@@ -1,0 +1,417 @@
+/* ═══════════════════════════════════════════════
+   WRITI.AI — Landing Page Styles
+   Clean, modern, and engaging
+   ═══════════════════════════════════════════════ */
+
+.landing {
+    background: var(--bg-main);
+}
+
+/* ── Navbar ── */
+.nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    z-index: 1000;
+    transition: all 0.3s;
+}
+
+.nav.scrolled {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+
+@media (prefers-color-scheme: dark) {
+    .nav.scrolled {
+        background: rgba(10, 10, 10, 0.8);
+    }
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+/* ── Hero ── */
+.hero {
+    padding: 160px 24px 100px;
+    text-align: center;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.hero-headline {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: var(--text-main);
+}
+
+.hero-sub {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto 40px;
+}
+
+.hero-ctas {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 48px;
+}
+
+/* ── Sections ── */
+section {
+    padding: 80px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.section-title {
+    font-size: 2.25rem;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    margin-bottom: 48px;
+}
+
+/* ── Grid Layouts ── */
+.pain-grid,
+.steps-grid,
+.testimonial-grid,
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+/* ── Cards ── */
+.pain-card,
+.step-item,
+.testimonial-card,
+.pricing-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pain-card:hover,
+.testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.pain-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.step-num {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+/* ── Pricing ── */
+.pricing-toggle-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.pricing-toggle {
+    background: var(--bg-soft);
+    padding: 4px;
+    border-radius: 40px;
+    display: inline-flex;
+}
+
+.pricing-toggle button {
+    padding: 8px 24px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.pricing-toggle button.active {
+    background: var(--bg-main);
+    box-shadow: var(--shadow-sm);
+    color: var(--text-main);
+}
+
+.pricing-card.featured {
+    border: 2px solid var(--accent);
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+.pricing-price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 16px 0;
+}
+
+.pricing-features {
+    list-style: none;
+    margin: 24px 0;
+}
+
+.pricing-features li {
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.pricing-features li::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* ── Mockup ── */
+.hero-mockup {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    overflow: hidden;
+    max-width: 900px;
+    margin: 64px auto 0;
+    text-align: left;
+}
+
+.mockup-left {
+    flex: 1;
+    padding: 32px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+
+.mockup-right {
+    flex: 1.5;
+    padding: 32px;
+}
+
+.mockup-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.mockup-input {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+}
+
+.mockup-chips {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mockup-chip {
+    padding: 6px 12px;
+    border-radius: 40px;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+}
+
+.mockup-chip.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* ── Footer ── */
+/* ── FAQ ── */
+.faq-list {
+    max-width: 800px;
+    margin: 48px auto 0;
+}
+
+.faq-item {
+    border-bottom: 1px solid var(--border);
+}
+
+.faq-question {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.faq-question:hover {
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.faq-arrow {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.3s;
+}
+
+.faq-arrow.open {
+    transform: rotate(180deg);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+}
+
+.faq-answer.open {
+    max-height: 200px;
+    opacity: 1;
+    margin-bottom: 24px;
+    padding: 0 20px 20px;
+}
+
+.faq-answer p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ── Final CTA & Email Form ── */
+.final-cta {
+    text-align: center;
+    padding: 120px 24px;
+    background: radial-gradient(circle at center, rgba(157, 0, 255, 0.05) 0%, transparent 70%);
+}
+
+.email-form {
+    display: flex;
+    max-width: 500px;
+    margin: 40px auto 24px;
+    background: var(--bg-soft);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.email-form:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(157, 0, 255, 0.1);
+}
+
+.email-form input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    box-shadow: none;
+}
+
+.email-form button {
+    white-space: nowrap;
+}
+
+.email-micro {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.email-micro span {
+    color: var(--accent-secondary);
+}
+
+.success-msg {
+    margin-top: 48px;
+    font-size: 1.25rem;
+    color: var(--accent-secondary);
+    font-weight: 600;
+}
+
+.lp-footer {
+    padding: 64px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .hero-headline {
+        font-size: 2.5rem;
+    }
+
+    .hero-mockup {
+        flex-direction: column;
+    }
+
+    .mockup-left {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .pricing-card.featured {
+        transform: none;
+    }
+
+    .email-form {
+        flex-direction: column;
+        background: transparent;
+        border: none;
+        padding: 0;
+        gap: 12px;
+    }
+
+    .email-form input {
+        background: var(--bg-soft);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        width: 100%;
+    }
+
+    .email-form button {
+        width: 100%;
+        padding: 16px;
+    }
+}

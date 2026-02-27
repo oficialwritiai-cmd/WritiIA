@@ -1,0 +1,10 @@
+'use client';
+
+export default function LandingPage() {
+    return (
+        <div style={{ padding: '40px', textAlign: 'center', background: '#050505', color: 'white', minHeight: '100vh' }}>
+            <h1 style={{ color: '#7ECECA' }}>WRITI.AI (MODO DEBUG)</h1>
+            <p>Si ves esto, el entorno Next.js funciona. El error está en el contenido original de la landing.</p>
+        </div>
+    );
+}
