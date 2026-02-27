@@ -10,7 +10,8 @@ export default function SettingsPage() {
     const [email, setEmail] = useState('');
     const [brandName, setBrandName] = useState('');
     const [defaultTone, setDefaultTone] = useState('Profesional');
-    const [plan, setPlan] = useState('free');
+    const [plan, setPlan] = useState('trial');
+    const [anthropicApiKey, setAnthropicApiKey] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -40,7 +41,18 @@ export default function SettingsPage() {
                 setName(data.name || '');
                 setBrandName(data.brand_name || '');
                 setDefaultTone(data.default_tone || 'Profesional');
-                setPlan(data.plan || 'free');
+                setPlan(data.plan || 'trial');
+            }
+
+            // Load API Key from user_settings
+            const { data: settingsData } = await supabase
+                .from('user_settings')
+                .select('anthropic_api_key')
+                .eq('user_id', user.id)
+                .single();
+
+            if (settingsData) {
+                setAnthropicApiKey(settingsData.anthropic_api_key || '');
             }
         } catch (err) {
             setError('Error al cargar el perfil.');
@@ -59,6 +71,7 @@ export default function SettingsPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
+            // Save Profile
             const { error: updateError } = await supabase
                 .from('users_profiles')
                 .upsert({
@@ -66,10 +79,21 @@ export default function SettingsPage() {
                     name,
                     brand_name: brandName,
                     default_tone: defaultTone,
-                    plan,
                 });
 
             if (updateError) throw updateError;
+
+            // Save API Key in user_settings
+            const { error: settingsError } = await supabase
+                .from('user_settings')
+                .upsert({
+                    user_id: user.id,
+                    anthropic_api_key: anthropicApiKey,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (settingsError) throw settingsError;
+
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
@@ -79,37 +103,30 @@ export default function SettingsPage() {
         }
     }
 
-    const planLabels = {
-        free: 'Free',
-        pro: 'Pro',
-        agency: 'Agency',
-    };
-
     if (loading) {
         return <div className="loading-pulse">Cargando ajustes...</div>;
     }
 
     return (
-        <div className="settings-page">
-            <h1>Ajustes</h1>
+        <div className="settings-page" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '100px' }}>
+            <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '32px' }}>Ajustes</h1>
 
             {error && <div className="error-message mb-4">{error}</div>}
             {saved && (
-                <div className="error-message mb-4" style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+                <div className="error-message mb-4" style={{ borderColor: 'var(--accent)', color: 'var(--accent)', background: 'rgba(126, 206, 202, 0.05)' }}>
                     ✓ Cambios guardados correctamente
                 </div>
             )}
 
-            <form onSubmit={handleSave}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 {/* Sección: Perfil */}
                 <div className="settings-section">
-                    <h2>Perfil</h2>
-                    <div className="card">
-                        <div className="settings-form">
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px', color: 'rgba(255,255,255,0.4)' }}>PERFIL</h2>
+                    <div className="card" style={{ padding: '24px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             <div>
-                                <label htmlFor="settings-name">Nombre</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Nombre</label>
                                 <input
-                                    id="settings-name"
                                     type="text"
                                     className="input-field"
                                     placeholder="Tu nombre"
@@ -118,72 +135,74 @@ export default function SettingsPage() {
                                 />
                             </div>
                             <div>
-                                <label htmlFor="settings-email">Email</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Email</label>
                                 <input
-                                    id="settings-email"
                                     type="email"
                                     className="input-field"
                                     value={email}
                                     disabled
-                                    style={{ opacity: 0.5 }}
+                                    style={{ opacity: 0.4 }}
                                 />
                             </div>
-                            <div>
-                                <label>Avatar</label>
-                                <div className="avatar" style={{ width: '56px', height: '56px', fontSize: '1.2rem' }}>
-                                    {name ? name.charAt(0).toUpperCase() : email.charAt(0).toUpperCase()}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Sección: Mi marca */}
+                {/* Sección: Configuración de IA */}
                 <div className="settings-section">
-                    <h2>Mi marca</h2>
-                    <div className="card">
-                        <div className="settings-form">
-                            <div>
-                                <label htmlFor="settings-brand">Nombre de marca</label>
-                                <input
-                                    id="settings-brand"
-                                    type="text"
-                                    className="input-field"
-                                    placeholder="Nombre de tu marca o negocio"
-                                    value={brandName}
-                                    onChange={(e) => setBrandName(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="settings-tone">Tono predeterminado</label>
-                                <select
-                                    id="settings-tone"
-                                    className="select-field"
-                                    value={defaultTone}
-                                    onChange={(e) => setDefaultTone(e.target.value)}
-                                >
-                                    {TONOS.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </select>
-                            </div>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px', color: 'rgba(126, 206, 202, 0.6)' }}>CONFIGURACIÓN DE IA</h2>
+                    <div className="card" style={{ padding: '24px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
+                        <div>
+                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Clave API de Claude (Anthropic)</label>
+                            <input
+                                type="password"
+                                className="input-field"
+                                placeholder="sk-ant-api03-..."
+                                value={anthropicApiKey}
+                                onChange={(e) => setAnthropicApiKey(e.target.value)}
+                                style={{ letterSpacing: anthropicApiKey ? '4px' : 'normal' }}
+                            />
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '12px' }}>
+                                Tu clave se encripta y nunca se muestra completa. WRITI.AI usa Claude 3.5 Sonnet para tus generaciones.
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Sección: Plan actual */}
+                {/* Sección: Plan Pro */}
                 <div className="settings-section">
-                    <h2>Plan actual</h2>
-                    <div className="card">
-                        <div className="plan-badge">
-                            <span className="badge">{planLabels[plan] || plan}</span>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px', color: 'rgba(255,255,255,0.4)' }}>SUSCRIPCIÓN</h2>
+                    <div className="premium-card" style={{ padding: '40px', textAlign: 'center', background: 'rgba(126, 206, 202, 0.03)', border: '1px solid #7ECECA20' }}>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7ECECA', marginBottom: '8px' }}>Plan Pro</h3>
+                        <div style={{ marginBottom: '24px' }}>
+                            <span style={{ fontSize: '3rem', fontWeight: 900 }}>€39</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>/mes</span>
                         </div>
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '32px' }}>
+                            Precio de lanzamiento. Subirá a €49/mes para nuevos usuarios.
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginBottom: '32px' }}>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Guiones ilimitados</strong> cada mes</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Todas las plataformas:</strong> Reels, TikTok, Shorts, LinkedIn, X</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Cerebro IA:</strong> memoria completa de tu voz</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca y Calendario</strong> en 1 clic</div>
+                        </div>
+
+                        <button type="button" className="btn-primary" style={{ padding: '16px 40px', fontSize: '1rem' }}>
+                            {plan === 'pro' ? 'Gestionar suscripción' : 'Empezar ahora por €39/mes →'}
+                        </button>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
+                            ✓ Sin permanencias · ✓ Cancelas cuando quieras
+                        </p>
                     </div>
                 </div>
 
-                <button type="submit" className="btn-primary mt-4" disabled={saving}>
-                    {saving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
+                <div style={{ position: 'fixed', bottom: '40px', right: '40px', zIndex: 10 }}>
+                    <button type="submit" className="btn-primary" disabled={saving} style={{ padding: '16px 32px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                        {saving ? 'Guardando...' : 'Guardar todos los cambios'}
+                    </button>
+                </div>
             </form>
         </div>
     );

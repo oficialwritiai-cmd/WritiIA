@@ -7,7 +7,7 @@ import { createSupabaseClient } from '@/lib/supabase';
 export default function LoginPage() {
     const [mode, setMode] = useState('login'); // 'login' | 'register'
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [accessKey, setAccessKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [mounted, setMounted] = useState(false);
@@ -26,12 +26,30 @@ export default function LoginPage() {
 
         try {
             if (mode === 'register') {
+                if (!accessKey.trim()) throw new Error('Se requiere una llave de acceso para el registro.');
+
+                // 1. Validar la llave de acceso
+                const { data: keyData, error: keyQueryError } = await supabase
+                    .from('access_keys')
+                    .select('*')
+                    .eq('key_code', accessKey.trim())
+                    .single();
+
+                if (keyQueryError || !keyData) {
+                    throw new Error('Esta llave no es válida.');
+                }
+
+                if (keyData.is_used) {
+                    throw new Error('Esta llave ya ha sido utilizada.');
+                }
+
+                // 2. Crear el usuario
                 const { error: signUpError, data: { user } } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
                         data: {
-                            full_name: email.split('@')[0], // Default name
+                            full_name: email.split('@')[0],
                         }
                     }
                 });
@@ -42,19 +60,32 @@ export default function LoginPage() {
                 }
 
                 if (user) {
-                    // Manual profile creation (fallback or primary depending on trigger)
+                    const now = new Date();
+                    const trialEnds = new Date();
+                    trialEnds.setDate(now.getDate() + 7);
+
+                    // 3. Crear perfil con periodo de prueba
                     const { error: profileError } = await supabase.from('users_profiles').upsert({
                         id: user.id,
                         email: user.email,
                         name: email.split('@')[0],
-                        plan: 'free',
-                        created_at: new Date().toISOString()
+                        plan: 'trial',
+                        trial_started_at: now.toISOString(),
+                        trial_ends_at: trialEnds.toISOString(),
+                        is_trial_active: true,
+                        created_at: now.toISOString()
                     });
 
                     if (profileError) console.error('Error creating profile:', profileError);
+
+                    // 4. Marcar llave como utilizada
+                    await supabase.from('access_keys').update({
+                        is_used: true,
+                        used_by_user_id: user.id,
+                        used_at: now.toISOString()
+                    }).eq('id', keyData.id);
                 }
 
-                // Success message or redirect
                 router.push('/dashboard');
             } else {
                 const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -91,7 +122,7 @@ export default function LoginPage() {
                         <span style={{ color: 'var(--accent)' }}>W</span>RITI.AI
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                        {mode === 'login' ? 'Bienvenido al futuro del contenido' : 'Empieza a crear hoy mismo'}
+                        {mode === 'login' ? 'Bienvenido al futuro del contenido' : 'Exclusivo para usuarios con llave beta'}
                     </p>
                 </div>
 
@@ -113,6 +144,19 @@ export default function LoginPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {mode === 'register' && (
+                        <div>
+                            <span className="script-label">Llave de acceso a la beta</span>
+                            <input
+                                type="text"
+                                className="input-field"
+                                placeholder="Introduce tu llave especial"
+                                value={accessKey}
+                                onChange={(e) => setAccessKey(e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
                     <div>
                         <span className="script-label">Email</span>
                         <input
@@ -138,7 +182,7 @@ export default function LoginPage() {
                     </div>
 
                     <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
-                        {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Crear mi Cuenta'}
+                        {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Poner en Marcha WRITI.AI'}
                     </button>
                 </form>
 

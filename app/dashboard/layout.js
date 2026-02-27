@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -8,17 +10,40 @@ export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [profile, setProfile] = useState(null);
     const [hoveredItem, setHoveredItem] = useState(null);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (!session) {
                 router.replace('/login');
             } else {
                 setUser(session.user);
+
+                // Fetch profile to check trial status
+                const { data: profileData } = await supabase
+                    .from('users_profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profileData) {
+                    setProfile(profileData);
+
+                    // Check trial expiry
+                    const now = new Date();
+                    const trialEnds = profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null;
+
+                    if (profileData.plan === 'trial' && trialEnds && trialEnds < now) {
+                        if (pathname !== '/dashboard/expired' && pathname !== '/dashboard/settings') {
+                            router.replace('/dashboard/expired');
+                        }
+                    }
+                }
+
                 setLoading(false);
             }
         });
@@ -34,7 +59,7 @@ export default function DashboardLayout({ children }) {
         );
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [pathname]);
 
     async function handleLogout() {
         await supabase.auth.signOut();
@@ -174,7 +199,15 @@ export default function DashboardLayout({ children }) {
                             <span style={{ fontSize: '0.9rem' }}>👤</span>
                         </div>
                         <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
-                        <span className="badge" style={{ fontSize: '0.6rem', padding: '2px 6px' }}>FREE</span>
+                        <span className="badge" style={{
+                            fontSize: '0.6rem',
+                            padding: '2px 8px',
+                            background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                            color: profile?.plan === 'pro' ? 'black' : 'white',
+                            fontWeight: 800
+                        }}>
+                            {profile?.plan?.toUpperCase() || 'FREE'}
+                        </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>

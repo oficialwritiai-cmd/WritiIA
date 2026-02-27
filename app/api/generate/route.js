@@ -12,32 +12,44 @@ export async function POST(request) {
             );
         }
 
-        const apiKey = process.env.ANTHROPIC_API_KEY;
+        const supabase = createSupabaseClient();
+
+        if (!userId) {
+            return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
+        }
+
+        // 1. Fetch user's Anthropic API Key
+        const { data: settings } = await supabase
+            .from('user_settings')
+            .select('anthropic_api_key')
+            .eq('user_id', userId)
+            .single();
+
+        const apiKey = settings?.anthropic_api_key;
         if (!apiKey) {
             return NextResponse.json(
-                { error: 'Clave de API de Anthropic no configurada.' },
-                { status: 500 }
+                { error: 'Añade tu clave de Claude en Configuración para poder generar guiones.' },
+                { status: 400 }
             );
         }
 
-        const supabase = createSupabaseClient();
         let brandContextString = '';
 
-        // Fetch Brand Brain if userId is provided
-        const { data: brandBrain } = userId ? await supabase
+        // Fetch Brand Brain
+        const { data: brandBrain } = await supabase
             .from('brand_brain')
             .select('*')
             .eq('user_id', userId)
-            .single() : { data: null };
+            .single();
 
         if (brandBrain) {
             const knowledgeRaw = brandBrain.knowledge_raw || '';
-            const trimmedKnowledge = knowledgeRaw.length > 8000
-                ? knowledgeRaw.substring(0, 8000) + '... [Trunkated]'
+            const trimmedKnowledge = knowledgeRaw.length > 5000
+                ? knowledgeRaw.substring(0, 5000) + '... [Trunkated]'
                 : knowledgeRaw;
 
             brandContextString = `
-CONTEXTO DE MARCA DEL USUARIO:
+CONTEXTO DE MARCA DEL USUARIO (Cerebro IA):
 - Biografía/Historia: ${brandBrain.biography || ''}
 - Audiencia Objetivo: ${brandBrain.audience || ''}
 - Valores y Tono: ${brandBrain.values_tone || ''}
@@ -46,39 +58,45 @@ CONTEXTO DE MARCA DEL USUARIO:
 `;
         }
 
-        const systemPrompt = `Eres el mejor experto mundial en contenido viral para redes sociales en español.
+        const systemPrompt = `Eres el mejor experto en guiones virales para redes sociales en español.
 
-${brandContextString || 'Si el contexto de marca está vacío, genera guiones profesionales igualmente pero avisa internamente que serán más genéricos.'}
+Siempre que recibas una petición:
+1) Lee primero el CONTEXTO DE MARCA (Cerebro IA) del usuario.
+2) Entiende quién es, a quién habla, cuál es su tono y de qué temas habla.
+3) Luego analiza los datos de la petición:
+   - Tema principal: ${topic}
+   - Plataforma: ${platform}
+   - Objetivo: ${request.goal || 'Autoridad y Engagement'}
+   - Tono deseado: ${tone}
+   - Número de guiones: ${request.count || 5}
 
-TAREA:
-Genera exactamente ${request.count || 5} guiones DIFERENTES y ORIGINALES en español para ${platform} sobre el tema: ${topic}.
+Tu tarea:
+- Proponer entre 5 y 10 guiones completamente diferentes entre sí.
+- Cada guión debe tener:
+  · titulo_angulo → nombre corto del ángulo (ej: "El error que te está frenando", "El método de 7 días")
+  · gancho → frase inicial que detenga el scroll (curiosidad, sorpresa o identificación)
+  · desarrollo → 3 puntos accionables y concretos
+  · cta → llamada a la acción específica
 
-Objetivo del contenido: ${request.goal || 'Viralizar'}
-Tono: ${tone}
-Ideas o ángulos del usuario: ${request.ideas || 'Ninguna'}
+Reglas:
+- Nada genérico, nada de relleno.
+- El gancho es crítico: evita saludos y presentaciones.
+- Adapta ritmo y lenguaje a ${platform}.
+- Usa el estilo y expresiones del Contexto de Marca si está disponible.
 
-REGLAS ABSOLUTAS:
-1. Cada guión debe tener un ángulo COMPLETAMENTE diferente al resto.
-2. El GANCHO es lo más crítico. Nunca empieces con: "En este vídeo...", "Hola soy...", "Hoy te voy a contar..."
-   Usa siempre uno de estos patrones: Pregunta que duele al ICP, Afirmación contraintuitiva, Dato o número específico sorprendente, Secreto revelado, Historia en medias res.
-3. El DESARROLLO debe ser accionable, concreto, sin relleno.
-4. El CTA debe pedir UNA acción específica, nunca solo "sígueme" o "dale like".
-5. Adapta el ritmo al formato:
-   - Reels/TikTok: frases cortas, máximo 8 palabras por línea
-   - LinkedIn: storytelling, datos, más denso
-   - Twitter/X: directo, provocador
-6. Usa el lenguaje y estilo del Contexto de Marca si está disponible.
-7. PROHIBIDO: palabras genéricas, relleno, sonar a IA.
+${brandContextString}
 
-Responde ÚNICAMENTE con JSON válido:
+Responde SOLO con JSON válido:
 [
   {
-    "numero": 1,
-    "angulo": "descripción breve del ángulo",
-    "potencial_viral": "alto/medio/bajo",
-    "gancho": "texto del gancho",
-    "desarrollo": ["punto 1", "punto 2", "punto 3"],
-    "cta": "texto del cta"
+    "titulo_angulo": "string",
+    "gancho": "string",
+    "desarrollo": [
+      "punto 1",
+      "punto 2",
+      "punto 3"
+    ],
+    "cta": "string"
   }
 ]`;
 
@@ -92,26 +110,34 @@ Responde ÚNICAMENTE con JSON válido:
             body: JSON.stringify({
                 model: 'claude-3-5-sonnet-20241022',
                 max_tokens: 4096,
+                temperature: 0.7,
                 messages: [{ role: 'user', content: systemPrompt }],
             }),
         });
 
-        if (!response.ok) throw new Error('Error de Anthropic API');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Error de Anthropic API');
+        }
 
         const data = await response.json();
         const content = data.content?.[0]?.text || '';
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         const results = JSON.parse(jsonMatch ? jsonMatch[0] : content);
 
-        // Usage Logging
-        if (userId) {
-            await supabase.from('usage_logs').insert({
-                user_id: userId,
-                action: 'generate_scripts',
-                tokens_used: data.usage?.total_tokens || 0,
-                cost_eur: (data.usage?.total_tokens || 0) * 0.000015 // Estimated cost
-            });
-        }
+        // Usage Logging (Sonnet 3.5: $3/1M in, $15/1M out)
+        const inTokens = data.usage?.input_tokens || 0;
+        const outTokens = data.usage?.output_tokens || 0;
+        const totalTokens = data.usage?.total_tokens || 0;
+        // Approx cost in EUR (rough estimate: 1$ = 0.92€)
+        const estimatedCost = ((inTokens * 3 / 1000000) + (outTokens * 15 / 1000000)) * 0.95;
+
+        await supabase.from('usage_logs').insert({
+            user_id: userId,
+            action: 'generate_scripts',
+            tokens_used: totalTokens,
+            cost_eur: estimatedCost
+        });
 
         return NextResponse.json({ scripts: results });
     } catch (err) {

@@ -276,52 +276,61 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '32px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '40px', paddingBottom: '60px' }}>
                         {scripts.map((s, i) => (
-                            <div key={i} className="premium-card" style={{ padding: '32px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+                            <div key={i} className="premium-card" style={{ padding: '0', overflow: 'hidden', border: '1px solid rgba(126, 206, 202, 0.15)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%)' }}>
+                                {/* Card Header Overlay */}
+                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px 32px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#7ECECA' }}>#{s.numero || i + 1}</span>
-                                        <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', border: 'none' }}>{platform}</span>
-                                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'white' }}>{tone}</span>
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'black', fontWeight: 900, fontSize: '0.9rem' }}>{i + 1}</div>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>{s.titulo_angulo}</h3>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <TrendingUp size={14} color={s.potencial_viral === 'alto' ? '#10B981' : '#F59E0B'} />
-                                        <p style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' }}>Viralidad: {s.potencial_viral}</p>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', border: 'none' }}>{platform}</span>
+                                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>{tone}</span>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                                    {/* Gancho section */}
                                     <section>
-                                        <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.1em', marginBottom: '8px' }}>GANCHO</p>
-                                        <p style={{ fontSize: '1.4rem', fontWeight: 800, lineHeight: '1.3' }}>{s.gancho}</p>
-                                        <div style={{ marginTop: '12px', height: '4px', width: '100%', background: 'rgba(126, 206, 202, 0.1)', borderRadius: '2px' }}>
-                                            <div style={{ height: '100%', width: s.potencial_viral === 'alto' ? '90%' : '60%', background: s.potencial_viral === 'alto' ? '#10B981' : '#F59E0B', borderRadius: '2px' }}></div>
-                                        </div>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <TrendingUp size={14} /> GANCHO IRRESISTIBLE
+                                        </p>
+                                        <p style={{ fontSize: '1.6rem', fontWeight: 900, lineHeight: '1.2', color: 'white' }}>“{s.gancho}”</p>
                                     </section>
 
+                                    {/* Desarrollo section */}
                                     <section>
-                                        <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.1em', marginBottom: '16px' }}>DESARROLLO</p>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '20px' }}>DESARROLLO (3 PUNTOS)</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                             {s.desarrollo?.map((p, pi) => (
-                                                <div key={pi} style={{ display: 'flex', gap: '16px', fontSize: '1rem', color: 'rgba(255,255,255,0.9)' }}>
-                                                    <span style={{ color: '#7ECECA', fontWeight: 800 }}>{pi + 1}.</span>
-                                                    <p>{p}</p>
+                                                <div key={pi} style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
+                                                    <div style={{ marginTop: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(126, 206, 202, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: '#7ECECA', flexShrink: 0 }}>{pi + 1}</div>
+                                                    <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5' }}>{p}</p>
                                                 </div>
                                             ))}
                                         </div>
                                     </section>
 
-                                    <section>
-                                        <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.1em', marginBottom: '8px' }}>CTA</p>
-                                        <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>{s.cta}</p>
+                                    {/* CTA section */}
+                                    <section style={{ borderTop: '1px dashed rgba(126, 206, 202, 0.2)', paddingTop: '24px' }}>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '12px' }}>CALL TO ACTION</p>
+                                        <p style={{ fontSize: '1.15rem', fontWeight: 700, color: '#7ECECA' }}>{s.cta}</p>
                                     </section>
                                 </div>
 
-                                <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                                    <button id={`copy-${i}`} onClick={() => copyToClipboard(`${s.gancho}\n\n${s.desarrollo?.join('\n')}\n\n${s.cta}`, i)} className="btn-secondary" style={{ width: '100%', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Copy size={14} /> Copiar guión</button>
-                                    <button onClick={() => saveScript(s)} className="btn-secondary" style={{ width: '100%', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Bookmark size={14} /> Guardar</button>
-                                    <button className="btn-secondary" style={{ width: '100%', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Calendar size={14} /> Programar</button>
+                                {/* Footer Actions */}
+                                <div style={{ padding: '20px 32px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                                    <button id={`copy-${i}`} onClick={() => copyToClipboard(`${s.gancho}\n\n${s.desarrollo?.join('\n')}\n\n${s.cta}`, i)} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
+                                        <Copy size={16} /> Copiar
+                                    </button>
+                                    <button onClick={() => saveScript(s)} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
+                                        <Bookmark size={16} /> Guardar
+                                    </button>
+                                    <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
+                                        <Calendar size={16} /> Programar
+                                    </button>
                                 </div>
                             </div>
                         ))}
