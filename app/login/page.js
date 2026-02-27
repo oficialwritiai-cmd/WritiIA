@@ -29,26 +29,49 @@ export default function LoginPage() {
                 const { error: signUpError, data: { user } } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        data: {
+                            full_name: email.split('@')[0], // Default name
+                        }
+                    }
                 });
 
-                if (signUpError) throw signUpError;
+                if (signUpError) {
+                    if (signUpError.message.includes('already registered')) throw new Error('Este email ya está registrado.');
+                    throw signUpError;
+                }
 
                 if (user) {
-                    await supabase.from('users_profiles').upsert({
+                    // Manual profile creation (fallback or primary depending on trigger)
+                    const { error: profileError } = await supabase.from('users_profiles').upsert({
                         id: user.id,
-                        name: '',
-                        brand_name: '',
-                        default_tone: 'Profesional',
+                        email: user.email,
+                        name: email.split('@')[0],
                         plan: 'free',
+                        created_at: new Date().toISOString()
                     });
+
+                    if (profileError) console.error('Error creating profile:', profileError);
                 }
+
+                // Success message or redirect
                 router.push('/dashboard');
             } else {
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
-                if (signInError) throw signInError;
+
+                if (signInError) {
+                    if (signInError.message.includes('Invalid login credentials')) {
+                        throw new Error('Email o contraseña incorrectos.');
+                    }
+                    if (signInError.message.includes('Email not confirmed')) {
+                        throw new Error('Por favor verifica tu email primero.');
+                    }
+                    throw signInError;
+                }
+
                 router.push('/dashboard');
             }
         } catch (err) {
