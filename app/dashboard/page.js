@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2, Sparkles } from 'lucide-react';
+import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
@@ -350,7 +351,7 @@ export default function DashboardPage() {
                             <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>
                                 {generationMode === 'single' ? '¿Sobre qué quieres crear contenido hoy?' : 'Describe tu marca y lo que quieres conseguir este mes'}
                             </p>
-                            <textarea
+                            <AIPolishedTextarea
                                 className="textarea-field"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}

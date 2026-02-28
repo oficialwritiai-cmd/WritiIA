@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
+import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 
 export default function KnowledgePage() {
     const [loading, setLoading] = useState(true);
@@ -128,7 +129,7 @@ export default function KnowledgePage() {
                             <span style={{ fontSize: '1.4rem' }}>{sec.icon}</span>
                             <h3 style={{ fontSize: '1.1rem' }}>{sec.label}</h3>
                         </div>
-                        <textarea
+                        <AIPolishedTextarea
                             className="textarea-field"
                             rows={6}
                             placeholder={sec.placeholder}
