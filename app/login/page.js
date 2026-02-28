@@ -7,6 +7,7 @@ import { createSupabaseClient } from '@/lib/supabase';
 export default function LoginPage() {
     const [mode, setMode] = useState('login'); // 'login' | 'register'
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [accessKey, setAccessKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');

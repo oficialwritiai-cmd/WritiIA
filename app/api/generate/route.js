@@ -18,18 +18,11 @@ export async function POST(request) {
             return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
         }
 
-        // 1. Fetch user's Anthropic API Key
-        const { data: settings } = await supabase
-            .from('user_settings')
-            .select('anthropic_api_key')
-            .eq('user_id', userId)
-            .single();
-
-        const apiKey = settings?.anthropic_api_key;
-        if (!apiKey) {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey || apiKey === 'placeholder-anthropic-key') {
             return NextResponse.json(
-                { error: 'Añade tu clave de Claude en Configuración para poder generar guiones.' },
-                { status: 400 }
+                { error: 'La API Key central de Claude no está configurada.' },
+                { status: 500 }
             );
         }
 

@@ -11,7 +11,6 @@ export default function SettingsPage() {
     const [brandName, setBrandName] = useState('');
     const [defaultTone, setDefaultTone] = useState('Profesional');
     const [plan, setPlan] = useState('trial');
-    const [anthropicApiKey, setAnthropicApiKey] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -43,17 +42,6 @@ export default function SettingsPage() {
                 setDefaultTone(data.default_tone || 'Profesional');
                 setPlan(data.plan || 'trial');
             }
-
-            // Load API Key from user_settings
-            const { data: settingsData } = await supabase
-                .from('user_settings')
-                .select('anthropic_api_key')
-                .eq('user_id', user.id)
-                .single();
-
-            if (settingsData) {
-                setAnthropicApiKey(settingsData.anthropic_api_key || '');
-            }
         } catch (err) {
             setError('Error al cargar el perfil.');
         } finally {
@@ -82,17 +70,6 @@ export default function SettingsPage() {
                 });
 
             if (updateError) throw updateError;
-
-            // Save API Key in user_settings
-            const { error: settingsError } = await supabase
-                .from('user_settings')
-                .upsert({
-                    user_id: user.id,
-                    anthropic_api_key: anthropicApiKey,
-                    updated_at: new Date().toISOString()
-                });
-
-            if (settingsError) throw settingsError;
 
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
@@ -144,27 +121,6 @@ export default function SettingsPage() {
                                     style={{ opacity: 0.4 }}
                                 />
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Sección: Configuración de IA */}
-                <div className="settings-section">
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px', color: 'rgba(126, 206, 202, 0.6)' }}>CONFIGURACIÓN DE IA</h2>
-                    <div className="card" style={{ padding: '24px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
-                        <div>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Clave API de Claude (Anthropic)</label>
-                            <input
-                                type="password"
-                                className="input-field"
-                                placeholder="sk-ant-api03-..."
-                                value={anthropicApiKey}
-                                onChange={(e) => setAnthropicApiKey(e.target.value)}
-                                style={{ letterSpacing: anthropicApiKey ? '4px' : 'normal' }}
-                            />
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '12px' }}>
-                                Tu clave se encripta y nunca se muestra completa. WRITI.AI usa Claude 3.5 Sonnet para tus generaciones.
-                            </p>
                         </div>
                     </div>
                 </div>
