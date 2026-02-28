@@ -87,3 +87,54 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ═══════════════════════════════════════════════
+-- Planificador de 30 Días
+-- ═══════════════════════════════════════════════
+
+-- ── Tabla: content_plans ──
+CREATE TABLE IF NOT EXISTS public.content_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  month INTEGER NOT NULL,
+  year INTEGER NOT NULL,
+  frequency TEXT NOT NULL,
+  platforms TEXT[] NOT NULL,
+  focus TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── Tabla: content_slots ──
+CREATE TABLE IF NOT EXISTS public.content_slots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id UUID NOT NULL REFERENCES public.content_plans(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  day_number INTEGER NOT NULL,
+  platform TEXT NOT NULL,
+  content_type TEXT NOT NULL,
+  idea_title TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  has_script BOOLEAN DEFAULT false,
+  script_id UUID REFERENCES public.scripts(id) ON DELETE SET NULL,
+  scheduled_date DATE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ── Índices para content plans/slots ──
+CREATE INDEX IF NOT EXISTS idx_plans_user_id ON public.content_plans(user_id);
+CREATE INDEX IF NOT EXISTS idx_slots_user_id ON public.content_slots(user_id);
+CREATE INDEX IF NOT EXISTS idx_slots_plan_id ON public.content_slots(plan_id);
+
+-- ── Políticas: content_plans ──
+ALTER TABLE public.content_plans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Los usuarios pueden ver sus propios planes" ON public.content_plans FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden insertar sus planes" ON public.content_plans FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden actualizar sus planes" ON public.content_plans FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden eliminar sus planes" ON public.content_plans FOR DELETE USING (auth.uid() = user_id);
+
+-- ── Políticas: content_slots ──
+ALTER TABLE public.content_slots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Los usuarios pueden ver sus propios slots" ON public.content_slots FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden insertar sus slots" ON public.content_slots FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden actualizar sus slots" ON public.content_slots FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Los usuarios pueden eliminar sus slots" ON public.content_slots FOR DELETE USING (auth.uid() = user_id);

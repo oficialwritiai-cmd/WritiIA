@@ -7,7 +7,9 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CalendarDays, Zap,
 export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [scripts, setScripts] = useState([]);
+    const [slots, setSlots] = useState([]);
     const [unscheduledScripts, setUnscheduledScripts] = useState([]);
+    const [unscheduledSlots, setUnscheduledSlots] = useState([]);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const supabase = createSupabaseClient();
@@ -28,6 +30,15 @@ export default function CalendarPage() {
 
                 setScripts(scheduled || []);
 
+                // Fetch scheduled slots
+                const { data: scheduledSlots } = await supabase
+                    .from('content_slots')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .not('scheduled_date', 'is', null);
+
+                setSlots(scheduledSlots || []);
+
                 // Fetch unscheduled scripts
                 const { data: unscheduled } = await supabase
                     .from('scripts')
@@ -37,6 +48,16 @@ export default function CalendarPage() {
                     .limit(10);
 
                 setUnscheduledScripts(unscheduled || []);
+
+                // Fetch unscheduled slots
+                const { data: unscheduledSlts } = await supabase
+                    .from('content_slots')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .is('scheduled_date', null)
+                    .limit(10);
+
+                setUnscheduledSlots(unscheduledSlts || []);
             }
             setLoading(false);
         }
@@ -91,6 +112,8 @@ export default function CalendarPage() {
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayScripts = scripts.filter(s => s.scheduled_date?.startsWith(dateStr));
+            const daySlots = slots.filter(s => s.scheduled_date?.startsWith(dateStr));
+
             const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
 
             cells.push(
@@ -104,9 +127,10 @@ export default function CalendarPage() {
                     gap: '4px',
                     overflowY: 'auto'
                 }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: isToday ? 900 : 400, color: isToday ? '#7ECECA' : 'white' }}>{day}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: isToday ? 900 : 400, color: isToday ? '#7ECECA' : 'white', marginBottom: '4px' }}>{day}</span>
+
                     {dayScripts.map((s, idx) => (
-                        <div key={idx} style={{
+                        <div key={`script-${idx}`} style={{
                             fontSize: '0.65rem',
                             padding: '4px 8px',
                             borderRadius: '4px',
@@ -116,8 +140,25 @@ export default function CalendarPage() {
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis'
-                        }}>
-                            {s.platform}: {s.content.substring(0, 20)}...
+                        }} title={s.content}>
+                            ✓ {s.platform}: {s.topic || s.content.substring(0, 20)}
+                        </div>
+                    ))}
+
+                    {daySlots.map((s, idx) => (
+                        <div key={`slot-${idx}`} style={{
+                            fontSize: '0.65rem',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            background: s.has_script ? '#7ECECA' : 'transparent',
+                            border: s.has_script ? 'none' : '1px dashed rgba(255,255,255,0.3)',
+                            color: s.has_script ? 'black' : 'rgba(255,255,255,0.8)',
+                            fontWeight: s.has_script ? 700 : 600,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }} title={s.idea_title}>
+                            {s.has_script ? '✓' : '🕒'} {s.platform}: {s.idea_title}
                         </div>
                     ))}
                 </div>
@@ -128,20 +169,28 @@ export default function CalendarPage() {
     };
 
     const autoSchedule = async () => {
-        if (unscheduledScripts.length === 0) {
-            alert("No hay guiones sin programar.");
+        if (unscheduledScripts.length === 0 && unscheduledSlots.length === 0) {
+            alert("No hay guiones ni ideas sin programar.");
             return;
         }
 
         setLoading(true);
         const today = new Date();
-        const updates = unscheduledScripts.map((s, i) => {
+        let counter = 1;
+
+        const updatesScripts = unscheduledScripts.map((s) => {
             const futureDate = new Date();
-            futureDate.setDate(today.getDate() + i + 1); // Mark for the next few days
+            futureDate.setDate(today.getDate() + counter++); // Mark for the next few days
             return supabase.from('scripts').update({ scheduled_date: futureDate.toISOString() }).eq('id', s.id);
         });
 
-        await Promise.all(updates);
+        const updatesSlots = unscheduledSlots.map((s) => {
+            const futureDate = new Date();
+            futureDate.setDate(today.getDate() + counter++); // Mark for the next few days
+            return supabase.from('content_slots').update({ scheduled_date: futureDate.toISOString() }).eq('id', s.id);
+        });
+
+        await Promise.all([...updatesScripts, ...updatesSlots]);
         window.location.reload();
     };
 
@@ -169,18 +218,26 @@ export default function CalendarPage() {
 
                 <div className="premium-card" style={{ padding: '24px' }}>
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Clock size={18} color="#7ECECA" /> Pendientes ({unscheduledScripts.length})
+                        <Clock size={18} color="#7ECECA" /> Pendientes ({unscheduledScripts.length + unscheduledSlots.length})
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {unscheduledScripts.map((s, i) => (
-                            <div key={i} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>{s.platform}</p>
+                            <div key={`us-${i}`} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>{s.platform} (Guión)</p>
                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {s.content}
+                                    {s.topic || s.content}
                                 </p>
                             </div>
                         ))}
-                        {unscheduledScripts.length === 0 && (
+                        {unscheduledSlots.map((s, i) => (
+                            <div key={`uslo-${i}`} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>{s.platform} (Plan)</p>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                    {s.idea_title}
+                                </p>
+                            </div>
+                        ))}
+                        {(unscheduledScripts.length === 0 && unscheduledSlots.length === 0) && (
                             <div style={{ textAlign: 'center', padding: '20px', opacity: 0.5 }}>
                                 <CheckCircle2 size={32} style={{ margin: '0 auto 10px' }} />
                                 <p style={{ fontSize: '0.8rem' }}>Todo programado</p>
