@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseClient } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request) {
     try {
@@ -12,7 +12,9 @@ export async function POST(request) {
             );
         }
 
-        const supabase = createSupabaseClient();
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         if (!userId) {
             return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
