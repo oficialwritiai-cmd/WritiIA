@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS public.users_profiles (
   brand_name TEXT DEFAULT '',
   default_tone TEXT DEFAULT 'Profesional',
   plan TEXT DEFAULT 'free',
+  email TEXT,
+  is_trial_active BOOLEAN DEFAULT false,
+  trial_started_at TIMESTAMPTZ,
+  trial_ends_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -29,6 +33,16 @@ CREATE TABLE IF NOT EXISTS public.scripts (
 CREATE INDEX IF NOT EXISTS idx_scripts_user_id ON public.scripts(user_id);
 CREATE INDEX IF NOT EXISTS idx_scripts_is_saved ON public.scripts(is_saved);
 
+-- ── Tabla: access_keys ──
+CREATE TABLE IF NOT EXISTS public.access_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key_code TEXT UNIQUE NOT NULL,
+  is_used BOOLEAN DEFAULT false,
+  used_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ═══════════════════════════════════════════════
 -- Row Level Security (RLS)
 -- ═══════════════════════════════════════════════
@@ -36,6 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_scripts_is_saved ON public.scripts(is_saved);
 -- Habilitar RLS
 ALTER TABLE public.users_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scripts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.access_keys ENABLE ROW LEVEL SECURITY;
 
 -- ── Políticas: users_profiles ──
 CREATE POLICY "Los usuarios pueden ver su propio perfil"
@@ -50,6 +65,10 @@ CREATE POLICY "Los usuarios pueden actualizar su propio perfil"
   ON public.users_profiles FOR UPDATE
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
+
+-- ── Políticas: access_keys ──
+CREATE POLICY "Permitir leer llaves a todos" ON public.access_keys FOR SELECT USING (true);
+CREATE POLICY "Permitir actualizar llaves a todos" ON public.access_keys FOR UPDATE USING (true);
 
 -- ── Políticas: scripts ──
 CREATE POLICY "Los usuarios pueden ver sus propios guiones"
