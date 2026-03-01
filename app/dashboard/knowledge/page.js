@@ -56,14 +56,16 @@ export default function KnowledgePage() {
                 values_tone: brain.values_tone,
                 niche_topics: brain.niche_topics,
                 knowledge_raw: brain.knowledge_raw,
-                updated_at: new Date()
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id'
             });
 
             if (error) throw error;
-            showToast('Cerebro actualizado. WRITI.AI ya piensa como tú. ✨', 'success');
+            showToast('Cerebro IA guardado ✓', 'success');
         } catch (err) {
             console.error('Error saving brand brain:', err);
-            showToast('Error al guardar cambios', 'error');
+            showToast('No se pudieron guardar los cambios. Intenta de nuevo.', 'error');
         } finally {
             setSaving(false);
         }

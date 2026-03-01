@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Logo from '@/app/components/Logo';
 import './landing.css';
 
 /* ────────────────────────────────────────
@@ -108,64 +109,60 @@ export default function LandingPage() {
         <div className="landing">
             {/* ═══ NAVBAR ═══ */}
             <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
-                <span className="logo">WRITI.AI</span>
-                <div className="nav-links">
-                    <Link href="/login" className="btn-ghost" style={{ fontSize: '0.875rem' }}>Iniciar sesión</Link>
-                    <button className="btn-primary" onClick={scrollToCta}>Empezar gratis</button>
+                <Link href="/" style={{ textDecoration: 'none' }}>
+                    <Logo size="1.2rem" />
+                </Link>
+                <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <Link href="/login" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, transition: '0.2s' }}>Iniciar sesión</Link>
+                    <Link href="/login?mode=register" style={{ textDecoration: 'none' }}>
+                        <button className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>Probar gratis</button>
+                    </Link>
                 </div>
             </nav>
 
             {/* ═══ HERO ═══ */}
             <section className="hero">
-                <h1 className="hero-headline">
-                    Deja de perder 8 horas semanales<br />pensando qué publicar.
+                <h1 className="hero-headline" style={{ lineHeight: '1.1' }}>
+                    Planifica y escribe el contenido de todo el mes en una tarde.
                 </h1>
                 <p className="hero-sub">
-                    WRITI.AI genera 5 guiones virales para Reels, TikTok y LinkedIn en 30 segundos. Con tu voz. Con tu estilo. Listos para grabar.
+                    WRITI.AI crea tu calendario de contenidos, genera guiones para Reels, TikTok y LinkedIn y adapta todo a tu voz de marca en minutos.
                 </p>
-                <p className="hero-proof">
-                    <span>✦</span> Más de 1.200 creadores ya generan contenido con WRITI.AI
+                <p style={{ color: 'var(--accent)', fontSize: '0.9rem', fontWeight: 700, marginBottom: '40px', letterSpacing: '0.05em' }}>
+                    Sin quedarte en blanco · Sin sonar a ChatGPT · Sin perder horas delante de la pantalla.
                 </p>
 
                 <div className="hero-ctas">
-                    <button className="btn-primary" style={{ padding: '16px 32px', fontSize: '1rem' }} onClick={scrollToCta}>
-                        Generar mis primeros guiones gratis →
-                    </button>
-                    <button className="btn-secondary" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}>
+                    <Link href="/login?mode=register" style={{ textDecoration: 'none' }}>
+                        <button className="btn-primary" style={{ padding: '20px 48px', fontSize: '1.2rem', borderRadius: '18px' }}>
+                            Probar gratis 7 días →
+                        </button>
+                    </Link>
+                    <button className="btn-secondary" style={{ padding: '20px 40px', fontSize: '1rem', borderRadius: '18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
                         Ver cómo funciona
                     </button>
                 </div>
 
-                <div className="hero-trust">
-                    <span>✓ Sin tarjeta de crédito</span>
-                    <span>✓ Acceso instantáneo</span>
-                    <span>✓ Cancela cuando quieras</span>
-                </div>
-
-                {/* Mockup */}
-                <div className="hero-mockup">
-                    <div className="mockup-left">
-                        <div className="mockup-input">Cómo ganar 1.000 seguidores en 30 días</div>
-                        <div className="mockup-chips">
-                            <span className="mockup-chip active">Reels</span>
-                            <span className="mockup-chip">TikTok</span>
-                            <span className="mockup-chip">LinkedIn</span>
-                            <span className="mockup-chip">X</span>
+                {/* Mockup simplificado */}
+                <div className="hero-mockup" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(157, 0, 255, 0.1)' }}>
+                    <div className="mockup-left" style={{ background: 'transparent' }}>
+                        <div style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '20px' }}>
+                            <div className="mockup-label">CALENDARIO MENSUAL</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginTop: '16px' }}>
+                                {[...Array(14)].map((_, i) => (
+                                    <div key={i} style={{ height: '40px', background: i % 3 === 0 ? 'var(--accent)' : 'rgba(255,255,255,0.05)', borderRadius: '6px', opacity: 0.6 }}></div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="mockup-input" style={{ color: '#888' }}>Tono: Cercano</div>
-                        <div className="mockup-btn" style={{ background: 'var(--accent)', color: 'white', padding: '10px', borderRadius: 'var(--radius-md)', textAlign: 'center', fontSize: '0.875rem', fontWeight: 600 }}>Generar guiones</div>
                     </div>
-                    <div className="mockup-right">
-                        <div className="mockup-label">GANCHO</div>
-                        <p>¿Por qué llevas meses sin crecer y otros lo consiguen en semanas?</p>
-                        <div className="mockup-label">DESARROLLO</div>
-                        <ul>
-                            <li>El algoritmo no es tu enemigo, tu contenido sí lo es.</li>
-                            <li>Los creadores que crecen publican con estructura, no con suerte.</li>
-                            <li>Este método me hizo ganar 1.200 seguidores en 3 semanas.</li>
-                        </ul>
-                        <div className="mockup-label">CTA</div>
-                        <p>Guarda este video y aplícalo hoy.</p>
+                    <div className="mockup-right" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                        <div className="mockup-label">EDITOR DE GUIONES</div>
+                        <div style={{ marginTop: '20px' }}>
+                            <div style={{ height: '12px', width: '90%', background: 'white', opacity: 0.3, borderRadius: '4px', marginBottom: '12px' }}></div>
+                            <div style={{ height: '12px', width: '70%', background: 'white', opacity: 0.3, borderRadius: '4px', marginBottom: '12px' }}></div>
+                            <div style={{ height: '12px', width: '80%', background: 'white', opacity: 0.3, borderRadius: '4px', marginBottom: '32px' }}></div>
+                            <div style={{ padding: '8px 16px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', fontSize: '0.8rem', display: 'inline-block', borderRadius: '6px', fontWeight: 700 }}>Mejorar con IA ✓</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -192,56 +189,46 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ═══ HOW IT WORKS ═══ */}
-            <section id="demo">
-                <h2 className="section-title">Así de simple.</h2>
-                <p className="section-subtitle">De idea a guión viral en 3 pasos.</p>
-                <div className="steps-grid">
+            {/* ═══ CÓMO FUNCIONA basado en features reales ═══ */}
+            <section id="how-it-works" style={{ borderTop: '1px solid var(--border)', paddingTop: '100px' }}>
+                <h2 className="section-title">Cómo trabaja WRITI.AI contigo</h2>
+                <div className="steps-grid" style={{ marginTop: '60px' }}>
                     <div className="step-item">
-                        <div className="step-num">01</div>
-                        <h3>Escribe tu tema</h3>
-                        <p>Un título, una URL, una frase. WRITI.AI lo convierte en contenido.</p>
+                        <div className="step-num">STEP 01</div>
+                        <h3>1. Entrena tu Cerebro IA</h3>
+                        <p>Completa tu biografía, tu público objetivo y tus valores. WRITI.AI aprende tu voz y tu historia para que cada guion suene a ti.</p>
                     </div>
                     <div className="step-item">
-                        <div className="step-num">02</div>
-                        <h3>Elige plataforma y tono</h3>
-                        <p>Reels, TikTok, LinkedIn o X. Profesional, cercano, inspiracional — tú decides cómo sonar.</p>
+                        <div className="step-num">STEP 02</div>
+                        <h3>2. Genera el plan de contenido del mes</h3>
+                        <p>Describe tu marca y tu objetivo del mes. La app crea un calendario de ideas distribuidas por días, plataformas y objetivos (ventas, autoridad, seguidores).</p>
                     </div>
                     <div className="step-item">
-                        <div className="step-num">03</div>
-                        <h3>Obtén 5 guiones listos</h3>
-                        <p>Con Gancho, Desarrollo y CTA. Cópialos, guárdalos y graba. Sin editar, sin pensar.</p>
+                        <div className="step-num">STEP 03</div>
+                        <h3>3. Convierte ideas en guiones listos</h3>
+                        <p>Para cada idea, genera un guion con gancho, desarrollo y CTA. Ajusta cada parte a tu gusto y mándalo al calendario o descárgalo en un clic.</p>
                     </div>
                 </div>
             </section>
 
-            {/* ═══ PRODUCT PREVIEW ═══ */}
-            <section>
-                <h2 className="section-title">Míralo en acción.</h2>
-                <div className="hero-mockup" style={{ marginTop: '48px' }}>
-                    <div className="mockup-left">
-                        <div className="mockup-input">Cómo ganar 1.000 seguidores en 30 días</div>
-                        <div className="mockup-chips">
-                            <span className="mockup-chip active">Reels</span>
-                            <span className="mockup-chip">TikTok</span>
-                            <span className="mockup-chip">LinkedIn</span>
-                            <span className="mockup-chip">X</span>
+            {/* ═══ LO QUE INCLUYE HOY ═══ */}
+            <section style={{ background: 'rgba(255,255,255,0.01)', borderRadius: '40px', margin: '80px auto', border: '1px solid var(--border)' }}>
+                <h2 className="section-title">Lo que incluye WRITI.AI hoy</h2>
+                <div className="pain-grid" style={{ marginTop: '48px' }}>
+                    {[
+                        { t: 'Generador de guiones', d: 'Guiones estructurados con gancho, desarrollo y CTA para cada plataforma.' },
+                        { t: 'Cerebro IA', d: 'Memoria de tu marca personal: biografía, público, valores y temas.' },
+                        { t: 'Plan mensual', d: 'Un mapa de contenidos para 30 días según tu frecuencia y objetivos.' },
+                        { t: 'Editor con IA', d: 'Mejora el gancho, el desarrollo o la CTA de cada guion con un clic.' },
+                        { t: 'Biblioteca y calendario', d: 'Guarda tus guiones, prográmalos por fechas y organízalos en un calendario visual.' },
+                        { t: 'Créditos de IA controlados', d: 'Sistema de créditos que protege tu presupuesto y te muestra cuánto consumes.' }
+                    ].map((item, i) => (
+                        <div key={i} className="pain-card" style={{ background: 'transparent' }}>
+                            <div style={{ color: 'var(--accent)', marginBottom: '16px', fontWeight: 900 }}>✓</div>
+                            <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{item.t}</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{item.d}</p>
                         </div>
-                        <div className="mockup-input" style={{ color: '#888' }}>Tono: Cercano</div>
-                        <div className="mockup-btn" style={{ background: 'var(--accent)', color: 'white', padding: '10px', borderRadius: 'var(--radius-md)', textAlign: 'center', fontSize: '0.875rem', fontWeight: 600 }}>Generar guiones</div>
-                    </div>
-                    <div className="mockup-right">
-                        <div className="mockup-label">GANCHO</div>
-                        <p>¿Por qué llevas meses sin crecer y otros lo consiguen en semanas?</p>
-                        <div className="mockup-label">DESARROLLO</div>
-                        <ul>
-                            <li>El algoritmo no es tu enemigo, tu contenido sí lo es.</li>
-                            <li>Los creadores que crecen publican con estructura, no con suerte.</li>
-                            <li>Este método me hizo ganar 1.200 seguidores en 3 semanas.</li>
-                        </ul>
-                        <div className="mockup-label">CTA</div>
-                        <p>Guarda este video y aplícalo hoy.</p>
-                    </div>
+                    ))}
                 </div>
             </section>
 
@@ -276,60 +263,35 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ═══ PRICING ═══ */}
-            <section>
-                <h2 className="section-title">Sin letra pequeña. Sin sorpresas.</h2>
-                <p className="section-subtitle">Empieza gratis. Escala cuando quieras.</p>
+            {/* ═══ PRICING (Un solo plan) ═══ */}
+            <section id="pricing">
+                <h2 className="section-title">Solo un plan. Todo desbloqueado.</h2>
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '60px' }}>
+                    <div className="pricing-card featured" style={{ maxWidth: '500px', width: '100%', padding: '60px 40px', position: 'relative' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.1em' }}>PLAN PRO</span>
+                            <div style={{ fontSize: '4rem', fontWeight: 900, margin: '20px 0' }}>$39<span style={{ fontSize: '1.2rem', opacity: 0.6 }}>/mes</span></div>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '40px', fontSize: '1.1rem' }}>Todo lo que necesitas para planear y escribir tu contenido del mes en minutos.</p>
+                        </div>
 
-                <div className="pricing-toggle-wrapper">
-                    <div className="pricing-toggle">
-                        <button className={billing === 'monthly' ? 'active' : ''} onClick={() => setBilling('monthly')}>Mensual</button>
-                        <button className={billing === 'yearly' ? 'active' : ''} onClick={() => setBilling('yearly')}>Anual (ahorra 17%)</button>
-                    </div>
-                </div>
-
-                <div className="pricing-grid">
-                    {/* Free */}
-                    <div className="pricing-card">
-                        <div className="pricing-label">Gratis</div>
-                        <div className="pricing-price">{prices[billing].free}<span className="pricing-period">{prices[billing].period}</span></div>
-                        <ul className="pricing-features">
-                            <li>10 guiones al mes</li>
-                            <li>Reels y TikTok</li>
-                            <li>Acceso a biblioteca</li>
-                            <li>Sin tarjeta de crédito</li>
+                        <ul className="pricing-features" style={{ marginBottom: '40px' }}>
+                            <li>Generador de guiones para Reels, TikTok, Shorts, LinkedIn y X</li>
+                            <li>Cerebro IA: memoria de tu biografía, público, valores y nicho</li>
+                            <li>Plan mensual de contenido con ideas para todo el mes</li>
+                            <li>Editor avanzado de guiones con IA (gancho, desarrollo y CTA)</li>
+                            <li>Biblioteca de guiones guardados</li>
+                            <li>Calendario de contenido con asignación en 1 clic</li>
+                            <li>Exportar/descargar guiones en texto</li>
+                            <li>Métricas básicas de uso y créditos de IA</li>
                         </ul>
-                        <button className="btn-ghost-teal" style={{ width: '100%' }} onClick={scrollToCta}>Empezar gratis</button>
-                    </div>
 
-                    {/* Pro */}
-                    <div className="pricing-card featured">
-                        <div className="pricing-popular">MÁS POPULAR</div>
-                        <div className="pricing-label">Pro</div>
-                        <div className="pricing-price">{prices[billing].pro}<span className="pricing-period">{prices[billing].period}</span></div>
-                        {billing === 'yearly' && <div className="pricing-period" style={{ marginTop: '-20px' }}>Facturado anualmente (€288/año)</div>}
-                        <ul className="pricing-features">
-                            <li>Guiones ilimitados</li>
-                            <li>Todas las plataformas</li>
-                            <li>Memoria de voz de marca</li>
-                            <li>Biblioteca ilimitada</li>
-                            <li>Soporte prioritario</li>
-                        </ul>
-                        <button className="btn-teal" style={{ width: '100%' }} onClick={scrollToCta}>Empezar con Pro →</button>
-                    </div>
+                        <Link href="/login" style={{ textDecoration: 'none' }}>
+                            <button className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '1.2rem' }}>Empezar con el Plan Pro →</button>
+                        </Link>
 
-                    {/* Agency */}
-                    <div className="pricing-card">
-                        <div className="pricing-label">Agency</div>
-                        <div className="pricing-price">{prices[billing].agency}<span className="pricing-period">{prices[billing].period}</span></div>
-                        <ul className="pricing-features">
-                            <li>Todo lo de Pro</li>
-                            <li>Hasta 10 marcas / clientes</li>
-                            <li>Reportes descargables</li>
-                            <li>White label básico</li>
-                            <li>Acceso API</li>
-                        </ul>
-                        <button className="btn-ghost-teal" style={{ width: '100%' }} onClick={scrollToCta}>Hablar con ventas</button>
+                        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Prueba gratis 7 días. Luego $39/mes. <br /> Sin permanencias, cancelas cuando quieras.
+                        </p>
                     </div>
                 </div>
             </section>
@@ -395,7 +357,7 @@ export default function LandingPage() {
             {/* ═══ FOOTER ═══ */}
             <footer className="lp-footer" style={{ maxWidth: '100%' }}>
                 <div className="footer-left">
-                    <span className="logo" style={{ fontSize: '0.9rem' }}>WRITI.AI</span>
+                    <Logo size="0.9rem" />
                     <p>© 2026 WRITI.AI. Todos los derechos reservados.</p>
                 </div>
                 <div className="footer-links">

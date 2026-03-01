@@ -27,7 +27,7 @@ export default function DashboardPage() {
     const [platform, setPlatform] = useState('Reels');
     const [tone, setTone] = useState('Profesional');
     const [goal, setGoal] = useState('Viralizar');
-    const [quantity, setQuantity] = useState(5);
+    const [quantity, setQuantity] = useState(4);
     const [ideas, setIdeas] = useState('');
     const [scripts, setScripts] = useState([]);
 
@@ -41,17 +41,20 @@ export default function DashboardPage() {
     const [loadingPhase, setLoadingPhase] = useState(0);
     const [error, setError] = useState('');
     const [profile, setProfile] = useState(null);
+    const [aiCredits, setAiCredits] = useState({ total: 200, used: 0 });
     const [hasBrain, setHasBrain] = useState(false);
+    const [improvementCounts, setImprovementCounts] = useState({}); // { 'scriptIndex-blockType': count }
+    const [refiningBlock, setRefiningBlock] = useState(null); // 'scriptIndex-blockType'
+    const [previousScripts, setPreviousScripts] = useState(null); // For "Undo" (Deshacer)
 
     const supabase = createSupabaseClient();
     const router = useRouter();
 
     const singleLoadingSteps = [
         "Leyendo tu Cerebro IA...",
-        "Analizando el tema y la plataforma...",
-        "Identificando los mejores ángulos virales...",
-        `Redactando ${quantity} guiones con tu voz...`,
-        "Revisando calidad y originalidad..."
+        "Buscando ángulos interesantes...",
+        "Redactando ganchos de alto impacto...",
+        "Afinando CTA y desarrollo...",
     ];
 
     const planLoadingSteps = [
@@ -64,6 +67,14 @@ export default function DashboardPage() {
 
     const loadingSteps = generationMode === 'single' ? singleLoadingSteps : planLoadingSteps;
 
+    async function fetchCredits(userId) {
+        if (!userId) return;
+        const { data } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
+        if (data) {
+            setAiCredits({ total: data.total_credits, used: data.used_credits });
+        }
+    }
+
     useEffect(() => {
         async function loadData() {
             const { data: { user } } = await supabase.auth.getUser();
@@ -73,9 +84,21 @@ export default function DashboardPage() {
 
                 const { data: brainData } = await supabase.from('brand_brain').select('id').eq('user_id', user.id).single();
                 setHasBrain(!!brainData);
+
+                fetchCredits(user.id);
             }
         }
         loadData();
+
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('mode') === 'single') {
+                setGenerationMode('single');
+                if (params.get('topic')) setTopic(params.get('topic'));
+                if (params.get('platform')) setPlatform(params.get('platform'));
+                if (params.get('goal')) setGoal(params.get('goal'));
+            }
+        }
     }, []);
 
     useEffect(() => {
@@ -115,13 +138,158 @@ export default function DashboardPage() {
                 }),
             });
 
-            if (!res.ok) throw new Error('Error al generar guiones');
             const data = await res.json();
-            setScripts(data.scripts || []);
+            if (!res.ok) throw new Error(data.error || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
+
+            let generatedScripts = data.scripts || [];
+
+            // Auto-guardado de los guiones generados
+            let paramsSource = 'single_topic';
+            let paramsRef = null;
+            if (typeof window !== 'undefined') {
+                const params = new URLSearchParams(window.location.search);
+                paramsSource = params.get('source_type') || 'single_topic';
+                paramsRef = params.get('source_reference_id') || null;
+            }
+
+            const savedScripts = await Promise.all(
+                generatedScripts.map(async (s) => {
+                    const insertPayload = {
+                        user_id: profile.id,
+                        content: s.gancho + '\n\n' + s.desarrollo.join('\n') + '\n\n' + s.cta,
+                        platform,
+                        topic: topic.trim(),
+                        tone,
+                        source_type: paramsSource,
+                        source_reference_id: paramsRef,
+                        titulo_angulo: s.titulo_angulo,
+                        gancho: s.gancho,
+                        desarrollo_1: s.desarrollo[0],
+                        desarrollo_2: s.desarrollo[1],
+                        desarrollo_3: s.desarrollo[2],
+                        cta: s.cta
+                    };
+                    const { data: inserted, error } = await supabase.from('scripts').insert(insertPayload).select().single();
+                    if (!error && inserted) {
+                        return { ...s, db_id: inserted.id };
+                    }
+                    return s;
+                })
+            );
+
+            setScripts(savedScripts);
             setStep(3);
+            fetchCredits(profile.id);
         } catch (err) {
-            setError(err.message);
+            console.error('Error real en generación:', err);
+            setError(err.message || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
             setStep(1);
+        }
+    }
+
+    async function handleRefineBlock(scriptIndex, blockType) {
+        const key = `${scriptIndex}-${blockType}`;
+        const currentCount = improvementCounts[key] || 0;
+
+        if (currentCount >= 3) {
+            alert('Límite de mejoras alcanzado para este bloque.');
+            return;
+        }
+
+        const available = aiCredits.total - aiCredits.used;
+        if (available < 1) {
+            alert('Has agotado tus créditos de IA. Actualiza tu plan o compra más créditos.');
+            return;
+        }
+
+        // Save current state for "Undo"
+        setPreviousScripts(JSON.parse(JSON.stringify(scripts)));
+        setRefiningBlock(key);
+
+        const script = scripts[scriptIndex];
+        let text = '';
+        if (blockType === 'gancho') text = script.gancho;
+        else if (blockType === 'punto1') text = script.desarrollo[0];
+        else if (blockType === 'punto2') text = script.desarrollo[1];
+        else if (blockType === 'punto3') text = script.desarrollo[2];
+        else if (blockType === 'cta') text = script.cta;
+
+        try {
+            const res = await fetch('/api/refine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text,
+                    type: blockType === 'cta' ? 'cta' : (blockType === 'gancho' ? 'gancho' : 'desarrollo'),
+                    context: `Guion sobre ${topic} para ${platform}. Ángulo: ${script.titulo_angulo}`,
+                    userId: profile.id
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            const updatedScripts = [...scripts];
+            if (blockType === 'gancho') updatedScripts[scriptIndex].gancho = data.refinedText;
+            else if (blockType === 'punto1') updatedScripts[scriptIndex].desarrollo[0] = data.refinedText;
+            else if (blockType === 'punto2') updatedScripts[scriptIndex].desarrollo[1] = data.refinedText;
+            else if (blockType === 'punto3') updatedScripts[scriptIndex].desarrollo[2] = data.refinedText;
+            else if (blockType === 'cta') updatedScripts[scriptIndex].cta = data.refinedText;
+
+            setScripts(updatedScripts);
+            setImprovementCounts({ ...improvementCounts, [key]: currentCount + 1 });
+            fetchCredits(profile.id);
+        } catch (err) {
+            alert('Error al mejorar: ' + err.message);
+        } finally {
+            setRefiningBlock(null);
+        }
+    }
+
+    function handleUndo() {
+        if (previousScripts) {
+            setScripts(previousScripts);
+            setPreviousScripts(null);
+        }
+    }
+
+    function handleDownload(script) {
+        const content = `GANCHO\n${script.gancho}\n\nDESARROLLO\n${script.desarrollo.join('\n')}\n\nCTA\n${script.cta}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `writi-guion.txt`;
+        a.click();
+    }
+
+    async function handleSaveAll() {
+        try {
+            for (const s of scripts) {
+                const content = s.gancho + '\n\n' + s.desarrollo.join('\n') + '\n\n' + s.cta;
+                if (s.db_id) {
+                    await supabase.from('scripts').update({
+                        content,
+                        titulo_angulo: s.titulo_angulo,
+                        gancho: s.gancho,
+                        desarrollo_1: s.desarrollo[0],
+                        desarrollo_2: s.desarrollo[1],
+                        desarrollo_3: s.desarrollo[2],
+                        cta: s.cta,
+                        is_saved: true
+                    }).eq('id', s.db_id);
+                } else {
+                    await supabase.from('scripts').insert({
+                        user_id: profile.id,
+                        content,
+                        platform,
+                        is_saved: true
+                    });
+                }
+            }
+            alert('Todos los guiones guardados en biblioteca ✓');
+        } catch (err) {
+            alert('Error al guardar todos: ' + err.message);
         }
     }
 
@@ -199,13 +367,31 @@ export default function DashboardPage() {
     };
 
     const saveScript = async (script) => {
-        const { error } = await supabase.from('scripts').insert({
-            user_id: profile.id,
-            content: script.gancho + '\n\n' + script.desarrollo.join('\n') + '\n\n' + script.cta,
-            platform,
-            is_saved: true
-        });
-        if (!error) alert('Guardado en biblioteca');
+        const content = script.gancho + '\n\n' + script.desarrollo.join('\n') + '\n\n' + script.cta;
+        let err = null;
+        if (script.db_id) {
+            const { error } = await supabase.from('scripts').update({
+                content,
+                titulo_angulo: script.titulo_angulo,
+                gancho: script.gancho,
+                desarrollo_1: script.desarrollo[0],
+                desarrollo_2: script.desarrollo[1],
+                desarrollo_3: script.desarrollo[2],
+                cta: script.cta,
+                is_saved: true
+            }).eq('id', script.db_id);
+            err = error;
+        } else {
+            const { error } = await supabase.from('scripts').insert({
+                user_id: profile.id,
+                content,
+                platform,
+                is_saved: true
+            });
+            err = error;
+        }
+        if (!err) alert('Guardado en biblioteca');
+        else alert('Error al guardar: ' + err.message);
     };
 
     const handleTogglePlatform = (p) => {
@@ -306,6 +492,13 @@ export default function DashboardPage() {
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
             {/* Header / Stats */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Sparkles size={16} color="#7ECECA" />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Créditos IA: {aiCredits.total - aiCredits.used} / {aiCredits.total}</span>
+                    <button onClick={() => alert('Próximamente...')} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
+                </div>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 {[
                     { label: 'Generaciones Realizadas', val: stats.monthGenerations, sub: 'Mes actual', color: '#9D00FF' },
@@ -393,8 +586,8 @@ export default function DashboardPage() {
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de Guiones</p>
-                                        <input type="range" min="5" max="10" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ width: '100%', accentColor: '#7ECECA' }} />
-                                        <p style={{ textAlign: 'center', marginTop: '10px', fontWeight: 800, color: '#7ECECA' }}>{quantity} guiones</p>
+                                        <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ width: '100%', accentColor: '#7ECECA' }} />
+                                        <p style={{ textAlign: 'center', marginTop: '10px', fontWeight: 800, color: '#7ECECA' }}>{quantity} guiones (Máx 4)</p>
                                     </div>
                                 </div>
                             </>
@@ -473,90 +666,310 @@ export default function DashboardPage() {
             )}
 
             {step === 2 && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', gap: '32px' }}>
-                    <div className="loading-spinner" style={{ width: '60px', height: '60px', borderTopColor: '#7ECECA' }}></div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '500px', gap: '48px' }}>
+                    <div style={{ position: 'relative' }}>
+                        <div className="loading-spinner" style={{ width: '80px', height: '80px', borderTopColor: '#7ECECA', borderWidth: '4px' }}></div>
+                        <Sparkles style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#7ECECA' }} className="pulse" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '440px', padding: '32px', background: 'rgba(126, 206, 202, 0.03)', borderRadius: '24px', border: '1px solid rgba(126, 206, 202, 0.1)' }}>
                         {loadingSteps.map((s, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: i <= loadingPhase ? 1 : 0.3, transition: '0.5s' }}>
-                                {i < loadingPhase ? <CheckCircle2 size={18} color="#7ECECA" /> : <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid' }}></div>}
-                                <span style={{ fontSize: '0.9rem', fontWeight: i === loadingPhase ? 700 : 400 }}>{s}</span>
+                            <div key={i} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                opacity: i <= loadingPhase ? 1 : 0.2,
+                                transition: '0.8s all ease',
+                                transform: i === loadingPhase ? 'scale(1.05)' : 'scale(1)',
+                                color: i === loadingPhase ? '#7ECECA' : 'white'
+                            }}>
+                                <div style={{
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    border: '2px solid',
+                                    borderColor: i < loadingPhase ? '#7ECECA' : (i === loadingPhase ? '#7ECECA' : 'rgba(255,255,255,0.2)'),
+                                    background: i < loadingPhase ? '#7ECECA' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: i === loadingPhase ? '0 0 15px rgba(126, 206, 202, 0.4)' : 'none'
+                                }}>
+                                    {i < loadingPhase ? <CheckCircle2 size={14} color="black" /> : null}
+                                </div>
+                                <span style={{
+                                    fontSize: '0.95rem',
+                                    fontWeight: i === loadingPhase ? 800 : 500,
+                                    textShadow: i === loadingPhase ? '0 0 10px rgba(126, 206, 202, 0.3)' : 'none'
+                                }}>{s}</span>
                             </div>
                         ))}
                     </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', animatePulse: true }}>Esto suele tomar entre 15 y 30 segundos...</p>
                 </div>
             )}
 
             {step === 3 && generationMode === 'single' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Resultados Generados</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '100px' }}>
+                    {/* Header Editor */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Editor de Guiones</h2>
+                            <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '0.95rem' }}>
+                                Ajusta cada gancho, desarrollo y CTA a tu estilo. Usa IA solo donde la necesitas.
+                            </p>
+                        </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Regenerar</button>
-                            <button onClick={() => { setStep(1); setTopic(''); setIdeas(''); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><PlusCircle size={16} /> Nueva sesión</button>
+                            <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem' }}>
+                                <RefreshCcw size={16} /> Volver
+                            </button>
+                            <button onClick={handleSaveAll} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}>
+                                Guardar todos
+                            </button>
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '40px', paddingBottom: '60px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         {scripts.map((s, i) => (
-                            <div key={i} className="premium-card" style={{ padding: '0', overflow: 'hidden', border: '1px solid rgba(126, 206, 202, 0.15)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 100%)' }}>
-                                {/* Card Header Overlay */}
-                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px 32px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'black', fontWeight: 900, fontSize: '0.9rem' }}>{i + 1}</div>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'white' }}>{s.titulo_angulo}</h3>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', border: 'none' }}>{platform}</span>
-                                        <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>{tone}</span>
+                            <div key={i} className="premium-card" style={{
+                                padding: '0',
+                                background: '#101010',
+                                border: '1px solid #1E1E1E',
+                                borderRadius: '16px',
+                                overflow: 'hidden',
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                            }}>
+                                {/* Card Header */}
+                                <div style={{
+                                    padding: '20px 32px',
+                                    borderBottom: '1px solid #1E1E1E',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    background: 'rgba(255,255,255,0.02)'
+                                }}>
+                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                        <div style={{
+                                            width: '28px',
+                                            height: '28px',
+                                            borderRadius: '50%',
+                                            background: 'var(--accent-gradient)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#000',
+                                            fontWeight: 900,
+                                            fontSize: '0.8rem'
+                                        }}>
+                                            #{i + 1}
+                                        </div>
+                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Guion #{i + 1}</h3>
+                                        <span className="badge" style={{
+                                            background: 'rgba(126, 206, 202, 0.1)',
+                                            color: '#7ECECA',
+                                            fontSize: '0.7rem',
+                                            padding: '4px 10px'
+                                        }}>{platform}</span>
+                                        {s.titulo_angulo && (
+                                            <span className="badge" style={{
+                                                background: 'rgba(157, 0, 255, 0.1)',
+                                                color: '#B74DFF',
+                                                fontSize: '0.7rem',
+                                                padding: '4px 10px',
+                                                border: '1px solid rgba(157, 0, 255, 0.2)'
+                                            }}>{s.titulo_angulo}</span>
+                                        )}
                                     </div>
                                 </div>
 
-                                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                                    {/* Gancho section */}
-                                    <section>
-                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <TrendingUp size={14} /> GANCHO IRRESISTIBLE
-                                        </p>
-                                        <p style={{ fontSize: '1.6rem', fontWeight: 900, lineHeight: '1.2', color: 'white' }}>“{s.gancho}”</p>
-                                    </section>
+                                {/* Card Body */}
+                                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-                                    {/* Desarrollo section */}
-                                    <section>
-                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '20px' }}>DESARROLLO (3 PUNTOS)</p>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                            {s.desarrollo?.map((p, pi) => (
-                                                <div key={pi} style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                                                    <div style={{ marginTop: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(126, 206, 202, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: '#7ECECA', flexShrink: 0 }}>{pi + 1}</div>
-                                                    <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5' }}>{p}</p>
+                                    {/* GANCHO */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>GANCHO</label>
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                {previousScripts && (
+                                                    <button onClick={handleUndo} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Deshacer</button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRefineBlock(i, 'gancho')}
+                                                    disabled={refiningBlock === `${i}-gancho`}
+                                                    title="Mejorar gancho con IA"
+                                                    style={{
+                                                        width: '32px',
+                                                        height: '32px',
+                                                        borderRadius: '50%',
+                                                        background: refiningBlock === `${i}-gancho` ? 'transparent' : 'rgba(126, 206, 202, 0.1)',
+                                                        color: '#7ECECA',
+                                                        border: refiningBlock === `${i}-gancho` ? 'none' : '1px solid rgba(126, 206, 202, 0.2)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <textarea
+                                            value={s.gancho}
+                                            disabled={refiningBlock === `${i}-gancho`}
+                                            onChange={(e) => {
+                                                const news = [...scripts];
+                                                news[i].gancho = e.target.value;
+                                                setScripts(news);
+                                            }}
+                                            className="textarea-field"
+                                            style={{
+                                                minHeight: '80px',
+                                                fontSize: '1.25rem',
+                                                fontWeight: 700,
+                                                background: '#080808',
+                                                border: '1px solid #1E1E1E',
+                                                fontFamily: 'monospace',
+                                                padding: '20px',
+                                                transition: '0.3s'
+                                            }}
+                                        />
+                                        {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>Versión mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
+                                    </div>
+
+                                    {/* DESARROLLO (3 PUNTOS) */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO (3 PUNTOS ACCIONABLES)</label>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {[0, 1, 2].map(idx => (
+                                                <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                                    <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>0{idx + 1}</div>
+                                                    <div style={{ flex: 1, position: 'relative' }}>
+                                                        <textarea
+                                                            value={s.desarrollo[idx] || ''}
+                                                            disabled={refiningBlock === `${i}-punto${idx + 1}`}
+                                                            onChange={(e) => {
+                                                                const news = [...scripts];
+                                                                news[i].desarrollo[idx] = e.target.value;
+                                                                setScripts(news);
+                                                            }}
+                                                            className="textarea-field"
+                                                            style={{
+                                                                minHeight: '60px',
+                                                                fontSize: '0.95rem',
+                                                                background: '#080808',
+                                                                border: '1px solid #1E1E1E',
+                                                                padding: '12px 48px 12px 16px'
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleRefineBlock(i, `punto${idx + 1}`)}
+                                                            disabled={refiningBlock === `${i}-punto${idx + 1}`}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '12px',
+                                                                top: '12px',
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                color: '#7ECECA',
+                                                                cursor: 'pointer',
+                                                                opacity: 0.6
+                                                            }}
+                                                        >
+                                                            {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="spin" /> : <Sparkles size={14} />}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
-                                    </section>
+                                    </div>
 
-                                    {/* CTA section */}
-                                    <section style={{ borderTop: '1px dashed rgba(126, 206, 202, 0.2)', paddingTop: '24px' }}>
-                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#7ECECA', letterSpacing: '0.15em', marginBottom: '12px' }}>CALL TO ACTION</p>
-                                        <p style={{ fontSize: '1.15rem', fontWeight: 700, color: '#7ECECA' }}>{s.cta}</p>
-                                    </section>
+                                    {/* CTA */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÓN (CTA)</label>
+                                            <button
+                                                onClick={() => handleRefineBlock(i, 'cta')}
+                                                disabled={refiningBlock === `${i}-cta`}
+                                                style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '50%',
+                                                    background: 'rgba(126, 206, 202, 0.1)',
+                                                    color: '#7ECECA',
+                                                    border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                                            </button>
+                                        </div>
+                                        <input
+                                            value={s.cta}
+                                            disabled={refiningBlock === `${i}-cta`}
+                                            onChange={(e) => {
+                                                const news = [...scripts];
+                                                news[i].cta = e.target.value;
+                                                setScripts(news);
+                                            }}
+                                            className="input-field"
+                                            style={{
+                                                fontSize: '1rem',
+                                                fontWeight: 600,
+                                                background: '#080808',
+                                                border: '1px solid #1E1E1E',
+                                                padding: '16px'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Footer Actions */}
-                                <div style={{ padding: '20px 32px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                                    <button id={`copy - ${i}`} onClick={() => copyToClipboard(`${s.gancho}\n\n${s.desarrollo?.join('\n')}\n\n${s.cta}`, i)} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
-                                        <Copy size={16} /> Copiar
-                                    </button>
-                                    <button onClick={() => saveScript(s)} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
-                                        <Bookmark size={16} /> Guardar
-                                    </button>
-                                    <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ height: '48px', fontWeight: 700 }}>
-                                        <Calendar size={16} /> Programar
-                                    </button>
+                                {/* Card Footer */}
+                                <div style={{
+                                    padding: '20px 32px',
+                                    background: 'rgba(255,255,255,0.01)',
+                                    borderTop: '1px solid #1E1E1E',
+                                    display: 'flex',
+                                    justifyContent: 'flex-end',
+                                    gap: '12px'
+                                }}>
+                                    {[
+                                        { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`${s.gancho}\n\n${s.desarrollo.join('\n')}\n\n${s.cta}`, i) },
+                                        { icon: <Bookmark size={16} />, label: 'Guardar', action: () => saveScript(s) },
+                                        { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
+                                        { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
+                                    ].map((btn, bidx) => (
+                                        <button
+                                            key={bidx}
+                                            onClick={btn.action}
+                                            className="btn-secondary"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                fontSize: '0.75rem',
+                                                padding: '8px 14px',
+                                                background: 'transparent',
+                                                border: '1px solid #2A2A2A',
+                                                color: 'rgba(255,255,255,0.6)'
+                                            }}
+                                        >
+                                            {btn.icon} {btn.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
+
 
             {step === 3 && generationMode === 'plan' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>

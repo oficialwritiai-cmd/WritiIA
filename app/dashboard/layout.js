@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles } from 'lucide-react';
+import Logo from '@/app/components/Logo';
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -76,6 +77,7 @@ export default function DashboardLayout({ children }) {
 
     const navItems = [
         { href: '/dashboard', icon: PenLine, label: 'Nuevo Guión' },
+        { href: '/dashboard/ideas-virales', icon: Sparkles, label: 'Ideas virales' },
         { href: '/dashboard/library', icon: BookOpen, label: 'Biblioteca' },
         { href: '/dashboard/knowledge', icon: Brain, label: 'Cerebro IA' },
         { href: '/dashboard/calendar', icon: CalendarDays, label: 'Calendario' },
@@ -96,7 +98,9 @@ export default function DashboardLayout({ children }) {
                 background: '#050505'
             }}>
                 <div style={{ marginBottom: '40px' }}>
-                    <div style={{ width: '32px', height: '32px', background: 'var(--accent-gradient)', borderRadius: '8px' }}></div>
+                    <Link href="/" style={{ textDecoration: 'none' }}>
+                        <Logo mobile={true} />
+                    </Link>
                 </div>
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
@@ -193,21 +197,27 @@ export default function DashboardLayout({ children }) {
 
             <div className="main-wrapper">
                 {/* Topbar refined */}
-                <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 32px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px', cursor: 'pointer' }}>
-                            <span style={{ fontSize: '0.9rem' }}>👤</span>
+                <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                        <Link href="/" style={{ textDecoration: 'none' }}>
+                            <Logo />
+                        </Link>
+                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px', cursor: 'pointer' }}>
+                                <span style={{ fontSize: '0.9rem' }}>👤</span>
+                            </div>
+                            <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
+                            <span className="badge" style={{
+                                fontSize: '0.6rem',
+                                padding: '2px 8px',
+                                background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                color: profile?.plan === 'pro' ? 'black' : 'white',
+                                fontWeight: 800
+                            }}>
+                                {profile?.plan?.toUpperCase() || 'FREE'}
+                            </span>
                         </div>
-                        <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
-                        <span className="badge" style={{
-                            fontSize: '0.6rem',
-                            padding: '2px 8px',
-                            background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                            color: profile?.plan === 'pro' ? 'black' : 'white',
-                            fontWeight: 800
-                        }}>
-                            {profile?.plan?.toUpperCase() || 'FREE'}
-                        </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>

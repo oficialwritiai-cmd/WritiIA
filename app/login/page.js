@@ -18,6 +18,11 @@ export default function LoginPage() {
 
     useEffect(() => {
         setMounted(true);
+        const params = new URLSearchParams(window.location.search);
+        const initialMode = params.get('mode');
+        if (initialMode === 'register' || initialMode === 'login') {
+            setMode(initialMode);
+        }
     }, []);
 
     async function handleSubmit(e) {
@@ -29,34 +34,39 @@ export default function LoginPage() {
             if (mode === 'register') {
                 if (!accessKey.trim()) throw new Error('Se requiere una llave de acceso para el registro.');
 
-                // 1. Validar la llave de acceso
-                const { data: keyData, error: keyQueryError } = await supabase
-                    .from('access_keys')
-                    .select('*')
-                    .eq('key_code', accessKey.trim())
-                    .single();
+                const isMasterKey = accessKey.trim() === 'WRITI-BETA-1813';
+                let keyData = null;
 
-                if (keyQueryError || !keyData) {
-                    throw new Error('Esta llave no es válida.');
+                if (!isMasterKey) {
+                    const { data, error: keyQueryError } = await supabase
+                        .from('access_keys')
+                        .select('*')
+                        .eq('key_code', accessKey.trim())
+                        .single();
+
+                    if (keyQueryError || !data) throw new Error('Esta llave no es válida.');
+                    if (data.is_used) throw new Error('Esta llave ya ha sido utilizada.');
+                    keyData = data;
                 }
 
-                if (keyData.is_used) {
-                    throw new Error('Esta llave ya ha sido utilizada.');
-                }
-
-                // 2. Crear el usuario
+                // Sign Up
                 const { error: signUpError, data: { user } } = await supabase.auth.signUp({
                     email,
                     password,
-                    options: {
-                        data: {
-                            full_name: email.split('@')[0],
-                        }
-                    }
+                    options: { data: { full_name: email.split('@')[0] } }
                 });
 
                 if (signUpError) {
-                    if (signUpError.message.includes('already registered')) throw new Error('Este email ya está registrado.');
+                    if (signUpError.message.includes('already registered')) {
+                        // If already registered, try to log in instead if using master key
+                        if (isMasterKey) {
+                            setError('Este email ya existe. Intenta iniciar sesión con tu contraseña.');
+                            setMode('login');
+                            setLoading(false);
+                            return;
+                        }
+                        throw new Error('Este email ya está registrado.');
+                    }
                     throw signUpError;
                 }
 
@@ -65,43 +75,46 @@ export default function LoginPage() {
                     const trialEnds = new Date();
                     trialEnds.setDate(now.getDate() + 7);
 
-                    // 3. Crear perfil con periodo de prueba
-                    const { error: profileError } = await supabase.from('users_profiles').upsert({
+                    await supabase.from('users_profiles').upsert({
                         id: user.id,
                         email: user.email,
                         name: email.split('@')[0],
-                        plan: 'trial',
+                        plan: isMasterKey ? 'pro' : 'trial',
+                        is_admin: isMasterKey ? true : false,
                         trial_started_at: now.toISOString(),
                         trial_ends_at: trialEnds.toISOString(),
                         is_trial_active: true,
                         created_at: now.toISOString()
                     });
 
-                    if (profileError) console.error('Error creating profile:', profileError);
-
-                    // 4. Marcar llave como utilizada
-                    await supabase.from('access_keys').update({
-                        is_used: true,
-                        used_by_user_id: user.id,
-                        used_at: now.toISOString()
-                    }).eq('id', keyData.id);
+                    if (!isMasterKey && keyData) {
+                        await supabase.from('access_keys').update({
+                            is_used: true,
+                            used_by_user_id: user.id,
+                            used_at: now.toISOString()
+                        }).eq('id', keyData.id);
+                    }
                 }
-
                 router.push('/dashboard');
             } else {
-                const { error: signInError } = await supabase.auth.signInWithPassword({
+                const { error: signInError, data: { user: signedInUser } } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
 
                 if (signInError) {
-                    if (signInError.message.includes('Invalid login credentials')) {
-                        throw new Error('Email o contraseña incorrectos.');
-                    }
-                    if (signInError.message.includes('Email not confirmed')) {
-                        throw new Error('Por favor verifica tu email primero.');
-                    }
+                    if (signInError.message.includes('Invalid login credentials')) throw new Error('Email o contraseña incorrectos.');
+                    if (signInError.message.includes('Email not confirmed')) throw new Error('Por favor verifica tu email primero.');
                     throw signInError;
+                }
+
+                // If logged in successfully, check if we need to apply master key privileges
+                // This allows the admin to regain status if they login normally
+                if (accessKey.trim() === 'WRITI-BETA-1813') {
+                    await supabase.from('users_profiles').update({
+                        plan: 'pro',
+                        is_admin: true
+                    }).eq('id', signedInUser.id);
                 }
 
                 router.push('/dashboard');

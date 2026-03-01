@@ -104,7 +104,7 @@ No devuelvas explicaciones, ni Markdown de código, solo el array de JSON puro.`
                 'anthropic-version': '2023-06-01',
             },
             body: JSON.stringify({
-                model: 'claude-3-5-sonnet-20241022',
+                model: 'claude-3-haiku-20240307',
                 max_tokens: 4096,
                 temperature: 0.7,
                 messages: [{ role: 'user', content: systemPrompt }],
