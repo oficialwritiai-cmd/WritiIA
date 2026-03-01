@@ -1,13 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { RefineSchema } from '@/lib/validations';
+import rateLimit from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+    interval: 60 * 1000,
+    uniqueTokenPerInterval: 500,
+});
 
 export async function POST(request) {
     try {
-        const { text, type, context, userId } = await request.json();
-
-        if (!text || !type || !userId) {
-            return NextResponse.json({ error: 'Faltan campos obligatorios.' }, { status: 400 });
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const resObj = new NextResponse();
+        try {
+            await limiter.check(resObj, 25, ip); // Max 25 refines per minute
+        } catch (rateErr) {
+            return NextResponse.json({ error: 'Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.' }, { status: 429, headers: resObj.headers });
         }
+
+        const body = await request.json();
+        const validation = RefineSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Datos de entrada inválidos para refinar', details: validation.error.errors },
+                { status: 400 }
+            );
+        }
+
+        const { text, type, context, userId } = validation.data;
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

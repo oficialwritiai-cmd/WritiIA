@@ -1,19 +1,37 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { GenerateScriptSchema } from '@/lib/validations';
+import rateLimit from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+    interval: 60 * 1000, // 60 seconds
+    uniqueTokenPerInterval: 500, // Max 500 users per second
+});
 
 export async function POST(request) {
     try {
-        const { topic, platform, tone, userId, mode, goal, count, ideas } = await request.json();
+        // --- 1. RATE LIMITING (IP & USER) ---
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const resObj = new NextResponse();
+        try {
+            await limiter.check(resObj, 10, ip); // Max 10 per minute per IP
+        } catch (rateErr) {
+            return NextResponse.json({ error: 'Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.' }, { status: 429, headers: resObj.headers });
+        }
 
-        if (!topic) {
+        // --- 2. VALIDACIÓN ESTRICTA (ZOD) ---
+        const body = await request.json();
+        const validation = GenerateScriptSchema.safeParse(body);
+
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Faltan campos obligatorios: tema.' },
+                { error: 'Datos de entrada inválidos', details: validation.error.errors },
                 { status: 400 }
             );
         }
 
-        // Limit count to 4 for "single" mode
-        const requestedCount = Math.min(Number(count) || 1, 4);
+        const { topic, platform, tone, userId, count, goal, ideas } = validation.data;
+        const requestedCount = count || 1;
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1,16 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { GeneratePlanSchema } from '@/lib/validations';
+import rateLimit from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+    interval: 60 * 1000,
+    uniqueTokenPerInterval: 500,
+});
 
 export async function POST(request) {
     try {
-        const { description, platforms, frequency, focus, tone, context, userId } = await request.json();
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const resObj = new NextResponse();
+        try {
+            await limiter.check(resObj, 5, ip); // Max 5 generative plans per minute
+        } catch (rateErr) {
+            return NextResponse.json({ error: 'Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.' }, { status: 429, headers: resObj.headers });
+        }
 
-        if (!description || !platforms || !frequency || !focus || !tone) {
+        const body = await request.json();
+        const validation = GeneratePlanSchema.safeParse(body);
+
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Faltan campos obligatorios para generar el plan mensual.' },
+                { error: 'Datos de entrada inválidos para crear plan', details: validation.error.errors },
                 { status: 400 }
             );
         }
+
+        const { description, platforms, frequency, focus, tone, context, userId } = validation.data;
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

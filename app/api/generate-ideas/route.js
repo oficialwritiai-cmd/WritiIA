@@ -1,10 +1,33 @@
 import { NextResponse } from 'next/server';
+import { GenerateIdeasSchema } from '@/lib/validations';
+import rateLimit from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+    interval: 60 * 1000,
+    uniqueTokenPerInterval: 500,
+});
 
 export async function POST(req) {
     try {
-        const { context, platforms, useSEO, useTikTok, goal, count, userId } = await req.json();
+        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+        const resObj = new NextResponse();
+        try {
+            await limiter.check(resObj, 15, ip); // Max 15 generation of ideas per minute
+        } catch (rateErr) {
+            return NextResponse.json({ error: 'Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.' }, { status: 429, headers: resObj.headers });
+        }
 
-        if (!userId) throw new Error('Usuario no autenticado');
+        const body = await req.json();
+        const validation = GenerateIdeasSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Datos de entrada inválidos para crear ideas', details: validation.error.errors },
+                { status: 400 }
+            );
+        }
+
+        const { context, platforms, useSEO, useTikTok, goal, count, userId } = validation.data;
 
         const systemPrompt = `Actúas como estratega de contenido viral en español, especializado en contenido corto (Reels, TikTok, Shorts) y formatos largos (YouTube, Blog/SEO). Tienes conocimiento actualizado sobre tendencias, formatos y temas que están funcionando bien en los últimos meses.
 

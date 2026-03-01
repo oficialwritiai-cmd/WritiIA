@@ -34,7 +34,7 @@ export default function LoginPage() {
             if (mode === 'register') {
                 if (!accessKey.trim()) throw new Error('Se requiere una llave de acceso para el registro.');
 
-                const isMasterKey = accessKey.trim() === 'WRITI-BETA-1813';
+                const isMasterKey = accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY;
                 let keyData = null;
 
                 if (!isMasterKey) {
@@ -110,7 +110,7 @@ export default function LoginPage() {
 
                 // If logged in successfully, check if we need to apply master key privileges
                 // This allows the admin to regain status if they login normally
-                if (accessKey.trim() === 'WRITI-BETA-1813') {
+                if (process.env.NEXT_PUBLIC_MASTER_KEY && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY) {
                     await supabase.from('users_profiles').update({
                         plan: 'pro',
                         is_admin: true
