@@ -107,6 +107,14 @@ export default function LandingPage() {
 
     return (
         <div className="landing">
+            {/* ═══ TOP BANNER ═══ */}
+            <div style={{ background: '#080808', color: '#888888', padding: '12px 0', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '40px', flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#9D00FF' }}>🛡️</span> GARANTÍA DE Cancelación En 1 Clic</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#7ECECA' }}>🔒</span> PAGO 100% SEGURO STRIPE</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#FFD700' }}>⚡</span> ACCESO INMEDIATO</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><span style={{ color: '#00F3FF' }}>👥</span> +100 CREADORES ACTIVOS</span>
+            </div>
+
             {/* ═══ NAVBAR ═══ */}
             <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
                 <Link href="/" style={{ textDecoration: 'none' }}>
@@ -276,10 +284,11 @@ export default function LandingPage() {
 
                         <ul className="pricing-features" style={{ marginBottom: '40px' }}>
                             <li>Generador de guiones para Reels, TikTok, Shorts, LinkedIn y X</li>
+                            <li><strong>NUEVO:</strong> Generador de ideas de contenido virales</li>
                             <li>Cerebro IA: memoria de tu biografía, público, valores y nicho</li>
                             <li>Plan mensual de contenido con ideas para todo el mes</li>
                             <li>Editor avanzado de guiones con IA (gancho, desarrollo y CTA)</li>
-                            <li>Biblioteca de guiones guardados</li>
+                            <li>Biblioteca de guiones con guardado e historial automático</li>
                             <li>Calendario de contenido con asignación en 1 clic</li>
                             <li>Exportar/descargar guiones en texto</li>
                             <li>Métricas básicas de uso y créditos de IA</li>
