@@ -141,63 +141,23 @@ Responde solo con JSON válido:
   }
 ]`;
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: 'claude-3-haiku-20240307',
-                max_tokens: 4096,
-                temperature: 0.8,
-                system: systemPrompt,
-                messages: [{
-                    role: 'user',
-                    content: `Genera exactamente ${requestedCount} guiones virales sobre: ${topic}. 
-                    Plataforma: ${platform}. 
-                    Objetivo: ${goal || 'Autoridad y Engagement'}. 
-                    Tono: ${tone}. 
-                    Detalles extra: ${ideas || 'Ninguno'}.
-                    Asegúrate de que cada guión tenga un ángulo totalmente diferente.`
-                }],
-            }),
+        // Sonnet is used for full script generation (see lib/anthropic.js)
+        const userMessage = `Genera exactamente ${requestedCount} guiones virales sobre: ${topic}.
+Plataforma: ${platform}.
+Objetivo: ${goal || 'Autoridad y Engagement'}.
+Tono: ${tone}.
+Detalles extra: ${ideas || 'Ninguno'}.
+Asegúrate de que cada guión tenga un ángulo totalmente diferente.`;
+
+        const { parsed: results, usage } = await generateScriptsWithSonnet({
+            apiKey,
+            systemPrompt,
+            userMessage,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'Error de Anthropic API');
-        }
-
-        const data = await response.json();
-        const content = data.content?.[0]?.text || '';
-
-        let results = [];
-        try {
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                results = JSON.parse(jsonMatch[0]);
-            } else {
-                // Try parsing as object if array not found
-                const objMatch = content.match(/\{[\s\S]*\}/);
-                if (objMatch) {
-                    const obj = JSON.parse(objMatch[0]);
-                    results = obj.scripts || (Array.isArray(obj) ? obj : [obj]);
-                }
-            }
-        } catch (parseErr) {
-            console.error('Error parseando JSON de IA:', content);
-            throw new Error('La IA devolvió un formato inválido. Intenta de nuevo.');
-        }
-
-        if (!Array.isArray(results)) {
-            results = [results];
-        }
-
-        // Usage Logging (Sonnet 3.5: $3/1M in, $15/1M out)
-        const inTokens = data.usage?.input_tokens || 0;
-        const outTokens = data.usage?.output_tokens || 0;
+        // results already parsed array; usage contains token usage for logging
+        const inTokens = usage?.input_tokens || 0;
+        const outTokens = usage?.output_tokens || 0;
         const totalTokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
 
         // Approx cost in EUR
