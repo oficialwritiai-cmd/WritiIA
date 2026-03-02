@@ -1,0 +1,6 @@
+﻿Model: claude-3-sonnet-20240229 | Status: 404
+Error: model: claude-3-sonnet-20240229
+Model: claude-2.1 | Status: 404
+Error: model: claude-2.1
+Model: claude-instant-1.2 | Status: 404
+Error: model: claude-instant-1.2

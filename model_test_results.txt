@@ -1,0 +1,20 @@
+﻿Testing claude-3-5-sonnet-latest...
+Model: claude-3-5-sonnet-latest | Status: 404
+Error: model: claude-3-5-sonnet-latest
+---
+Testing claude-3-5-sonnet-20241022...
+Model: claude-3-5-sonnet-20241022 | Status: 404
+Error: model: claude-3-5-sonnet-20241022
+---
+Testing claude-3-5-sonnet-20240620...
+Model: claude-3-5-sonnet-20240620 | Status: 404
+Error: model: claude-3-5-sonnet-20240620
+---
+Testing claude-3-haiku-20240307...
+Model: claude-3-haiku-20240307 | Status: 200
+SUCCESS with claude-3-haiku-20240307!
+---
+Testing claude-3-opus-20240229...
+Model: claude-3-opus-20240229 | Status: 404
+Error: model: claude-3-opus-20240229
+---
