@@ -325,17 +325,25 @@ export default function DashboardLayout({ children }) {
                     </div>
                 </header>
 
-                <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)' }}>
+                <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
                     {children}
                 </main>
             </div>
 
             <style jsx>{`
                 .app-layout { display: flex; height: 100vh; overflow: hidden; }
-                .sidebar { width: 240px; padding: 24px; display: flex; flex-direction: column; background: var(--bg-sidebar); }
-                .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+                .sidebar { width: 240px; padding: 24px; display: flex; flex-direction: column; background: var(--bg-sidebar); flex-shrink: 0; }
+                .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+                .main-content { flex: 1; overflow-y: auto; }
                 .sidebar-nav { display: flex; flex-direction: column; }
                 .sidebar-btn { display: flex; align-items: center; gap: 12px; text-decoration: none; transition: 0.2s; }
+                
+                @media (max-width: 768px) {
+                    .app-layout { position: relative; }
+                    .sidebar { display: none !important; }
+                    .main-wrapper { width: 100% !important; max-width: 100% !important; }
+                    .main-content { padding: 16px !important; width: 100% !important; max-width: 100% !important; }
+                }
             `}</style>
         </div>
     );

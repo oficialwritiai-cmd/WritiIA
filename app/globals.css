@@ -200,17 +200,34 @@ h4 {
 }
 
 @media (max-width: 768px) {
-  .sidebar {
-    display: none; /* Sidebar hidden by default on mobile */
+  .dashboard-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
-  .topbar {
-    padding: 0 16px;
-    height: 64px;
+  .sidebar {
+    display: none !important;
+  }
+
+  .app-layout {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  .main-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
   }
 
   .main-content {
-    padding: 16px;
+    padding: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
   }
 
   .desktop-only {
@@ -219,6 +236,11 @@ h4 {
 
   .mobile-menu-btn {
     display: flex !important;
+  }
+
+  .topbar {
+    padding: 0 16px;
+    height: 64px;
   }
 
   .topbar > div:first-child {
