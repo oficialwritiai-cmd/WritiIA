@@ -124,7 +124,7 @@ export default function DashboardPage() {
         setError('');
 
         try {
-            const res = await fetch('/api/generate', {
+            const res = await fetch('/api/generate-scripts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -406,7 +406,7 @@ export default function DashboardPage() {
         setGeneratingSlotId(slot.id);
 
         try {
-            const res = await fetch('/api/generate', {
+            const res = await fetch('/api/generate-scripts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

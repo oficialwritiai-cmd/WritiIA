@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 
 export default function DashboardLayout({ children }) {
@@ -77,6 +77,7 @@ export default function DashboardLayout({ children }) {
 
     const navItems = [
         { href: '/dashboard', icon: PenLine, label: 'Nuevo Guión' },
+        { href: '/dashboard/estrategia', icon: Target, label: 'Estrategia' },
         { href: '/dashboard/ideas-virales', icon: Sparkles, label: 'Ideas virales' },
         { href: '/dashboard/library', icon: BookOpen, label: 'Biblioteca' },
         { href: '/dashboard/knowledge', icon: Brain, label: 'Cerebro IA' },
@@ -189,7 +190,7 @@ export default function DashboardLayout({ children }) {
 
             <div className="main-wrapper">
                 {/* Mobile menu button */}
-                <button 
+                <button
                     className="mobile-menu-btn"
                     onClick={() => setSidebarOpen(!sidebarOpen)}
                     style={{
@@ -215,7 +216,7 @@ export default function DashboardLayout({ children }) {
 
                 {/* Mobile Sidebar Overlay */}
                 {sidebarOpen && (
-                    <div 
+                    <div
                         style={{
                             position: 'fixed',
                             inset: 0,
