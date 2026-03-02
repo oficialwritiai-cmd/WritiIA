@@ -69,6 +69,8 @@ export async function POST(request) {
         }
 
         const apiKey = process.env.ANTHROPIC_API_KEY;
+        console.log(`[GenerateScripts] Env Key detected: ${apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'} (Length: ${apiKey?.length || 0})`);
+
         if (!apiKey) {
             return NextResponse.json({ error: 'La API Key de Claude no está configurada en el servidor.' }, { status: 500 });
         }
