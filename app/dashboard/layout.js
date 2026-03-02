@@ -88,15 +88,7 @@ export default function DashboardLayout({ children }) {
     return (
         <div className="app-layout" style={{ background: '#050505' }}>
             {/* Sidebar Lucide (Icons Only) */}
-            <aside className="sidebar" style={{
-                width: '80px',
-                padding: '24px 0',
-                borderRight: '1px solid var(--border)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                background: '#050505'
-            }}>
+            <aside className="sidebar">
                 <div style={{ marginBottom: '40px' }}>
                     <Link href="/" style={{ textDecoration: 'none' }}>
                         <Logo mobile={true} />

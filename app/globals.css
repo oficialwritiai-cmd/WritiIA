@@ -189,13 +189,46 @@ h4 {
 }
 
 .sidebar {
-  width: 260px;
+  width: 260px; /* Ancho por defecto para desktop */
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
   gap: 40px;
+  transition: width 0.3s ease; /* Transición para el ancho */
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 70px; /* Ancho reducido para móviles (solo iconos) */
+    padding: 24px 0; /* Ajuste de padding */
+    align-items: center;
+  }
+
+  .topbar {
+    padding: 0 20px; /* Reduce padding en topbar para móviles */
+  }
+
+  .main-content {
+    padding: 20px; /* Reduce padding en main-content para móviles */
+  }
+
+  .topbar > div:first-child {
+    gap: 16px; /* Ajusta el espacio entre elementos del logo/usuario */
+  }
+
+  .topbar .badge {
+    display: none; /* Oculta el badge de plan en móvil si está muy apretado */
+  }
+
+  .topbar button.btn-secondary {
+    display: none; /* Oculta el botón 'Deposit Credits' en móvil */
+  }
+
+  .topbar > div:last-child {
+    gap: 10px; /* Ajusta el espacio entre iconos de la derecha */
+  }
 }
 
 .main-wrapper {
