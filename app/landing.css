@@ -62,12 +62,26 @@
     margin: 0 auto 40px;
 }
 
-.hero-ctas {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 48px;
-}
+    .hero-ctas {
+        display: flex;
+        flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 48px;
+    }
+
+    @media (max-width: 640px) {
+        .hero-ctas {
+            flex-direction: column; /* Apila los botones en pantallas muy pequeñas */
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hero-ctas a, .hero-ctas button {
+            width: 100%; /* Asegura que los botones ocupen todo el ancho */
+            max-width: 300px; /* Limita el ancho máximo para no ser demasiado grandes en tabletas */
+        }
+    }
 
 /* ── Sections ── */
 section {
@@ -90,14 +104,32 @@ section {
 }
 
 /* ── Grid Layouts ── */
-.pain-grid,
-.steps-grid,
-.testimonial-grid,
-.pricing-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
-}
+    .pain-grid,
+    .steps-grid,
+    .testimonial-grid,
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+        .pain-grid,
+        .steps-grid,
+        .testimonial-grid,
+        .pricing-grid {
+            grid-template-columns: 1fr; /* Una sola columna en móvil */
+        }
+    }
+
+    @media (max-width: 480px) {
+        .pain-grid,
+        .steps-grid,
+        .testimonial-grid,
+        .pricing-grid {
+            padding: 0 16px; /* Reduce padding para pantallas muy pequeñas */
+        }
+    }
 
 /* ── Cards ── */
 .pain-card,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GenerateScriptSchema } from '@/lib/validations';
 import rateLimit from '@/lib/rate-limit';
+import { generateScriptsWithSonnet } from '@/lib/anthropic';
 
 const limiter = rateLimit({
     interval: 60 * 1000, // 60 seconds
@@ -158,7 +159,7 @@ Asegúrate de que cada guión tenga un ángulo totalmente diferente.`;
         // results already parsed array; usage contains token usage for logging
         const inTokens = usage?.input_tokens || 0;
         const outTokens = usage?.output_tokens || 0;
-        const totalTokens = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0);
+        const totalTokens = (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
 
         // Approx cost in EUR
         const estimatedCost = ((inTokens * 3 / 1000000) + (outTokens * 15 / 1000000)) * 0.95;
