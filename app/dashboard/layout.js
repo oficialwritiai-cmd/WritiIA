@@ -188,14 +188,114 @@ export default function DashboardLayout({ children }) {
             </aside>
 
             <div className="main-wrapper">
+                {/* Mobile menu button */}
+                <button 
+                    className="mobile-menu-btn"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    style={{
+                        display: 'none',
+                        position: 'fixed',
+                        bottom: 20,
+                        left: 20,
+                        zIndex: 1000,
+                        width: 56,
+                        height: 56,
+                        borderRadius: '50%',
+                        background: 'var(--accent-gradient)',
+                        border: 'none',
+                        color: 'white',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 20px rgba(157, 0, 255, 0.5)',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <Menu size={24} />
+                </button>
+
+                {/* Mobile Sidebar Overlay */}
+                {sidebarOpen && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.8)',
+                            zIndex: 999,
+                            display: 'flex'
+                        }}
+                        onClick={() => setSidebarOpen(false)}
+                    >
+                        <aside style={{
+                            width: '260px',
+                            background: 'var(--bg-sidebar)',
+                            padding: 24,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 20
+                        }}>
+                            <div style={{ marginBottom: 20 }}>
+                                <Link href="/" style={{ textDecoration: 'none' }}>
+                                    <Logo mobile={true} />
+                                </Link>
+                            </div>
+                            <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {navItems.map((item) => {
+                                    const Icon = item.icon;
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setSidebarOpen(false)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 12,
+                                                padding: '14px 16px',
+                                                borderRadius: 12,
+                                                background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
+                                                color: isActive ? '#7ECECA' : '#888888',
+                                                textDecoration: 'none',
+                                                fontSize: '0.95rem',
+                                                fontWeight: 500
+                                            }}
+                                        >
+                                            <Icon size={20} />
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+                            </nav>
+                            <button
+                                onClick={() => { handleLogout(); setSidebarOpen(false); }}
+                                style={{
+                                    marginTop: 'auto',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#888888',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    padding: '14px 16px',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 500
+                                }}
+                            >
+                                <LogOut size={20} />
+                                Cerrar sesión
+                            </button>
+                        </aside>
+                    </div>
+                )}
                 {/* Topbar refined */}
                 <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                         <Link href="/" style={{ textDecoration: 'none' }}>
                             <Logo />
                         </Link>
-                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="desktop-only" style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
+                        <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', padding: '8px', cursor: 'pointer' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
                             </div>
@@ -212,7 +312,7 @@ export default function DashboardLayout({ children }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                         <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.8rem' }}>Deposit Credits</button>
 
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>

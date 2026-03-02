@@ -499,7 +499,7 @@ export default function DashboardPage() {
                     <button onClick={() => alert('Próximamente...')} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
                 </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+            <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 {[
                     { label: 'Generaciones Realizadas', val: stats.monthGenerations, sub: 'Mes actual', color: '#9D00FF' },
                     { label: 'Guiones Guardados', val: stats.saved, sub: 'Total histórico', color: '#F59E0B' },
@@ -556,7 +556,7 @@ export default function DashboardPage() {
                         {generationMode === 'single' ? (
                             <>
                                 {/* Opciones Modo Single */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                                     <div>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataforma</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -575,7 +575,7 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                                     <div>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivo del Contenido</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -594,7 +594,7 @@ export default function DashboardPage() {
                         ) : (
                             <>
                                 {/* Opciones Modo Plan Mensual */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                                     <div>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas (Multiselección)</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -612,7 +612,7 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                                     <div>
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Enfoque Principal del Mes</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>

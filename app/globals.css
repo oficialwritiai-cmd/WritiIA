@@ -201,33 +201,87 @@ h4 {
 
 @media (max-width: 768px) {
   .sidebar {
-    width: 70px; /* Ancho reducido para móviles (solo iconos) */
-    padding: 24px 0; /* Ajuste de padding */
-    align-items: center;
+    display: none; /* Sidebar hidden by default on mobile */
   }
 
   .topbar {
-    padding: 0 20px; /* Reduce padding en topbar para móviles */
+    padding: 0 16px;
+    height: 64px;
   }
 
   .main-content {
-    padding: 20px; /* Reduce padding en main-content para móviles */
+    padding: 16px;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex !important;
   }
 
   .topbar > div:first-child {
-    gap: 16px; /* Ajusta el espacio entre elementos del logo/usuario */
+    gap: 8px;
   }
 
   .topbar .badge {
-    display: none; /* Oculta el badge de plan en móvil si está muy apretado */
+    display: none;
   }
 
   .topbar button.btn-secondary {
-    display: none; /* Oculta el botón 'Deposit Credits' en móvil */
+    display: none;
   }
 
   .topbar > div:last-child {
-    gap: 10px; /* Ajusta el espacio entre iconos de la derecha */
+    gap: 8px;
+  }
+
+  .topbar > div:first-child > a,
+  .topbar > div:first-child > div {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .premium-card {
+    padding: 16px;
+  }
+  
+  .btn-primary {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+  }
+
+  .input-field,
+  .textarea-field {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+
+  h1, h2 {
+    font-size: 1.5rem !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  .premium-card h2 {
+    font-size: 1.3rem !important;
+  }
+
+  .premium-card h3 {
+    font-size: 1rem !important;
   }
 }
 
@@ -327,7 +381,18 @@ h4 {
   animation: spin 1s linear infinite;
 }
 
-/* ── Hide scrollbar ── */
+.mobile-menu-btn {
+  display: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 ::-webkit-scrollbar {
   width: 8px;
 }
