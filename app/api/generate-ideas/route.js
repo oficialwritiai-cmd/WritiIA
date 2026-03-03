@@ -132,24 +132,19 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
             return NextResponse.json({ error: 'No se pudieron generar ideas. Intenta de nuevo con otros parámetros.' }, { status: 500 });
         }
 
-        // Save to library (don't fail if this errors)
-        try {
-            const { saveToLibrary } = await import('@/lib/library');
-            for (const idea of ideasArray) {
-                if (idea && idea.titulo_idea) {
-                    await saveToLibrary({
-                        userId,
-                        type: 'idea',
-                        platform: idea.plataforma || 'General',
-                        goal: idea.objetivo || goal,
-                        content: idea,
-                        tags: ['idea', idea.plataforma].filter(Boolean)
-                    }).catch(err => console.error('[generate-ideas] Save error:', err));
-                }
+        // Save to library (MANDATORY - fail if can't save)
+        const { saveToLibrary } = await import('@/lib/library');
+        for (const idea of ideasArray) {
+            if (idea && (idea.titulo || idea.titulo_idea)) {
+                await saveToLibrary({
+                    userId,
+                    type: 'idea',
+                    platform: idea.plataforma || 'General',
+                    goal: idea.objetivo || idea.cta || 'engagement',
+                    content: idea,
+                    tags: ['idea', 'viral', idea.plataforma].filter(Boolean)
+                });
             }
-        } catch (saveErr) {
-            console.error('[generate-ideas] Library save error:', saveErr);
-            // Continue even if save fails
         }
 
         return NextResponse.json({ ideas: ideasArray });
