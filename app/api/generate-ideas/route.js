@@ -51,16 +51,34 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1). Por favor, completa tu perfil en la página de generación de guiones.' }, { status: 400 });
         }
 
-        const systemPrompt = `Eres un estratega virales experto. ${brandContextString}
-Genera IDEAS DE CONTENIDO de alto impacto.
-Responde ÚNICAMENTE en JSON array:
+        const systemPrompt = `Eres un estratega de contenido viral experto.
+${brandContextString}
+
+Genera IDEAS DE CONTENIDO de alto impacto para redes sociales.
+
+IMPORTANTE: Responde EXCLUSIVAMENTE con un array JSON válido. Nada de texto antes o después. Sin markdown, sin código, solo JSON puro.
+
+Formato obligatorio:
 [
   {
-    "plataforma": "...",
-    "tipo_idea": "...",
-    "titulo_idea": "...",
-    "descripcion": "...",
-    "objetivo": "..."
+    "titulo": "Título corto y atractivo de la idea",
+    "hook": "Gancho de alto impacto en 1-2 frases",
+    "descripcion": "Descripción de la idea en 2-3 frases",
+    "plataforma": "Reels, TikTok, LinkedIn, X o YouTube",
+    "tipo_contenido": "educativo, autoridad, historia personal, venta o viral",
+    "cta": "Llamada a la acción recomendada"
+  }
+]
+
+Ejemplo de respuesta válida:
+[
+  {
+    "titulo": "Por qué los días de 25 horas no existen",
+    "hook": "El error que comete el 90% de los emprendedores",
+    "descripcion": "Análisis de por qué gestionar el tiempo como si tuvieras más horas es el mayor error",
+    "plataforma": "Reels",
+    "tipo_contenido": "autoridad",
+    "cta": "Sígueme para más consejos de productividad"
   }
 ]`;
 

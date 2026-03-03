@@ -117,8 +117,8 @@ export default function IdeasViralesPage() {
             const { data, error: insertError } = await supabase.from('viral_ideas').insert({
                 user_id: profile.id,
                 plataforma: idea.plataforma,
-                tipo_idea: idea.tipo_idea,
-                titulo_idea: idea.titulo_idea,
+                tipo_idea: idea.tipo_contenido || idea.tipo_idea,
+                titulo_idea: idea.titulo || idea.titulo_idea,
                 descripcion: idea.descripcion,
                 objetivo: idea.objetivo
             }).select().single();
@@ -291,44 +291,128 @@ export default function IdeasViralesPage() {
             {/* Listado de Ideas */}
             {ideas.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '20px' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Resultados: {ideas.length} ideas para tu nicho</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '24px' }}>
-                        {ideas.map((idea, idx) => (
-                            <div key={idx} className="premium-card" style={{ padding: '24px', background: '#101010', display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                                    <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.15)', color: '#D8B4FF' }}>{idea.plataforma}</span>
-                                    <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{idea.tipo_idea}</span>
-                                    <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}>{idea.objetivo}</span>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{ideas.length} ideas para tu nicho</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px', paddingBottom: '60px' }}>
+                        {ideas.map((idea, idx) => {
+                            const truncateDesc = (text, maxLines = 3) => {
+                                if (!text) return '';
+                                const lines = text.split('\n').slice(0, maxLines);
+                                let result = lines.join(' ');
+                                if (result.length > 180) result = result.substring(0, 180) + '...';
+                                else if (text.split('\n').length > maxLines) result += '... ver más';
+                                return result;
+                            };
+                            
+                            return (
+                                <div 
+                                    key={idx} 
+                                    className="premium-card" 
+                                    style={{ 
+                                        padding: '24px', 
+                                        background: 'linear-gradient(145deg, #121212 0%, #0a0a0a 100%)', 
+                                        display: 'flex', 
+                                        flexDirection: 'column',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                        borderRadius: '16px',
+                                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                    }}
+                                >
+                                    {/* Chips */}
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                        <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.15)', color: '#D8B4FF', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                            {idea.plataforma || 'Reels'}
+                                        </span>
+                                        <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                            {idea.tipo_contenido || idea.tipo_idea || 'viral'}
+                                        </span>
+                                    </div>
+
+                                    {/* Título */}
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '12px', lineHeight: '1.3', color: '#fff' }}>
+                                        {idea.titulo || idea.titulo_idea}
+                                    </h3>
+
+                                    {/* Hook destacado */}
+                                    {idea.hook && (
+                                        <div style={{ 
+                                            background: 'linear-gradient(135deg, rgba(255,0,122,0.1) 0%, rgba(157,0,255,0.1) 100%)', 
+                                            padding: '12px 16px', 
+                                            borderRadius: '12px', 
+                                            marginBottom: '12px',
+                                            borderLeft: '3px solid #FF007A'
+                                        }}>
+                                            <p style={{ fontSize: '0.8rem', color: '#FF007A', fontWeight: 700, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hook</p>
+                                            <p style={{ fontSize: '0.9rem', color: '#fff', lineHeight: '1.4', fontWeight: 500 }}>
+                                                {idea.hook}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Descripción */}
+                                    <p style={{ 
+                                        fontSize: '0.9rem', 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        lineHeight: '1.5', 
+                                        flex: 1, 
+                                        marginBottom: '16px' 
+                                    }}>
+                                        {truncateDesc(idea.descripcion, 3)}
+                                    </p>
+
+                                    {/* CTA */}
+                                    {idea.cta && (
+                                        <div style={{ 
+                                            background: 'rgba(126, 206, 202, 0.08)', 
+                                            padding: '10px 14px', 
+                                            borderRadius: '8px',
+                                            marginBottom: '16px',
+                                            border: '1px solid rgba(126, 206, 202, 0.15)'
+                                        }}>
+                                            <p style={{ fontSize: '0.7rem', color: '#7ECECA', fontWeight: 700, marginBottom: '2px', textTransform: 'uppercase' }}>CTA</p>
+                                            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>{idea.cta}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Botones */}
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: 'auto' }}>
+                                        <button
+                                            onClick={() => handleConvertToScript(idea)}
+                                            className="btn-primary"
+                                            style={{ 
+                                                flex: 1, 
+                                                padding: '10px 0', 
+                                                fontSize: '0.8rem',
+                                                background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                                borderRadius: '10px'
+                                            }}
+                                        >
+                                            <PenLine size={14} style={{ marginRight: '6px' }} /> Convertir a guion
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleSaveIdea(idea, idx)}
+                                            disabled={savedIdeasIds.has(idx)}
+                                            className="btn-secondary"
+                                            style={{ 
+                                                padding: '10px 16px', 
+                                                fontSize: '0.8rem', 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                gap: '6px', 
+                                                background: savedIdeasIds.has(idx) ? 'rgba(126, 206, 202, 0.15)' : '', 
+                                                color: savedIdeasIds.has(idx) ? '#7ECECA' : 'rgba(255,255,255,0.7)', 
+                                                borderColor: savedIdeasIds.has(idx) ? 'rgba(126, 206, 202, 0.3)' : '',
+                                                borderRadius: '10px',
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            {savedIdeasIds.has(idx) ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '12px', lineHeight: '1.3' }}>
-                                    {idea.titulo_idea}
-                                </h3>
-
-                                <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5', flex: 1, marginBottom: '24px' }}>
-                                    {idea.descripcion}
-                                </p>
-
-                                <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
-                                    <button
-                                        onClick={() => handleConvertToScript(idea)}
-                                        className="btn-primary"
-                                        style={{ flex: 1, padding: '10px 0', fontSize: '0.85rem' }}
-                                    >
-                                        <PenLine size={16} /> Convertir a guion
-                                    </button>
-
-                                    <button
-                                        onClick={() => handleSaveIdea(idea, idx)}
-                                        disabled={savedIdeasIds.has(idx)}
-                                        className="btn-secondary"
-                                        style={{ padding: '10px 20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', background: savedIdeasIds.has(idx) ? 'rgba(126, 206, 202, 0.1)' : '', color: savedIdeasIds.has(idx) ? '#7ECECA' : '', borderColor: savedIdeasIds.has(idx) ? 'rgba(126, 206, 202, 0.3)' : '' }}
-                                    >
-                                        {savedIdeasIds.has(idx) ? <><CheckCircle2 size={16} /> Guardado</> : <><Save size={16} /> Guardar</>}
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
