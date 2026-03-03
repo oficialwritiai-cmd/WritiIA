@@ -119,9 +119,26 @@ Genera ${requestedCount} guiones únicos.`;
             userMessage,
         });
 
+        // Ensure results is always an array
+        let scriptsArray = [];
+        if (Array.isArray(results)) {
+            scriptsArray = results;
+        } else if (typeof results === 'string') {
+            try {
+                const parsed = JSON.parse(results);
+                scriptsArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                scriptsArray = [];
+            }
+        }
+
+        if (scriptsArray.length === 0) {
+            return NextResponse.json({ error: 'No se pudieron generar guiones. Intenta de nuevo.' }, { status: 500 });
+        }
+
         // 2. Save each to Library (new unified table)
         const { saveToLibrary } = await import('@/lib/library');
-        for (const res of results) {
+        for (const res of scriptsArray) {
             await saveToLibrary({
                 userId,
                 type: 'guion',
@@ -142,7 +159,7 @@ Genera ${requestedCount} guiones únicos.`;
         // Log usage & charge credits
         await supabase.rpc('increment_used_credits', { u_id: userId, amount: cost });
 
-        return NextResponse.json({ scripts: results });
+        return NextResponse.json({ scripts: scriptsArray });
 
     } catch (err) {
         console.error('Error en generate-scripts:', err);

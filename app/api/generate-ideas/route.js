@@ -61,12 +61,30 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
         const { parsed: ideas } = await generateIdeasWithHaiku({
             apiKey,
             systemPrompt,
-            userMessage: userPrompt,
+            userMessage,
         });
+
+        // Ensure ideas is always an array
+        let ideasArray = [];
+        if (Array.isArray(ideas)) {
+            ideasArray = ideas;
+        } else if (typeof ideas === 'string') {
+            // Try to parse if it's a string
+            try {
+                const parsed = JSON.parse(ideas);
+                ideasArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                ideasArray = [];
+            }
+        }
+
+        if (ideasArray.length === 0) {
+            return NextResponse.json({ error: 'No se pudieron generar ideas. Intenta de nuevo.' }, { status: 500 });
+        }
 
         // Save to library
         const { saveToLibrary } = await import('@/lib/library');
-        for (const idea of ideas) {
+        for (const idea of ideasArray) {
             await saveToLibrary({
                 userId,
                 type: 'idea',
@@ -77,7 +95,7 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
             });
         }
 
-        return NextResponse.json({ ideas });
+        return NextResponse.json({ ideas: ideasArray });
 
     } catch (error) {
         console.error("Error en generate-ideas:", error);
