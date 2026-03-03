@@ -25,11 +25,22 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
         }
 
-        const { context, platforms, useSEO, useTikTok, goal, count } = validation.data;
+        const { context, platforms, useSEO, useTikTok, goal, count, userId } = validation.data;
         const apiKey = process.env.ANTHROPIC_API_KEY;
 
-        const systemPrompt = `Eres un estratega de contenido viral en español.
-Genera IDEAS DE CONTENIDO (no guiones) para las plataformas seleccionadas.
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+        let brandContextString = '';
+        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        if (brandBrain) {
+            brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
+        } else {
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
+        }
+
+        const systemPrompt = `Eres un estratega virales experto. ${brandContextString}
+Genera IDEAS DE CONTENIDO de alto impacto.
 Responde ÚNICAMENTE en JSON array:
 [
   {
@@ -52,6 +63,19 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
             systemPrompt,
             userMessage: userPrompt,
         });
+
+        // Save to library
+        const { saveToLibrary } = await import('@/lib/library');
+        for (const idea of ideas) {
+            await saveToLibrary({
+                userId,
+                type: 'idea',
+                platform: idea.plataforma,
+                goal: idea.objetivo,
+                content: idea,
+                tags: ['idea', idea.plataforma]
+            });
+        }
 
         return NextResponse.json({ ideas });
 

@@ -50,7 +50,34 @@ Responde ÚNICAMENTE en JSON array:
   }
 ]`;
 
-        const userMessage = `Descripción: ${description}. Frecuencia: ${frequency} (${postCount} posts). Plataformas: ${platforms.join(', ')}. Enfoque: ${focus}. Tono: ${tone}.`;
+        let brandContextString = '';
+        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+
+        if (brandBrain) {
+            brandContextString = `
+PERFIL DEL CREADOR (Cerebro IA):
+- Bio/Quién es: ${brandBrain.biography || ''}
+- Qué vende/Productos: ${brandBrain.products_services || ''}
+- A quién ayuda: ${brandBrain.audience || ''}
+- Estilo: ${brandBrain.style_words || ''}
+- Tono general: ${brandBrain.values_tone || ''}
+`;
+        } else {
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
+        }
+
+        const systemPrompt = `Eres un estratega de contenido premium especializado en planes mensuales agresivos y persuasivos.
+Tu misión es crear piezas que no parezcan escritas por una IA. 
+
+REGLAS DE ORO:
+1. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
+2. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
+3. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
+
+${brandContextString}
+
+${systemPrompt}
+
 
         const { parsed: results, usage } = await generateIdeasWithHaiku({
             apiKey,

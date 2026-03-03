@@ -29,7 +29,10 @@ export async function POST(request) {
             );
         }
 
-        const { topic, platform, tone, userId, count, goal, ideas } = validation.data;
+        const {
+            topic, platform, tone, userId, count, goal, ideas,
+            awareness, victory, opinion, story, hookType, intensity
+        } = validation.data;
         const requestedCount = count || 1;
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,81 +43,75 @@ export async function POST(request) {
             return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
         }
 
-        // 1. Credit Check (5 credits per generation session)
+        // 1. Credit Check (5 credits)
         const { data: credits, error: creditError } = await supabase
             .from('ai_credits')
             .select('*')
             .eq('user_id', userId)
             .single();
 
-        if (creditError) {
-            if (creditError.code === 'PGRST116') {
-                const { data: newCredits } = await supabase.from('ai_credits').insert({ user_id: userId, total_credits: 200, used_credits: 0 }).select().single();
-                if (!newCredits) throw new Error('No se pudieron inicializar tus créditos.');
-            } else {
-                throw new Error('Error al verificar tus créditos de IA.');
-            }
-        }
-
         const cost = 5;
-        const totalCredits = credits?.total_credits || 200;
-        const usedCredits = credits?.used_credits || 0;
-        const available = totalCredits - usedCredits;
-
-        if (available < cost) {
-            return NextResponse.json(
-                { error: 'Has agotado tus créditos de IA. Actualiza tu plan o compra más créditos.' },
-                { status: 402 }
-            );
+        if (credits && (credits.total_credits - credits.used_credits) < cost) {
+            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
         }
 
         const apiKey = process.env.ANTHROPIC_API_KEY;
-        console.log(`[GenerateScripts] Env Key detected: ${apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'} (Length: ${apiKey?.length || 0})`);
-
-        if (!apiKey) {
-            return NextResponse.json({ error: 'La API Key de Claude no está configurada en el servidor.' }, { status: 500 });
-        }
 
         let brandContextString = '';
         const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
 
         if (brandBrain) {
             brandContextString = `
-CONTEXTO DE MARCA (Cerebro IA):
-- Bio: ${brandBrain.biography || ''}
-- Audiencia: ${brandBrain.audience || ''}
-- Tono: ${brandBrain.values_tone || ''}
-- Nicho: ${brandBrain.niche_topics || ''}
+PERFIL DEL CREADOR (Cerebro IA):
+- Bio/Quién es: ${brandBrain.biography || ''}
+- Qué vende/Productos: ${brandBrain.products_services || ''}
+- A quién ayuda: ${brandBrain.audience || ''}
+- Estilo: ${brandBrain.style_words || ''}
+- Tono general: ${brandBrain.values_tone || ''}
 `;
+        } else {
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
-        const systemPrompt = `Eres un guionista experto en contenido viral (Reels, TikTok, Shorts, LinkedIn) en español.
-Dominas la psicología de la atención y el storytelling corto.
-Siempre adaptas el tono al CONTEXTO DE MARCA del usuario.
+        const systemPrompt = `Eres un estratega de contenido premium especializado en guiones virales agresivos y persuasivos.
+Tu misión es crear piezas que no parezcan escritas por una IA. 
 
-REGLAS:
-- Gancho fuerte (provoca curiosidad).
-- Desarrollo accionable y concreto.
-- CTA única y clara.
-- NO uses frases genéricas de IA como "en este vídeo...".
+REGLAS DE ORO:
+1. GANCHOS (HOOKS): Deben ser ultra-específicos. Nada de "¿Quieres saber cómo...?". Usa la intensidad ${intensity}/5.
+2. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
+3. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
+4. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
 
 ${brandContextString}
 
-Responde SOLO en JSON:
+ESTILO DE RESPUESTA:
+Debes generar un JSON array de objetos con esta estructura:
 [
   {
-    "titulo_angulo": "nombre del ángulo",
-    "gancho": "texto del gancho",
-    "desarrollo": ["punto 1", "punto 2", "punto 3"],
-    "cta": "texto de la llamada a la acción"
+    "titulo_angulo": "...",
+    "hook_principal": "Hook principal muy potente basado en el tipo: ${hookType}",
+    "hook_alternativo_1": "Variante extrema",
+    "hook_alternativo_2": "Variante intrigante",
+    "guion_detallado": "El cuerpo del guion con frases cortas y ritmo",
+    "cta": "Llamada a la acción coherente con el objetivo"
   }
 ]`;
 
-        const userMessage = `Genera ${requestedCount} guiones sobre: ${topic}. 
-Plataforma: ${platform}. 
-Objetivo: ${goal || 'Autoridad'}. 
-Tono: ${tone}. 
-Ideas extra: ${ideas || 'Ninguna'}.`;
+        const userMessage = `
+CONTEXTO DEL CONTENIDO:
+- Tema: ${topic}
+- Objetivo: ${goal}
+- Plataforma: ${platform}
+- Nivel de awareness: ${awareness}
+- Tono deseado: ${tone}
+- Tipo de gancho: ${hookType}
+- Intensidad de gancho: ${intensity}/5
+- Victoria/Fracaso: ${victory || 'N/A'}
+- Opinión impopular: ${opinion || 'N/A'}
+- Caso real/Situación: ${story || 'N/A'}
+- Notas extra: ${ideas || 'Ninguna'}
+
+Genera ${requestedCount} guiones únicos.`;
 
         const { parsed: results, usage } = await generateScriptsWithSonnet({
             apiKey,
@@ -122,17 +119,27 @@ Ideas extra: ${ideas || 'Ninguna'}.`;
             userMessage,
         });
 
+        // 2. Save each to Library (new unified table)
+        const { saveToLibrary } = await import('@/lib/library');
+        for (const res of results) {
+            await saveToLibrary({
+                userId,
+                type: 'guion',
+                platform,
+                goal,
+                content: res,
+                metadata: {
+                    awareness,
+                    hookType,
+                    intensity,
+                    tone,
+                    topic
+                },
+                tags: [platform, goal, tone].filter(Boolean)
+            });
+        }
+
         // Log usage & charge credits
-        const totalTokens = (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
-        const estimatedCost = (((usage?.input_tokens || 0) * 3 / 1000000) + ((usage?.output_tokens || 0) * 15 / 1000000)) * 0.95;
-
-        await supabase.from('usage_logs').insert({
-            user_id: userId,
-            action: 'generate_scripts',
-            tokens_used: totalTokens,
-            cost_eur: estimatedCost
-        });
-
         await supabase.rpc('increment_used_credits', { u_id: userId, amount: cost });
 
         return NextResponse.json({ scripts: results });
