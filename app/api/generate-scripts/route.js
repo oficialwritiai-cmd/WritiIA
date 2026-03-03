@@ -163,6 +163,10 @@ Genera ${requestedCount} guiones únicos.`;
 
     } catch (err) {
         console.error('Error en generate-scripts:', err);
-        return NextResponse.json({ error: err.message || 'Error interno' }, { status: 500 });
+        const errorMsg = err.message || 'Error interno';
+        if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded')) {
+            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Por favor, espera unos segundos e intenta de nuevo.' }, { status: 503 });
+        }
+        return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
 }

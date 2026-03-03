@@ -99,6 +99,10 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
 
     } catch (error) {
         console.error("Error en generate-ideas:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const errorMsg = error.message || 'Error interno';
+        if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded')) {
+            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Por favor, espera unos segundos e intenta de nuevo.' }, { status: 503 });
+        }
+        return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
 }
