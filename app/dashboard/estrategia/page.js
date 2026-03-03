@@ -128,29 +128,65 @@ export default function EstrategiaPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
 
-            // Ensure ideas is always an array - robust parsing
+            // ULTRA ROBUST PARSING
             let ideasData = data.ideas;
+            console.log('[Estrategia] Raw data type:', typeof ideasData);
+            console.log('[Estrategia] Raw data preview:', String(ideasData).substring(0, 200));
             
-            // If it's a string, try to extract JSON array
+            // Step 1: If it's a string, aggressively extract JSON
             if (typeof ideasData === 'string') {
-                // Try to find JSON array in the string
-                const jsonMatch = ideasData.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    try {
-                        ideasData = JSON.parse(jsonMatch[0]);
-                    } catch (e) {
-                        ideasData = [];
+                // Remove any text before/after the JSON array
+                let cleanStr = ideasData;
+                
+                // Find where JSON array starts
+                const firstBracket = cleanStr.indexOf('[');
+                const firstBrace = cleanStr.indexOf('{');
+                let startIdx = -1;
+                
+                if (firstBracket !== -1 && firstBrace !== -1) {
+                    startIdx = Math.min(firstBracket, firstBrace);
+                } else if (firstBracket !== -1) {
+                    startIdx = firstBracket;
+                } else if (firstBrace !== -1) {
+                    startIdx = firstBrace;
+                }
+                
+                if (startIdx !== -1) {
+                    cleanStr = cleanStr.substring(startIdx);
+                }
+                
+                // Find where JSON array ends
+                let endIdx = -1;
+                let bracketCount = 0;
+                let inString = false;
+                
+                for (let i = 0; i < cleanStr.length; i++) {
+                    const char = cleanStr[i];
+                    if (char === '"' && cleanStr[i-1] !== '\\') inString = !inString;
+                    if (!inString) {
+                        if (char === '[') bracketCount++;
+                        if (char === ']') bracketCount--;
+                        if (bracketCount === 0 && cleanStr[i] === ']') {
+                            endIdx = i + 1;
+                            break;
+                        }
                     }
-                } else {
-                    try {
-                        ideasData = JSON.parse(ideasData);
-                    } catch (e) {
-                        ideasData = [];
-                    }
+                }
+                
+                if (endIdx !== -1) {
+                    cleanStr = cleanStr.substring(0, endIdx);
+                }
+                
+                try {
+                    ideasData = JSON.parse(cleanStr);
+                    console.log('[Estrategia] Parsed from string successfully');
+                } catch (e) {
+                    console.error('[Estrategia] Failed to parse:', e.message);
+                    ideasData = [];
                 }
             }
             
-            // Ensure it's an array
+            // Step 2: Ensure it's an array
             if (!Array.isArray(ideasData)) {
                 if (ideasData && typeof ideasData === 'object') {
                     ideasData = [ideasData];
@@ -159,14 +195,22 @@ export default function EstrategiaPage() {
                 }
             }
 
-            // Filter out invalid ideas
-            ideasData = ideasData.filter(idea => idea && (idea.titulo_idea || idea.titulo || idea.descripcion));
+            // Step 3: Filter out invalid ideas (must have at least titulo or descripcion)
+            ideasData = ideasData.filter(idea => 
+                idea && (
+                    idea.titulo_idea || 
+                    idea.titulo || 
+                    idea.descripcion ||
+                    idea.plataforma
+                )
+            );
+
+            console.log('[Estrategia] Final ideas count:', ideasData.length);
 
             if (ideasData.length === 0) {
-                throw new Error('No se recibieron ideas válidas. Intenta de nuevo.');
+                throw new Error('No se pudieron parsear las ideas. Intenta de nuevo.');
             }
 
-            console.log('[Estrategia] Ideas parsed:', ideasData.length);
             setIdeas(ideasData);
             setStep(1);
         } catch (err) {
@@ -343,7 +387,7 @@ export default function EstrategiaPage() {
                     <p style={{ color: 'var(--text-secondary)' }}>Selecciona las mejores ideas para crear tu plan mensual de contenido.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideas.map(i => i.id || i.titulo_idea || i.titulo)))}>
+                    <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideas.map(i => i.id || i.titulo_idea || i.titulo || String(i))))}>
                         Seleccionar todas
                     </button>
                     <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
@@ -352,16 +396,34 @@ export default function EstrategiaPage() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+            {/* Debug info */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                📊 Total de ideas: {ideas.length}
+            </div>
+
+            {/* Grid: 3 columns desktop, 2 tablet, 1 mobile */}
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(1, 1fr)',
+                gap: '16px',
+                '@media (min-width: 640px)': { gridTemplateColumns: 'repeat(2, 1fr)' },
+                '@media (min-width: 1024px)': { gridTemplateColumns: 'repeat(3, 1fr)' }
+            }} className="ideas-grid">
                 {ideas.map((idea, idx) => {
-                    const id = idea.id || idea.titulo_idea || idea.titulo || idx;
+                    // Extract fields with fallbacks
+                    const id = idea.id || idea.titulo_idea || idea.titulo || String(idx);
                     const isSelected = selectedIdeaIds.has(id);
                     const titulo = idea.titulo_idea || idea.titulo || 'Sin título';
                     const desc = idea.descripcion || '';
-                    const truncateDesc = (text, maxLen = 120) => {
+                    const truncateDesc = (text, maxLen = 100) => {
                         if (!text) return '';
                         return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
                     };
+                    
+                    // Skip invalid ideas
+                    if (!titulo || titulo.includes('{') || titulo.includes('[')) {
+                        return null;
+                    }
                     
                     return (
                         <div
@@ -369,102 +431,112 @@ export default function EstrategiaPage() {
                             onClick={() => toggleIdeaSelection(id)}
                             className="premium-card"
                             style={{
-                                padding: '20px',
-                                background: isSelected ? 'linear-gradient(145deg, rgba(126, 206, 202, 0.08) 0%, #0a0a0a 100%)' : 'linear-gradient(145deg, #121212 0%, #0a0a0a 100%)',
-                                border: isSelected ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
+                                padding: '18px',
+                                background: isSelected ? 'linear-gradient(145deg, rgba(126, 206, 202, 0.1) 0%, #0a0a0a 100%)' : 'linear-gradient(145deg, #151515 0%, #0c0c0c 100%)',
+                                border: isSelected ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.06)',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 position: 'relative',
-                                borderRadius: '16px',
-                                boxShadow: isSelected ? '0 4px 20px rgba(126, 206, 202, 0.15)' : '0 4px 12px rgba(0,0,0,0.3)'
+                                borderRadius: '14px',
+                                boxShadow: isSelected ? '0 4px 20px rgba(126, 206, 202, 0.2)' : '0 2px 8px rgba(0,0,0,0.3)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px'
                             }}
                         >
                             {/* Checkbox */}
                             <div style={{ 
                                 position: 'absolute', 
-                                top: '16px', 
-                                right: '16px',
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '6px',
-                                border: '2px solid ' + (isSelected ? '#7ECECA' : 'rgba(255,255,255,0.2)'),
+                                top: '14px', 
+                                right: '14px',
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '5px',
+                                border: '2px solid ' + (isSelected ? '#7ECECA' : 'rgba(255,255,255,0.15)'),
                                 background: isSelected ? '#7ECECA' : 'transparent',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
                             }}>
-                                {isSelected && <CheckCircle2 size={14} color="#000" />}
+                                {isSelected && <CheckCircle2 size={12} color="#000" />}
                             </div>
 
                             {/* Chips */}
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                                <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.15)', color: '#D8B4FF', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '0', flexWrap: 'wrap' }}>
+                                <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.12)', color: '#D8B4FF', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
                                     {idea.plataforma || 'Reels'}
                                 </span>
-                                <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.12)', color: '#7ECECA', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
                                     {idea.tipo || idea.tipo_contenido || 'viral'}
                                 </span>
                                 {idea.potencial === 'alto' && (
-                                    <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22C55E', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
-                                        Potencial Alto
+                                    <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#22C55E', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
+                                        Alto
                                     </span>
                                 )}
                             </div>
 
                             {/* Título */}
-                            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '10px', paddingRight: '30px', lineHeight: '1.3', color: '#fff' }}>
+                            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0', paddingRight: '28px', lineHeight: '1.3', color: '#fff' }}>
                                 {titulo}
                             </h3>
 
                             {/* Descripción */}
-                            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '14px', lineHeight: '1.5' }}>
-                                {truncateDesc(desc, 100)}
-                            </p>
+                            {desc && (
+                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', marginBottom: '0', lineHeight: '1.45', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                                    {desc}
+                                </p>
+                            )}
 
                             {/* Por qué funcionará */}
                             {idea.por_que_funciona && (
-                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px', marginBottom: '14px', borderLeft: '3px solid #7ECECA' }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#7ECECA', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                                        ¿Por qué funcionará?
+                                <div style={{ background: 'rgba(255,255,255,0.025)', padding: '10px', borderRadius: '8px', marginTop: 'auto', borderLeft: '2px solid #7ECECA' }}>
+                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#7ECECA', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                                        Por qué funciona
                                     </span>
-                                    <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
-                                        {truncateDesc(idea.por_que_funciona, 80)}
+                                    <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', lineHeight: '1.3', margin: 0 }}>
+                                        {truncateDesc(idea.por_que_funciona, 60)}
                                     </p>
                                 </div>
                             )}
 
-                            {/* Botones */}
-                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
-                                    className="btn-primary"
-                                    style={{ 
-                                        flex: 1, 
-                                        padding: '10px 0', 
-                                        fontSize: '0.75rem',
-                                        background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
-                                        borderRadius: '10px',
-                                        gap: '6px'
-                                    }}
-                                >
-                                    <Sparkles size={12} /> Generar Guion
-                                </button>
-                                <button
-                                    className="btn-secondary"
-                                    style={{ 
-                                        padding: '10px 14px', 
-                                        fontSize: '0.75rem',
-                                        borderRadius: '10px'
-                                    }}
-                                    onClick={(e) => { e.stopPropagation(); }}
-                                >
-                                    <Save size={12} />
-                                </button>
-                            </div>
+                            {/* Botón generar guion */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
+                                className="btn-primary"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '8px 0', 
+                                    fontSize: '0.7rem',
+                                    background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                    borderRadius: '8px',
+                                    marginTop: '8px'
+                                }}
+                            >
+                                <Sparkles size={11} style={{ marginRight: '4px' }} /> Generar Guion
+                            </button>
                         </div>
                     );
                 })}
             </div>
+
+            <style jsx>{`
+                .ideas-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 16px;
+                }
+                @media (min-width: 640px) {
+                    .ideas-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                }
+                @media (min-width: 1024px) {
+                    .ideas-grid {
+                        grid-template-columns: repeat(3, 1fr);
+                    }
+                }
+            `}</style>
         </div>
     );
 
