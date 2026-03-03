@@ -19,24 +19,36 @@ export async function POST(req) {
         }
 
         const body = await req.json();
+        console.log('[generate-ideas] Body received:', { ...body, userId: body.userId?.substring(0, 8) });
+        
         const validation = GenerateIdeasSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+            console.error('[generate-ideas] Validation failed:', validation.error);
+            return NextResponse.json({ error: 'Datos inválidos: ' + validation.error.errors[0]?.message }, { status: 400 });
         }
 
         const { context, platforms, useSEO, useTikTok, goal, count, userId } = validation.data;
+        console.log('[generate-ideas] Validated data:', { context, platforms, goal, count, userId: userId?.substring(0, 8) });
+        
         const apiKey = process.env.ANTHROPIC_API_KEY;
+        console.log('[generate-ideas] API Key available:', !!apiKey);
 
         const { createClient } = await import('@supabase/supabase-js');
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         let brandContextString = '';
-        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        const { data: brandBrain, error: brainError } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        
+        if (brainError) {
+            console.error('[generate-ideas] Brain fetch error:', brainError);
+        }
+        
         if (brandBrain) {
             brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
         } else {
-            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
+            console.error('[generate-ideas] No brain found for user:', userId?.substring(0, 8));
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1). Por favor, completa tu perfil en la página de generación de guiones.' }, { status: 400 });
         }
 
         const systemPrompt = `Eres un estratega virales experto. ${brandContextString}
@@ -126,10 +138,10 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
 
     } catch (error) {
         console.error("[Error en generate-ideas]:", error);
-        const errorMsg = error?.message || 'Error interno';
+        const errorMsg = error?.message || 'Error interno del servidor';
         if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded')) {
-            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Por favor, espera unos segundos e intenta de nuevo.' }, { status: 503 });
+            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Por favor, espera unos segundos e intenta de nuevo.', ideas: [] }, { status: 503 });
         }
-        return NextResponse.json({ error: errorMsg }, { status: 500 });
+        return NextResponse.json({ error: errorMsg, ideas: [] }, { status: 500 });
     }
 }
