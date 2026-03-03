@@ -128,27 +128,45 @@ export default function EstrategiaPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
 
-            // Ensure ideas is always an array
+            // Ensure ideas is always an array - robust parsing
             let ideasData = data.ideas;
-            if (!Array.isArray(ideasData)) {
-                if (typeof ideasData === 'string') {
+            
+            // If it's a string, try to extract JSON array
+            if (typeof ideasData === 'string') {
+                // Try to find JSON array in the string
+                const jsonMatch = ideasData.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
                     try {
-                        ideasData = JSON.parse(ideasData);
-                        ideasData = Array.isArray(ideasData) ? ideasData : [ideasData];
+                        ideasData = JSON.parse(jsonMatch[0]);
                     } catch (e) {
                         ideasData = [];
                     }
-                } else if (ideasData && typeof ideasData === 'object') {
+                } else {
+                    try {
+                        ideasData = JSON.parse(ideasData);
+                    } catch (e) {
+                        ideasData = [];
+                    }
+                }
+            }
+            
+            // Ensure it's an array
+            if (!Array.isArray(ideasData)) {
+                if (ideasData && typeof ideasData === 'object') {
                     ideasData = [ideasData];
                 } else {
                     ideasData = [];
                 }
             }
 
+            // Filter out invalid ideas
+            ideasData = ideasData.filter(idea => idea && (idea.titulo_idea || idea.titulo || idea.descripcion));
+
             if (ideasData.length === 0) {
                 throw new Error('No se recibieron ideas válidas. Intenta de nuevo.');
             }
 
+            console.log('[Estrategia] Ideas parsed:', ideasData.length);
             setIdeas(ideasData);
             setStep(1);
         } catch (err) {
@@ -318,80 +336,129 @@ export default function EstrategiaPage() {
     );
 
     const renderIdeas = () => (
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
                 <div>
                     <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Banco de Ideas Estratégicas</h2>
                     <p style={{ color: 'var(--text-secondary)' }}>Selecciona las mejores ideas para crear tu plan mensual de contenido.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideas.map(i => i.id || i.titulo_idea)))}>Seleccionar todas</button>
-                    <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideas.map(i => i.id || i.titulo_idea || i.titulo)))}>
+                        Seleccionar todas
+                    </button>
+                    <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
                         Crear plan con ({selectedIdeaIds.size}) seleccionadas →
                     </button>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
                 {ideas.map((idea, idx) => {
-                    const id = idea.id || idea.titulo_idea;
+                    const id = idea.id || idea.titulo_idea || idea.titulo || idx;
                     const isSelected = selectedIdeaIds.has(id);
+                    const titulo = idea.titulo_idea || idea.titulo || 'Sin título';
+                    const desc = idea.descripcion || '';
+                    const truncateDesc = (text, maxLen = 120) => {
+                        if (!text) return '';
+                        return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+                    };
+                    
                     return (
                         <div
                             key={idx}
                             onClick={() => toggleIdeaSelection(id)}
                             className="premium-card"
                             style={{
-                                padding: '24px',
-                                background: isSelected ? 'rgba(126, 206, 202, 0.05)' : '#0D0D0D',
-                                border: isSelected ? '1px solid var(--accent)' : '1px solid #1E1E1E',
+                                padding: '20px',
+                                background: isSelected ? 'linear-gradient(145deg, rgba(126, 206, 202, 0.08) 0%, #0a0a0a 100%)' : 'linear-gradient(145deg, #121212 0%, #0a0a0a 100%)',
+                                border: isSelected ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
                                 cursor: 'pointer',
-                                transition: '0.2s',
-                                position: 'relative'
+                                transition: 'all 0.2s ease',
+                                position: 'relative',
+                                borderRadius: '16px',
+                                boxShadow: isSelected ? '0 4px 20px rgba(126, 206, 202, 0.15)' : '0 4px 12px rgba(0,0,0,0.3)'
                             }}
                         >
-                            <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
-                                <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '6px',
-                                    border: '2px solid ' + (isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.1)'),
-                                    background: isSelected ? 'var(--accent)' : 'transparent',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                    {isSelected && <CheckCircle2 size={16} color="#000" />}
+                            {/* Checkbox */}
+                            <div style={{ 
+                                position: 'absolute', 
+                                top: '16px', 
+                                right: '16px',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '6px',
+                                border: '2px solid ' + (isSelected ? '#7ECECA' : 'rgba(255,255,255,0.2)'),
+                                background: isSelected ? '#7ECECA' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                {isSelected && <CheckCircle2 size={14} color="#000" />}
+                            </div>
+
+                            {/* Chips */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                                <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.15)', color: '#D8B4FF', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                    {idea.plataforma || 'Reels'}
+                                </span>
+                                <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                    {idea.tipo || idea.tipo_contenido || 'viral'}
+                                </span>
+                                {idea.potencial === 'alto' && (
+                                    <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22C55E', fontSize: '0.7rem', padding: '4px 10px', borderRadius: '20px' }}>
+                                        Potencial Alto
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Título */}
+                            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, marginBottom: '10px', paddingRight: '30px', lineHeight: '1.3', color: '#fff' }}>
+                                {titulo}
+                            </h3>
+
+                            {/* Descripción */}
+                            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '14px', lineHeight: '1.5' }}>
+                                {truncateDesc(desc, 100)}
+                            </p>
+
+                            {/* Por qué funcionará */}
+                            {idea.por_que_funciona && (
+                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px', marginBottom: '14px', borderLeft: '3px solid #7ECECA' }}>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#7ECECA', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                                        ¿Por qué funcionará?
+                                    </span>
+                                    <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
+                                        {truncateDesc(idea.por_que_funciona, 80)}
+                                    </p>
                                 </div>
-                            </div>
+                            )}
 
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                                <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#FFF' }}>{idea.plataforma}</span>
-                                {idea.potencial === 'alto' && <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E' }}>Potencial Alto</span>}
-                            </div>
-
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '12px', paddingRight: '30px' }}>{idea.titulo_idea}</h3>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>{idea.descripcion}</p>
-
-                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
-                                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>¿Por qué funcionará?</span>
-                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>{idea.por_que_funciona}</p>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            {/* Botones */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
-                                    className="btn-secondary"
-                                    style={{ flex: 1, padding: '8px', fontSize: '0.8rem', gap: '6px' }}
+                                    className="btn-primary"
+                                    style={{ 
+                                        flex: 1, 
+                                        padding: '10px 0', 
+                                        fontSize: '0.75rem',
+                                        background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                        borderRadius: '10px',
+                                        gap: '6px'
+                                    }}
                                 >
-                                    <Sparkles size={14} /> Guión
+                                    <Sparkles size={12} /> Generar Guion
                                 </button>
                                 <button
                                     className="btn-secondary"
-                                    style={{ padding: '8px', fontSize: '0.8rem' }}
+                                    style={{ 
+                                        padding: '10px 14px', 
+                                        fontSize: '0.75rem',
+                                        borderRadius: '10px'
+                                    }}
                                     onClick={(e) => { e.stopPropagation(); }}
                                 >
-                                    <Save size={14} />
+                                    <Save size={12} />
                                 </button>
                             </div>
                         </div>

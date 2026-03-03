@@ -47,39 +47,37 @@ CONTEXTO DE MARCA (Cerebro IA):
         }
 
         const systemPrompt = `Eres un estratega de contenido de élite para redes sociales.
-Tu objetivo es analizar los datos del usuario y crear un "Banco de Ideas Estratégicas" de 30 ideas únicas.
-
-Deberás mezclar diferentes tipos de contenido:
-- Educativo (Cómo hacer X, mitos, errores).
-- Autoridad (Resultados, casos de éxito, "por qué escucharte").
-- Conexión/Personal (Historias, vulnerabilidad, valores).
-- Venta/Conversión (Objeciones, oferta directa, resultados de clientes).
-- Viralidad (Tendencias, opiniones impopulares, entretenimiento de nicho).
-
 ${brandContextString}
 
-Respuestas de la sesión de descubrimiento:
-- Objetivo 30 días: ${objective}
-- Lanzamiento/Oferta: ${launch}
-- Objeción principal: ${objection}
-- Historia personal: ${story}
-- Tipos preferidos: ${types.join(', ')}
-- Plataformas: ${platforms.join(', ')}
+Tu objetivo es crear un Banco de Ideas Estratégicas.
 
-Reglas:
-- Genera exactamente 30 ideas.
-- Cada idea debe ser accionable y específica.
-- Devuelve SOLO un array JSON de objetos con esta estructura:
+IMPORTANTE: Responde EXCLUSIVAMENTE con un array JSON válido. Nada de texto antes o después. Sin markdown, sin código, solo JSON puro.
+
+Formato obligatorio (exactamente 15-20 ideas):
 [
   {
-    "id": "uuid-generado",
-    "plataforma": "...",
-    "tipo": "...",
-    "titulo_idea": "...",
-    "descripcion": "...",
-    "por_que_funciona": "...",
-    "objetivo": "...",
-    "potencial": "alto/medio"
+    "id": "1",
+    "plataforma": "Reels, TikTok, LinkedIn, X o YouTube",
+    "tipo": "educativo, autoridad, historia personal, venta o viral",
+    "titulo_idea": "Título corto y atractivo",
+    "descripcion": "Descripción de la idea en 1-2 frases",
+    "por_que_funciona": "Por qué esta idea funciona para el objetivo",
+    "objetivo": "atraer leads, autoridad, ventas, engagement o comunidad",
+    "potencial": "alto, medio o bajo"
+  }
+]
+
+Ejemplo de respuesta válida:
+[
+  {
+    "id": "1",
+    "plataforma": "Reels",
+    "tipo": "autoridad",
+    "titulo_idea": "El error que comete el 90% al usar IA",
+    "descripcion": "Análisis del error común y cómo evitarlo",
+    "por_que_funciona": "Genera identificación inmediata",
+    "objetivo": "autoridad",
+    "potencial": "alto"
   }
 ]`;
 
