@@ -133,6 +133,19 @@ export default function DashboardPage() {
         }
     }, []);
 
+    // Auto-advance wizard if coming from strategy and has brain
+    useEffect(() => {
+        if (typeof window !== 'undefined' && hasBrain) {
+            const params = new URLSearchParams(window.location.search);
+            // If coming from strategy/bank with pre-filled data and has brain, skip to step 2
+            if (params.get('mode') === 'single' && params.get('topic')) {
+                setWizardStep(2);
+                // Clean URL params after using them
+                window.history.replaceState({}, document.title, '/dashboard');
+            }
+        }
+    }, [hasBrain]);
+
     useEffect(() => {
         if (step === 2) {
             let current = 0;
@@ -635,6 +648,20 @@ export default function DashboardPage() {
                                             }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar</button>
                                         </div>
                                     ) : (
+                                        <div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Quién eres</p><p style={{ fontWeight: 600 }}>{brainProfile?.biography || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Qué vendes</p><p style={{ fontWeight: 600 }}>{brainProfile?.products_services || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>A quién ayudas</p><p style={{ fontWeight: 600 }}>{brainProfile?.audience || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Estilo</p><p style={{ fontWeight: 600 }}>{brainProfile?.style_words || '-'}</p></div>
+                                            </div>
+                                            <button onClick={() => setWizardStep(2)} className="btn-primary" style={{ width: '100%', height: '50px', fontSize: '1rem' }}>
+                                                Continuar al siguiente paso →
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                             <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Quién eres</p><p style={{ fontWeight: 600 }}>{brainProfile?.biography || '-'}</p></div>
                                             <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Qué vendes</p><p style={{ fontWeight: 600 }}>{brainProfile?.products_services || '-'}</p></div>
@@ -653,12 +680,13 @@ export default function DashboardPage() {
                                     <button onClick={async () => {
                                         const { data: { user } } = await supabase.auth.getUser();
                                         if (!brainForm.biography || !brainForm.helps) {
-                                            setError('Por favor, completa al menos "Quién eres" y "A quién ayudas"');
+                                            setError('Por favor, completa al menos "Quién eres" y "A quién ayuda"');
                                             return;
                                         }
                                         await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
                                         setHasBrain(true);
                                         setBrainName(brainForm.biography.substring(0, 30));
+                                        setWizardStep(2);
                                     }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar →</button>
                                 </div>
                             )}
