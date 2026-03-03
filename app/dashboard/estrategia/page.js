@@ -236,12 +236,31 @@ export default function EstrategiaPage() {
     };
 
     const handleGenerateScriptForIdea = (idea) => {
+        // Validate idea has required data
+        if (!idea) {
+            alert('Error: No se pudo obtener la idea. Intenta de nuevo.');
+            return;
+        }
+        
+        const titulo = idea.titulo_idea || idea.titulo || '';
+        const desc = idea.descripcion || '';
+        const plataforma = idea.plataforma || 'Reels';
+        const objetivo = idea.objetivo || 'engagement';
+        
+        if (!titulo) {
+            alert('Error: La idea no tiene título válido.');
+            return;
+        }
+        
+        console.log('[Estrategia] Generating script for idea:', { titulo, plataforma, objetivo });
+        
         const params = new URLSearchParams();
         params.set('mode', 'single');
-        params.set('topic', `${idea.titulo_idea}\n${idea.descripcion}`);
-        params.set('platform', idea.plataforma);
-        params.set('goal', idea.objetivo);
+        params.set('topic', encodeURIComponent(`${titulo}\n${desc}`));
+        params.set('platform', encodeURIComponent(plataforma));
+        params.set('goal', encodeURIComponent(objetivo));
         params.set('source_type', 'strategy');
+        
         router.push(`/dashboard?${params.toString()}`);
     };
 

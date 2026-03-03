@@ -122,13 +122,20 @@ export default function DashboardPage() {
         }
         loadData();
 
+        // Load params from URL on initial load
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             if (params.get('mode') === 'single') {
                 setGenerationMode('single');
-                if (params.get('topic')) setTopic(params.get('topic'));
-                if (params.get('platform')) setPlatform(params.get('platform'));
-                if (params.get('goal')) setGoal(params.get('goal'));
+                const topicParam = params.get('topic');
+                const platformParam = params.get('platform');
+                const goalParam = params.get('goal');
+                
+                console.log('[Dashboard] URL params:', { topic: topicParam, platform: platformParam, goal: goalParam });
+                
+                if (topicParam) setTopic(decodeURIComponent(topicParam));
+                if (platformParam) setPlatform(decodeURIComponent(platformParam));
+                if (goalParam) setGoal(decodeURIComponent(goalParam));
             }
         }
     }, []);
@@ -140,7 +147,15 @@ export default function DashboardPage() {
             // If coming from strategy/bank with pre-filled data and has brain, skip to step 2
             if (params.get('mode') === 'single' && params.get('topic')) {
                 setWizardStep(2);
-                // Clean URL params after using them
+                // Clean URL params after using them (but save topic/platform/goal first)
+                const savedTopic = params.get('topic');
+                const savedPlatform = params.get('platform');
+                const savedGoal = params.get('goal');
+                
+                if (savedTopic) setTopic(decodeURIComponent(savedTopic));
+                if (savedPlatform) setPlatform(decodeURIComponent(savedPlatform));
+                if (savedGoal) setGoal(decodeURIComponent(savedGoal));
+                
                 window.history.replaceState({}, document.title, '/dashboard');
             }
         }
@@ -272,12 +287,18 @@ export default function DashboardPage() {
         setRefiningBlock(key);
 
         const script = scripts[scriptIndex];
+        if (!script) {
+            alert('Error: No se encontró el guion');
+            return;
+        }
+        
         let text = '';
-        if (blockType === 'gancho') text = script.gancho;
-        else if (blockType === 'punto1') text = script.desarrollo[0];
-        else if (blockType === 'punto2') text = script.desarrollo[1];
-        else if (blockType === 'punto3') text = script.desarrollo[2];
-        else if (blockType === 'cta') text = script.cta;
+        const desarrolloArray = Array.isArray(script.desarrollo) ? script.desarrollo : [];
+        if (blockType === 'gancho') text = script.gancho || '';
+        else if (blockType === 'punto1') text = desarrolloArray[0] || '';
+        else if (blockType === 'punto2') text = desarrolloArray[1] || '';
+        else if (blockType === 'punto3') text = desarrolloArray[2] || '';
+        else if (blockType === 'cta') text = script.cta || '';
 
         try {
             const res = await fetch('/api/refine', {
@@ -295,6 +316,11 @@ export default function DashboardPage() {
             if (!res.ok) throw new Error(data.error);
 
             const updatedScripts = [...scripts];
+            // Ensure desarrollo is an array
+            if (!Array.isArray(updatedScripts[scriptIndex].desarrollo)) {
+                updatedScripts[scriptIndex].desarrollo = ['', '', ''];
+            }
+            
             if (blockType === 'gancho') updatedScripts[scriptIndex].gancho = data.refinedText;
             else if (blockType === 'punto1') updatedScripts[scriptIndex].desarrollo[0] = data.refinedText;
             else if (blockType === 'punto2') updatedScripts[scriptIndex].desarrollo[1] = data.refinedText;
@@ -331,15 +357,17 @@ export default function DashboardPage() {
     async function handleSaveAll() {
         try {
             for (const s of scripts) {
-                const content = s.gancho + '\n\n' + s.desarrollo.join('\n') + '\n\n' + s.cta;
+                // Ensure desarrollo is an array
+                const desarrolloArray = Array.isArray(s.desarrollo) ? s.desarrollo : [];
+                const content = (s.gancho || '') + '\n\n' + (desarrolloArray.join('\n') || '') + '\n\n' + (s.cta || '');
                 if (s.db_id) {
                     await supabase.from('scripts').update({
                         content,
                         titulo_angulo: s.titulo_angulo,
                         gancho: s.gancho,
-                        desarrollo_1: s.desarrollo[0],
-                        desarrollo_2: s.desarrollo[1],
-                        desarrollo_3: s.desarrollo[2],
+                        desarrollo_1: desarrolloArray[0] || '',
+                        desarrollo_2: desarrolloArray[1] || '',
+                        desarrollo_3: desarrolloArray[2] || '',
                         cta: s.cta,
                         is_saved: true
                     }).eq('id', s.db_id);
@@ -432,16 +460,18 @@ export default function DashboardPage() {
     };
 
     const saveScript = async (script) => {
-        const content = script.gancho + '\n\n' + script.desarrollo.join('\n') + '\n\n' + script.cta;
+        // Ensure desarrollo is an array
+        const desarrolloArray = Array.isArray(script.desarrollo) ? script.desarrollo : [];
+        const content = (script.gancho || '') + '\n\n' + (desarrolloArray.join('\n') || '') + '\n\n' + (script.cta || '');
         let err = null;
         if (script.db_id) {
             const { error } = await supabase.from('scripts').update({
                 content,
                 titulo_angulo: script.titulo_angulo,
                 gancho: script.gancho,
-                desarrollo_1: script.desarrollo[0],
-                desarrollo_2: script.desarrollo[1],
-                desarrollo_3: script.desarrollo[2],
+                desarrollo_1: desarrolloArray[0] || '',
+                desarrollo_2: desarrolloArray[1] || '',
+                desarrollo_3: desarrolloArray[2] || '',
                 cta: script.cta,
                 is_saved: true
             }).eq('id', script.db_id);
@@ -487,6 +517,11 @@ export default function DashboardPage() {
 
             if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
+            
+            if (!data.scripts || !Array.isArray(data.scripts) || data.scripts.length === 0) {
+                throw new Error('No se recibió ningún guion. Intenta de nuevo.');
+            }
+            
             const generatedScript = data.scripts[0];
 
             // Subir a BD
