@@ -38,18 +38,6 @@ export async function POST(request) {
         if (frequency === '5 publicaciones por semana') postCount = 20;
         if (frequency === '7 publicaciones por semana') postCount = 28;
 
-        const systemPrompt = `Diseña un PLAN DE CONTENIDO para 30 días en español.
-Responde ÚNICAMENTE en JSON array:
-[
-  {
-    "dia": 1,
-    "plataforma": "...",
-    "tipo_contenido": "...",
-    "titulo_idea": "...",
-    "objetivo": "..."
-  }
-]`;
-
         let brandContextString = '';
         const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
 
@@ -73,11 +61,32 @@ REGLAS DE ORO:
 1. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
 2. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
 3. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
+4. Cada día debe tener: plataforma, tipo de contenido (autoridad/historia/venta/comunidad), título de idea, y objetivo específico.
 
 ${brandContextString}
 
-${systemPrompt}
+Diseña un PLAN DE CONTENIDO para 30 días en español.
+Responde ÚNICAMENTE en JSON array:
+[
+  {
+    "dia": 1,
+    "plataforma": "Reels",
+    "tipo_contenido": "autoridad",
+    "titulo_idea": "...",
+    "objetivo": "atraer leads"
+  }
+]`;
 
+        const userMessage = `
+CONTEXTO:
+- Descripción de marca: ${description}
+- Plataformas: ${platforms.join(', ')}
+- Frecuencia: ${frequency}
+- Enfoque: ${focus}
+- Notas adicionales: ${context || 'Ninguna'}
+- Cantidad de posts a generar: ${postCount}
+
+Genera un plan de contenido para 30 días con variedad de tipos (autoridad, historia personal, venta, comunidad).`;
 
         const { parsed: results, usage } = await generateIdeasWithHaiku({
             apiKey,
@@ -85,7 +94,6 @@ ${systemPrompt}
             userMessage,
         });
 
-        // Insert logs & plan into DB (similar to existing logic but cleaned up)
         const totalTokens = (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
         await supabase.from('usage_logs').insert({ user_id: userId, action: 'generate_plan', tokens_used: totalTokens });
 
@@ -100,6 +108,19 @@ ${systemPrompt}
         }));
 
         const { data: slotData } = await supabase.from('content_slots').insert(slotsToInsert).select();
+
+        const { saveToLibrary } = await import('@/lib/library');
+        for (const r of results) {
+            await saveToLibrary({
+                userId,
+                type: 'mensual',
+                platform: r.plataforma,
+                goal: r.objetivo,
+                content: { titulo_idea: r.titulo_idea, tipo_contenido: r.tipo_contenido, dia: r.dia },
+                metadata: { plan_id: planData.id, focus, frequency },
+                tags: [r.plataforma, r.tipo_contenido, r.objetivo].filter(Boolean)
+            });
+        }
 
         return NextResponse.json({ plan: planData, slots: slotData });
     } catch (err) {

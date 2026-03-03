@@ -12,29 +12,49 @@ const SUGGESTED_TRENDS = [
     { name: 'Productividad', icon: '⏳', grow: '+8.1%', color: '#FF007A' },
 ];
 
-const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'X', 'YouTube Shorts'];
-const TONOS = ['Profesional', 'Cercano', 'Inspiracional', 'Directo', 'Educativo', 'Provocador'];
-const OBJETIVOS = ['Ganar seguidores', 'Generar ventas', 'Crear autoridad', 'Entretener', 'Educar', 'Viralizar'];
+const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'X', 'YouTube Shorts', 'YouTube', 'Instagram'];
+const TONOS_MARCA = ['brutal honesto', 'elegante', 'polémico', 'cercano', 'experto', 'profesional'];
+const OBJETIVOS = ['atraer leads', 'autoridad', 'venta directa', 'engagement', 'storytelling', 'educar'];
+const AWARENESS_LEVELS = ['no te conoce', 'tibia', 'muy caliente'];
+const HOOK_TYPES = ['historia personal', 'pain fuerte', 'contraintuitivo', 'prueba social', 'curiosidad extrema'];
 const FRECUENCIAS = ['3 publicaciones por semana', '4 publicaciones por semana', '5 publicaciones por semana', '7 publicaciones por semana'];
-const ENFOQUES = ['Educar', 'Crear autoridad', 'Generar ventas', 'Mezcla equilibrada'];
+const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcla equilibrada'];
+const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 
 export default function DashboardPage() {
-    const [generationMode, setGenerationMode] = useState('single'); // 'single' | 'plan'
+    const [generationMode, setGenerationMode] = useState('single');
 
-    // States for 'single' mode
+    // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
+    const [wizardStep, setWizardStep] = useState(1);
     const [step, setStep] = useState(1); // 1: Form, 2: Loading, 3: Results
     const [topic, setTopic] = useState('');
     const [platform, setPlatform] = useState('Reels');
-    const [tone, setTone] = useState('Profesional');
-    const [goal, setGoal] = useState('Viralizar');
+    const [toneBrand, setToneBrand] = useState('cercano');
+    const [goal, setGoal] = useState('engagement');
+    const [awareness, setAwareness] = useState('tibia');
     const [quantity, setQuantity] = useState(4);
     const [ideas, setIdeas] = useState('');
     const [scripts, setScripts] = useState([]);
+    
+    // Wizard step 3 fields
+    const [victory, setVictory] = useState('');
+    const [opinion, setOpinion] = useState('');
+    const [story, setStory] = useState('');
+    const [hookType, setHookType] = useState('curiosidad extrema');
+    const [intensity, setIntensity] = useState(3);
+    
+    // Brain profile
+    const [brainProfile, setBrainProfile] = useState(null);
+    const [editingBrain, setEditingBrain] = useState(false);
+    const [brainForm, setBrainForm] = useState({ biography: '', sells: '', helps: '', style_words: '' });
 
-    // States for 'plan' mode
+    // Plan mode states
     const [planPlatforms, setPlanPlatforms] = useState(['Reels']);
     const [planFrequency, setPlanFrequency] = useState('3 publicaciones por semana');
-    const [planFocus, setPlanFocus] = useState('Mezcla equilibrada');
+    const [planFocus, setPlanFocus] = useState('mezcla equilibrada');
+    const [planContentTypes, setPlanContentTypes] = useState({ autoridad: 30, 'historia personal': 25, venta: 25, comunidad: 20 });
+    const [planExcludeTopics, setPlanExcludeTopics] = useState('');
+    const [planCampaigns, setPlanCampaigns] = useState('');
     const [planSlots, setPlanSlots] = useState([]);
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
 
@@ -43,9 +63,11 @@ export default function DashboardPage() {
     const [profile, setProfile] = useState(null);
     const [aiCredits, setAiCredits] = useState({ total: 200, used: 0 });
     const [hasBrain, setHasBrain] = useState(false);
-    const [improvementCounts, setImprovementCounts] = useState({}); // { 'scriptIndex-blockType': count }
-    const [refiningBlock, setRefiningBlock] = useState(null); // 'scriptIndex-blockType'
-    const [previousScripts, setPreviousScripts] = useState(null); // For "Undo" (Deshacer)
+    const [improvementCounts, setImprovementCounts] = useState({});
+    const [refiningBlock, setRefiningBlock] = useState(null);
+    const [previousScripts, setPreviousScripts] = useState(null);
+    const [selectedHook, setSelectedHook] = useState({});
+    const [brainName, setBrainName] = useState('');
 
     const supabase = createSupabaseClient();
     const router = useRouter();
@@ -82,8 +104,18 @@ export default function DashboardPage() {
                 const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
                 setProfile(profileData);
 
-                const { data: brainData } = await supabase.from('brand_brain').select('id').eq('user_id', user.id).single();
-                setHasBrain(!!brainData);
+                const { data: brainData } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
+                if (brainData) {
+                    setHasBrain(true);
+                    setBrainProfile(brainData);
+                    setBrainName(brainData.biography ? brainData.biography.substring(0, 30) + '...' : 'Perfil');
+                    setBrainForm({
+                        biography: brainData.biography || '',
+                        sells: brainData.products_services || '',
+                        helps: brainData.audience || '',
+                        style_words: brainData.style_words || ''
+                    });
+                }
 
                 fetchCredits(user.id);
             }
@@ -120,6 +152,12 @@ export default function DashboardPage() {
             setError('Por favor, indica sobre qué quieres crear contenido.');
             return;
         }
+        
+        if (!hasBrain && wizardStep < 2) {
+            setError('Por favor, completa el Paso 1 (Marca Personal) antes de generar.');
+            return;
+        }
+        
         setStep(2);
         setError('');
 
@@ -130,11 +168,17 @@ export default function DashboardPage() {
                 body: JSON.stringify({
                     topic: topic.trim(),
                     platform,
-                    tone,
+                    tone: toneBrand,
                     goal,
                     count: quantity,
                     ideas,
-                    userId: profile?.id
+                    userId: profile?.id,
+                    awareness,
+                    victory,
+                    opinion,
+                    story,
+                    hookType,
+                    intensity
                 }),
             });
 
@@ -143,7 +187,11 @@ export default function DashboardPage() {
 
             let generatedScripts = data.scripts || [];
 
-            // Auto-guardado de los guiones generados
+            // Initialize selected hooks
+            const initialSelected = {};
+            generatedScripts.forEach((_, i) => { initialSelected[i] = 0; });
+            setSelectedHook(initialSelected);
+
             let paramsSource = 'single_topic';
             let paramsRef = null;
             if (typeof window !== 'undefined') {
@@ -156,18 +204,22 @@ export default function DashboardPage() {
                 generatedScripts.map(async (s) => {
                     const insertPayload = {
                         user_id: profile.id,
-                        content: s.gancho + '\n\n' + s.desarrollo.join('\n') + '\n\n' + s.cta,
+                        content: JSON.stringify({
+                            hook_principal: s.hook_principal,
+                            hook_alternativo_1: s.hook_alternativo_1,
+                            hook_alternativo_2: s.hook_alternativo_2,
+                            guion_detallado: s.guion_detallado,
+                            cta: s.cta
+                        }),
                         platform,
                         topic: topic.trim(),
-                        tone,
+                        tone: toneBrand,
+                        goal,
                         source_type: paramsSource,
                         source_reference_id: paramsRef,
                         titulo_angulo: s.titulo_angulo,
-                        gancho: s.gancho,
-                        desarrollo_1: s.desarrollo[0],
-                        desarrollo_2: s.desarrollo[1],
-                        desarrollo_3: s.desarrollo[2],
-                        cta: s.cta
+                        gancho: s.hook_principal,
+                        metadata: { hookType, intensity, awareness, victory, opinion, story }
                     };
                     const { data: inserted, error } = await supabase.from('scripts').insert(insertPayload).select().single();
                     if (!error && inserted) {
@@ -531,135 +583,236 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {step === 1 && (
+            {step === 1 && generationMode === 'single' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '40px', fontWeight: 800 }}>
-                        {generationMode === 'single' ? 'Nuevo Proyecto Viral' : 'Tu Planificador Mensual de Contenido'}
+                    {/* Wizard Progress */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
+                        {[1, 2, 3].map(w => (
+                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ 
+                                    width: '36px', height: '36px', borderRadius: '50%', 
+                                    background: wizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                    color: wizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
+                                }}>
+                                    {wizardStep > w ? '✓' : w}
+                                </div>
+                                <span style={{ color: wizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: wizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
+                                    {w === 1 ? 'Marca' : w === 2 ? 'Contexto' : 'Detalle'}
+                                </span>
+                                {w < 3 && <div style={{ width: '40px', height: '2px', background: wizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
+                            </div>
+                        ))}
+                    </div>
+
+                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center' }}>
+                        {wizardStep === 1 ? 'Tu Marca Personal' : wizardStep === 2 ? 'Contexto del Contenido' : 'Detalle del Guion'}
                     </h2>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-                        {/* Tema / Descripción general */}
-                        <div>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>
-                                {generationMode === 'single' ? '¿Sobre qué quieres crear contenido hoy?' : 'Describe tu marca y lo que quieres conseguir este mes'}
+                    {/* Wizard Step 1: Marca Personal */}
+                    {wizardStep === 1 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {hasBrain ? (
+                                <div style={{ padding: '24px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <p style={{ fontWeight: 700, color: '#7ECECA' }}>✓ Cerebro IA configurado</p>
+                                        <button onClick={() => setEditingBrain(!editingBrain)} style={{ background: 'none', border: 'none', color: '#7ECECA', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                            {editingBrain ? 'Cancelar' : 'Editar'}
+                                        </button>
+                                    </div>
+                                    {editingBrain ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({...brainForm, biography: e.target.value})} />
+                                            <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({...brainForm, sells: e.target.value})} />
+                                            <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({...brainForm, helps: e.target.value})} />
+                                            <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({...brainForm, style_words: e.target.value})} />
+                                            <button onClick={async () => {
+                                                const { data: { user } } = await supabase.auth.getUser();
+                                                await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                                setHasBrain(true);
+                                                setEditingBrain(false);
+                                                setBrainName(brainForm.biography.substring(0, 30));
+                                            }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar</button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Quién eres</p><p style={{ fontWeight: 600 }}>{brainProfile?.biography || '-'}</p></div>
+                                            <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Qué vendes</p><p style={{ fontWeight: 600 }}>{brainProfile?.products_services || '-'}</p></div>
+                                            <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>A quién ayudas</p><p style={{ fontWeight: 600 }}>{brainProfile?.audience || '-'}</p></div>
+                                            <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Estilo</p><p style={{ fontWeight: 600 }}>{brainProfile?.style_words || '-'}</p></div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Completa tu perfil para que la IA genere contenido con tu voz única.</p>
+                                    <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({...brainForm, biography: e.target.value})} />
+                                    <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({...brainForm, sells: e.target.value})} />
+                                    <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({...brainForm, helps: e.target.value})} />
+                                    <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({...brainForm, style_words: e.target.value})} />
+                                    <button onClick={async () => {
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        if (!brainForm.biography || !brainForm.helps) {
+                                            setError('Por favor, completa al menos "Quién eres" y "A quién ayudas"');
+                                            return;
+                                        }
+                                        await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                        setHasBrain(true);
+                                        setBrainName(brainForm.biography.substring(0, 30));
+                                    }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar →</button>
+                                </div>
+                            )}
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                Este paso se completa solo una vez. Puedes editarlo después en "Cerebro IA".
                             </p>
-                            <AIPolishedTextarea
-                                className="textarea-field"
-                                value={topic}
-                                onChange={(e) => setTopic(e.target.value)}
-                                placeholder={generationMode === 'single' ? "Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" : "Ej: Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría."}
-                                style={{ minHeight: '120px', fontSize: '1.1rem' }}
-                            />
                         </div>
+                    )}
 
-                        {generationMode === 'single' ? (
-                            <>
-                                {/* Opciones Modo Single */}
-                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataforma</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {PLATAFORMAS.map(p => (
-                                                <button key={p} onClick={() => setPlatform(p)} className={platform === p ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: platform === p ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{p}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tono de Comunicación</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {TONOS.map(t => (
-                                                <button key={t} onClick={() => setTone(t)} className={tone === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: tone === t ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{t}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivo del Contenido</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {OBJETIVOS.map(o => (
-                                                <button key={o} onClick={() => setGoal(o)} className={goal === o ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: goal === o ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{o}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de Guiones</p>
-                                        <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ width: '100%', accentColor: '#7ECECA' }} />
-                                        <p style={{ textAlign: 'center', marginTop: '10px', fontWeight: 800, color: '#7ECECA' }}>{quantity} guiones (Máx 4)</p>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                {/* Opciones Modo Plan Mensual */}
-                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas (Multiselección)</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {PLATAFORMAS.map(p => (
-                                                <button key={p} onClick={() => handleTogglePlatform(p)} className={planPlatforms.includes(p) ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{p}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia de Publicación</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {FRECUENCIAS.map(f => (
-                                                <button key={f} onClick={() => setPlanFrequency(f)} className={planFrequency === f ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{f.split(' ')[0]} x Sem</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Enfoque Principal del Mes</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {ENFOQUES.map(e => (
-                                                <button key={e} onClick={() => setPlanFocus(e)} className={planFocus === e ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: planFocus === e ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{e}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tono de Comunicación</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {TONOS.map(t => (
-                                                <button key={t} onClick={() => setTone(t)} className={tone === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '8px 16px', fontSize: '0.8rem', background: tone === t ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)' }}>{t}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        <div>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>{generationMode === 'single' ? 'Ideas o Ángulos (opcional)' : 'Ideas o campañas específicas para este mes (opcional)'}</p>
-                            <input
-                                className="input-field"
-                                value={ideas}
-                                onChange={(e) => setIdeas(e.target.value)}
-                                placeholder={generationMode === 'single' ? "Ej: Hablar del error más común, dar una lista de pasos..." : "Ej: Lanzamiento de un curso, promover oferta, destacar testimonios"}
-                            />
-                        </div>
-
-                        {/* Brain Status */}
-                        <div style={{ padding: '20px', borderRadius: '16px', background: hasBrain ? 'rgba(126, 206, 202, 0.05)' : 'rgba(245, 158, 11, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {hasBrain ? <CheckCircle2 color="#7ECECA" /> : <AlertCircle color="#F59E0B" />}
-                                <div>
-                                    <p style={{ fontWeight: 700, color: hasBrain ? '#7ECECA' : '#F59E0B' }}>
-                                        {hasBrain ? '✓ Cerebro IA activo — tus guiones sonarán como tú' : '⚠ Cerebro IA vacío — tus guiones serán genéricos'}
-                                    </p>
-                                    {!hasBrain && <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Complétalo para obtener mejores resultados</p>}
+                    {/* Wizard Step 2: Contexto */}
+                    {wizardStep === 2 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivo del guion</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {OBJETIVOS.map(o => (
+                                        <button key={o} onClick={() => setGoal(o)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: goal === o ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: goal === o ? 'black' : 'white', fontWeight: goal === o ? 700 : 400 }}>{o}</button>
+                                    ))}
                                 </div>
                             </div>
-                            {!hasBrain && <button onClick={() => router.push('/dashboard/knowledge')} className="btn-secondary" style={{ fontSize: '0.7rem' }}>Ir al Cerebro →</button>}
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataforma</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {PLATAFORMAS.map(p => (
+                                        <button key={p} onClick={() => setPlatform(p)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: platform === p ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: platform === p ? 'black' : 'white', fontWeight: platform === p ? 700 : 400 }}>{p}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Nivel de awareness de tu audiencia</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {AWARENESS_LEVELS.map(a => (
+                                        <button key={a} onClick={() => setAwareness(a)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: awareness === a ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: awareness === a ? 'black' : 'white', fontWeight: awareness === a ? 700 : 400 }}>{a === 'no te conoce' ? 'No te conoce' : a === 'tibia' ? 'Te conoce / Tibia' : 'Muy caliente'}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle →</button>
+                            </div>
                         </div>
+                    )}
 
-                        <button onClick={generationMode === 'single' ? handleGenerateSingle : handleGeneratePlan} className="btn-primary" style={{ height: '64px', fontSize: '1.2rem', fontWeight: 800 }}>
-                            {generationMode === 'single' ? 'Analizar y generar guiones →' : 'Generar plan de 30 días →'}
-                        </button>
+                    {/* Wizard Step 3: Detalle */}
+                    {wizardStep === 3 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Sobre qué va el contenido</p>
+                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '100px' }} />
+                            </div>
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tono de marca</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {TONOS_MARCA.map(t => (
+                                            <button key={t} onClick={() => setToneBrand(t)} style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: toneBrand === t ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: toneBrand === t ? 'black' : 'white', fontWeight: toneBrand === t ? 700 : 400 }}>{t}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tipo de gancho preferido</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {HOOK_TYPES.map(h => (
+                                            <button key={h} onClick={() => setHookType(h)} style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: hookType === h ? '#9D00FF' : 'rgba(255,255,255,0.1)', color: 'white', fontWeight: hookType === h ? 700 : 400 }}>{h}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Intensidad del hook: {intensity}/5</p>
+                                <input type="range" min="1" max="5" value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#9D00FF' }} />
+                            </div>
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Victoria/Fracaso reciente</p>
+                                    <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular</p>
+                                    <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación</p>
+                                    <input className="input-field" placeholder="Cliente o situación real" value={story} onChange={(e) => setStory(e.target.value)} />
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de guiones</p>
+                                <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#7ECECA' }} />
+                                <p style={{ textAlign: 'center', marginTop: '8px', fontWeight: 700, color: '#7ECECA' }}>{quantity} guiones</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>
+                            </div>
+                            {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Plan Monthly Mode */}
+            {step === 1 && generationMode === 'plan' && (
+                <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
+                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800 }}>Tu Planificador Mensual de Contenido</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos del mes</p>
+                            <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
+                        </div>
+                        <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {PLATAFORMAS.map(p => (
+                                        <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {FRECUENCIAS.map(f => (
+                                        <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                                {CONTENT_TYPES_PLAN.map(type => (
+                                    <div key={type}>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
+                                        <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({...planContentTypes, [type]: parseInt(e.target.value) || 0})} style={{ width: '100%', textAlign: 'center' }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
+                                <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
+                                <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
+                            </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                            <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>← Volver</button>
+                            <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
+                        </div>
                         {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                     </div>
                 </div>
@@ -667,6 +820,12 @@ export default function DashboardPage() {
 
             {step === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '500px', gap: '48px' }}>
+                    {hasBrain && (
+                        <div style={{ padding: '12px 24px', background: 'rgba(126, 206, 202, 0.1)', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '10px', border: '1px solid rgba(126, 206, 202, 0.3)' }}>
+                            <Sparkles size={16} color="#7ECECA" />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#7ECECA' }}>Generando con tu Cerebro IA: {brainName || 'perfil configurado'}</span>
+                        </div>
+                    )}
                     <div style={{ position: 'relative' }}>
                         <div className="loading-spinner" style={{ width: '80px', height: '80px', borderTopColor: '#7ECECA', borderWidth: '4px' }}></div>
                         <Sparkles style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#7ECECA' }} className="pulse" />

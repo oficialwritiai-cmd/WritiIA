@@ -26,8 +26,8 @@ const FAQ_DATA = [
         a: 'Sí, sin permanencias ni penalizaciones. Cancelas en un clic desde tu configuración.',
     },
     {
-        q: '¿Hay límite de guiones en el plan Pro?',
-        a: 'No. Guiones ilimitados en Pro y Agency.',
+        q: '¿Cuántos guiones puedo generar al mes?',
+        a: 'El plan Pro incluye 200 créditos de IA al mes (aproximadamente 40 guiones avanzados). Puedes comprar créditos extra si los necesitas.',
     },
 ];
 
@@ -283,7 +283,8 @@ export default function LandingPage() {
                         </div>
 
                         <ul className="pricing-features" style={{ marginBottom: '40px' }}>
-                            <li>Generador de guiones para Reels, TikTok, Shorts, LinkedIn y X</li>
+                            <li>Generador de guiones avanzados para Reels, TikTok, Shorts, LinkedIn y X</li>
+                            <li><strong>200 créditos IA/mes</strong> (≈40 guiones avanzados)</li>
                             <li><strong>NUEVO:</strong> Generador de ideas de contenido virales</li>
                             <li>Cerebro IA: memoria de tu biografía, público, valores y nicho</li>
                             <li>Plan mensual de contenido con ideas para todo el mes</li>
