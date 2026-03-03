@@ -91,6 +91,25 @@ Reglas:
             userMessage,
         });
 
+        // Ensure ideas is always an array
+        let ideasArray = [];
+        if (Array.isArray(ideas)) {
+            ideasArray = ideas;
+        } else if (typeof ideas === 'string') {
+            try {
+                const parsed = JSON.parse(ideas);
+                ideasArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                ideasArray = [];
+            }
+        } else if (ideas && typeof ideas === 'object') {
+            ideasArray = [ideas];
+        }
+
+        if (ideasArray.length === 0) {
+            return NextResponse.json({ error: 'No se pudieron generar ideas. Intenta de nuevo.' }, { status: 500 });
+        }
+
         // Save session
         const { data: session } = await supabase.from('strategy_sessions').insert({
             user_id: userId,
@@ -103,7 +122,7 @@ Reglas:
         }).select().single();
 
         // Save ideas
-        const ideasToInsert = ideas.map(idea => ({
+        const ideasToInsert = ideasArray.map(idea => ({
             session_id: session.id,
             user_id: userId,
             plataforma: idea.plataforma,
@@ -117,10 +136,14 @@ Reglas:
 
         await supabase.from('strategy_ideas').insert(ideasToInsert);
 
-        return NextResponse.json({ ideas });
+        return NextResponse.json({ ideas: ideasArray });
 
     } catch (err) {
         console.error('Error en estrategia generate-ideas:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        const errorMsg = err?.message || 'Error interno';
+        if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded')) {
+            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Intenta de nuevo en unos segundos.', ideas: [] }, { status: 503 });
+        }
+        return NextResponse.json({ error: errorMsg, ideas: [] }, { status: 500 });
     }
 }

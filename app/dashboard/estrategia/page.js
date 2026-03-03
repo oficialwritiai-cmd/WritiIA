@@ -128,7 +128,28 @@ export default function EstrategiaPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
 
-            setIdeas(data.ideas || []);
+            // Ensure ideas is always an array
+            let ideasData = data.ideas;
+            if (!Array.isArray(ideasData)) {
+                if (typeof ideasData === 'string') {
+                    try {
+                        ideasData = JSON.parse(ideasData);
+                        ideasData = Array.isArray(ideasData) ? ideasData : [ideasData];
+                    } catch (e) {
+                        ideasData = [];
+                    }
+                } else if (ideasData && typeof ideasData === 'object') {
+                    ideasData = [ideasData];
+                } else {
+                    ideasData = [];
+                }
+            }
+
+            if (ideasData.length === 0) {
+                throw new Error('No se recibieron ideas válidas. Intenta de nuevo.');
+            }
+
+            setIdeas(ideasData);
             setStep(1);
         } catch (err) {
             setError(err.message);
