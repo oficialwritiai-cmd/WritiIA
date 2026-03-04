@@ -114,6 +114,7 @@ export default function IdeasViralesPage() {
                 type: 'idea',
                 platform: idea.plataforma || 'Reels',
                 goal: idea.objetivo || 'Viral',
+                titulo: idea.titulo || idea.titulo_idea || 'Idea Viral',
                 content: idea,
                 tags: [idea.plataforma, idea.tipo_contenido || idea.tipo_idea].filter(Boolean)
             });

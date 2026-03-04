@@ -33,6 +33,17 @@ export async function POST(request) {
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+        const cost = 5; // Cost for generating a plan
+        const { data: profile, error: creditError } = await supabase
+            .from('users_profiles')
+            .select('credits_balance')
+            .eq('id', userId)
+            .single();
+
+        if (!profile || profile.credits_balance < cost) {
+            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        }
+
         let postCount = 12;
         if (frequency === '4 publicaciones por semana') postCount = 16;
         if (frequency === '5 publicaciones por semana') postCount = 20;
@@ -95,7 +106,12 @@ Genera un plan de contenido para 30 días con variedad de tipos (autoridad, hist
         });
 
         const totalTokens = (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
-        await supabase.from('usage_logs').insert({ user_id: userId, action: 'generate_plan', tokens_used: totalTokens });
+
+        // Deduct credits and log usage
+        await Promise.all([
+            supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost }),
+            supabase.from('usage_logs').insert({ user_id: userId, action: 'generate_plan', tokens_used: totalTokens })
+        ]);
 
         const { data: planData } = await supabase.from('content_plans').insert({
             user_id: userId, month: new Date().getMonth() + 1, year: new Date().getFullYear(),

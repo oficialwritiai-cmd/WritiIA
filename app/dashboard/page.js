@@ -6,6 +6,7 @@ import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2, Sparkles } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import GenerationProgress from '@/app/components/GenerationProgress';
+import { saveToLibrary } from '@/lib/library';
 
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
@@ -248,10 +249,13 @@ export default function DashboardPage() {
             generatedScripts.forEach((_, i) => { initialSelected[i] = 0; });
             setSelectedHook(initialSelected);
 
-            // Backend already handled persistence and returned db_ids
             const finalScripts = generatedScripts.map(s => ({
                 ...s,
-                desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : []
+                titulo_guion: s.titulo_guion || s.titulo_interno || 'Sin título',
+                video_duration: s.video_duration || '45-60 seg',
+                desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
+                cierre: s.cierre || '',
+                copy_post: s.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
             }));
 
             setScripts(finalScripts);
@@ -354,28 +358,7 @@ export default function DashboardPage() {
     async function handleSaveAll() {
         try {
             for (const s of scripts) {
-                // Ensure desarrollo is an array
-                const desarrolloArray = Array.isArray(s.desarrollo) ? s.desarrollo : [];
-                const content = (s.gancho || '') + '\n\n' + (desarrolloArray.join('\n') || '') + '\n\n' + (s.cta || '');
-                if (s.db_id) {
-                    await supabase.from('scripts').update({
-                        content,
-                        titulo_angulo: s.titulo_angulo,
-                        gancho: s.gancho,
-                        desarrollo_1: desarrolloArray[0] || '',
-                        desarrollo_2: desarrolloArray[1] || '',
-                        desarrollo_3: desarrolloArray[2] || '',
-                        cta: s.cta,
-                        is_saved: true
-                    }).eq('id', s.db_id);
-                } else {
-                    await supabase.from('scripts').insert({
-                        user_id: profile.id,
-                        content,
-                        platform,
-                        is_saved: true
-                    });
-                }
+                await saveScript(s, true); // Silent save
             }
             alert('Todos los guiones guardados en biblioteca ✓');
         } catch (err) {
@@ -456,34 +439,32 @@ export default function DashboardPage() {
         }
     };
 
-    const saveScript = async (script) => {
-        // Ensure desarrollo is an array
-        const desarrolloArray = Array.isArray(script.desarrollo) ? script.desarrollo : [];
-        const content = (script.gancho || '') + '\n\n' + (desarrolloArray.join('\n') || '') + '\n\n' + (script.cta || '');
-        let err = null;
-        if (script.db_id) {
-            const { error } = await supabase.from('scripts').update({
-                content,
-                titulo_angulo: script.titulo_angulo,
-                gancho: script.gancho,
-                desarrollo_1: desarrolloArray[0] || '',
-                desarrollo_2: desarrolloArray[1] || '',
-                desarrollo_3: desarrolloArray[2] || '',
-                cta: script.cta,
-                is_saved: true
-            }).eq('id', script.db_id);
-            err = error;
-        } else {
-            const { error } = await supabase.from('scripts').insert({
-                user_id: profile.id,
-                content,
-                platform,
-                is_saved: true
+    const saveScript = async (script, silent = false) => {
+        if (!profile?.id) return;
+
+        try {
+            await saveToLibrary({
+                userId: profile.id,
+                type: 'guion',
+                platform: platform || 'General',
+                goal: goal || 'engagement',
+                titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
+                content: {
+                    video_duration: script.video_duration || '45-60 seg',
+                    hook: script.hook || script.gancho || '',
+                    desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                    cierre: script.cierre || '',
+                    cta: script.cta || '',
+                    copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                },
+                tags: ['guion', platform, goal].filter(Boolean)
             });
-            err = error;
+
+            if (!silent) alert('Guardado en biblioteca ✓');
+        } catch (err) {
+            console.error('Error saving script:', err);
+            if (!silent) alert('Error al guardar: ' + err.message);
         }
-        if (!err) alert('Guardado en biblioteca');
-        else alert('Error al guardar: ' + err.message);
     };
 
     const handleTogglePlatform = (p) => {
@@ -624,6 +605,25 @@ export default function DashboardPage() {
 
     return (
         <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* BANNER DE ACTUALIZACIÓN (Solo visible si no han refrescado) */}
+            <div style={{
+                background: 'rgba(126, 206, 202, 0.15)',
+                border: '2px solid rgba(126, 206, 202, 0.4)',
+                padding: '20px 24px',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                animation: 'pulse-glow 2s infinite alternate'
+            }}>
+                <div style={{ fontSize: '2rem' }}>✅</div>
+                <div>
+                    <h3 style={{ color: '#7ECECA', margin: 0, fontSize: '1rem', fontWeight: 900 }}>SISTEMA ACTUALIZADO - VERSIÓN V1.4.0 (PREMIUM SCRIPTS + COPY POST)</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', margin: '4px 0 0 0', fontSize: '0.85rem', fontWeight: 600 }}>
+                        {new Date().toLocaleTimeString('es-ES')} - Si no ves los campos de "LinkedIn/Copy Post", pulsa <strong>Ctrl + F5</strong> para forzar la actualización.
+                    </p>
+                </div>
+            </div>
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -968,22 +968,49 @@ export default function DashboardPage() {
                                         }}>
                                             #{i + 1}
                                         </div>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Guion #{i + 1}</h3>
-                                        <span className="badge" style={{
-                                            background: 'rgba(126, 206, 202, 0.1)',
-                                            color: '#7ECECA',
-                                            fontSize: '0.7rem',
-                                            padding: '4px 10px'
-                                        }}>{platform}</span>
-                                        {s.titulo_angulo && (
-                                            <span className="badge" style={{
-                                                background: 'rgba(157, 0, 255, 0.1)',
-                                                color: '#B74DFF',
-                                                fontSize: '0.7rem',
-                                                padding: '4px 10px',
-                                                border: '1px solid rgba(157, 0, 255, 0.2)'
-                                            }}>{s.titulo_angulo}</span>
-                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <input
+                                                value={s.titulo_guion || s.titulo_angulo || `Guion #${i + 1}`}
+                                                onChange={(e) => {
+                                                    const news = [...scripts];
+                                                    news[i].titulo_guion = e.target.value;
+                                                    setScripts(news);
+                                                }}
+                                                placeholder="Título del guion..."
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    borderBottom: '1px dashed rgba(255,255,255,0.2)',
+                                                    color: '#fff',
+                                                    fontSize: '1.2rem',
+                                                    fontWeight: 800,
+                                                    width: '100%',
+                                                    outline: 'none',
+                                                    padding: '4px 0'
+                                                }}
+                                            />
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                    <input
+                                                        value={s.video_duration || '45-60 seg'}
+                                                        onChange={(e) => {
+                                                            const news = [...scripts];
+                                                            news[i].video_duration = e.target.value;
+                                                            setScripts(news);
+                                                        }}
+                                                        style={{ background: 'transparent', border: 'none', color: 'inherit', width: '80px', fontSize: 'inherit', fontWeight: 'inherit', padding: 0, outline: 'none' }}
+                                                    />
+                                                </div>
+                                                <span className="badge" style={{
+                                                    background: 'rgba(255, 255, 255, 0.05)',
+                                                    color: 'rgba(255,255,255,0.6)',
+                                                    fontSize: '0.7rem',
+                                                    padding: '4px 10px',
+                                                    whiteSpace: 'nowrap'
+                                                }}>{platform}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1021,10 +1048,11 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         <textarea
-                                            value={s.gancho}
+                                            value={s.hook || s.gancho || ''}
                                             disabled={refiningBlock === `${i}-gancho`}
                                             onChange={(e) => {
                                                 const news = [...scripts];
+                                                news[i].hook = e.target.value;
                                                 news[i].gancho = e.target.value;
                                                 setScripts(news);
                                             }}
@@ -1135,6 +1163,92 @@ export default function DashboardPage() {
                                             }}
                                         />
                                     </div>
+
+                                    {/* CIERRE */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>CIERRE / REMATE</label>
+                                        <textarea
+                                            value={s.cierre || ''}
+                                            onChange={(e) => {
+                                                const news = [...scripts];
+                                                news[i].cierre = e.target.value;
+                                                setScripts(news);
+                                            }}
+                                            className="textarea-field"
+                                            style={{
+                                                minHeight: '60px',
+                                                fontSize: '1rem',
+                                                background: '#080808',
+                                                border: '1px solid #1E1E1E',
+                                                padding: '16px'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* COPY DEL POST */}
+                                    <div style={{
+                                        marginTop: '20px',
+                                        padding: '32px',
+                                        background: 'rgba(126, 206, 202, 0.03)',
+                                        borderRadius: '24px',
+                                        border: '1px solid rgba(126, 206, 202, 0.1)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '24px'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <PenLine size={20} color="#7ECECA" />
+                                            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7ECECA' }}>Copy para publicación</h4>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>TÍTULO DEL POST</label>
+                                            <input
+                                                value={s.copy_post?.titulo || ''}
+                                                onChange={(e) => {
+                                                    const news = [...scripts];
+                                                    if (!news[i].copy_post) news[i].copy_post = {};
+                                                    news[i].copy_post.titulo = e.target.value;
+                                                    setScripts(news);
+                                                }}
+                                                className="input-field"
+                                                style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>DESCRIPCIÓN LARGA / CAPTION</label>
+                                            <textarea
+                                                value={s.copy_post?.descripcion_larga || ''}
+                                                onChange={(e) => {
+                                                    const news = [...scripts];
+                                                    if (!news[i].copy_post) news[i].copy_post = {};
+                                                    news[i].copy_post.descripcion_larga = e.target.value;
+                                                    setScripts(news);
+                                                }}
+                                                className="textarea-field"
+                                                style={{ minHeight: '120px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '12px', display: 'block' }}>HASHTAGS RECOMENDADOS</label>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                {s.copy_post?.hashtags?.map((tag, tidx) => (
+                                                    <span key={tidx} style={{
+                                                        fontSize: '0.75rem',
+                                                        background: 'rgba(126, 206, 202, 0.1)',
+                                                        color: '#7ECECA',
+                                                        padding: '4px 12px',
+                                                        borderRadius: '100px',
+                                                        border: '1px solid rgba(126, 206, 202, 0.2)'
+                                                    }}>
+                                                        #{tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Card Footer */}
@@ -1147,7 +1261,7 @@ export default function DashboardPage() {
                                     gap: '12px'
                                 }}>
                                     {[
-                                        { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`${s.gancho}\n\n${s.desarrollo.join('\n')}\n\n${s.cta}`, i) },
+                                        { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
                                         { icon: <Bookmark size={16} />, label: 'Guardar', action: () => saveScript(s) },
                                         { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
                                         { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
@@ -1243,6 +1357,12 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+            <style jsx>{`
+                @keyframes pulse-glow {
+                    from { box-shadow: 0 0 5px rgba(126, 206, 202, 0.1); border-color: rgba(126, 206, 202, 0.3); }
+                    to { box-shadow: 0 0 20px rgba(126, 206, 202, 0.3); border-color: rgba(126, 206, 202, 0.6); }
+                }
+            `}</style>
         </div>
     );
 }

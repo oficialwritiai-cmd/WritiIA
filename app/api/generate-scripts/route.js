@@ -46,14 +46,14 @@ export async function POST(request) {
         }
 
         // 1. Credit Check (5 credits)
-        const { data: credits, error: creditError } = await supabase
-            .from('ai_credits')
-            .select('*')
-            .eq('user_id', userId)
+        const { data: profile, error: creditError } = await supabase
+            .from('users_profiles')
+            .select('credits_balance')
+            .eq('id', userId)
             .single();
 
         const cost = 5;
-        if (credits && (credits.total_credits - credits.used_credits) < cost) {
+        if (!profile || profile.credits_balance < cost) {
             return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
         }
 
@@ -76,31 +76,44 @@ PERFIL DEL CREADOR (Cerebro IA):
         }
 
         const systemPrompt = `Eres un estratega de contenido premium especializado en guiones virales agresivos y persuasivos.
-Tu misión es crear piezas que no parezcan escritas por una IA. 
+Tu misión es crear piezas que no parezcan escritas por una IA, sino por un experto en marketing de respuesta directa.
 
-REGLAS DE ORO:
-1. GANCHOS (HOOKS): Deben ser ultra-específicos. Nada de "¿Quieres saber cómo...?". Usa la intensidad ${intensity}/5.
-2. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
+REGLAS DE ORO PARA EL CONTENIDO:
+1. GANCHOS (HOOKS) ULTRA-ESPECÍFICOS: Nada de frases genéricas como "¿Quieres saber cómo...?", "En este video te voy a contar...", "Hoy vamos a hablar de...". 
+   - Empieza DIRECTO al grano con un dato, una provocación o una verdad contraintuitiva.
+   - Usa la intensidad ${intensity}/5.
+2. LENGUAJE CONCRETO: Usa números, detalles reales, comparaciones y evita adjetivos vacíos ("increíble", "asombroso").
+3. CONEXIÓN TOTAL: El guion debe estar 100% conectado con la idea proporcionada.
+4. COPY DEL POST: Debe estar optimizado para ${platform}, usando hooks visuales en el título y una descripción que invite a leer.
+
+PARÁMETROS DEL CREADOR:
 - Plataforma: ${platform}
 - Nivel de awareness: ${awareness}
 - Tono deseado: ${tone}
 - Tipo de gancho: ${hookType}
-- Intensidad de gancho: ${intensity}/5
-- Victoria/Fracaso: ${victory || 'N/A'}
-- Opinión impopular: ${opinion || 'N/A'}
-- Caso real/Situación: ${story || 'N/A'}
-- Notas extra: ${ideas || 'Ninguna'}
 
 Genera ${requestedCount} guiones únicos.
 
-IMPORTANTE: Devuelve ÚNICAMENTE un array JSON válido. Cada guion debe tener exactamente esta estructura:
+IMPORTANTE: Devuelve ÚNICAMENTE un array JSON válido. Nada de texto extra.
+Estructura obligatoria por cada objeto del array:
 {
-  "titulo_angulo": "Un título corto",
-  "gancho": "Texto del gancho principal",
-  "desarrollo": ["Punto 1", "Punto 2", "Punto 3"],
-  "cta": "El llamado a la acción"
-}
-No incluyas texto antes ni después del array JSON.`;
+  "titulo_guion": "Título interno del guion",
+  "video_duration": "Duración estimada (ej. 45-60 segundos)",
+  "hook": "El gancho inicial (impactante y directo)",
+  "desarrollo": [
+    "Punto 1 con detalle real y accionable",
+    "Punto 2 con detalle real y accionable",
+    "Punto 3 con detalle real y accionable"
+  ],
+  "cierre": "Frase de cierre potente que conecte con el paso final",
+  "cta": "Llamada a la acción clara y directa",
+  "copy_post": {
+    "titulo": "Título/Hook para el texto del post",
+    "descripcion_larga": "Cuerpo del post con valor añadido (1-2 párrafos)",
+    "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
+  }
+} / 
+IMPORTANTE: El campo 'video_duration' debe ser una estimación realista del tiempo que tardaría un humano en leer el guion.`;
 
         const userMessage = `Tema o idea principal para el guion: ${topic}
 Contexto a aplicar:
@@ -129,39 +142,18 @@ ${brandContextString}`;
             return NextResponse.json({ error: 'No se pudieron generar guiones. Intenta de nuevo.' }, { status: 500 });
         }
 
-        // 2. Parallel Sync Persistence
-        const [insertedScripts] = await Promise.all([
-            // Primary Scripts Table (for Dashboard Results)
-            supabase.from('scripts').insert(
-                scriptsArray.map(s => ({
-                    user_id: userId,
-                    content: JSON.stringify({
-                        gancho: s.gancho,
-                        desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
-                        cta: s.cta
-                    }),
-                    platform,
-                    topic: topic.trim(),
-                    tone,
-                    goal,
-                    source_type: sourceType,
-                    source_reference_id: sourceReferenceId,
-                    titulo_angulo: s.titulo_angulo,
-                    gancho: s.gancho,
-                    metadata: { hookType, intensity, awareness, victory, opinion, story }
-                }))
-            ).select(),
-
-            // Credit accounting
-            supabase.rpc('increment_used_credits', { u_id: userId, amount: cost })
+        // 2. Credit accounting & Usage logs
+        await Promise.all([
+            supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost }),
+            supabase.from('usage_logs').insert({
+                user_id: userId,
+                action: 'generate_scripts',
+                model: 'claude-3-5-sonnet',
+                cost_eur: 0.05 // Estimated cost per generation
+            })
         ]);
 
-        const scriptsWithIds = scriptsArray.map((s, idx) => ({
-            ...s,
-            db_id: insertedScripts.data?.[idx]?.id
-        }));
-
-        return NextResponse.json({ scripts: scriptsWithIds });
+        return NextResponse.json({ scripts: scriptsArray });
 
     } catch (err) {
         console.error('Error en generate-scripts:', err);

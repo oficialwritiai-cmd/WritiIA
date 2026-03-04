@@ -151,9 +151,35 @@ export default function LibraryPage() {
         return matchesPlatform && matchesType && matchesGoal && matchesTone && matchesHookType && matchesFavorite && matchesDate && matchesSearch;
     });
 
-    const copyToClipboard = (text) => {
+    const copyToClipboard = (item) => {
+        const { content, titulo, type } = item;
+        let text = '';
+
+        if (type === 'guion' && typeof content === 'object') {
+            text = `GUION: ${titulo || content.titulo_guion || content.titulo_angulo}\n\n`;
+            text += `HOOK: ${content.hook || content.gancho || ''}\n\n`;
+            text += `DESARROLLO:\n${Array.isArray(content.desarrollo) ? content.desarrollo.join('\n') : ''}\n\n`;
+            if (content.cierre) text += `CIERRE: ${content.cierre}\n\n`;
+            text += `CTA: ${content.cta || ''}\n\n`;
+
+            if (content.copy_post) {
+                text += `--- COPY POST ---\n`;
+                text += `${content.copy_post.titulo || ''}\n\n`;
+                text += `${content.copy_post.descripcion_larga || ''}\n\n`;
+                text += `Hashtags: ${Array.isArray(content.copy_post.hashtags) ? content.copy_post.hashtags.map(h => '#' + h).join(' ') : ''}`;
+            }
+        } else if (type === 'idea' && typeof content === 'object') {
+            text = `IDEA: ${titulo || content.titulo || content.titulo_idea}\n\n`;
+            text += `DESCRIPCIÓN: ${content.descripcion || ''}\n\n`;
+            if (content.hook) text += `HOOK SUGERIDO: ${content.hook}\n\n`;
+            text += `PLATAFORMA: ${item.platform}\n`;
+            text += `OBJETIVO: ${item.goal}`;
+        } else {
+            text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+        }
+
         navigator.clipboard.writeText(text);
-        showToast('Copiado al portapapeles', 'success');
+        showToast('Copiado al portapapeles ✓', 'success');
     };
 
     const getTypeLabel = (type) => {
@@ -289,7 +315,7 @@ export default function LibraryPage() {
                                         {new Date(item.created_at).toLocaleDateString()}
                                     </span>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button onClick={() => copyToClipboard(typeof content === 'string' ? content : JSON.stringify(content, null, 2))} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <button onClick={() => copyToClipboard(item)} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Copy size={16} /> <span className="hide-mobile">Copiar</span>
                                         </button>
                                         <button onClick={() => handleDelete(item.id)} className="btn-secondary" style={{ padding: '8px 12px', color: '#FF4D4D', borderColor: 'rgba(255, 77, 77, 0.2)', display: 'flex', alignItems: 'center', gap: '6px' }}>

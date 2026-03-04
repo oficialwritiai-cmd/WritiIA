@@ -20,7 +20,7 @@ export async function POST(req) {
 
         const body = await req.json();
         console.log('[generate-ideas] Body received:', { ...body, userId: body.userId?.substring(0, 8) });
-        
+
         const validation = GenerateIdeasSchema.safeParse(body);
 
         if (!validation.success) {
@@ -30,7 +30,7 @@ export async function POST(req) {
 
         const { context, platforms, useSEO, useTikTok, goal, count, userId } = validation.data;
         console.log('[generate-ideas] Validated data:', { context, platforms, goal, count, userId: userId?.substring(0, 8) });
-        
+
         const apiKey = process.env.ANTHROPIC_API_KEY;
         console.log('[generate-ideas] API Key available:', !!apiKey);
 
@@ -39,11 +39,22 @@ export async function POST(req) {
 
         let brandContextString = '';
         const { data: brandBrain, error: brainError } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
-        
+
         if (brainError) {
             console.error('[generate-ideas] Brain fetch error:', brainError);
         }
-        
+
+        const cost = 2; // Cost for generating ideas
+        const { data: profile, error: creditError } = await supabase
+            .from('users_profiles')
+            .select('credits_balance')
+            .eq('id', userId)
+            .single();
+
+        if (!profile || profile.credits_balance < cost) {
+            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        }
+
         if (brandBrain) {
             brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
         } else {
@@ -89,7 +100,7 @@ Tendencias SEO: ${useSEO ? 'Sí' : 'No'}.
 Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
 
         console.log('[generate-ideas] Calling Anthropic...');
-        
+
         let ideasData;
         try {
             ideasData = await generateIdeasWithHaiku({
@@ -110,7 +121,7 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
 
         // Ensure ideas is always an array
         let ideasArray = [];
-        
+
         if (ideas && Array.isArray(ideas)) {
             ideasArray = ideas;
         } else if (ideas && typeof ideas === 'object') {
@@ -132,20 +143,8 @@ Tendencias TikTok: ${useTikTok ? 'Sí' : 'No'}.`;
             return NextResponse.json({ error: 'No se pudieron generar ideas. Intenta de nuevo con otros parámetros.' }, { status: 500 });
         }
 
-        // Save to library (MANDATORY - fail if can't save)
-        const { saveToLibrary } = await import('@/lib/library');
-        for (const idea of ideasArray) {
-            if (idea && (idea.titulo || idea.titulo_idea)) {
-                await saveToLibrary({
-                    userId,
-                    type: 'idea',
-                    platform: idea.plataforma || 'General',
-                    goal: idea.objetivo || idea.cta || 'engagement',
-                    content: idea,
-                    tags: ['idea', 'viral', idea.plataforma].filter(Boolean)
-                });
-            }
-        }
+        // Deduct credits
+        await supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost });
 
         return NextResponse.json({ ideas: ideasArray });
 

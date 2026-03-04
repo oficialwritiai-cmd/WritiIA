@@ -33,6 +33,21 @@ export async function POST(request) {
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+        if (!userId) {
+            return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
+        }
+
+        const cost = 1;
+        const { data: profile, error: creditError } = await supabase
+            .from('users_profiles')
+            .select('credits_balance')
+            .eq('id', userId)
+            .single();
+
+        if (!profile || profile.credits_balance < cost) {
+            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        }
+
         const systemPrompt = `Mejora el ${type} (gancho, desarrollo o cta) de un guion viral.
 Mantén la intención original pero hazlo más claro y potente.
 Alineado con: ${context || 'redes sociales'}. 
@@ -46,7 +61,7 @@ Responde SOLO con la versión final mejorada.`;
             userMessage: userPrompt,
         });
 
-        await supabase.rpc('increment_used_credits', { u_id: userId, amount: 1 });
+        await supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost });
 
         return NextResponse.json({ refinedText: refinedText.trim() });
     } catch (err) {

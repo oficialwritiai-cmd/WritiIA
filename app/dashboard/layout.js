@@ -186,13 +186,14 @@ export default function DashboardLayout({ children }) {
                         )}
                     </button>
                     <div style={{
-                        fontSize: '0.65rem',
-                        color: 'rgba(255,255,255,0.2)',
+                        fontSize: '0.75rem',
+                        color: '#7ECECA',
                         textAlign: 'center',
-                        fontWeight: 700,
-                        marginTop: '10px'
+                        fontWeight: 900,
+                        marginTop: '10px',
+                        letterSpacing: '0.05em'
                     }}>
-                        v1.1.0
+                        v1.4.0
                     </div>
                 </div>
             </aside>
@@ -308,7 +309,7 @@ export default function DashboardLayout({ children }) {
                         <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px 12px' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>V1.2.0</span>
+                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900 }}>v1.4.1</span>
                             </div>
                             <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
                             <span className="badge" style={{
@@ -324,7 +325,28 @@ export default function DashboardLayout({ children }) {
                     </div>
 
                     <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.8rem' }}>Deposit Credits</button>
+                        {profile?.plan !== 'pro' && (
+                            <Link href="/dashboard/settings" style={{ textDecoration: 'none' }}>
+                                <button className="btn-primary" style={{
+                                    padding: '8px 20px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 900,
+                                    background: 'var(--accent-gradient)',
+                                    color: 'black',
+                                    borderRadius: '100px',
+                                    boxShadow: '0 0 15px rgba(126, 206, 202, 0.4)',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}>
+                                    🚀 MEJORAR A PRO
+                                </button>
+                            </Link>
+                        )}
+                        <Link href="/dashboard/credits" style={{ textDecoration: 'none' }}>
+                            <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                Deposit Credits
+                            </button>
+                        </Link>
 
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
 
