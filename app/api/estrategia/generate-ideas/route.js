@@ -59,7 +59,7 @@ Tu objetivo es crear un Banco de Ideas Estratégicas.
 
 IMPORTANTE: Responde EXCLUSIVAMENTE con un array JSON válido. Nada de texto antes o después. Sin markdown, sin código, solo JSON puro.
 
-Formato obligatorio (exactamente 15 ideas):
+Formato obligatorio (exactamente 10 ideas):
 [
   {
     "id": "1",
@@ -87,7 +87,7 @@ Ejemplo de respuesta válida:
   }
 ]`;
 
-        const userMessage = "Genera el Banco de Ideas Estratégicas con 15 ideas únicas basadas en mi perfil y objetivos. Responde SOLO con el JSON array, sin texto previo ni posterior.";
+        const userMessage = "Genera el Banco de Ideas Estratégicas con 10 ideas únicas basadas en mi perfil y objetivos. Responde SOLO con el JSON array, sin texto previo ni posterior.";
 
         const { parsed: ideas, usage } = await callAnthropicForIdeas({
             apiKey,
