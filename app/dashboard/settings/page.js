@@ -170,10 +170,10 @@ export default function SettingsPage() {
                         </p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginBottom: '32px' }}>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Guiones ilimitados</strong> cada mes</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>40 guiones avanzados/mes</strong> (200 créditos IA)</div>
                             <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Todas las plataformas:</strong> Reels, TikTok, Shorts, LinkedIn, X</div>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Cerebro IA:</strong> memoria completa de tu voz</div>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca y Calendario</strong> en 1 clic</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Cerebro IA</strong> — memoria de tu voz de marca</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca + Calendario</strong> — organiza tu contenido</div>
                         </div>
 
                         <button type="button" className="btn-primary" style={{ padding: '16px 40px', fontSize: '1rem' }}>
