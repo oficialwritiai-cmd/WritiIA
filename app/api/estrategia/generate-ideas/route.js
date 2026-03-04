@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateScriptsWithSonnet } from '@/lib/anthropic';
+import { generateIdeasWithHaiku } from '@/lib/anthropic';
 import rateLimit from '@/lib/rate-limit';
+
+// Wrapper that uses higher max_tokens for idea generation
+async function callAnthropicForIdeas({ apiKey, systemPrompt, userMessage }) {
+    // Use the dedicated ideas function
+    return await generateIdeasWithHaiku({ apiKey, systemPrompt, userMessage });
+}
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -53,7 +59,7 @@ Tu objetivo es crear un Banco de Ideas Estratégicas.
 
 IMPORTANTE: Responde EXCLUSIVAMENTE con un array JSON válido. Nada de texto antes o después. Sin markdown, sin código, solo JSON puro.
 
-Formato obligatorio (exactamente 15-20 ideas):
+Formato obligatorio (exactamente 15 ideas):
 [
   {
     "id": "1",
@@ -81,9 +87,9 @@ Ejemplo de respuesta válida:
   }
 ]`;
 
-        const userMessage = "Genera el Banco de Ideas Estratégicas con 30 ideas únicas basadas en mi perfil y objetivos.";
+        const userMessage = "Genera el Banco de Ideas Estratégicas con 15 ideas únicas basadas en mi perfil y objetivos. Responde SOLO con el JSON array, sin texto previo ni posterior.";
 
-        const { parsed: ideas, usage } = await generateScriptsWithSonnet({
+        const { parsed: ideas, usage } = await callAnthropicForIdeas({
             apiKey,
             systemPrompt,
             userMessage,
@@ -162,7 +168,7 @@ Ejemplo de respuesta válida:
         // Ensure we send a proper array
         const ideasToSend = Array.isArray(ideasArray) ? ideasArray : [];
         console.log('[API] Sending ideas count:', ideasToSend.length);
-        
+
         return NextResponse.json({ ideas: ideasToSend });
 
     } catch (err) {
