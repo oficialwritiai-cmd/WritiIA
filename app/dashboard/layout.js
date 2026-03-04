@@ -185,6 +185,15 @@ export default function DashboardLayout({ children }) {
                             </div>
                         )}
                     </button>
+                    <div style={{
+                        fontSize: '0.65rem',
+                        color: 'rgba(255,255,255,0.2)',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        marginTop: '10px'
+                    }}>
+                        v1.1.0
+                    </div>
                 </div>
             </aside>
 

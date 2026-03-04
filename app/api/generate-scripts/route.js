@@ -152,27 +152,6 @@ ${brandContextString}`;
                 }))
             ).select(),
 
-            // Unified Library Table
-            Promise.all(scriptsArray.map(res =>
-                saveToLibrary({
-                    userId,
-                    type: 'guion',
-                    platform,
-                    goal,
-                    content: res,
-                    metadata: {
-                        awareness,
-                        hookType,
-                        intensity,
-                        tone,
-                        topic,
-                        sourceType,
-                        sourceReferenceId
-                    },
-                    tags: [platform, goal, tone].filter(Boolean)
-                })
-            )),
-
             // Credit accounting
             supabase.rpc('increment_used_credits', { u_id: userId, amount: cost })
         ]);

@@ -61,11 +61,11 @@ export default function LibraryPage() {
             const { data: { user } } = await supabase.auth.getUser();
             const newContent = {
                 ...currentContent,
-                titulo_angulo: (currentContent.titulo_angulo || '').includes('(variación') 
-                    ? currentContent.titulo_angulo 
+                titulo_angulo: (currentContent.titulo_angulo || '').includes('(variación')
+                    ? currentContent.titulo_angulo
                     : (currentContent.titulo_angulo || 'Nuevo guion') + ' (variación)'
             };
-            
+
             const { error } = await supabase.from('library').insert({
                 user_id: user.id,
                 type: currentContent.type || 'guion',
@@ -76,7 +76,7 @@ export default function LibraryPage() {
                 tags: currentContent.tags || [],
                 status: 'borrador'
             });
-            
+
             if (error) throw error;
             showToast('Duplicado y listo para variar', 'success');
             loadScripts();
@@ -89,7 +89,7 @@ export default function LibraryPage() {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     };
-    
+
     const [toast, setToast] = useState(null);
 
     async function handleDelete(id) {
@@ -157,8 +157,19 @@ export default function LibraryPage() {
     };
 
     const getTypeLabel = (type) => {
-        const labels = { guion: 'Guion', idea: 'Idea', mensual: 'Plan Mensual' };
+        const labels = { guion: 'Guion', idea: 'Idea', plan_mensual: 'Plan Mensual' };
         return labels[type] || type || 'Contenido';
+    };
+
+    const handleUpdateItem = async (id, updates) => {
+        try {
+            const { error } = await supabase.from('library').update(updates).eq('id', id);
+            if (error) throw error;
+            setScripts(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+            showToast('Actualizado', 'success');
+        } catch (err) {
+            showToast('Error al actualizar', 'error');
+        }
     };
 
     return (
@@ -228,23 +239,20 @@ export default function LibraryPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {filtered.map(item => {
                         const content = item.content || {};
-                        const hookText = content.hook_principal || content.gancho || '';
-                        const title = content.titulo_angulo || item.goal || item.platform || 'Sin título';
-                        
+                        const hookText = content.hookText || content.hook_principal || content.gancho || content.descripcion || '';
+                        const title = item.titulo || content.titulo_angulo || item.goal || item.platform || 'Sin título';
+
                         return (
                             <div key={item.id} className="premium-card" style={{ padding: '24px', background: '#0A0A0A', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                         <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{getTypeLabel(item.type)}</span>
                                         <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.1)', color: '#B74DFF' }}>{item.platform || 'General'}</span>
-                                        {item.goal && <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>{item.goal}</span>}
-                                        {item.metadata?.tone && <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>{item.metadata.tone}</span>}
-                                        {item.metadata?.hookType && <span className="badge" style={{ background: 'rgba(0, 243, 255, 0.1)', color: '#00F3FF' }}>Hook: {item.metadata.hookType}</span>}
-                                        {item.scheduled_date && (
-                                            <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.15)', color: '#D8B4FF', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Calendar size={12} /> {new Date(item.scheduled_date).toLocaleDateString()}
-                                            </span>
-                                        )}
+                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                            {(item.tags || []).map((tag, idx) => (
+                                                <span key={idx} className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>{tag}</span>
+                                            ))}
+                                        </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <button onClick={() => toggleFavorite(item.id, item.is_favorite)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', color: item.is_favorite ? '#FFD700' : 'rgba(255,255,255,0.3)' }}>
@@ -254,25 +262,35 @@ export default function LibraryPage() {
                                 </div>
 
                                 <div>
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '8px', color: 'white' }}>{title}</h3>
-                                    <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: '1.5', fontFamily: 'monospace' }}>
-                                        "{hookText ? hookText.substring(0, 150) + (hookText.length > 150 ? '...' : '') : 'Sin gancho'}"
+                                    <input
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            fontSize: '1.2rem',
+                                            fontWeight: 800,
+                                            marginBottom: '8px',
+                                            color: 'white',
+                                            width: '100%',
+                                            outline: 'none',
+                                            borderBottom: '1px solid transparent'
+                                        }}
+                                        defaultValue={title}
+                                        onBlur={(e) => handleUpdateItem(item.id, { titulo: e.target.value })}
+                                        onFocus={(e) => e.target.style.borderBottom = '1px solid #7ECECA'}
+                                        placeholder="Título del contenido..."
+                                    />
+                                    <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                                        {hookText ? hookText.substring(0, 200) + (hookText.length > 200 ? '...' : '') : 'Sin descripción disponible'}
                                     </p>
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>
-                                        Creado el {new Date(item.created_at).toLocaleDateString()}
+                                        {new Date(item.created_at).toLocaleDateString()}
                                     </span>
-                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
                                         <button onClick={() => copyToClipboard(typeof content === 'string' ? content : JSON.stringify(content, null, 2))} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Copy size={16} /> <span className="hide-mobile">Copiar</span>
-                                        </button>
-                                        <button onClick={() => duplicateAndVary(item.id, content)} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', borderColor: 'rgba(157, 0, 255, 0.3)', color: '#B74DFF' }}>
-                                            <RefreshCw size={16} /> <span className="hide-mobile">Duplicar</span>
-                                        </button>
-                                        <button onClick={() => handleSchedule(item.id)} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <Calendar size={16} /> <span className="hide-mobile">Planificar</span>
                                         </button>
                                         <button onClick={() => handleDelete(item.id)} className="btn-secondary" style={{ padding: '8px 12px', color: '#FF4D4D', borderColor: 'rgba(255, 77, 77, 0.2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <Trash2 size={16} />

@@ -1,251 +1,382 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CalendarDays, Zap, Clock, CheckCircle2 } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Calendar as CalendarIcon,
+    Plus,
+    X,
+    Save,
+    Trash2,
+    Search,
+    BookOpen,
+    Edit3,
+    Clock,
+    Globe
+} from 'lucide-react';
 
 export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [scripts, setScripts] = useState([]);
-    const [slots, setSlots] = useState([]);
-    const [unscheduledScripts, setUnscheduledScripts] = useState([]);
-    const [unscheduledSlots, setUnscheduledSlots] = useState([]);
-    const [profile, setProfile] = useState(null);
+    const [events, setEvents] = useState([]);
+    const [libraryItems, setLibraryItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalStep, setModalStep] = useState('choice'); // 'choice', 'library', 'note', 'edit'
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [editingEvent, setEditingEvent] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Form states
+    const [title, setTitle] = useState('');
+    const [desc, setDesc] = useState('');
+    const [type, setType] = useState('note');
+    const [platform, setPlatform] = useState('General');
+
     const supabase = createSupabaseClient();
 
     useEffect(() => {
-        async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
-                setProfile(profileData);
-
-                // Fetch scheduled scripts
-                const { data: scheduled } = await supabase
-                    .from('scripts')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .not('scheduled_date', 'is', null);
-
-                setScripts(scheduled || []);
-
-                // Fetch scheduled slots
-                const { data: scheduledSlots } = await supabase
-                    .from('content_slots')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .not('scheduled_date', 'is', null);
-
-                setSlots(scheduledSlots || []);
-
-                // Fetch unscheduled scripts
-                const { data: unscheduled } = await supabase
-                    .from('scripts')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .is('scheduled_date', null)
-                    .limit(10);
-
-                setUnscheduledScripts(unscheduled || []);
-
-                // Fetch unscheduled slots
-                const { data: unscheduledSlts } = await supabase
-                    .from('content_slots')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .is('scheduled_date', null)
-                    .limit(10);
-
-                setUnscheduledSlots(unscheduledSlts || []);
-            }
-            setLoading(false);
-        }
         loadData();
-    }, []);
+    }, [currentDate]);
+
+    async function loadData() {
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            const { data: eventData } = await supabase
+                .from('calendar_events')
+                .select('*')
+                .eq('user_id', user.id)
+                .gte('event_date', firstDay)
+                .lte('event_date', lastDay);
+
+            setEvents(eventData || []);
+
+            const { data: libData } = await supabase
+                .from('library')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            setLibraryItems(libData || []);
+        }
+        setLoading(false);
+    }
 
     const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
 
-    const renderHeader = () => {
-        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        return (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Calendario Editorial</h1>
-                    <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>
-                        {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-                    </span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="btn-secondary" style={{ padding: '8px' }}><ChevronLeft size={20} /></button>
-                    <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="btn-secondary" style={{ padding: '8px' }}><ChevronRight size={20} /></button>
-                </div>
-            </div>
-        );
+    const handleOpenModal = (date, event = null) => {
+        setSelectedDate(date);
+        if (event) {
+            setEditingEvent(event);
+            setTitle(event.title);
+            setDesc(event.description || '');
+            setType(event.type || 'note');
+            setPlatform(event.platform || 'General');
+            setModalStep('edit');
+        } else {
+            setEditingEvent(null);
+            setTitle('');
+            setDesc('');
+            setType('note');
+            setPlatform('General');
+            setModalStep('choice');
+        }
+        setIsModalOpen(true);
     };
 
-    const renderDays = () => {
-        const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-        return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '10px' }}>
-                {days.map(d => (
-                    <div key={d} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{d}</div>
-                ))}
-            </div>
-        );
-    };
+    const handleSaveEvent = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-    const renderCells = () => {
-        const month = currentDate.getMonth();
-        const year = currentDate.getFullYear();
-        const totalDays = daysInMonth(year, month);
-        const startDay = firstDayOfMonth(year, month);
-        const cells = [];
+        const payload = {
+            user_id: user.id,
+            title,
+            description: desc,
+            event_date: selectedDate,
+            type,
+            platform
+        };
 
-        // Padding previous month
-        for (let i = 0; i < startDay; i++) {
-            cells.push(<div key={`prev-${i}`} style={{ height: '140px', border: '1px solid rgba(255,255,255,0.03)', opacity: 0.1 }}></div>);
+        if (editingEvent) {
+            await supabase.from('calendar_events').update(payload).eq('id', editingEvent.id);
+        } else {
+            await supabase.from('calendar_events').insert(payload);
         }
 
-        // Current month
-        for (let day = 1; day <= totalDays; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const dayScripts = scripts.filter(s => s.scheduled_date?.startsWith(dateStr));
-            const daySlots = slots.filter(s => s.scheduled_date?.startsWith(dateStr));
+        setIsModalOpen(false);
+        loadData();
+    };
 
-            const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+    const handleDeleteEvent = async () => {
+        if (!confirm('¿Eliminar del calendario?')) return;
+        await supabase.from('calendar_events').delete().eq('id', editingEvent.id);
+        setIsModalOpen(false);
+        loadData();
+    };
+
+    const handleImportFromLibrary = async (item) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        const content = item.content || {};
+        const displayTitle = item.titulo || content.titulo_angulo || content.titulo_idea || 'Sin título';
+
+        await supabase.from('calendar_events').insert({
+            user_id: user.id,
+            title: displayTitle,
+            description: item.platform || 'General',
+            event_date: selectedDate,
+            type: item.type,
+            platform: item.platform,
+            reference_id: item.id
+        });
+
+        setIsModalOpen(false);
+        loadData();
+    };
+
+    const onDragStart = (e, id) => {
+        e.dataTransfer.setData('eventId', id);
+    };
+
+    const onDrop = async (e, date) => {
+        const id = e.dataTransfer.getData('eventId');
+        if (!id) return;
+        await supabase.from('calendar_events').update({ event_date: date }).eq('id', id);
+        loadData();
+    };
+
+    const renderGrid = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const days = daysInMonth(year, month);
+        const start = firstDayOfMonth(year, month);
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        const cells = [];
+        dayNames.forEach(d => cells.push(<div key={d} className="cal-header-cell">{d}</div>));
+
+        for (let i = 0; i < start; i++) cells.push(<div key={`b-${i}`} className="cal-cell empty"></div>);
+
+        for (let d = 1; d <= days; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayEvents = events.filter(e => e.event_date === dateStr);
+            const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
 
             cells.push(
-                <div key={day} style={{
-                    height: '140px',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    padding: '10px',
-                    background: isToday ? 'rgba(126, 206, 202, 0.02)' : 'transparent',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    overflowY: 'auto'
-                }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: isToday ? 900 : 400, color: isToday ? '#7ECECA' : 'white', marginBottom: '4px' }}>{day}</span>
-
-                    {dayScripts.map((s, idx) => (
-                        <div key={`script-${idx}`} style={{
-                            fontSize: '0.65rem',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            background: '#7ECECA',
-                            color: 'black',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }} title={s.content}>
-                            ✓ {s.platform}: {s.topic || s.content.substring(0, 20)}
-                        </div>
-                    ))}
-
-                    {daySlots.map((s, idx) => (
-                        <div key={`slot-${idx}`} style={{
-                            fontSize: '0.65rem',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            background: s.has_script ? '#7ECECA' : 'transparent',
-                            border: s.has_script ? 'none' : '1px dashed rgba(255,255,255,0.3)',
-                            color: s.has_script ? 'black' : 'rgba(255,255,255,0.8)',
-                            fontWeight: s.has_script ? 700 : 600,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }} title={s.idea_title}>
-                            {s.has_script ? '✓' : '🕒'} {s.platform}: {s.idea_title}
-                        </div>
-                    ))}
+                <div
+                    key={d}
+                    className={`cal-cell ${isToday ? 'today' : ''}`}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => onDrop(e, dateStr)}
+                    onClick={() => handleOpenModal(dateStr)}
+                >
+                    <div className="cal-day-num">{d}</div>
+                    <div className="cal-event-container">
+                        {dayEvents.slice(0, 3).map(ev => (
+                            <div
+                                key={ev.id}
+                                draggable
+                                onDragStart={e => { e.stopPropagation(); onDragStart(e, ev.id); }}
+                                onClick={e => { e.stopPropagation(); handleOpenModal(dateStr, ev); }}
+                                className={`cal-event ${ev.type}`}
+                            >
+                                {ev.title}
+                            </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                            <div className="cal-more">+{dayEvents.length - 3} más</div>
+                        )}
+                    </div>
                 </div>
             );
         }
 
-        return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>{cells}</div>;
-    };
-
-    const autoSchedule = async () => {
-        if (unscheduledScripts.length === 0 && unscheduledSlots.length === 0) {
-            alert("No hay guiones ni ideas sin programar.");
-            return;
-        }
-
-        setLoading(true);
-        const today = new Date();
-        let counter = 1;
-
-        const updatesScripts = unscheduledScripts.map((s) => {
-            const futureDate = new Date();
-            futureDate.setDate(today.getDate() + counter++); // Mark for the next few days
-            return supabase.from('scripts').update({ scheduled_date: futureDate.toISOString() }).eq('id', s.id);
-        });
-
-        const updatesSlots = unscheduledSlots.map((s) => {
-            const futureDate = new Date();
-            futureDate.setDate(today.getDate() + counter++); // Mark for the next few days
-            return supabase.from('content_slots').update({ scheduled_date: futureDate.toISOString() }).eq('id', s.id);
-        });
-
-        await Promise.all([...updatesScripts, ...updatesSlots]);
-        window.location.reload();
+        return <div className="cal-grid">{cells}</div>;
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '32px' }}>
-            <div>
-                {renderHeader()}
-                {renderDays()}
-                {renderCells()}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div className="premium-card" style={{ padding: '24px', background: 'var(--accent-gradient)', border: 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <Zap color="white" fill="white" />
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Auto-Organizar</h3>
-                    </div>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.9)', marginBottom: '24px', lineHeight: '1.4' }}>
-                        ¿Tienes guiones sin fecha? Nuestra IA los distribuirá de forma óptima en tu calendario.
-                    </p>
-                    <button onClick={autoSchedule} className="btn-secondary" style={{ width: '100%', background: 'white', color: 'var(--accent)', fontWeight: 800 }}>
-                        Organizar en 1 clic
-                    </button>
-                </div>
-
-                <div className="premium-card" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Clock size={18} color="#7ECECA" /> Pendientes ({unscheduledScripts.length + unscheduledSlots.length})
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {unscheduledScripts.map((s, i) => (
-                            <div key={`us-${i}`} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>{s.platform} (Guión)</p>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {s.topic || s.content}
-                                </p>
-                            </div>
-                        ))}
-                        {unscheduledSlots.map((s, i) => (
-                            <div key={`uslo-${i}`} style={{ padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>{s.platform} (Plan)</p>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                    {s.idea_title}
-                                </p>
-                            </div>
-                        ))}
-                        {(unscheduledScripts.length === 0 && unscheduledSlots.length === 0) && (
-                            <div style={{ textAlign: 'center', padding: '20px', opacity: 0.5 }}>
-                                <CheckCircle2 size={32} style={{ margin: '0 auto 10px' }} />
-                                <p style={{ fontSize: '0.8rem' }}>Todo programado</p>
-                            </div>
-                        )}
+        <div className="calendar-page">
+            <header className="cal-header">
+                <div className="cal-title-section">
+                    <h1>Calendario Editorial</h1>
+                    <div className="cal-nav">
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}><ChevronLeft /></button>
+                        <span className="cal-current-month">
+                            {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)}
+                        </span>
+                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}><ChevronRight /></button>
+                        <button onClick={() => setCurrentDate(new Date())} className="btn-today">Hoy</button>
                     </div>
                 </div>
-            </div>
+            </header>
+
+            {renderGrid()}
+
+            {isModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+                    <div className="modal-content premium-card" onClick={e => e.stopPropagation()}>
+                        <header>
+                            <h2>{modalStep === 'edit' ? 'Editar Evento' : 'Programar Contenido'}</h2>
+                            <button className="close-btn" onClick={() => setIsModalOpen(false)}><X /></button>
+                        </header>
+
+                        <div className="modal-body">
+                            {modalStep === 'choice' && (
+                                <div className="choice-steps">
+                                    <button className="choice-card" onClick={() => setModalStep('library')}>
+                                        <div className="icon"><BookOpen size={24} /></div>
+                                        <div>
+                                            <h3>Importar desde Biblioteca</h3>
+                                            <p>Usa tus ideas y guiones ya guardados</p>
+                                        </div>
+                                    </button>
+                                    <button className="choice-card" onClick={() => setModalStep('note')}>
+                                        <div className="icon"><Edit3 size={24} /></div>
+                                        <div>
+                                            <h3>Crear Nota Rápida</h3>
+                                            <p>Anota una idea rápida para este día</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
+
+                            {modalStep === 'library' && (
+                                <div className="library-step">
+                                    <div className="search-bar">
+                                        <Search size={18} />
+                                        <input
+                                            placeholder="Buscar en mi biblioteca..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="lib-list">
+                                        {libraryItems.filter(item =>
+                                            (item.titulo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            (item.type || '').toLowerCase().includes(searchQuery.toLowerCase())
+                                        ).map(item => (
+                                            <div key={item.id} className="lib-item" onClick={() => handleImportFromLibrary(item)}>
+                                                <div className="lib-badge">{item.type}</div>
+                                                <div className="lib-info">
+                                                    <strong>{item.titulo || item.content?.titulo_angulo || 'Sin título'}</strong>
+                                                    <span>{item.platform}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button className="back-btn" onClick={() => setModalStep('choice')}>Volver</button>
+                                </div>
+                            )}
+
+                            {(modalStep === 'note' || modalStep === 'edit') && (
+                                <div className="note-form">
+                                    <div className="form-group">
+                                        <label>Título</label>
+                                        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Publicar Reel sobre... " />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Tipo</label>
+                                            <select value={type} onChange={e => setType(e.target.value)}>
+                                                <option value="note">Nota</option>
+                                                <option value="idea">Idea</option>
+                                                <option value="guion">Guion</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Plataforma</label>
+                                            <select value={platform} onChange={e => setPlatform(e.target.value)}>
+                                                <option value="General">General</option>
+                                                <option value="Instagram">Instagram</option>
+                                                <option value="TikTok">TikTok</option>
+                                                <option value="YouTube">YouTube</option>
+                                                <option value="LinkedIn">LinkedIn</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Descripción / Notas</label>
+                                        <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Escribe aquí los detalles..." />
+                                    </div>
+
+                                    <div className="form-actions">
+                                        {modalStep === 'edit' && (
+                                            <button className="delete-btn" onClick={handleDeleteEvent}><Trash2 size={18} /></button>
+                                        )}
+                                        <button className="save-btn" onClick={handleSaveEvent}><Save size={18} /> Guardar</button>
+                                    </div>
+                                    {modalStep === 'note' && <button className="back-btn" onClick={() => setModalStep('choice')}>Volver</button>}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+                .calendar-page { padding: 20px; color: white; background: #050505; min-height: 100vh; }
+                .cal-header { margin-bottom: 30px; }
+                .cal-title-section { display: flex; justify-content: space-between; align-items: center; }
+                h1 { fontSize: 1.8rem; fontWeight: 900; }
+                .cal-nav { display: flex; align-items: center; gap: 15px; }
+                .cal-current-month { fontSize: 1.1rem; fontWeight: 700; textTransform: capitalize; minWidth: 200px; textAlign: center; }
+                .cal-nav button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px; borderRadius: 10px; cursor: pointer; display: flex; align-items: center; }
+                .btn-today { padding: 8px 16px !important; fontSize: 0.9rem; fontWeight: 600; }
+
+                .cal-grid { display: grid; gridTemplateColumns: repeat(7, 1fr); border: 1px solid rgba(255,255,255,0.05); borderRadius: 16px; overflow: hidden; }
+                .cal-header-cell { padding: 15px; textAlign: center; fontSize: 0.75rem; fontWeight: 800; color: rgba(255,255,255,0.3); textTransform: uppercase; background: #080808; }
+                .cal-cell { height: 160px; border: 1px solid rgba(255,255,255,0.05); padding: 10px; background: #080808; transition: 0.2s; cursor: pointer; }
+                .cal-cell:hover { background: #0C0C0C; }
+                .cal-cell.today { background: rgba(126, 206, 202, 0.03); border-color: rgba(126, 206, 202, 0.2); }
+                .cal-cell.empty { background: #030303; opacity: 0.5; cursor: default; }
+                .cal-day-num { fontSize: 0.9rem; fontWeight: 600; marginBottom: 8px; color: rgba(255,255,255,0.5); }
+                .today .cal-day-num { color: #7ECECA; fontWeight: 900; }
+
+                .cal-event-container { display: flex; flexDirection: column; gap: 4px; }
+                .cal-event { fontSize: 0.7rem; padding: 5px 10px; borderRadius: 6px; whiteSpace: nowrap; overflow: hidden; textOverflow: ellipsis; fontWeight: 700; transition: 0.2s; }
+                .cal-event:hover { filter: brightness(1.2); }
+                .cal-event.note { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); }
+                .cal-event.idea { background: rgba(157, 0, 255, 0.2); color: #B74DFF; border: 1px solid rgba(157, 0, 255, 0.2); }
+                .cal-event.guion { background: rgba(126, 206, 202, 0.2); color: #7ECECA; border: 1px solid rgba(126, 206, 202, 0.2); }
+                .cal-more { fontSize: 0.65rem; color: rgba(255,255,255,0.3); paddingLeft: 5px; marginTop: 2px; }
+
+                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; alignItems: center; justifyContent: center; zIndex: 1000; padding: 20px; }
+                .modal-content { width: 100%; maxWidth: 500px; background: #0A0A0A; borderRadius: 24px; padding: 32px; border: 1px solid rgba(255,255,255,0.1); }
+                .modal-content header { display: flex; justifyContent: space-between; alignItems: center; marginBottom: 24px; }
+                .close-btn { background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; }
+
+                .choice-steps { display: grid; gap: 16px; }
+                .choice-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 20px; borderRadius: 16px; display: flex; alignItems: center; gap: 20px; cursor: pointer; transition: 0.2s; textAlign: left; color: white; }
+                .choice-card:hover { background: rgba(255,255,255,0.06); borderColor: #7ECECA; transform: translateY(-2px); }
+                .choice-card .icon { background: rgba(126, 206, 202, 0.1); color: #7ECECA; padding: 12px; borderRadius: 12px; }
+                .choice-card h3 { fontSize: 1rem; fontWeight: 800; marginBottom: 4px; }
+                .choice-card p { fontSize: 0.85rem; color: rgba(255,255,255,0.5); }
+
+                .search-bar { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); borderRadius: 12px; padding: 12px 16px; display: flex; alignItems: center; gap: 12px; marginBottom: 20px; }
+                .search-bar input { background: none; border: none; color: white; width: 100%; outline: none; }
+                .lib-list { maxHeight: 300px; overflowY: auto; display: grid; gap: 10px; marginBottom: 20px; }
+                .lib-item { background: rgba(255,255,255,0.03); padding: 12px; borderRadius: 12px; cursor: pointer; display: flex; alignItems: center; gap: 12px; transition: 0.2s; }
+                .lib-item:hover { background: rgba(255,255,255,0.08); }
+                .lib-badge { fontSize: 0.6rem; fontWeight: 900; background: rgba(157, 0, 255, 0.2); color: #D8B4FF; padding: 4px 8px; borderRadius: 6px; textTransform: uppercase; }
+                .lib-info strong { display: block; fontSize: 0.9rem; }
+                .lib-info span { fontSize: 0.75rem; color: rgba(255,255,255,0.4); }
+
+                .note-form { display: grid; gap: 20px; }
+                .form-group label { display: block; fontSize: 0.75rem; fontWeight: 800; color: #7ECECA; marginBottom: 8px; textTransform: uppercase; }
+                .form-group input, .form-group select, .form-group textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; borderRadius: 12px; outline: none; transition: 0.2s; }
+                .form-group input:focus { borderColor: #7ECECA; background: rgba(255,255,255,0.08); }
+                .form-row { display: grid; gridTemplateColumns: 1fr 1fr; gap: 16px; }
+                .form-actions { display: flex; gap: 12px; marginTop: 10px; }
+                .save-btn { flex: 1; background: var(--accent-gradient); color: white; border: none; padding: 14px; borderRadius: 12px; fontWeight: 800; cursor: pointer; display: flex; alignItems: center; justifyContent: center; gap: 10px; }
+                .delete-btn { background: rgba(255,77,77,0.1); color: #FF4D4D; border: 1px solid rgba(255,77,77,0.2); padding: 14px; borderRadius: 12px; cursor: pointer; }
+                .back-btn { background: none; border: none; color: rgba(255,255,255,0.4); fontSize: 0.85rem; fontWeight: 700; cursor: pointer; marginTop: 10px; textAlign: center; width: 100%; }
+            `}</style>
         </div>
     );
 }

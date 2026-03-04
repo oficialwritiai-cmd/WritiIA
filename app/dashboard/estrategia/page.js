@@ -10,6 +10,8 @@ import {
 import { createSupabaseClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import GenerationProgress from '@/app/components/GenerationProgress';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 // Simple stepper component
 function Stepper({ current }) {
@@ -349,26 +351,7 @@ export default function EstrategiaPage() {
 
             if (slotError) throw slotError;
 
-            const { saveToLibrary } = await import('@/lib/library');
-            for (const idea of selectedIdeasForPlan) {
-                await saveToLibrary({
-                    userId: user.id,
-                    type: 'idea_plan_mensual',
-                    platform: idea.plataforma || 'Reels',
-                    goal: idea.objetivo || 'engagement',
-                    content: {
-                        titulo_idea: idea.titulo_idea || idea.titulo || 'Sin título',
-                        descripcion: idea.descripcion || '',
-                        plataforma: idea.plataforma || 'Reels',
-                        objetivo: idea.objetivo || 'engagement',
-                        tipo_contenido: idea.tipo || idea.tipo_contenido || 'viral'
-                    },
-                    metadata: { plan_id: planData.id, source: 'estrategia' },
-                    tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
-                });
-            }
-
-            alert(`✓ ${selectedIdeasForPlan.length} ideas guardadas en el plan mensual y biblioteca`);
+            alert(`✓ ${selectedIdeasForPlan.length} ideas guardadas en el plan mensual`);
             router.push('/dashboard/calendar');
         } catch (err) {
             console.error('[Estrategia] Error sending to calendar:', err);
@@ -406,6 +389,47 @@ export default function EstrategiaPage() {
         params.set('source_type', 'strategy');
 
         router.push(`/dashboard?${params.toString()}`);
+    };
+
+    const handleDownloadPDF = () => {
+        const doc = new jsPDF();
+
+        // Brand & Month
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const currentMonth = monthNames[new Date().getMonth()];
+        const currentYear = new Date().getFullYear();
+
+        // Cover
+        doc.setFontSize(22);
+        doc.text("Plan Estratégico de Contenido", 105, 80, { align: 'center' });
+        doc.setFontSize(14);
+        doc.text(`${profile?.nombre_marca || 'Writiai User'} - ${currentMonth} ${currentYear}`, 105, 95, { align: 'center' });
+
+        doc.addPage();
+
+        // Table Data
+        const itemsToDownload = selectedIdeaIds.size > 0
+            ? ideas.filter(i => selectedIdeaIds.has(i.id || i.titulo_idea || i.titulo || String(ideas.indexOf(i))))
+            : ideas;
+
+        const tableBody = itemsToDownload.map(i => [
+            i.titulo_idea || i.titulo || 'Sin título',
+            i.plataforma || 'Reels',
+            i.objetivo || 'Engagement',
+            i.tipo || 'Viral',
+            i.descripcion || '',
+            i.cta || ''
+        ]);
+
+        doc.autoTable({
+            head: [['Título', 'Plataforma', 'Objetivo', 'Tipo', 'Descripción', 'CTA']],
+            body: tableBody,
+            startY: 20,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [126, 206, 202] }
+        });
+
+        doc.save(`Ideas_Contenido_${currentMonth}_${currentYear}.pdf`);
     };
 
     const renderDiscovery = () => (
@@ -619,6 +643,9 @@ export default function EstrategiaPage() {
                         <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideasList.map((i, idx) => i?.id || i?.titulo_idea || i?.titulo || String(idx)).filter(Boolean)))}>
                             Seleccionar todas
                         </button>
+                        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handleDownloadPDF}>
+                            <Save size={16} /> Descargar ideas (.pdf)
+                        </button>
                         <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
                             Crear plan con ({selectedIdeaIds.size}) seleccionadas →
                         </button>
@@ -723,20 +750,45 @@ export default function EstrategiaPage() {
                                         </div>
                                     )}
 
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
-                                        className="btn-primary"
-                                        style={{
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            fontSize: '0.7rem',
-                                            background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
-                                            borderRadius: '8px',
-                                            marginTop: '8px'
-                                        }}
-                                    >
-                                        <Sparkles size={11} style={{ marginRight: '4px' }} /> Generar Guion
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
+                                            className="btn-primary"
+                                            style={{
+                                                flex: 2,
+                                                padding: '8px 0',
+                                                fontSize: '0.7rem',
+                                                background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                                borderRadius: '8px'
+                                            }}
+                                        >
+                                            <Sparkles size={11} style={{ marginRight: '4px' }} /> Generar Guion
+                                        </button>
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const { saveToLibrary } = await import('@/lib/library');
+                                                await saveToLibrary({
+                                                    userId: profile.id,
+                                                    type: 'idea',
+                                                    platform: idea.plataforma || 'Reels',
+                                                    goal: idea.objetivo || 'engagement',
+                                                    content: idea,
+                                                    tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
+                                                });
+                                                alert('Guardado en biblioteca');
+                                            }}
+                                            className="btn-secondary"
+                                            style={{
+                                                flex: 1,
+                                                padding: '8px 0',
+                                                fontSize: '0.7rem',
+                                                borderRadius: '8px'
+                                            }}
+                                        >
+                                            <Save size={11} style={{ marginRight: '4px' }} /> Guardar
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
