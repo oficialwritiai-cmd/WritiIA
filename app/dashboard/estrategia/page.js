@@ -617,12 +617,12 @@ export default function EstrategiaPage() {
 
                                     <div style={{ display: 'flex', gap: '6px', marginBottom: '0', flexWrap: 'wrap' }}>
                                         <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.12)', color: '#D8B4FF', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
-                                            {parsedIdea?.plataforma || 'Reels'}
+                                            {idea?.plataforma || 'Reels'}
                                         </span>
                                         <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.12)', color: '#7ECECA', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
-                                            {parsedIdea?.tipo || 'viral'}
+                                            {idea?.tipo || 'viral'}
                                         </span>
-                                        {parsedIdea?.potencial === 'alto' && (
+                                        {idea?.potencial === 'alto' && (
                                             <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#22C55E', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '20px' }}>
                                                 Alto
                                             </span>
@@ -639,19 +639,19 @@ export default function EstrategiaPage() {
                                         </p>
                                     )}
 
-                                    {parsedIdea?.por_que_funciona && (
+                                    {idea?.por_que_funciona && (
                                         <div style={{ background: 'rgba(255,255,255,0.025)', padding: '10px', borderRadius: '8px', marginTop: 'auto', borderLeft: '2px solid #7ECECA' }}>
                                             <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#7ECECA', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
                                                 Por qué funciona
                                             </span>
                                             <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', lineHeight: '1.3', margin: 0 }}>
-                                                {truncateDesc(parsedIdea.por_que_funciona, 60)}
+                                                {truncateDesc(idea.por_que_funciona, 60)}
                                             </p>
                                         </div>
                                     )}
 
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(parsedIdea); }}
+                                        onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
                                         className="btn-primary"
                                         style={{ 
                                             width: '100%', 
