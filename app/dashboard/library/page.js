@@ -217,7 +217,7 @@ export default function LibraryPage() {
             {/* Lista de contenido */}
             {loading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
-                    <Loader2 size={40} className="spin" color="#7ECECA" />
+                    <Loader2 size={40} className="animate-spin" color="#7ECECA" />
                 </div>
             ) : filtered.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '80px 20px', background: 'rgba(255,255,255,0.01)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>

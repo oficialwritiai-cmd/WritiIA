@@ -128,7 +128,7 @@ export default function AIPolishedTextarea({
                         zIndex: 10
                     }}
                 >
-                    <Loader2 size={12} className="spin" /> Mejorando...
+                    <Loader2 size={12} className="animate-spin" /> Mejorando...
                 </div>
             )}
 

@@ -282,7 +282,7 @@ export default function IdeasViralesPage() {
                         className="btn-primary"
                         style={{ height: '64px', fontSize: '1.2rem', fontWeight: 800, marginTop: '16px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)' }}
                     >
-                        {loading ? <Loader2 className="spin" size={24} /> : 'Generar ideas virales →'}
+                        {loading ? <Loader2 className="animate-spin" size={24} /> : 'Generar ideas virales →'}
                     </button>
                     {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                 </div>

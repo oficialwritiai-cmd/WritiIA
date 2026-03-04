@@ -1023,7 +1023,7 @@ export default function DashboardPage() {
                                                         transition: '0.2s'
                                                     }}
                                                 >
-                                                    {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                                                    {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                 </button>
                                             </div>
                                         </div>
@@ -1092,7 +1092,7 @@ export default function DashboardPage() {
                                                                 opacity: 0.6
                                                             }}
                                                         >
-                                                            {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="spin" /> : <Sparkles size={14} />}
+                                                            {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1120,7 +1120,7 @@ export default function DashboardPage() {
                                                     cursor: 'pointer'
                                                 }}
                                             >
-                                                {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+                                                {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                             </button>
                                         </div>
                                         <input
@@ -1236,7 +1236,7 @@ export default function DashboardPage() {
                                             className="btn-primary"
                                             style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1 }}
                                         >
-                                            {generatingSlotId === slot.id ? <><Loader2 className="spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
+                                            {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
                                         </button>
                                     ) : (
                                         <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem' }}>

@@ -64,6 +64,8 @@ export default function EstrategiaPage() {
     const [brainActive, setBrainActive] = useState(false);
     const [ideas, setIdeas] = useState([]);
     const [selectedIdeaIds, setSelectedIdeaIds] = useState(new Set());
+    const [selectedIdeasForPlan, setSelectedIdeasForPlan] = useState([]);
+    const [savingToCalendar, setSavingToCalendar] = useState(false);
     const [form, setForm] = useState({
         objective: '',
         launch: '',
@@ -232,7 +234,85 @@ export default function EstrategiaPage() {
             alert('Selecciona al menos una idea para crear tu plan.');
             return;
         }
+        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id || i.titulo_idea || i.titulo || String(ideas.indexOf(i))));
+        setSelectedIdeasForPlan(selectedIdeas);
         setStep(2);
+    };
+
+    const handleSendToCalendar = async () => {
+        if (selectedIdeasForPlan.length === 0) {
+            alert('No hay ideas para enviar al calendario.');
+            return;
+        }
+        
+        setSavingToCalendar(true);
+        
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión');
+            
+            const month = new Date().getMonth() + 1;
+            const year = new Date().getFullYear();
+            
+            const { data: planData, error: planError } = await supabase
+                .from('content_plans')
+                .insert({
+                    user_id: user.id,
+                    month,
+                    year,
+                    frequency: `${selectedIdeasForPlan.length} publicaciones`,
+                    platforms: [...new Set(selectedIdeasForPlan.map(i => i.plataforma))],
+                    focus: 'plan_mensual'
+                })
+                .select()
+                .single();
+            
+            if (planError) throw planError;
+            
+            const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => ({
+                plan_id: planData.id,
+                user_id: user.id,
+                day_number: Math.floor(idx * (30 / selectedIdeasForPlan.length)) + 1,
+                platform: idea.plataforma || 'Reels',
+                content_type: idea.tipo || idea.tipo_contenido || 'viral',
+                idea_title: idea.titulo_idea || idea.titulo || 'Sin título',
+                goal: idea.objetivo || 'engagement'
+            }));
+            
+            const { data: slotData, error: slotError } = await supabase
+                .from('content_slots')
+                .insert(slotsToInsert)
+                .select();
+            
+            if (slotError) throw slotError;
+            
+            const { saveToLibrary } = await import('@/lib/library');
+            for (const idea of selectedIdeasForPlan) {
+                await saveToLibrary({
+                    userId: user.id,
+                    type: 'idea_plan_mensual',
+                    platform: idea.plataforma || 'Reels',
+                    goal: idea.objetivo || 'engagement',
+                    content: {
+                        titulo_idea: idea.titulo_idea || idea.titulo || 'Sin título',
+                        descripcion: idea.descripcion || '',
+                        plataforma: idea.plataforma || 'Reels',
+                        objetivo: idea.objetivo || 'engagement',
+                        tipo_contenido: idea.tipo || idea.tipo_contenido || 'viral'
+                    },
+                    metadata: { plan_id: planData.id, source: 'estrategia' },
+                    tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
+                });
+            }
+            
+            alert(`✓ ${selectedIdeasForPlan.length} ideas guardadas en el plan mensual y biblioteca`);
+            router.push('/dashboard/calendar');
+        } catch (err) {
+            console.error('[Estrategia] Error sending to calendar:', err);
+            alert('Error al enviar al calendario: ' + err.message);
+        } finally {
+            setSavingToCalendar(false);
+        }
     };
 
     const handleGenerateScriptForIdea = (idea) => {
@@ -390,7 +470,7 @@ export default function EstrategiaPage() {
                         className="btn-primary"
                         style={{ height: '64px', fontSize: '1.1rem', fontWeight: 900, marginTop: '20px' }}
                     >
-                        {loading ? <Loader2 className="spin" /> : <><Sparkles size={20} /> Analizar y generar banco de ideas →</>}
+                        {loading ? <Loader2 className="animate-spin" style={{ display: 'inline-block' }} /> : <><Sparkles size={20} /> Analizar y generar banco de ideas →</>}
                     </button>
                     {error && <p style={{ color: '#FF4D4D', textAlign: 'center', fontSize: '0.9rem' }}>{error}</p>}
                 </div>
@@ -550,7 +630,7 @@ export default function EstrategiaPage() {
     };
 
     const renderPlan = () => {
-        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id || i.titulo_idea));
+        const selectedIdeas = selectedIdeasForPlan;
         return (
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <div style={{ textAlign: 'center', marginBottom: '48px' }}>
@@ -559,8 +639,8 @@ export default function EstrategiaPage() {
                 </div>
 
                 <div className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px 32px', borderBottom: '1px solid #1E1E1E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: '24px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px 32px', borderBottom: '1px solid #1E1E1E', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Calendar size={18} color="var(--accent)" />
                                 <span style={{ fontWeight: 700 }}>Marzo 2026</span>
@@ -570,9 +650,20 @@ export default function EstrategiaPage() {
                                 <span style={{ fontWeight: 700 }}>{selectedIdeas.length} publicaciones</span>
                             </div>
                         </div>
-                        <button className="btn-primary" style={{ padding: '10px 20px' }} onClick={() => router.push('/dashboard/calendar')}>
-                            Ver en Calendario Full →
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                className="btn-secondary" 
+                                style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', border: 'none' }}
+                                onClick={handleSendToCalendar}
+                                disabled={savingToCalendar}
+                            >
+                                {savingToCalendar ? <Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> : <Calendar size={16} style={{ marginRight: '8px', display: 'inline' }} />}
+                                {savingToCalendar ? 'Guardando...' : 'Enviar al Calendario'}
+                            </button>
+                            <button className="btn-primary" style={{ padding: '10px 20px' }} onClick={() => router.push('/dashboard/calendar')}>
+                                Ver Calendario →
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ background: '#080808' }}>
