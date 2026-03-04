@@ -399,6 +399,7 @@ export default function EstrategiaPage() {
 
         const params = new URLSearchParams();
         params.set('mode', 'single');
+        params.set('count', '1');
         params.set('topic', encodeURIComponent(`${titulo}\n${desc}`));
         params.set('platform', encodeURIComponent(plataforma));
         params.set('goal', encodeURIComponent(objetivo));

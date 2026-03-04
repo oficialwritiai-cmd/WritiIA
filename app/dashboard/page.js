@@ -131,12 +131,15 @@ export default function DashboardPage() {
                 const topicParam = params.get('topic');
                 const platformParam = params.get('platform');
                 const goalParam = params.get('goal');
+                const countParam = params.get('count');
+                const forceCount = countParam ? parseInt(countParam) : null;
 
-                console.log('[Dashboard] URL params:', { topic: topicParam, platform: platformParam, goal: goalParam });
+                console.log('[Dashboard] URL params:', { topic: topicParam, platform: platformParam, goal: goalParam, count: countParam });
 
                 if (topicParam) setTopic(decodeURIComponent(topicParam));
                 if (platformParam) setPlatform(decodeURIComponent(platformParam));
                 if (goalParam) setGoal(decodeURIComponent(goalParam));
+                if (forceCount) setQuantity(forceCount);
             }
         }
     }, []);
@@ -259,34 +262,39 @@ export default function DashboardPage() {
                 paramsRef = params.get('source_reference_id') || null;
             }
 
-            const savedScripts = await Promise.all(
-                generatedScripts.map(async (s) => {
-                    const insertPayload = {
-                        user_id: profile.id,
-                        content: JSON.stringify({
-                            gancho: s.gancho,
-                            desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
-                            cta: s.cta
-                        }),
-                        platform,
-                        topic: topic.trim(),
-                        tone: toneBrand,
-                        goal,
-                        source_type: paramsSource,
-                        source_reference_id: paramsRef,
-                        titulo_angulo: s.titulo_angulo,
-                        gancho: s.gancho,
-                        metadata: { hookType, intensity, awareness, victory, opinion, story }
-                    };
-                    const { data: inserted, error } = await supabase.from('scripts').insert(insertPayload).select().single();
-                    if (!error && inserted) {
-                        return { ...s, db_id: inserted.id };
-                    }
-                    return { ...s, desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [] };
-                })
-            );
+            const payloads = generatedScripts.map(s => ({
+                user_id: profile.id,
+                content: JSON.stringify({
+                    gancho: s.gancho,
+                    desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
+                    cta: s.cta
+                }),
+                platform,
+                topic: topic.trim(),
+                tone: toneBrand,
+                goal,
+                source_type: paramsSource,
+                source_reference_id: paramsRef,
+                titulo_angulo: s.titulo_angulo,
+                gancho: s.gancho,
+                metadata: { hookType, intensity, awareness, victory, opinion, story }
+            }));
 
-            setScripts(savedScripts);
+            const { data: insertedScripts, error: insertError } = await supabase.from('scripts').insert(payloads).select();
+
+            if (insertError) {
+                console.error('[Dashboard] Error batch inserting scripts:', insertError);
+                // Fallback to local state without DB IDs if insert fails (though unusual)
+                setScripts(generatedScripts.map(s => ({ ...s, desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [] })));
+            } else {
+                // Merge DB IDs back to generated scripts
+                const finalScripts = generatedScripts.map((s, idx) => ({
+                    ...s,
+                    db_id: insertedScripts?.[idx]?.id,
+                    desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : []
+                }));
+                setScripts(finalScripts);
+            }
             setStep(3);
             fetchCredits(profile.id);
         } catch (err) {
