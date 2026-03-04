@@ -32,7 +32,8 @@ export async function POST(request) {
 
         const {
             topic, platform, tone, userId, count, goal, ideas,
-            awareness, victory, opinion, story, hookType, intensity
+            awareness, victory, opinion, story, hookType, intensity,
+            sourceType, sourceReferenceId
         } = validation.data;
         const requestedCount = count || 1;
 
@@ -128,29 +129,60 @@ ${brandContextString}`;
             return NextResponse.json({ error: 'No se pudieron generar guiones. Intenta de nuevo.' }, { status: 500 });
         }
 
-        // 2. Save each to Library in parallel
-        await Promise.all(scriptsArray.map(res =>
-            saveToLibrary({
-                userId,
-                type: 'guion',
-                platform,
-                goal,
-                content: res,
-                metadata: {
-                    awareness,
-                    hookType,
-                    intensity,
+        // 2. Parallel Sync Persistence
+        const [insertedScripts] = await Promise.all([
+            // Primary Scripts Table (for Dashboard Results)
+            supabase.from('scripts').insert(
+                scriptsArray.map(s => ({
+                    user_id: userId,
+                    content: JSON.stringify({
+                        gancho: s.gancho,
+                        desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
+                        cta: s.cta
+                    }),
+                    platform,
+                    topic: topic.trim(),
                     tone,
-                    topic
-                },
-                tags: [platform, goal, tone].filter(Boolean)
-            })
-        ));
+                    goal,
+                    source_type: sourceType,
+                    source_reference_id: sourceReferenceId,
+                    titulo_angulo: s.titulo_angulo,
+                    gancho: s.gancho,
+                    metadata: { hookType, intensity, awareness, victory, opinion, story }
+                }))
+            ).select(),
 
-        // Log usage & charge credits
-        await supabase.rpc('increment_used_credits', { u_id: userId, amount: cost });
+            // Unified Library Table
+            Promise.all(scriptsArray.map(res =>
+                saveToLibrary({
+                    userId,
+                    type: 'guion',
+                    platform,
+                    goal,
+                    content: res,
+                    metadata: {
+                        awareness,
+                        hookType,
+                        intensity,
+                        tone,
+                        topic,
+                        sourceType,
+                        sourceReferenceId
+                    },
+                    tags: [platform, goal, tone].filter(Boolean)
+                })
+            )),
 
-        return NextResponse.json({ scripts: scriptsArray });
+            // Credit accounting
+            supabase.rpc('increment_used_credits', { u_id: userId, amount: cost })
+        ]);
+
+        const scriptsWithIds = scriptsArray.map((s, idx) => ({
+            ...s,
+            db_id: insertedScripts.data?.[idx]?.id
+        }));
+
+        return NextResponse.json({ scripts: scriptsWithIds });
 
     } catch (err) {
         console.error('Error en generate-scripts:', err);

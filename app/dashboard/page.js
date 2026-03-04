@@ -231,7 +231,9 @@ export default function DashboardPage() {
                 opinion: opinion || '',
                 story: story || '',
                 hookType: hookType || 'question',
-                intensity: intensity || 'medium'
+                intensity: intensity || 'medium',
+                sourceType: params.get('source_type') || null,
+                sourceReferenceId: params.get('source_reference_id') || null
             };
             console.log('[Dashboard] Sending request:', requestBody);
 
@@ -260,47 +262,13 @@ export default function DashboardPage() {
             generatedScripts.forEach((_, i) => { initialSelected[i] = 0; });
             setSelectedHook(initialSelected);
 
-            let paramsSource = 'single_topic';
-            let paramsRef = null;
-            if (typeof window !== 'undefined') {
-                const params = new URLSearchParams(window.location.search);
-                paramsSource = params.get('source_type') || 'single_topic';
-                paramsRef = params.get('source_reference_id') || null;
-            }
-
-            const payloads = generatedScripts.map(s => ({
-                user_id: profile.id,
-                content: JSON.stringify({
-                    gancho: s.gancho,
-                    desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
-                    cta: s.cta
-                }),
-                platform,
-                topic: topic.trim(),
-                tone: toneBrand,
-                goal,
-                source_type: paramsSource,
-                source_reference_id: paramsRef,
-                titulo_angulo: s.titulo_angulo,
-                gancho: s.gancho,
-                metadata: { hookType, intensity, awareness, victory, opinion, story }
+            // Backend already handled persistence and returned db_ids
+            const finalScripts = generatedScripts.map(s => ({
+                ...s,
+                desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : []
             }));
 
-            const { data: insertedScripts, error: insertError } = await supabase.from('scripts').insert(payloads).select();
-
-            if (insertError) {
-                console.error('[Dashboard] Error batch inserting scripts:', insertError);
-                // Fallback to local state without DB IDs if insert fails (though unusual)
-                setScripts(generatedScripts.map(s => ({ ...s, desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [] })));
-            } else {
-                // Merge DB IDs back to generated scripts
-                const finalScripts = generatedScripts.map((s, idx) => ({
-                    ...s,
-                    db_id: insertedScripts?.[idx]?.id,
-                    desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : []
-                }));
-                setScripts(finalScripts);
-            }
+            setScripts(finalScripts);
             setStep(3);
             fetchCredits(profile.id);
         } catch (err) {
