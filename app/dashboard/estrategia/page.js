@@ -234,7 +234,32 @@ export default function EstrategiaPage() {
             alert('Selecciona al menos una idea para crear tu plan.');
             return;
         }
-        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id || i.titulo_idea || i.titulo || String(ideas.indexOf(i))));
+        
+        // Filtrar ideas seleccionadas - con protección
+        let ideasArray = ideas;
+        if (typeof ideas === 'string') {
+            try {
+                ideasArray = JSON.parse(ideas);
+                if (!Array.isArray(ideasArray)) ideasArray = [ideasArray];
+            } catch (e) {
+                ideasArray = [];
+            }
+        }
+        
+        if (!Array.isArray(ideasArray)) {
+            ideasArray = [];
+        }
+        
+        const selectedIdeas = ideasArray.filter(i => {
+            const id = i?.id || i?.titulo_idea || i?.titulo || String(ideasArray.indexOf(i));
+            return selectedIdeaIds.has(id);
+        });
+        
+        if (selectedIdeas.length === 0) {
+            alert('Selecciona al menos una idea para crear tu plan.');
+            return;
+        }
+        
         setSelectedIdeasForPlan(selectedIdeas);
         setStep(2);
     };
@@ -479,8 +504,31 @@ export default function EstrategiaPage() {
     );
 
     const renderIdeas = () => {
-        // Ensure ideas is always an array
-        const ideasList = Array.isArray(ideas) ? ideas : [];
+        // PROTECCIÓN: Asegurar que ideas es siempre un array de objetos
+        let ideasList = [];
+        
+        if (typeof ideas === 'string') {
+            // Si es string, intentar parsear
+            try {
+                const parsed = JSON.parse(ideas);
+                ideasList = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                console.error('[Estrategia] Error parsing ideas string:', e);
+                ideasList = [];
+            }
+        } else if (Array.isArray(ideas)) {
+            ideasList = ideas;
+        }
+        
+        // Filtrar ideas inválidas (deben tener titulo o descripcion)
+        ideasList = ideasList.filter(idea => 
+            idea && typeof idea === 'object' && (
+                idea.titulo_idea || 
+                idea.titulo || 
+                idea.descripcion ||
+                idea.plataforma
+            )
+        );
         
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -490,7 +538,7 @@ export default function EstrategiaPage() {
                         <p style={{ color: 'var(--text-secondary)' }}>Selecciona las mejores ideas para crear tu plan mensual de contenido.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideasList.map(i => i.id || i.titulo_idea || i.titulo || String(i))))}>
+                        <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideasList.map((i, idx) => i?.id || i?.titulo_idea || i?.titulo || String(idx)).filter(Boolean)))}>
                             Seleccionar todas
                         </button>
                         <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
@@ -511,23 +559,19 @@ export default function EstrategiaPage() {
                         gap: '16px'
                     }}>
                         {ideasList.map((idea, idx) => {
-                            // Handle if idea is a string (JSON string)
-                            let parsedIdea = idea;
-                            if (typeof idea === 'string') {
-                                try {
-                                    parsedIdea = JSON.parse(idea);
-                                } catch (e) {
-                                    parsedIdea = { titulo_idea: idea, descripcion: idea };
-                                }
+                            // PROTECCIÓN: Si no es un objeto, skip
+                            if (!idea || typeof idea !== 'object') {
+                                return null;
                             }
                             
                             // Extract fields with fallbacks
-                            const id = parsedIdea?.id || parsedIdea?.titulo_idea || parsedIdea?.titulo || String(idx);
+                            const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
                             const isSelected = selectedIdeaIds.has(id);
-                            const titulo = parsedIdea?.titulo_idea || parsedIdea?.titulo || 'Sin título';
-                            const desc = parsedIdea?.descripcion || '';
+                            const titulo = idea?.titulo_idea || idea?.titulo || '';
+                            const desc = idea?.descripcion || '';
                             
-                            if (!titulo || titulo === 'Sin título') {
+                            // Si no tiene título válido, skip
+                            if (!titulo || typeof titulo !== 'string' || titulo.includes('[') || titulo.includes('{')) {
                                 return null;
                             }
                             
