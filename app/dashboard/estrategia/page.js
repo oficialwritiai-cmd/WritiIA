@@ -214,11 +214,13 @@ export default function EstrategiaPage() {
             );
 
             console.log('[Estrategia] Final ideas count:', ideasData.length);
+            console.log('[Estrategia] First idea:', ideasData[0]);
 
             if (ideasData.length === 0) {
                 throw new Error('No se pudieron parsear las ideas. Intenta de nuevo.');
             }
 
+            console.log('[Estrategia] Setting ideas, type:', typeof ideasData, Array.isArray(ideasData));
             setIdeas(ideasData);
             setStep(1);
         } catch (err) {
@@ -510,33 +512,43 @@ export default function EstrategiaPage() {
     );
 
     const renderIdeas = () => {
-        console.log('[Estrategia] renderIdeas - ideas state:', ideas);
+        console.log('[Estrategia] renderIdeas - ideas state:', ideas, typeof ideas);
         
-        // PROTECCIÓN: Asegurar que ideas es siempre un array de objetos
+        // ASEGURAR que ideas es SIEMPRE un array de objetos
         let ideasList = [];
         
+        // CASO 1: Si es string (JSON raw)
         if (typeof ideas === 'string') {
-            // Si es string, intentar parsear
             try {
                 const parsed = JSON.parse(ideas);
-                ideasList = Array.isArray(parsed) ? parsed : [parsed];
+                console.log('[Estrategia] Parsed from string:', parsed);
+                if (Array.isArray(parsed)) {
+                    ideasList = parsed;
+                } else if (parsed && typeof parsed === 'object') {
+                    ideasList = [parsed];
+                }
             } catch (e) {
-                console.error('[Estrategia] Error parsing ideas string:', e);
-                ideasList = [];
+                console.error('[Estrategia] Error parsing string:', e);
             }
-        } else if (Array.isArray(ideas)) {
+        }
+        // CASO 2: Si ya es array
+        else if (Array.isArray(ideas)) {
             ideasList = ideas;
-        } else if (ideas && typeof ideas === 'object') {
-            // Si es un solo objeto, envolverlo en array
+        }
+        // CASO 3: Si es un solo objeto
+        else if (ideas && typeof ideas === 'object') {
             ideasList = [ideas];
         }
         
-        console.log('[Estrategia] ideasList after parse:', ideasList.length);
+        // Filtrar: solo objetos válidos con al menos titulo o descripcion
+        ideasList = ideasList.filter(idea => 
+            idea && 
+            typeof idea === 'object' && 
+            (idea.titulo_idea || idea.titulo || idea.descripcion || idea.plataforma)
+        );
         
-        // Filtrar ideas inválidas - solo verificar que sea objeto y no sea null
-        ideasList = ideasList.filter(idea => idea && typeof idea === 'object');
-        
-        console.log('[Estrategia] ideasList after filter:', ideasList.length);
+        console.log('[Estrategia] Final ideasList count:', ideasList.length);
+        console.log('[Estrategia] First idea sample:', ideasList[0]);
         
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
