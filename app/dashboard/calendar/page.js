@@ -16,6 +16,7 @@ import {
     LayoutGrid,
     Type,
     Tag,
+    Globe,
     Share2
 } from 'lucide-react';
 
