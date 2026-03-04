@@ -139,57 +139,41 @@ export default function EstrategiaPage() {
             // ULTRA ROBUST PARSING
             let ideasData = data.ideas;
             console.log('[Estrategia] Raw data type:', typeof ideasData);
-            console.log('[Estrategia] Raw data:', ideasData);
+            console.log('[Estrategia] Raw data sample:', String(ideasData).substring(0, 300));
             
-            // Step 1: If it's a string, aggressively extract JSON
+            // Step 1: If it's a string, parse it as JSON
             if (typeof ideasData === 'string') {
-                // Remove any text before/after the JSON array
-                let cleanStr = ideasData;
+                const str = ideasData.trim();
                 
-                // Find where JSON array starts
-                const firstBracket = cleanStr.indexOf('[');
-                const firstBrace = cleanStr.indexOf('{');
-                let startIdx = -1;
-                
-                if (firstBracket !== -1 && firstBrace !== -1) {
-                    startIdx = Math.min(firstBracket, firstBrace);
-                } else if (firstBracket !== -1) {
-                    startIdx = firstBracket;
-                } else if (firstBrace !== -1) {
-                    startIdx = firstBrace;
-                }
-                
-                if (startIdx !== -1) {
-                    cleanStr = cleanStr.substring(startIdx);
-                }
-                
-                // Find where JSON array ends
-                let endIdx = -1;
-                let bracketCount = 0;
-                let inString = false;
-                
-                for (let i = 0; i < cleanStr.length; i++) {
-                    const char = cleanStr[i];
-                    if (char === '"' && cleanStr[i-1] !== '\\') inString = !inString;
-                    if (!inString) {
-                        if (char === '[') bracketCount++;
-                        if (char === ']') bracketCount--;
-                        if (bracketCount === 0 && cleanStr[i] === ']') {
-                            endIdx = i + 1;
-                            break;
+                // Si es un array JSON
+                if (str.startsWith('[')) {
+                    try {
+                        ideasData = JSON.parse(str);
+                        console.log('[Estrategia] Parsed as array, length:', ideasData?.length);
+                    } catch (e) {
+                        console.error('[Estrategia] Parse error:', e);
+                        // Buscar el array manualmente
+                        const match = str.match(/\[[\s\S]*\]/);
+                        if (match) {
+                            try {
+                                ideasData = JSON.parse(match[0]);
+                            } catch (e2) {
+                                ideasData = [];
+                            }
+                        } else {
+                            ideasData = [];
                         }
                     }
                 }
-                
-                if (endIdx !== -1) {
-                    cleanStr = cleanStr.substring(0, endIdx);
+                // Si es un objeto JSON único
+                else if (str.startsWith('{')) {
+                    try {
+                        ideasData = [JSON.parse(str)];
+                    } catch (e) {
+                        ideasData = [];
+                    }
                 }
-                
-                try {
-                    ideasData = JSON.parse(cleanStr);
-                    console.log('[Estrategia] Parsed from string successfully');
-                } catch (e) {
-                    console.error('[Estrategia] Failed to parse:', e.message);
+                else {
                     ideasData = [];
                 }
             }
@@ -512,23 +496,39 @@ export default function EstrategiaPage() {
     );
 
     const renderIdeas = () => {
-        console.log('[Estrategia] renderIdeas - ideas state:', ideas, typeof ideas);
+        console.log('[Estrategia] renderIdeas - ideas:', ideas);
         
         // ASEGURAR que ideas es SIEMPRE un array de objetos
         let ideasList = [];
         
-        // CASO 1: Si es string (JSON raw)
+        // CASO 1: Si es string (JSON raw como "[{...},{...}]")
         if (typeof ideas === 'string') {
-            try {
-                const parsed = JSON.parse(ideas);
-                console.log('[Estrategia] Parsed from string:', parsed);
-                if (Array.isArray(parsed)) {
-                    ideasList = parsed;
-                } else if (parsed && typeof parsed === 'object') {
-                    ideasList = [parsed];
+            const str = ideas.trim();
+            // Si empieza con "[" es un array JSON
+            if (str.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(str);
+                    console.log('[Estrategia] Parsed string as array:', Array.isArray(parsed));
+                    ideasList = Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                    console.error('[Estrategia] Error parsing JSON string:', e);
+                    // Buscar el array manualmente
+                    const match = str.match(/\[[\s\S]*\]/);
+                    if (match) {
+                        try {
+                            ideasList = JSON.parse(match[0]);
+                        } catch (e2) {
+                            console.error('[Estrategia] Fallback parse failed:', e2);
+                        }
+                    }
                 }
-            } catch (e) {
-                console.error('[Estrategia] Error parsing string:', e);
+            } else if (str.startsWith('{')) {
+                // Es un objeto único
+                try {
+                    ideasList = [JSON.parse(str)];
+                } catch (e) {
+                    console.error('[Estrategia] Error parsing object string:', e);
+                }
             }
         }
         // CASO 2: Si ya es array
@@ -548,7 +548,9 @@ export default function EstrategiaPage() {
         );
         
         console.log('[Estrategia] Final ideasList count:', ideasList.length);
-        console.log('[Estrategia] First idea sample:', ideasList[0]);
+        if (ideasList.length > 0) {
+            console.log('[Estrategia] First idea:', JSON.stringify(ideasList[0]).substring(0, 200));
+        }
         
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
