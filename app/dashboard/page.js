@@ -517,12 +517,18 @@ export default function DashboardPage() {
 
             if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
+            console.log('[Dashboard] Generate script response:', data);
             
             if (!data.scripts || !Array.isArray(data.scripts) || data.scripts.length === 0) {
+                console.error('[Dashboard] No scripts in response:', data);
                 throw new Error('No se recibió ningún guion. Intenta de nuevo.');
             }
             
             const generatedScript = data.scripts[0];
+            
+            if (!generatedScript) {
+                throw new Error('El guion recibido está vacío. Intenta de nuevo.');
+            }
 
             // Subir a BD
             const fullContent = generatedScript.gancho + '\n\n' + generatedScript.desarrollo.join('\n') + '\n\n' + generatedScript.cta;
@@ -942,7 +948,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        {scripts.map((s, i) => (
+                        {Array.isArray(scripts) && scripts.map((s, i) => (
                             <div key={i} className="premium-card" style={{
                                 padding: '0',
                                 background: '#101010',
@@ -1197,7 +1203,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {planSlots.map((slot, i) => (
+                        {Array.isArray(planSlots) && planSlots.map((slot, i) => (
                             <div key={slot.id} className="premium-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: slot.has_script ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)' }}>
                                 <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
 
