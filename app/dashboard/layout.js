@@ -88,6 +88,21 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className="app-layout" style={{ background: '#050505' }}>
+            {/* FORCE DEPLOYMENT BANNER - V1.3.0 */}
+            <div style={{
+                background: '#7ECECA',
+                color: '#000',
+                padding: '8px 20px',
+                textAlign: 'center',
+                fontSize: '0.85rem',
+                fontWeight: '900',
+                letterSpacing: '0.05em',
+                boxShadow: '0 4px 15px rgba(126, 206, 202, 0.3)',
+                zIndex: 9999,
+                position: 'relative'
+            }}>
+                ✅ SISTEMA ACTUALIZADO - VERSIÓN V1.3.0 (PREMIUM CALENDAR LIVE) - {new Date().toLocaleTimeString()} (Refresca si no ves los cambios)
+            </div>
             {/* Sidebar Lucide (Icons Only) */}
             <aside className="sidebar">
                 <div style={{ marginBottom: '40px' }}>
