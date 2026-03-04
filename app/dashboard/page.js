@@ -264,10 +264,8 @@ export default function DashboardPage() {
                     const insertPayload = {
                         user_id: profile.id,
                         content: JSON.stringify({
-                            hook_principal: s.hook_principal,
-                            hook_alternativo_1: s.hook_alternativo_1,
-                            hook_alternativo_2: s.hook_alternativo_2,
-                            guion_detallado: s.guion_detallado,
+                            gancho: s.gancho,
+                            desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
                             cta: s.cta
                         }),
                         platform,
@@ -277,14 +275,14 @@ export default function DashboardPage() {
                         source_type: paramsSource,
                         source_reference_id: paramsRef,
                         titulo_angulo: s.titulo_angulo,
-                        gancho: s.hook_principal,
+                        gancho: s.gancho,
                         metadata: { hookType, intensity, awareness, victory, opinion, story }
                     };
                     const { data: inserted, error } = await supabase.from('scripts').insert(insertPayload).select().single();
                     if (!error && inserted) {
                         return { ...s, db_id: inserted.id };
                     }
-                    return s;
+                    return { ...s, desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [] };
                 })
             );
 
@@ -562,7 +560,8 @@ export default function DashboardPage() {
             }
 
             // Subir a BD
-            const fullContent = generatedScript.gancho + '\n\n' + generatedScript.desarrollo.join('\n') + '\n\n' + generatedScript.cta;
+            const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.join('\n') : (generatedScript.desarrollo || '');
+            const fullContent = (generatedScript.gancho || '') + '\n\n' + desarrolloStr + '\n\n' + (generatedScript.cta || '');
             const insertPayload = {
                 user_id: profile.id,
                 content: fullContent,
@@ -1054,7 +1053,7 @@ export default function DashboardPage() {
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {[0, 1, 2].map(idx => (
+                                            {Array.isArray(s.desarrollo) && [0, 1, 2].map(idx => (
                                                 <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                                                     <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>0{idx + 1}</div>
                                                     <div style={{ flex: 1, position: 'relative' }}>
@@ -1063,6 +1062,7 @@ export default function DashboardPage() {
                                                             disabled={refiningBlock === `${i}-punto${idx + 1}`}
                                                             onChange={(e) => {
                                                                 const news = [...scripts];
+                                                                if (!Array.isArray(news[i].desarrollo)) news[i].desarrollo = ['', '', ''];
                                                                 news[i].desarrollo[idx] = e.target.value;
                                                                 setScripts(news);
                                                             }}

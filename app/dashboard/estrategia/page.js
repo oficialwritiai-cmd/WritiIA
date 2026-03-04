@@ -231,7 +231,9 @@ export default function EstrategiaPage() {
             );
 
             console.log('[Estrategia] Final ideas count:', ideasData.length);
-            console.log('[Estrategia] First idea:', JSON.stringify(ideasData[0]).substring(0, 200));
+            if (ideasData.length > 0 && ideasData[0]) {
+                console.log('[Estrategia] First idea:', JSON.stringify(ideasData[0]).substring(0, 200));
+            }
 
             if (ideasData.length === 0) {
                 throw new Error('No se pudieron parsear las ideas. Intenta de nuevo.');
@@ -601,7 +603,7 @@ export default function EstrategiaPage() {
         );
 
         console.log('[Estrategia] Final ideasList count:', ideasList.length);
-        if (ideasList.length > 0) {
+        if (ideasList.length > 0 && ideasList[0]) {
             console.log('[Estrategia] First idea:', JSON.stringify(ideasList[0]).substring(0, 200));
         }
 

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateScriptSchema } from '@/lib/validations';
 import rateLimit from '@/lib/rate-limit';
 import { generateScriptsWithSonnet } from '@/lib/anthropic';
+import { saveToLibrary } from '@/lib/library';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -79,28 +80,6 @@ Tu misión es crear piezas que no parezcan escritas por una IA.
 REGLAS DE ORO:
 1. GANCHOS (HOOKS): Deben ser ultra-específicos. Nada de "¿Quieres saber cómo...?". Usa la intensidad ${intensity}/5.
 2. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
-3. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
-4. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
-
-${brandContextString}
-
-ESTILO DE RESPUESTA:
-Debes generar un JSON array de objetos con esta estructura:
-[
-  {
-    "titulo_angulo": "...",
-    "hook_principal": "Hook principal muy potente basado en el tipo: ${hookType}",
-    "hook_alternativo_1": "Variante extrema",
-    "hook_alternativo_2": "Variante intrigante",
-    "guion_detallado": "El cuerpo del guion con frases cortas y ritmo",
-    "cta": "Llamada a la acción coherente con el objetivo"
-  }
-]`;
-
-        const userMessage = `
-CONTEXTO DEL CONTENIDO:
-- Tema: ${topic}
-- Objetivo: ${goal}
 - Plataforma: ${platform}
 - Nivel de awareness: ${awareness}
 - Tono deseado: ${tone}
@@ -111,7 +90,20 @@ CONTEXTO DEL CONTENIDO:
 - Caso real/Situación: ${story || 'N/A'}
 - Notas extra: ${ideas || 'Ninguna'}
 
-Genera ${requestedCount} guiones únicos.`;
+Genera ${requestedCount} guiones únicos.
+
+IMPORTANTE: Devuelve ÚNICAMENTE un array JSON válido. Cada guion debe tener exactamente esta estructura:
+{
+  "titulo_angulo": "Un título corto",
+  "gancho": "Texto del gancho principal",
+  "desarrollo": ["Punto 1", "Punto 2", "Punto 3"],
+  "cta": "El llamado a la acción"
+}
+No incluyas texto antes ni después del array JSON.`;
+
+        const userMessage = `Tema o idea principal para el guion: ${topic}
+Contexto a aplicar:
+${brandContextString}`;
 
         const { parsed: results, usage } = await generateScriptsWithSonnet({
             apiKey,
@@ -136,10 +128,9 @@ Genera ${requestedCount} guiones únicos.`;
             return NextResponse.json({ error: 'No se pudieron generar guiones. Intenta de nuevo.' }, { status: 500 });
         }
 
-        // 2. Save each to Library (new unified table)
-        const { saveToLibrary } = await import('@/lib/library');
-        for (const res of scriptsArray) {
-            await saveToLibrary({
+        // 2. Save each to Library in parallel
+        await Promise.all(scriptsArray.map(res =>
+            saveToLibrary({
                 userId,
                 type: 'guion',
                 platform,
@@ -153,8 +144,8 @@ Genera ${requestedCount} guiones únicos.`;
                     topic
                 },
                 tags: [platform, goal, tone].filter(Boolean)
-            });
-        }
+            })
+        ));
 
         // Log usage & charge credits
         await supabase.rpc('increment_used_credits', { u_id: userId, amount: cost });
