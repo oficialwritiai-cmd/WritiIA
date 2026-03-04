@@ -190,21 +190,38 @@ export default function CalendarPage() {
                         <div className="cal-cell-plus"><Plus size={12} /></div>
                     </div>
                     <div className="cal-event-list">
-                        {dayEvents.slice(0, 3).map(ev => (
+                        {dayEvents.map((ev, idx) => {
+                            if (window.innerWidth < 768 && idx >= 2) return null;
+                            if (window.innerWidth >= 768 && idx >= 3) return null;
+
+                            return (
+                                <div
+                                    key={ev.id}
+                                    draggable
+                                    onDragStart={e => { e.stopPropagation(); onDragStart(e, ev.id); }}
+                                    onClick={e => { e.stopPropagation(); handleOpenModal(dateStr, ev); }}
+                                    className={`cal-event-pill ${ev.type} ${ev.platform === 'General' ? '' : 'has-platform'}`}
+                                >
+                                    <span className="pill-dot"></span>
+                                    <span className="pill-text">{ev.title}</span>
+                                </div>
+                            );
+                        })}
+
+                        {(window.innerWidth < 768 && dayEvents.length > 2) || (window.innerWidth >= 768 && dayEvents.length > 3) ? (
                             <div
-                                key={ev.id}
-                                draggable
-                                onDragStart={e => { e.stopPropagation(); onDragStart(e, ev.id); }}
-                                onClick={e => { e.stopPropagation(); handleOpenModal(dateStr, ev); }}
-                                className={`cal-event-pill ${ev.type}`}
+                                className="cal-more-indicator"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Open modal restricted to this day if needed, 
+                                    // but handleOpenModal with date already does show some info.
+                                    // For now, let's just make it clear.
+                                    handleOpenModal(dateStr);
+                                }}
                             >
-                                <span className="pill-dot"></span>
-                                <span className="pill-text">{ev.title}</span>
+                                +{window.innerWidth < 768 ? dayEvents.length - 2 : dayEvents.length - 3} más
                             </div>
-                        ))}
-                        {dayEvents.length > 3 && (
-                            <div className="cal-more-indicator">+{dayEvents.length - 3} más</div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             );
@@ -614,6 +631,47 @@ export default function CalendarPage() {
                     padding: 12px;
                     border-radius: 12px;
                     cursor: pointer;
+                }
+                @media (max-width: 768px) {
+                    .cal-modern-grid {
+                        border-radius: 12px;
+                    }
+                    .cal-cell {
+                        height: 100px;
+                        padding: 6px;
+                    }
+                    .cal-header-cell {
+                        padding: 8px 4px;
+                        font-size: 0.6rem;
+                    }
+                    .cal-day-num {
+                        font-size: 0.7rem;
+                    }
+                    .cal-event-pill {
+                        font-size: 0.6rem;
+                        padding: 3px 6px;
+                    }
+                    .cal-modal {
+                        padding: 24px;
+                        border-radius: 20px;
+                        height: 90vh;
+                        overflow-y: auto;
+                    }
+                    .cal-choice-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .cal-choice-card {
+                        padding: 16px;
+                        gap: 12px;
+                    }
+                    .cal-btn-primary, .cal-btn-delete {
+                        padding: 18px;
+                        font-size: 1rem;
+                    }
+                    .cal-input {
+                        padding: 16px;
+                        font-size: 1rem;
+                    }
                 }
             `}</style>
 

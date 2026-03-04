@@ -316,15 +316,25 @@ export default function EstrategiaPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión');
 
-            const month = new Date().getMonth() + 1;
-            const year = new Date().getFullYear();
+            // 1. Get AI suggested schedule
+            const scheduleRes = await fetch('/api/calendar/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: selectedIdeasForPlan,
+                    userId: user.id
+                })
+            });
+            const { schedule } = await scheduleRes.json();
+            console.log('[CALENDARIO] Plan sugerido por IA:', schedule);
 
+            // 2. Create the content plan record
             const { data: planData, error: planError } = await supabase
                 .from('content_plans')
                 .insert({
                     user_id: user.id,
-                    month,
-                    year,
+                    month: new Date().getMonth() + 1,
+                    year: new Date().getFullYear(),
                     frequency: `${selectedIdeasForPlan.length} publicaciones`,
                     platforms: [...new Set(selectedIdeasForPlan.map(i => i.plataforma))],
                     focus: 'plan_mensual'
@@ -334,24 +344,46 @@ export default function EstrategiaPage() {
 
             if (planError) throw planError;
 
-            const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => ({
-                plan_id: planData.id,
-                user_id: user.id,
-                day_number: Math.floor(idx * (30 / selectedIdeasForPlan.length)) + 1,
-                platform: idea.plataforma || 'Reels',
-                content_type: idea.tipo || idea.tipo_contenido || 'viral',
-                idea_title: idea.titulo_idea || idea.titulo || 'Sin título',
-                goal: idea.objetivo || 'engagement'
-            }));
+            // 3. Prepare events for calendar_events (visible monthly)
+            const eventsToInsert = selectedIdeasForPlan.map((idea, idx) => {
+                const suggestion = schedule?.find(s => s.id === idea.id) || {};
+                const targetDate = suggestion.fecha || new Date(new Date().setDate(new Date().getDate() + idx + 1)).toISOString().split('T')[0];
 
-            const { data: slotData, error: slotError } = await supabase
-                .from('content_slots')
-                .insert(slotsToInsert)
-                .select();
+                console.log(`[CALENDARIO] creando evento para idea "${idea.titulo_idea || idea.titulo}" en fecha ${targetDate}`);
 
-            if (slotError) throw slotError;
+                return {
+                    user_id: user.id,
+                    title: idea.titulo_idea || idea.titulo || 'Sin título',
+                    description: (idea.descripcion || '') + (suggestion.razon ? `\n\nAI Tip: ${suggestion.razon}` : ''),
+                    event_date: targetDate,
+                    type: idea.tipo || idea.tipo_contenido || 'idea',
+                    platform: idea.plataforma || 'General',
+                    reference_id: idea.id // Link to original library item if exists
+                };
+            });
 
-            alert(`✓ ${selectedIdeasForPlan.length} ideas guardadas en el plan mensual`);
+            const { error: eventError } = await supabase
+                .from('calendar_events')
+                .insert(eventsToInsert);
+
+            if (eventError) throw eventError;
+
+            // 4. (Optional) Also save to slots for backward compatibility if needed
+            const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => {
+                const suggestion = schedule?.find(s => s.id === idea.id) || {};
+                return {
+                    plan_id: planData.id,
+                    user_id: user.id,
+                    day_number: suggestion.fecha ? parseInt(suggestion.fecha.split('-')[2]) : idx + 1,
+                    platform: idea.plataforma || 'Reels',
+                    content_type: idea.tipo || idea.tipo_contenido || 'viral',
+                    idea_title: idea.titulo_idea || idea.titulo || 'Sin título',
+                    goal: idea.objetivo || 'engagement'
+                };
+            });
+            await supabase.from('content_slots').insert(slotsToInsert);
+
+            alert(`✓ ${selectedIdeasForPlan.length} ideas enviadas al calendario con éxito`);
             router.push('/dashboard/calendar');
         } catch (err) {
             console.error('[Estrategia] Error sending to calendar:', err);

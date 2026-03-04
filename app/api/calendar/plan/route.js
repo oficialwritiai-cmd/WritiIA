@@ -40,11 +40,19 @@ ${items.map(it => `- [ID: ${it.id}] ${it.titulo || it.content?.titulo_idea || 'S
 
 Genera la planificación óptima para estos contenidos.`;
 
+        console.log(`[CALENDARIO] Solicitando plan inteligente para ${items.length} ítems de usuario ${userId}`);
+
         const { parsed: schedule } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
             userMessage,
         });
+
+        if (schedule) {
+            schedule.forEach(s => {
+                console.log(`[CALENDARIO] IA sugiere fecha ${s.fecha} para ítem ${s.id}`);
+            });
+        }
 
         return NextResponse.json({ schedule });
     } catch (err) {
