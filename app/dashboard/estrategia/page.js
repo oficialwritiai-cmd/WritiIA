@@ -198,13 +198,24 @@ export default function EstrategiaPage() {
             );
 
             console.log('[Estrategia] Final ideas count:', ideasData.length);
-            console.log('[Estrategia] First idea:', ideasData[0]);
+            console.log('[Estrategia] First idea:', JSON.stringify(ideasData[0]).substring(0, 200));
 
             if (ideasData.length === 0) {
                 throw new Error('No se pudieron parsear las ideas. Intenta de nuevo.');
             }
 
-            console.log('[Estrategia] Setting ideas, type:', typeof ideasData, Array.isArray(ideasData));
+            // ASEGURAR que ideasData es un array de objetos antes de guardar
+            if (!Array.isArray(ideasData)) {
+                console.error('[Estrategia] ideasData no es array:', ideasData);
+                throw new Error('Error al procesar las ideas');
+            }
+            
+            // Verificar que cada elemento es un objeto
+            for (let i = 0; i < Math.min(3, ideasData.length); i++) {
+                console.log('[Estrategia] Idea[' + i + ']:', typeof ideasData[i], ideasData[i]?.titulo_idea);
+            }
+
+            console.log('[Estrategia] Setting ideas, type:', typeof ideasData, 'isArray:', Array.isArray(ideasData));
             setIdeas(ideasData);
             setStep(1);
         } catch (err) {
