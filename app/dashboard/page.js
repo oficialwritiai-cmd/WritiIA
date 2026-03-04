@@ -593,6 +593,35 @@ export default function DashboardPage() {
         }
     };
 
+    const handleBuyCredits = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert('Inicia sesión para continuar');
+                return;
+            }
+
+            const res = await fetch('/api/stripe/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    email: user.email
+                }),
+            });
+
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'Error al crear la sesión de pago');
+            }
+        } catch (err) {
+            console.error('Error in buy credits:', err);
+            alert(err.message);
+        }
+    };
+
     return (
         <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
             {/* Header / Stats */}
@@ -600,7 +629,7 @@ export default function DashboardPage() {
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Sparkles size={16} color="#7ECECA" />
                     <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Créditos IA: {aiCredits.total - aiCredits.used} / {aiCredits.total}</span>
-                    <button onClick={() => alert('Próximamente...')} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
+                    <button onClick={handleBuyCredits} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
                 </div>
             </div>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
