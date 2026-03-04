@@ -128,12 +128,18 @@ export default function EstrategiaPage() {
             });
 
             const data = await res.json();
+            console.log('[Estrategia] Response:', data);
+            
             if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
+            
+            if (!data.ideas) {
+                throw new Error('No se recibieron ideas. Verifica que el Cerebro IA esté configurado.');
+            }
 
             // ULTRA ROBUST PARSING
             let ideasData = data.ideas;
             console.log('[Estrategia] Raw data type:', typeof ideasData);
-            console.log('[Estrategia] Raw data preview:', String(ideasData).substring(0, 200));
+            console.log('[Estrategia] Raw data:', ideasData);
             
             // Step 1: If it's a string, aggressively extract JSON
             if (typeof ideasData === 'string') {
@@ -504,6 +510,8 @@ export default function EstrategiaPage() {
     );
 
     const renderIdeas = () => {
+        console.log('[Estrategia] renderIdeas - ideas state:', ideas);
+        
         // PROTECCIÓN: Asegurar que ideas es siempre un array de objetos
         let ideasList = [];
         
@@ -518,17 +526,17 @@ export default function EstrategiaPage() {
             }
         } else if (Array.isArray(ideas)) {
             ideasList = ideas;
+        } else if (ideas && typeof ideas === 'object') {
+            // Si es un solo objeto, envolverlo en array
+            ideasList = [ideas];
         }
         
-        // Filtrar ideas inválidas (deben tener titulo o descripcion)
-        ideasList = ideasList.filter(idea => 
-            idea && typeof idea === 'object' && (
-                idea.titulo_idea || 
-                idea.titulo || 
-                idea.descripcion ||
-                idea.plataforma
-            )
-        );
+        console.log('[Estrategia] ideasList after parse:', ideasList.length);
+        
+        // Filtrar ideas inválidas - solo verificar que sea objeto y no sea null
+        ideasList = ideasList.filter(idea => idea && typeof idea === 'object');
+        
+        console.log('[Estrategia] ideasList after filter:', ideasList.length);
         
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
@@ -567,13 +575,8 @@ export default function EstrategiaPage() {
                             // Extract fields with fallbacks
                             const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
                             const isSelected = selectedIdeaIds.has(id);
-                            const titulo = idea?.titulo_idea || idea?.titulo || '';
-                            const desc = idea?.descripcion || '';
-                            
-                            // Si no tiene título válido, skip
-                            if (!titulo || typeof titulo !== 'string' || titulo.includes('[') || titulo.includes('{')) {
-                                return null;
-                            }
+                            const titulo = idea?.titulo_idea || idea?.titulo || idea?.title || 'Idea sin título';
+                            const desc = idea?.descripcion || idea?.description || '';
                             
                             const truncateDesc = (text, maxLen = 100) => {
                                 if (!text) return '';
