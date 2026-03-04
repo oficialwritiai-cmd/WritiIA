@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins } from 'lucide-react';
 import Logo from '@/app/components/Logo';
+import CreditsModal from '@/app/components/CreditsModal';
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -13,9 +14,24 @@ export default function DashboardLayout({ children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profile, setProfile] = useState(null);
     const [hoveredItem, setHoveredItem] = useState(null);
+    const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
+
+    const fetchProfile = async (userId) => {
+        const { data: profileData } = await supabase
+            .from('users_profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (profileData) {
+            setProfile(profileData);
+            return profileData;
+        }
+        return null;
+    };
 
     useEffect(() => {
         supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -23,17 +39,9 @@ export default function DashboardLayout({ children }) {
                 router.replace('/login');
             } else {
                 setUser(session.user);
-
-                // Fetch profile to check trial status
-                const { data: profileData } = await supabase
-                    .from('users_profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+                const profileData = await fetchProfile(session.user.id);
 
                 if (profileData) {
-                    setProfile(profileData);
-
                     // Check trial expiry
                     const now = new Date();
                     const trialEnds = profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null;
@@ -44,23 +52,43 @@ export default function DashboardLayout({ children }) {
                         }
                     }
                 }
-
                 setLoading(false);
             }
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
+            async (_event, session) => {
                 if (!session) {
                     router.replace('/login');
                 } else {
                     setUser(session.user);
+                    await fetchProfile(session.user.id);
                 }
             }
         );
 
-        return () => subscription.unsubscribe();
-    }, [pathname]);
+        // Listen for internal profile refreshes
+        const handleRefreshProfile = () => {
+            if (user) fetchProfile(user.id);
+        };
+        window.addEventListener('refresh-profile', handleRefreshProfile);
+
+        // Handle success redirect or explicit open
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('credits_purchased')) {
+            alert(`¡Pago completado! En breves momentos se añadirán ${urlParams.get('credits_purchased')} créditos a tu cuenta.`);
+            router.replace('/dashboard');
+            handleRefreshProfile();
+        } else if (urlParams.get('open_credits')) {
+            setIsCreditsModalOpen(true);
+            router.replace('/dashboard');
+        }
+
+        return () => {
+            subscription.unsubscribe();
+            window.removeEventListener('refresh-profile', handleRefreshProfile);
+        };
+    }, [pathname, user]);
 
     async function handleLogout() {
         await supabase.auth.signOut();
@@ -325,7 +353,23 @@ export default function DashboardLayout({ children }) {
                     </div>
 
                     <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        {profile?.plan !== 'pro' && (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                onClick={() => setIsCreditsModalOpen(true)}
+                                className="btn-primary"
+                                style={{
+                                    padding: '8px 20px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 900,
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    borderRadius: '100px',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                🪙 COMPRAR CRÉDITOS
+                            </button>
                             <Link href="/dashboard/settings" style={{ textDecoration: 'none' }}>
                                 <button className="btn-primary" style={{
                                     padding: '8px 20px',
@@ -338,15 +382,35 @@ export default function DashboardLayout({ children }) {
                                     border: 'none',
                                     cursor: 'pointer'
                                 }}>
-                                    🚀 MEJORAR A PRO
+                                    🚀 PLAN PRO
                                 </button>
                             </Link>
-                        )}
-                        <Link href="/dashboard/credits" style={{ textDecoration: 'none' }}>
-                            <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                                Deposit Credits
+                        </div>
+                        <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: '100px',
+                            padding: '6px 16px',
+                            cursor: 'pointer',
+                            transition: '0.2s',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                            <span style={{ fontSize: '1rem' }}>🪙</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>{profile?.credits_balance || 0}</span>
+                            <button style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#7ECECA',
+                                fontSize: '0.75rem',
+                                fontWeight: 900,
+                                cursor: 'pointer',
+                                padding: '2px 4px'
+                            }}>
+                                + DEPOSITAR
                             </button>
-                        </Link>
+                        </div>
 
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
 
@@ -361,6 +425,13 @@ export default function DashboardLayout({ children }) {
                 <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
                     {children}
                 </main>
+
+                <CreditsModal
+                    isOpen={isCreditsModalOpen}
+                    onClose={() => setIsCreditsModalOpen(false)}
+                    balance={profile?.credits_balance || 0}
+                    user={user}
+                />
             </div>
 
             <style jsx>{`

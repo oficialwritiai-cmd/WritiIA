@@ -260,6 +260,8 @@ export default function DashboardPage() {
 
             setScripts(finalScripts);
             setStep(3);
+            // Refresh credits balance in header
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
             fetchCredits(profile.id);
         } catch (err) {
             console.error('Error real en generación:', err);
@@ -330,6 +332,8 @@ export default function DashboardPage() {
 
             setScripts(updatedScripts);
             setImprovementCounts({ ...improvementCounts, [key]: currentCount + 1 });
+            // Refresh credits balance in header
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
             fetchCredits(profile.id);
         } catch (err) {
             alert('Error al mejorar: ' + err.message);

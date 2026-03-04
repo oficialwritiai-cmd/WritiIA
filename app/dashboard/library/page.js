@@ -288,23 +288,31 @@ export default function LibraryPage() {
                                 </div>
 
                                 <div>
-                                    <input
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            fontSize: '1.2rem',
-                                            fontWeight: 800,
-                                            marginBottom: '8px',
-                                            color: 'white',
-                                            width: '100%',
-                                            outline: 'none',
-                                            borderBottom: '1px solid transparent'
-                                        }}
-                                        defaultValue={title}
-                                        onBlur={(e) => handleUpdateItem(item.id, { titulo: e.target.value })}
-                                        onFocus={(e) => e.target.style.borderBottom = '1px solid #7ECECA'}
-                                        placeholder="Título del contenido..."
-                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <input
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                fontSize: '1.2rem',
+                                                fontWeight: 800,
+                                                color: 'white',
+                                                width: '100%',
+                                                outline: 'none',
+                                                borderBottom: '1px solid transparent'
+                                            }}
+                                            defaultValue={title}
+                                            onBlur={(e) => handleUpdateItem(item.id, { titulo: e.target.value })}
+                                            onFocus={(e) => e.target.style.borderBottom = '1px solid #7ECECA'}
+                                            placeholder="Título del contenido..."
+                                        />
+                                        <button
+                                            onClick={() => router.push(`/dashboard/calendar?import=${item.id}`)}
+                                            className="btn-primary"
+                                            style={{ padding: '6px 16px', fontSize: '0.8rem', background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}
+                                        >
+                                            <Calendar size={14} style={{ marginRight: '6px' }} /> Planificar
+                                        </button>
+                                    </div>
                                     <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                                         {hookText ? hookText.substring(0, 200) + (hookText.length > 200 ? '...' : '') : 'Sin descripción disponible'}
                                     </p>

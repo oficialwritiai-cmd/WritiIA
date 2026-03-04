@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Loader2, Sparkles, Undo2 } from 'lucide-react';
+import { createSupabaseClient } from '@/lib/supabase';
 
 export default function AIPolishedTextarea({
     value,
@@ -12,6 +13,7 @@ export default function AIPolishedTextarea({
     const [isPolishing, setIsPolishing] = useState(false);
     const [originalText, setOriginalText] = useState(null);
     const [toast, setToast] = useState(null);
+    const supabase = createSupabaseClient();
 
     const showToast = (msg, type) => {
         setToast({ msg, type });
@@ -23,13 +25,17 @@ export default function AIPolishedTextarea({
 
         setIsPolishing(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
             const res = await fetch('/api/polish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: value }),
+                body: JSON.stringify({ text: value, userId: user?.id }),
             });
 
-            if (!res.ok) throw new Error('Error al mejorar el texto');
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Error al mejorar el texto');
+            }
 
             const data = await res.json();
 
@@ -40,6 +46,9 @@ export default function AIPolishedTextarea({
             onChange({ target: { value: data.polishedText } });
 
             showToast('Texto mejorado ✓', 'success');
+
+            // Refresh credits balance in header
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
         } catch (error) {
             console.error(error);
             showToast('No se pudo mejorar el texto. Inténtalo de nuevo.', 'error');

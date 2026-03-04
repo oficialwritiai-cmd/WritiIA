@@ -125,19 +125,6 @@ Genera un plan de contenido para 30 días con variedad de tipos (autoridad, hist
 
         const { data: slotData } = await supabase.from('content_slots').insert(slotsToInsert).select();
 
-        const { saveToLibrary } = await import('@/lib/library');
-        for (const r of results) {
-            await saveToLibrary({
-                userId,
-                type: 'mensual',
-                platform: r.plataforma,
-                goal: r.objetivo,
-                content: { titulo_idea: r.titulo_idea, tipo_contenido: r.tipo_contenido, dia: r.dia },
-                metadata: { plan_id: planData.id, focus, frequency },
-                tags: [r.plataforma, r.tipo_contenido, r.objetivo].filter(Boolean)
-            });
-        }
-
         return NextResponse.json({ plan: planData, slots: slotData });
     } catch (err) {
         console.error('Error en generate-plan:', err);

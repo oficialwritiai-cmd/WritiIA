@@ -16,12 +16,17 @@ export async function POST(request) {
         }
 
         let priceId;
-        if (pack === '100') priceId = process.env.STRIPE_PRICE_CREDITS_100;
-        else if (pack === '250') priceId = process.env.STRIPE_PRICE_CREDITS_250;
-        else if (pack === '500') priceId = process.env.STRIPE_PRICE_CREDITS_500;
+        const packStr = String(pack);
+
+        if (packStr === '100') priceId = process.env.STRIPE_PRICE_CREDITS_100;
+        else if (packStr === '250') priceId = process.env.STRIPE_PRICE_CREDITS_250;
+        else if (packStr === '500') priceId = process.env.STRIPE_PRICE_CREDITS_500;
 
         if (!priceId) {
-            return NextResponse.json({ error: 'Configuración de precio no encontrada en el servidor' }, { status: 500 });
+            console.error(`Price ID not found for pack ${packStr}. Enviroment variable STRIPE_PRICE_CREDITS_${packStr} is missing.`);
+            return NextResponse.json({
+                error: `Configuración de precio (STRIPE_PRICE_CREDITS_${packStr}) no encontrada en el servidor.`
+            }, { status: 500 });
         }
 
         const session = await stripe.checkout.sessions.create({

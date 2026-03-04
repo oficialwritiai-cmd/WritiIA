@@ -770,13 +770,11 @@ export default function EstrategiaPage() {
                                                 const { saveToLibrary } = await import('@/lib/library');
                                                 await saveToLibrary({
                                                     userId: profile.id,
-                                                    type: 'idea',
-                                                    platform: idea.plataforma || 'Reels',
-                                                    goal: idea.objetivo || 'engagement',
+                                                    titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
                                                     content: idea,
                                                     tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
                                                 });
-                                                alert('Guardado en biblioteca');
+                                                alert('✓ Guardado en tu biblioteca');
                                             }}
                                             className="btn-secondary"
                                             style={{

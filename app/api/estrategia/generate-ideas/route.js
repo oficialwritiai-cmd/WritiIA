@@ -140,31 +140,6 @@ Ejemplo de respuesta válida:
 
         await supabase.from('strategy_ideas').insert(ideasToInsert);
 
-        // ALSO save to main library (MANDATORY)
-        try {
-            const { saveToLibrary } = await import('@/lib/library');
-            for (const idea of ideasArray) {
-                await saveToLibrary({
-                    userId,
-                    type: 'idea',
-                    platform: idea.plataforma,
-                    goal: idea.objetivo,
-                    content: {
-                        titulo_idea: idea.titulo_idea,
-                        descripcion: idea.descripcion,
-                        tipo: idea.tipo,
-                        por_que_funciona: idea.por_que_funciona,
-                        potencial: idea.potencial
-                    },
-                    metadata: { session_id: session.id, tipo_contenido: idea.tipo },
-                    tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
-                });
-            }
-        } catch (libraryErr) {
-            console.error('[Estrategia] Library save error:', libraryErr);
-            // Continue even if library save fails - we already saved to strategy_ideas
-        }
-
         // Ensure we send a proper array
         const ideasToSend = Array.isArray(ideasArray) ? ideasArray : [];
         console.log('[API] Sending ideas count:', ideasToSend.length);

@@ -41,6 +41,13 @@ export default function CalendarPage() {
 
     useEffect(() => {
         loadData();
+        const params = new URLSearchParams(window.location.search);
+        const importId = params.get('import');
+        if (importId) {
+            handleOpenModal(new Date().toISOString().split('T')[0]);
+            setModalStep('library');
+            // We could auto-filter here but let's just let the user see the list first
+        }
     }, [currentDate]);
 
     async function loadData() {
