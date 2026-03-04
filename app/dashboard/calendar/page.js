@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
     ChevronLeft,
     ChevronRight,
-    Calendar as CalendarIcon,
     Plus,
     X,
     Save,
@@ -13,8 +12,11 @@ import {
     Search,
     BookOpen,
     Edit3,
-    Clock,
-    Globe
+    Calendar as CalendarIcon,
+    LayoutGrid,
+    Type,
+    Tag,
+    Share2
 } from 'lucide-react';
 
 export default function CalendarPage() {
@@ -27,7 +29,6 @@ export default function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingEvent, setEditingEvent] = useState(null);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Form states
     const [title, setTitle] = useState('');
@@ -176,207 +177,582 @@ export default function CalendarPage() {
                     onDrop={e => onDrop(e, dateStr)}
                     onClick={() => handleOpenModal(dateStr)}
                 >
-                    <div className="cal-day-num">{d}</div>
-                    <div className="cal-event-container">
+                    <div className="cal-cell-header">
+                        <span className="cal-day-num">{d}</span>
+                        <div className="cal-cell-plus"><Plus size={12} /></div>
+                    </div>
+                    <div className="cal-event-list">
                         {dayEvents.slice(0, 3).map(ev => (
                             <div
                                 key={ev.id}
                                 draggable
                                 onDragStart={e => { e.stopPropagation(); onDragStart(e, ev.id); }}
                                 onClick={e => { e.stopPropagation(); handleOpenModal(dateStr, ev); }}
-                                className={`cal-event ${ev.type}`}
+                                className={`cal-event-pill ${ev.type}`}
                             >
-                                {ev.title}
+                                <span className="pill-dot"></span>
+                                <span className="pill-text">{ev.title}</span>
                             </div>
                         ))}
                         {dayEvents.length > 3 && (
-                            <div className="cal-more">+{dayEvents.length - 3} más</div>
+                            <div className="cal-more-indicator">+{dayEvents.length - 3} más</div>
                         )}
                     </div>
                 </div>
             );
         }
 
-        return <div className="cal-grid">{cells}</div>;
+        return <div className="cal-modern-grid">{cells}</div>;
     };
 
     return (
-        <div className="calendar-page">
-            <header className="cal-header">
-                <div className="cal-title-section">
-                    <h1>Calendario Editorial</h1>
-                    <div className="cal-nav">
-                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}><ChevronLeft /></button>
-                        <span className="cal-current-month">
-                            {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)}
-                        </span>
-                        <button onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}><ChevronRight /></button>
-                        <button onClick={() => setCurrentDate(new Date())} className="btn-today">Hoy</button>
-                    </div>
-                </div>
-            </header>
+        <div className="cal-view-container">
+            <style jsx global>{`
+                .cal-view-container {
+                    padding: 24px;
+                    background: #000;
+                    min-height: calc(100vh - 64px);
+                    font-family: 'Inter', sans-serif;
+                }
 
-            {renderGrid()}
+                .cal-top-bar {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 32px;
+                }
+
+                .cal-header-info h1 {
+                    font-size: 1.75rem;
+                    font-weight: 900;
+                    letter-spacing: -0.03em;
+                    background: linear-gradient(to right, #fff, #888);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+
+                .cal-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    background: rgba(255,255,255,0.03);
+                    padding: 6px;
+                    border-radius: 14px;
+                    border: 1px solid rgba(255,255,255,0.05);
+                }
+
+                .cal-month-display {
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                    color: white;
+                    min-width: 160px;
+                    text-align: center;
+                    text-transform: capitalize;
+                }
+
+                .cal-nav-btn {
+                    padding: 8px;
+                    border-radius: 10px;
+                    background: transparent;
+                    border: none;
+                    color: #888;
+                    cursor: pointer;
+                    transition: 0.2s;
+                }
+
+                .cal-nav-btn:hover {
+                    background: rgba(255,255,255,0.05);
+                    color: white;
+                }
+
+                .cal-today-btn {
+                    padding: 8px 16px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    background: #fff;
+                    color: #000;
+                    border-radius: 10px;
+                    border: none;
+                    cursor: pointer;
+                }
+
+                .cal-modern-grid {
+                    display: grid;
+                    grid-template-columns: repeat(7, 1fr);
+                    gap: 1px;
+                    background: rgba(255,255,255,0.08);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 20px;
+                    overflow: hidden;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                }
+
+                .cal-header-cell {
+                    background: #080808;
+                    padding: 16px;
+                    text-align: center;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    color: #555;
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                }
+
+                .cal-cell {
+                    background: #050505;
+                    height: 140px;
+                    padding: 12px;
+                    position: relative;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .cal-cell:hover {
+                    background: #080808;
+                }
+
+                .cal-cell.today {
+                    background: radial-gradient(circle at top right, rgba(126, 206, 202, 0.08), transparent);
+                }
+
+                .cal-cell.empty {
+                    background: #020202;
+                    opacity: 0.4;
+                    cursor: default;
+                }
+
+                .cal-cell-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 8px;
+                }
+
+                .cal-day-num {
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    color: #444;
+                }
+
+                .today .cal-day-num {
+                    color: #7ECECA;
+                    font-weight: 900;
+                }
+
+                .cal-cell-plus {
+                    opacity: 0;
+                    color: #444;
+                    transition: 0.2s;
+                }
+
+                .cal-cell:hover .cal-cell-plus {
+                    opacity: 1;
+                }
+
+                .cal-event-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                .cal-event-pill {
+                    font-size: 0.7rem;
+                    padding: 5px 8px;
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    transition: 0.2s;
+                    border: 1px solid transparent;
+                }
+
+                .cal-event-pill:hover {
+                    transform: translateX(2px);
+                    filter: brightness(1.2);
+                }
+
+                .cal-event-pill.note {
+                    background: rgba(255,255,255,0.03);
+                    color: #bbb;
+                    border-color: rgba(255,255,255,0.05);
+                }
+
+                .cal-event-pill.idea {
+                    background: rgba(183, 77, 255, 0.1);
+                    color: #B74DFF;
+                    border-color: rgba(183, 77, 255, 0.1);
+                }
+
+                .cal-event-pill.guion {
+                    background: rgba(126, 206, 202, 0.1);
+                    color: #7ECECA;
+                    border-color: rgba(126, 206, 202, 0.1);
+                }
+
+                .pill-dot {
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 50%;
+                    background: currentColor;
+                }
+
+                .cal-more-indicator {
+                    font-size: 0.65rem;
+                    color: #444;
+                    padding-left: 4px;
+                    font-weight: 700;
+                }
+
+                /* MODAL */
+                .cal-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.9);
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    padding: 20px;
+                }
+
+                .cal-modal {
+                    width: 100%;
+                    maxWidth: 480px;
+                    background: #0A0A0A;
+                    border-radius: 28px;
+                    border: 1px solid rgba(255,255,255,0.08);
+                    padding: 32px;
+                    box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+                }
+
+                .cal-modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 24px;
+                }
+
+                .cal-modal-header h2 {
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                    color: white;
+                }
+
+                .cal-close-btn {
+                    background: rgba(255,255,255,0.03);
+                    border: none;
+                    color: #555;
+                    padding: 8px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: 0.2s;
+                }
+
+                .cal-close-btn:hover {
+                    background: rgba(255,255,255,0.08);
+                    color: white;
+                }
+
+                .cal-choice-grid {
+                    display: grid;
+                    gap: 16px;
+                }
+
+                .cal-choice-card {
+                    background: rgba(255,255,255,0.02);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    padding: 20px;
+                    border-radius: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    cursor: pointer;
+                    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .cal-choice-card:hover {
+                    background: rgba(255,255,255,0.05);
+                    border-color: #7ECECA;
+                    transform: scale(1.02);
+                }
+
+                .cal-choice-icon {
+                    background: rgba(126, 206, 202, 0.1);
+                    color: #7ECECA;
+                    padding: 12px;
+                    border-radius: 14px;
+                }
+
+                .cal-choice-info h3 {
+                    font-size: 0.95rem;
+                    font-weight: 700;
+                    color: white;
+                    margin-bottom: 2px;
+                    text-align: left;
+                }
+
+                .cal-choice-info p {
+                    font-size: 0.8rem;
+                    color: #666;
+                    text-align: left;
+                }
+
+                .cal-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+
+                .cal-input-group label {
+                    display: block;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    color: #7ECECA;
+                    text-transform: uppercase;
+                    margin-bottom: 8px;
+                    letter-spacing: 0.05em;
+                }
+
+                .cal-input {
+                    width: 100%;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    padding: 14px;
+                    border-radius: 12px;
+                    color: white;
+                    font-size: 0.9rem;
+                    outline: none;
+                    transition: 0.2s;
+                }
+
+                .cal-input:focus {
+                    background: rgba(255,255,255,0.05);
+                    border-color: #7ECECA;
+                }
+
+                .cal-lib-search {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    padding: 0 16px;
+                    border-radius: 12px;
+                    margin-bottom: 16px;
+                }
+
+                .cal-lib-search input {
+                    background: none;
+                    border: none;
+                    padding: 14px 0;
+                    color: white;
+                    width: 100%;
+                    outline: none;
+                }
+
+                .cal-lib-list {
+                    max-height: 280px;
+                    overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .cal-lib-item {
+                    background: rgba(255,255,255,0.02);
+                    padding: 12px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    transition: 0.2s;
+                }
+
+                .cal-lib-item:hover {
+                    background: rgba(255,255,255,0.06);
+                }
+
+                .cal-btn-primary {
+                    background: #7ECECA;
+                    color: #000;
+                    border: none;
+                    padding: 14px;
+                    border-radius: 12px;
+                    font-weight: 800;
+                    font-size: 0.95rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    transition: 0.2s;
+                }
+
+                .cal-btn-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 20px rgba(126, 206, 202, 0.2);
+                }
+
+                .cal-btn-delete {
+                    background: rgba(255,77,77,0.1);
+                    color: #FF4D4D;
+                    border: 1px solid rgba(255,77,77,0.15);
+                    padding: 12px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                }
+            `}</style>
+
+            <div className="cal-top-bar">
+                <div className="cal-header-info">
+                    <h1>Calendario</h1>
+                </div>
+                <div className="cal-controls">
+                    <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
+                        <ChevronLeft size={20} />
+                    </button>
+                    <div className="cal-month-display">
+                        {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate)}
+                    </div>
+                    <button className="cal-nav-btn" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
+                        <ChevronRight size={20} />
+                    </button>
+                    <button className="cal-today-btn" onClick={() => setCurrentDate(new Date())}>Hoy</button>
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555' }}>
+                    Cargando calendario...
+                </div>
+            ) : renderGrid()}
 
             {isModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-                    <div className="modal-content premium-card" onClick={e => e.stopPropagation()}>
-                        <header>
-                            <h2>{modalStep === 'edit' ? 'Editar Evento' : 'Programar Contenido'}</h2>
-                            <button className="close-btn" onClick={() => setIsModalOpen(false)}><X /></button>
-                        </header>
+                <div className="cal-modal-overlay" onClick={() => setIsModalOpen(false)}>
+                    <div className="cal-modal" onClick={e => e.stopPropagation()}>
+                        <div className="cal-modal-header">
+                            <h2>
+                                {modalStep === 'edit' ? 'Editar Publicación' :
+                                    modalStep === 'library' ? 'Importar de Biblioteca' : 'Nueva Publicación'}
+                            </h2>
+                            <button className="cal-close-btn" onClick={() => setIsModalOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                        <div className="modal-body">
+                        <div className="cal-modal-content">
                             {modalStep === 'choice' && (
-                                <div className="choice-steps">
-                                    <button className="choice-card" onClick={() => setModalStep('library')}>
-                                        <div className="icon"><BookOpen size={24} /></div>
-                                        <div>
+                                <div className="cal-choice-grid">
+                                    <div className="cal-choice-card" onClick={() => setModalStep('library')}>
+                                        <div className="cal-choice-icon"><BookOpen size={24} /></div>
+                                        <div className="cal-choice-info">
                                             <h3>Importar desde Biblioteca</h3>
-                                            <p>Usa tus ideas y guiones ya guardados</p>
+                                            <p>Selecciona una idea o guion guardado anteriormente.</p>
                                         </div>
-                                    </button>
-                                    <button className="choice-card" onClick={() => setModalStep('note')}>
-                                        <div className="icon"><Edit3 size={24} /></div>
-                                        <div>
-                                            <h3>Crear Nota Rápida</h3>
-                                            <p>Anota una idea rápida para este día</p>
+                                    </div>
+                                    <div className="cal-choice-card" onClick={() => setModalStep('note')}>
+                                        <div className="cal-choice-icon"><Edit3 size={24} /></div>
+                                        <div className="cal-choice-info">
+                                            <h3>Nota Rápida</h3>
+                                            <p>Crea un recordatorio o evento rápido sin usar la biblioteca.</p>
                                         </div>
-                                    </button>
+                                    </div>
                                 </div>
                             )}
 
                             {modalStep === 'library' && (
-                                <div className="library-step">
-                                    <div className="search-bar">
-                                        <Search size={18} />
+                                <div className="cal-lib-step">
+                                    <div className="cal-lib-search">
+                                        <Search size={18} color="#555" />
                                         <input
-                                            placeholder="Buscar en mi biblioteca..."
+                                            placeholder="Buscar contenido..."
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
+                                            autoFocus
                                         />
                                     </div>
-                                    <div className="lib-list">
-                                        {libraryItems.filter(item =>
-                                            (item.titulo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            (item.type || '').toLowerCase().includes(searchQuery.toLowerCase())
-                                        ).map(item => (
-                                            <div key={item.id} className="lib-item" onClick={() => handleImportFromLibrary(item)}>
-                                                <div className="lib-badge">{item.type}</div>
-                                                <div className="lib-info">
-                                                    <strong>{item.titulo || item.content?.titulo_angulo || 'Sin título'}</strong>
-                                                    <span>{item.platform}</span>
+                                    <div className="cal-lib-list">
+                                        {libraryItems
+                                            .filter(it => (it.titulo || it.content?.titulo_angulo || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                                            .map(item => (
+                                                <div key={item.id} className="cal-lib-item" onClick={() => handleImportFromLibrary(item)}>
+                                                    <div style={{ color: item.type === 'guion' ? '#7ECECA' : '#B74DFF' }}>
+                                                        <LayoutGrid size={18} />
+                                                    </div>
+                                                    <div className="cal-lib-info">
+                                                        <strong style={{ display: 'block', fontSize: '0.85rem' }}>{item.titulo || item.content?.titulo_angulo || 'Sin título'}</strong>
+                                                        <span style={{ fontSize: '0.7rem', color: '#666' }}>{item.type} • {item.platform}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))
+                                        }
                                     </div>
-                                    <button className="back-btn" onClick={() => setModalStep('choice')}>Volver</button>
+                                    <button onClick={() => setModalStep('choice')} style={{ border: 'none', background: 'none', color: '#666', width: '100%', marginTop: '20px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                                        Volver
+                                    </button>
                                 </div>
                             )}
 
                             {(modalStep === 'note' || modalStep === 'edit') && (
-                                <div className="note-form">
-                                    <div className="form-group">
-                                        <label>Título</label>
-                                        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Publicar Reel sobre... " />
+                                <div className="cal-form">
+                                    <div className="cal-input-group">
+                                        <label><Type size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Título</label>
+                                        <input className="cal-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Publicar carrusel sobre..." />
                                     </div>
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label>Tipo</label>
-                                            <select value={type} onChange={e => setType(e.target.value)}>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div className="cal-input-group">
+                                            <label><Tag size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Tipo</label>
+                                            <select className="cal-input" value={type} onChange={e => setType(e.target.value)}>
                                                 <option value="note">Nota</option>
                                                 <option value="idea">Idea</option>
                                                 <option value="guion">Guion</option>
                                             </select>
                                         </div>
-                                        <div className="form-group">
-                                            <label>Plataforma</label>
-                                            <select value={platform} onChange={e => setPlatform(e.target.value)}>
+                                        <div className="cal-input-group">
+                                            <label><Globe size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Plataforma</label>
+                                            <select className="cal-input" value={platform} onChange={e => setPlatform(e.target.value)}>
                                                 <option value="General">General</option>
-                                                <option value="Instagram">Instagram</option>
                                                 <option value="TikTok">TikTok</option>
+                                                <option value="Instagram">Instagram</option>
                                                 <option value="YouTube">YouTube</option>
-                                                <option value="LinkedIn">LinkedIn</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div className="form-group">
-                                        <label>Descripción / Notas</label>
-                                        <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Escribe aquí los detalles..." />
+
+                                    <div className="cal-input-group">
+                                        <label><Search size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Notas Adicionales</label>
+                                        <textarea className="cal-input" style={{ minHeight: '80px' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Detalles de la publicación..." />
                                     </div>
 
-                                    <div className="form-actions">
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                         {modalStep === 'edit' && (
-                                            <button className="delete-btn" onClick={handleDeleteEvent}><Trash2 size={18} /></button>
+                                            <button className="cal-btn-delete" onClick={handleDeleteEvent}>
+                                                <Trash2 size={20} />
+                                            </button>
                                         )}
-                                        <button className="save-btn" onClick={handleSaveEvent}><Save size={18} /> Guardar</button>
+                                        <button className="cal-btn-primary" style={{ flex: 1 }} onClick={handleSaveEvent}>
+                                            <Save size={18} /> Guardar Cambios
+                                        </button>
                                     </div>
-                                    {modalStep === 'note' && <button className="back-btn" onClick={() => setModalStep('choice')}>Volver</button>}
+
+                                    {modalStep === 'note' && (
+                                        <button onClick={() => setModalStep('choice')} style={{ border: 'none', background: 'none', color: '#666', width: '100%', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}>
+                                            Volver
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
             )}
-
-            <style jsx>{`
-                .calendar-page { padding: 20px; color: white; background: #050505; min-height: 100vh; }
-                .cal-header { margin-bottom: 30px; }
-                .cal-title-section { display: flex; justify-content: space-between; align-items: center; }
-                h1 { fontSize: 1.8rem; fontWeight: 900; }
-                .cal-nav { display: flex; align-items: center; gap: 15px; }
-                .cal-current-month { fontSize: 1.1rem; fontWeight: 700; textTransform: capitalize; minWidth: 200px; textAlign: center; }
-                .cal-nav button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px; borderRadius: 10px; cursor: pointer; display: flex; align-items: center; }
-                .btn-today { padding: 8px 16px !important; fontSize: 0.9rem; fontWeight: 600; }
-
-                .cal-grid { display: grid; gridTemplateColumns: repeat(7, 1fr); border: 1px solid rgba(255,255,255,0.05); borderRadius: 16px; overflow: hidden; }
-                .cal-header-cell { padding: 15px; textAlign: center; fontSize: 0.75rem; fontWeight: 800; color: rgba(255,255,255,0.3); textTransform: uppercase; background: #080808; }
-                .cal-cell { height: 160px; border: 1px solid rgba(255,255,255,0.05); padding: 10px; background: #080808; transition: 0.2s; cursor: pointer; }
-                .cal-cell:hover { background: #0C0C0C; }
-                .cal-cell.today { background: rgba(126, 206, 202, 0.03); border-color: rgba(126, 206, 202, 0.2); }
-                .cal-cell.empty { background: #030303; opacity: 0.5; cursor: default; }
-                .cal-day-num { fontSize: 0.9rem; fontWeight: 600; marginBottom: 8px; color: rgba(255,255,255,0.5); }
-                .today .cal-day-num { color: #7ECECA; fontWeight: 900; }
-
-                .cal-event-container { display: flex; flexDirection: column; gap: 4px; }
-                .cal-event { fontSize: 0.7rem; padding: 5px 10px; borderRadius: 6px; whiteSpace: nowrap; overflow: hidden; textOverflow: ellipsis; fontWeight: 700; transition: 0.2s; }
-                .cal-event:hover { filter: brightness(1.2); }
-                .cal-event.note { background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); }
-                .cal-event.idea { background: rgba(157, 0, 255, 0.2); color: #B74DFF; border: 1px solid rgba(157, 0, 255, 0.2); }
-                .cal-event.guion { background: rgba(126, 206, 202, 0.2); color: #7ECECA; border: 1px solid rgba(126, 206, 202, 0.2); }
-                .cal-more { fontSize: 0.65rem; color: rgba(255,255,255,0.3); paddingLeft: 5px; marginTop: 2px; }
-
-                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; alignItems: center; justifyContent: center; zIndex: 1000; padding: 20px; }
-                .modal-content { width: 100%; maxWidth: 500px; background: #0A0A0A; borderRadius: 24px; padding: 32px; border: 1px solid rgba(255,255,255,0.1); }
-                .modal-content header { display: flex; justifyContent: space-between; alignItems: center; marginBottom: 24px; }
-                .close-btn { background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; }
-
-                .choice-steps { display: grid; gap: 16px; }
-                .choice-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 20px; borderRadius: 16px; display: flex; alignItems: center; gap: 20px; cursor: pointer; transition: 0.2s; textAlign: left; color: white; }
-                .choice-card:hover { background: rgba(255,255,255,0.06); borderColor: #7ECECA; transform: translateY(-2px); }
-                .choice-card .icon { background: rgba(126, 206, 202, 0.1); color: #7ECECA; padding: 12px; borderRadius: 12px; }
-                .choice-card h3 { fontSize: 1rem; fontWeight: 800; marginBottom: 4px; }
-                .choice-card p { fontSize: 0.85rem; color: rgba(255,255,255,0.5); }
-
-                .search-bar { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); borderRadius: 12px; padding: 12px 16px; display: flex; alignItems: center; gap: 12px; marginBottom: 20px; }
-                .search-bar input { background: none; border: none; color: white; width: 100%; outline: none; }
-                .lib-list { maxHeight: 300px; overflowY: auto; display: grid; gap: 10px; marginBottom: 20px; }
-                .lib-item { background: rgba(255,255,255,0.03); padding: 12px; borderRadius: 12px; cursor: pointer; display: flex; alignItems: center; gap: 12px; transition: 0.2s; }
-                .lib-item:hover { background: rgba(255,255,255,0.08); }
-                .lib-badge { fontSize: 0.6rem; fontWeight: 900; background: rgba(157, 0, 255, 0.2); color: #D8B4FF; padding: 4px 8px; borderRadius: 6px; textTransform: uppercase; }
-                .lib-info strong { display: block; fontSize: 0.9rem; }
-                .lib-info span { fontSize: 0.75rem; color: rgba(255,255,255,0.4); }
-
-                .note-form { display: grid; gap: 20px; }
-                .form-group label { display: block; fontSize: 0.75rem; fontWeight: 800; color: #7ECECA; marginBottom: 8px; textTransform: uppercase; }
-                .form-group input, .form-group select, .form-group textarea { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; borderRadius: 12px; outline: none; transition: 0.2s; }
-                .form-group input:focus { borderColor: #7ECECA; background: rgba(255,255,255,0.08); }
-                .form-row { display: grid; gridTemplateColumns: 1fr 1fr; gap: 16px; }
-                .form-actions { display: flex; gap: 12px; marginTop: 10px; }
-                .save-btn { flex: 1; background: var(--accent-gradient); color: white; border: none; padding: 14px; borderRadius: 12px; fontWeight: 800; cursor: pointer; display: flex; alignItems: center; justifyContent: center; gap: 10px; }
-                .delete-btn { background: rgba(255,77,77,0.1); color: #FF4D4D; border: 1px solid rgba(255,77,77,0.2); padding: 14px; borderRadius: 12px; cursor: pointer; }
-                .back-btn { background: none; border: none; color: rgba(255,255,255,0.4); fontSize: 0.85rem; fontWeight: 700; cursor: pointer; marginTop: 10px; textAlign: center; width: 100%; }
-            `}</style>
         </div>
     );
 }
