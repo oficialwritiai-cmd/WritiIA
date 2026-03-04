@@ -146,8 +146,6 @@ export default function DashboardPage() {
             const params = new URLSearchParams(window.location.search);
             // If coming from strategy/bank with pre-filled data and has brain, skip to step 2
             if (params.get('mode') === 'single' && params.get('topic')) {
-                setWizardStep(2);
-                // Clean URL params after using them (but save topic/platform/goal first)
                 const savedTopic = params.get('topic');
                 const savedPlatform = params.get('platform');
                 const savedGoal = params.get('goal');
@@ -156,10 +154,25 @@ export default function DashboardPage() {
                 if (savedPlatform) setPlatform(decodeURIComponent(savedPlatform));
                 if (savedGoal) setGoal(decodeURIComponent(savedGoal));
                 
+                setWizardStep(2);
+                setGenerationMode('single');
+                setStep(2); // Start generation immediately
+                
                 window.history.replaceState({}, document.title, '/dashboard');
             }
         }
     }, [hasBrain]);
+
+    // Auto-generate when coming from estrategia with pre-filled data
+    useEffect(() => {
+        const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+        const isFromStrategy = params.get('mode') === 'single' && params.get('topic') && step === 2;
+        
+        if (isFromStrategy && hasBrain && topic.trim()) {
+            console.log('[Dashboard] Auto-generating from estrategia...');
+            handleGenerateSingle();
+        }
+    }, [step, hasBrain, topic]);
 
     useEffect(() => {
         if (step === 2) {
@@ -213,7 +226,14 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
 
+            console.log('[Dashboard] handleGenerateSingle - data:', data);
+            
             let generatedScripts = data.scripts || [];
+            console.log('[Dashboard] generatedScripts:', generatedScripts, generatedScripts.length);
+
+            if (generatedScripts.length === 0) {
+                throw new Error('No se recibieron guiones de la API');
+            }
 
             // Initialize selected hooks
             const initialSelected = {};
