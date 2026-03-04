@@ -75,9 +75,15 @@ export default function IdeasViralesPage() {
             });
 
             const data = await res.json();
+            console.log('[ideas-virales] Response:', data);
             
             if (!res.ok) {
                 throw new Error(data.error || 'Error al generar las ideas virales.');
+            }
+
+            if (!data.ideas) {
+                console.error('[ideas-virales] No ideas in response:', data);
+                throw new Error('La respuesta del servidor no contiene ideas.');
             }
 
             // Ensure ideas is always an array
@@ -98,12 +104,14 @@ export default function IdeasViralesPage() {
             }
 
             if (ideasData.length === 0) {
+                console.error('[ideas-virales] Empty ideasData:', ideasData);
                 throw new Error('No se recibieron ideas válidas. Intenta de nuevo.');
             }
 
+            console.log('[ideas-virales] Setting ideas:', ideasData.length);
             setIdeas(ideasData);
         } catch (err) {
-            console.error(err);
+            console.error('[ideas-virales] Error:', err);
             setError(err.message);
         } finally {
             setLoading(false);
