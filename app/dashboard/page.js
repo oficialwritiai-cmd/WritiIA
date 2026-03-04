@@ -185,12 +185,13 @@ export default function DashboardPage() {
         if (step === 2) {
             let current = 0;
             setLoadingPhase(0);
+            const intervalMs = (generationMode === 'single' && quantity === 1) ? 3500 : 5000;
             const interval = setInterval(() => {
                 if (current < loadingSteps.length - 1) {
                     current++;
                     setLoadingPhase(current);
                 }
-            }, 5000);
+            }, intervalMs);
             return () => clearInterval(interval);
         }
     }, [step, generationMode]);
@@ -212,12 +213,17 @@ export default function DashboardPage() {
         setError('');
 
         try {
+            // Priority check for count to avoid state race conditions from strategy
+            const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+            const urlCount = params.get('count');
+            const finalQuantity = urlCount ? parseInt(urlCount) : (quantity || 3);
+
             const requestBody = {
                 topic: topic.trim(),
                 platform: platform || 'Reels',
                 tone: toneBrand || 'Profesional',
                 goal: goal || 'engagement',
-                count: quantity || 3,
+                count: finalQuantity,
                 ideas: ideas || '',
                 userId: profile?.id,
                 awareness: awareness || 'medium',
