@@ -187,7 +187,7 @@ export default function DashboardPage() {
                     current++;
                     setLoadingPhase(current);
                 }
-            }, 2000);
+            }, 5000);
             return () => clearInterval(interval);
         }
     }, [step, generationMode]);

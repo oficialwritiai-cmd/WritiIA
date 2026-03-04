@@ -109,7 +109,7 @@ export default function EstrategiaPage() {
                     current++;
                     setLoadingPhase(current);
                 }
-            }, 2500);
+            }, 5000);
             return () => clearInterval(interval);
         }
     }, [loading]);
