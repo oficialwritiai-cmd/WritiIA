@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { createSupabaseClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import GenerationProgress from '@/app/components/GenerationProgress';
 
 // Simple stepper component
 function Stepper({ current }) {
@@ -59,6 +60,7 @@ export default function EstrategiaPage() {
     const router = useRouter();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [loadingPhase, setLoadingPhase] = useState(0);
     const [error, setError] = useState('');
     const [profile, setProfile] = useState(null);
     const [brainActive, setBrainActive] = useState(false);
@@ -90,6 +92,27 @@ export default function EstrategiaPage() {
         }
         loadProfile();
     }, []);
+
+    const ideasLoadingSteps = [
+        "Leyendo tu Cerebro IA…",
+        "Buscando ángulos de contenido…",
+        "Diseñando ideas virales…",
+        "Preparando tu Banco de Ideas…",
+    ];
+
+    useEffect(() => {
+        if (loading) {
+            let current = 0;
+            setLoadingPhase(0);
+            const interval = setInterval(() => {
+                if (current < ideasLoadingSteps.length - 1) {
+                    current++;
+                    setLoadingPhase(current);
+                }
+            }, 2500);
+            return () => clearInterval(interval);
+        }
+    }, [loading]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -129,9 +152,9 @@ export default function EstrategiaPage() {
 
             const data = await res.json();
             console.log('[Estrategia] Response:', data);
-            
+
             if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
-            
+
             if (!data.ideas) {
                 throw new Error('No se recibieron ideas. Verifica que el Cerebro IA esté configurado.');
             }
@@ -139,12 +162,12 @@ export default function EstrategiaPage() {
             // ULTRA ROBUST PARSING
             let ideasData = data.ideas;
             console.log('[Estrategia] Raw data type:', typeof ideasData, Array.isArray(ideasData));
-            
+
             // Step 1: If it's a string, parse it as JSON
             if (typeof ideasData === 'string') {
                 console.log('[Estrategia] Parsing string...');
                 const str = ideasData.trim();
-                
+
                 // Si es un array JSON
                 if (str.startsWith('[')) {
                     try {
@@ -177,7 +200,7 @@ export default function EstrategiaPage() {
                     ideasData = [];
                 }
             }
-            
+
             // ASEGURAR que es array al final
             if (!Array.isArray(ideasData)) {
                 console.error('[Estrategia] ideasData is not array after parsing:', typeof ideasData);
@@ -187,7 +210,7 @@ export default function EstrategiaPage() {
                     ideasData = [];
                 }
             }
-            
+
             // Step 2: Ensure it's an array
             if (!Array.isArray(ideasData)) {
                 if (ideasData && typeof ideasData === 'object') {
@@ -198,10 +221,10 @@ export default function EstrategiaPage() {
             }
 
             // Step 3: Filter out invalid ideas (must have at least titulo or descripcion)
-            ideasData = ideasData.filter(idea => 
+            ideasData = ideasData.filter(idea =>
                 idea && (
-                    idea.titulo_idea || 
-                    idea.titulo || 
+                    idea.titulo_idea ||
+                    idea.titulo ||
                     idea.descripcion ||
                     idea.plataforma
                 )
@@ -219,7 +242,7 @@ export default function EstrategiaPage() {
                 console.error('[Estrategia] ideasData no es array:', ideasData);
                 throw new Error('Error al procesar las ideas');
             }
-            
+
             // Verificar que cada elemento es un objeto
             for (let i = 0; i < Math.min(3, ideasData.length); i++) {
                 console.log('[Estrategia] Idea[' + i + ']:', typeof ideasData[i], ideasData[i]?.titulo_idea);
@@ -247,7 +270,7 @@ export default function EstrategiaPage() {
             alert('Selecciona al menos una idea para crear tu plan.');
             return;
         }
-        
+
         // Filtrar ideas seleccionadas - con protección
         let ideasArray = ideas;
         if (typeof ideas === 'string') {
@@ -258,21 +281,21 @@ export default function EstrategiaPage() {
                 ideasArray = [];
             }
         }
-        
+
         if (!Array.isArray(ideasArray)) {
             ideasArray = [];
         }
-        
+
         const selectedIdeas = ideasArray.filter(i => {
             const id = i?.id || i?.titulo_idea || i?.titulo || String(ideasArray.indexOf(i));
             return selectedIdeaIds.has(id);
         });
-        
+
         if (selectedIdeas.length === 0) {
             alert('Selecciona al menos una idea para crear tu plan.');
             return;
         }
-        
+
         setSelectedIdeasForPlan(selectedIdeas);
         setStep(2);
     };
@@ -282,16 +305,16 @@ export default function EstrategiaPage() {
             alert('No hay ideas para enviar al calendario.');
             return;
         }
-        
+
         setSavingToCalendar(true);
-        
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión');
-            
+
             const month = new Date().getMonth() + 1;
             const year = new Date().getFullYear();
-            
+
             const { data: planData, error: planError } = await supabase
                 .from('content_plans')
                 .insert({
@@ -304,9 +327,9 @@ export default function EstrategiaPage() {
                 })
                 .select()
                 .single();
-            
+
             if (planError) throw planError;
-            
+
             const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => ({
                 plan_id: planData.id,
                 user_id: user.id,
@@ -316,14 +339,14 @@ export default function EstrategiaPage() {
                 idea_title: idea.titulo_idea || idea.titulo || 'Sin título',
                 goal: idea.objetivo || 'engagement'
             }));
-            
+
             const { data: slotData, error: slotError } = await supabase
                 .from('content_slots')
                 .insert(slotsToInsert)
                 .select();
-            
+
             if (slotError) throw slotError;
-            
+
             const { saveToLibrary } = await import('@/lib/library');
             for (const idea of selectedIdeasForPlan) {
                 await saveToLibrary({
@@ -342,7 +365,7 @@ export default function EstrategiaPage() {
                     tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
                 });
             }
-            
+
             alert(`✓ ${selectedIdeasForPlan.length} ideas guardadas en el plan mensual y biblioteca`);
             router.push('/dashboard/calendar');
         } catch (err) {
@@ -359,26 +382,26 @@ export default function EstrategiaPage() {
             alert('Error: No se pudo obtener la idea. Intenta de nuevo.');
             return;
         }
-        
+
         const titulo = idea.titulo_idea || idea.titulo || '';
         const desc = idea.descripcion || '';
         const plataforma = idea.plataforma || 'Reels';
         const objetivo = idea.objetivo || 'engagement';
-        
+
         if (!titulo) {
             alert('Error: La idea no tiene título válido.');
             return;
         }
-        
+
         console.log('[Estrategia] Generating script for idea:', { titulo, plataforma, objetivo });
-        
+
         const params = new URLSearchParams();
         params.set('mode', 'single');
         params.set('topic', encodeURIComponent(`${titulo}\n${desc}`));
         params.set('platform', encodeURIComponent(plataforma));
         params.set('goal', encodeURIComponent(objetivo));
         params.set('source_type', 'strategy');
-        
+
         router.push(`/dashboard?${params.toString()}`);
     };
 
@@ -502,14 +525,23 @@ export default function EstrategiaPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleGenerateIdeas}
-                        disabled={loading}
-                        className="btn-primary"
-                        style={{ height: '64px', fontSize: '1.1rem', fontWeight: 900, marginTop: '20px' }}
-                    >
-                        {loading ? <Loader2 className="animate-spin" style={{ display: 'inline-block' }} /> : <><Sparkles size={20} /> Analizar y generar banco de ideas →</>}
-                    </button>
+                    {loading ? (
+                        <GenerationProgress
+                            steps={ideasLoadingSteps}
+                            currentPhase={loadingPhase}
+                            brainName={brainActive ? 'perfil configurado' : null}
+                            subtitle="Esto suele tomar entre 15 y 30 segundos…"
+                        />
+                    ) : (
+                        <button
+                            onClick={handleGenerateIdeas}
+                            disabled={loading}
+                            className="btn-primary"
+                            style={{ height: '64px', fontSize: '1.1rem', fontWeight: 900, marginTop: '20px' }}
+                        >
+                            <Sparkles size={20} /> Analizar y generar banco de ideas →
+                        </button>
+                    )}
                     {error && <p style={{ color: '#FF4D4D', textAlign: 'center', fontSize: '0.9rem' }}>{error}</p>}
                 </div>
             </div>
@@ -518,10 +550,10 @@ export default function EstrategiaPage() {
 
     const renderIdeas = () => {
         console.log('[Estrategia] renderIdeas - ideas:', ideas);
-        
+
         // ASEGURAR que ideas es SIEMPRE un array de objetos
         let ideasList = [];
-        
+
         // CASO 1: Si es string (JSON raw como "[{...},{...}]")
         if (typeof ideas === 'string') {
             const str = ideas.trim();
@@ -560,19 +592,19 @@ export default function EstrategiaPage() {
         else if (ideas && typeof ideas === 'object') {
             ideasList = [ideas];
         }
-        
+
         // Filtrar: solo objetos válidos con al menos titulo o descripcion
-        ideasList = ideasList.filter(idea => 
-            idea && 
-            typeof idea === 'object' && 
+        ideasList = ideasList.filter(idea =>
+            idea &&
+            typeof idea === 'object' &&
             (idea.titulo_idea || idea.titulo || idea.descripcion || idea.plataforma)
         );
-        
+
         console.log('[Estrategia] Final ideasList count:', ideasList.length);
         if (ideasList.length > 0) {
             console.log('[Estrategia] First idea:', JSON.stringify(ideasList[0]).substring(0, 200));
         }
-        
+
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
@@ -596,8 +628,8 @@ export default function EstrategiaPage() {
                         <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', marginTop: '8px' }}>Completa el formulario y genera ideas estratégicas.</p>
                     </div>
                 ) : (
-                    <div style={{ 
-                        display: 'grid', 
+                    <div style={{
+                        display: 'grid',
                         gridTemplateColumns: 'repeat(1, 1fr)',
                         gap: '16px'
                     }}>
@@ -606,18 +638,18 @@ export default function EstrategiaPage() {
                             if (!idea || typeof idea !== 'object') {
                                 return null;
                             }
-                            
+
                             // Extract fields with fallbacks
                             const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
                             const isSelected = selectedIdeaIds.has(id);
                             const titulo = idea?.titulo_idea || idea?.titulo || idea?.title || 'Idea sin título';
                             const desc = idea?.descripcion || idea?.description || '';
-                            
+
                             const truncateDesc = (text, maxLen = 100) => {
                                 if (!text) return '';
                                 return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
                             };
-                            
+
                             return (
                                 <div
                                     key={idx}
@@ -637,9 +669,9 @@ export default function EstrategiaPage() {
                                         gap: '10px'
                                     }}
                                 >
-                                    <div style={{ 
-                                        position: 'absolute', 
-                                        top: '14px', 
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '14px',
                                         right: '14px',
                                         width: '22px',
                                         height: '22px',
@@ -691,9 +723,9 @@ export default function EstrategiaPage() {
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
                                         className="btn-primary"
-                                        style={{ 
-                                            width: '100%', 
-                                            padding: '8px 0', 
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 0',
                                             fontSize: '0.7rem',
                                             background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
                                             borderRadius: '8px',
@@ -733,8 +765,8 @@ export default function EstrategiaPage() {
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', border: 'none' }}
                                 onClick={handleSendToCalendar}
                                 disabled={savingToCalendar}
