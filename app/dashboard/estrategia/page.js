@@ -138,11 +138,11 @@ export default function EstrategiaPage() {
 
             // ULTRA ROBUST PARSING
             let ideasData = data.ideas;
-            console.log('[Estrategia] Raw data type:', typeof ideasData);
-            console.log('[Estrategia] Raw data sample:', String(ideasData).substring(0, 300));
+            console.log('[Estrategia] Raw data type:', typeof ideasData, Array.isArray(ideasData));
             
             // Step 1: If it's a string, parse it as JSON
             if (typeof ideasData === 'string') {
+                console.log('[Estrategia] Parsing string...');
                 const str = ideasData.trim();
                 
                 // Si es un array JSON
@@ -174,6 +174,16 @@ export default function EstrategiaPage() {
                     }
                 }
                 else {
+                    ideasData = [];
+                }
+            }
+            
+            // ASEGURAR que es array al final
+            if (!Array.isArray(ideasData)) {
+                console.error('[Estrategia] ideasData is not array after parsing:', typeof ideasData);
+                if (ideasData && typeof ideasData === 'object') {
+                    ideasData = [ideasData];
+                } else {
                     ideasData = [];
                 }
             }

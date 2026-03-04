@@ -159,7 +159,11 @@ Ejemplo de respuesta válida:
             // Continue even if library save fails - we already saved to strategy_ideas
         }
 
-        return NextResponse.json({ ideas: ideasArray });
+        // Ensure we send a proper array
+        const ideasToSend = Array.isArray(ideasArray) ? ideasArray : [];
+        console.log('[API] Sending ideas count:', ideasToSend.length);
+        
+        return NextResponse.json({ ideas: ideasToSend });
 
     } catch (err) {
         console.error('Error en estrategia generate-ideas:', err);
