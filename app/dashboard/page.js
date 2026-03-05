@@ -647,25 +647,6 @@ export default function DashboardPage() {
 
     return (
         <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            {/* BANNER DE ACTUALIZACIÓN (Solo visible si no han refrescado) */}
-            <div style={{
-                background: 'rgba(126, 206, 202, 0.15)',
-                border: '2px solid rgba(126, 206, 202, 0.4)',
-                padding: '20px 24px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                animation: 'pulse-glow 2s infinite alternate'
-            }}>
-                <div style={{ fontSize: '2rem' }}>✅</div>
-                <div>
-                    <h3 style={{ color: '#7ECECA', margin: 0, fontSize: '1rem', fontWeight: 900 }}>SISTEMA ACTUALIZADO - VERSIÓN V1.4.0 (PREMIUM SCRIPTS + COPY POST)</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', margin: '4px 0 0 0', fontSize: '0.85rem', fontWeight: 600 }}>
-                        {new Date().toLocaleTimeString('es-ES')} - Si no ves los campos de "LinkedIn/Copy Post", pulsa <strong>Ctrl + F5</strong> para forzar la actualización.
-                    </p>
-                </div>
-            </div>
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
