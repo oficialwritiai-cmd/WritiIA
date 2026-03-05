@@ -1,4 +1,4 @@
-// Build Version: 2026-03-05-v4 - Fix: Auth Redirects + Version v1.6.0 + Premium Email Template
+// Build Version: 2026-03-05-v5 - Force Force v1.6.5 - Gold Spinner Emergency Bypass
 import './globals.css';
 
 export const metadata = {
