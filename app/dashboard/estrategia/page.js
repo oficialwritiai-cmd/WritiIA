@@ -1,4 +1,6 @@
 /* app/dashboard/estrategia/page.js */
+'use client';
+
 import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft } from 'lucide-react';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
