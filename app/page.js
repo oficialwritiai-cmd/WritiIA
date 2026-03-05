@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createSupabaseClient } from '@/lib/supabase';
 import Logo from '@/app/components/Logo';
 import './landing.css';
 
@@ -43,7 +45,23 @@ export default function LandingPage() {
     const [submitting, setSubmitting] = useState(false);
     const [countdown, setCountdown] = useState({ h: 71, m: 59, s: 59 });
     const [mounted, setMounted] = useState(false);
+    const [user, setUser] = useState(null);
     const ctaRef = useRef(null);
+    const router = useRouter();
+    const supabase = createSupabaseClient();
+
+    // Check session
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) setUser(session.user);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user || null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     // Navbar scroll effect
     useEffect(() => {
@@ -121,10 +139,21 @@ export default function LandingPage() {
                     <Logo size="1.2rem" />
                 </Link>
                 <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <Link href="/login" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, transition: '0.2s' }}>Iniciar sesión</Link>
-                    <Link href="/login?mode=register" style={{ textDecoration: 'none' }}>
-                        <button className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>Probar gratis</button>
-                    </Link>
+                    {user ? (
+                        <>
+                            <Link href="/dashboard" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Mi Panel</Link>
+                            <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+                                <button className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>Ir al Panel →</button>
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/login" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600, transition: '0.2s' }}>Iniciar sesión</Link>
+                            <Link href="/login?mode=register" style={{ textDecoration: 'none' }}>
+                                <button className="btn-primary" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>Probar gratis</button>
+                            </Link>
+                        </>
+                    )}
                 </div>
             </nav>
 
@@ -141,9 +170,9 @@ export default function LandingPage() {
                 </p>
 
                 <div className="hero-ctas">
-                    <Link href="/login?mode=register" style={{ textDecoration: 'none' }}>
+                    <Link href={user ? "/dashboard" : "/login?mode=register"} style={{ textDecoration: 'none' }}>
                         <button className="btn-primary" style={{ padding: '20px 48px', fontSize: '1.2rem', borderRadius: '18px' }}>
-                            Probar gratis 7 días →
+                            {user ? 'Ir a mi Panel de Control →' : 'Probar gratis 7 días →'}
                         </button>
                     </Link>
                     <button className="btn-secondary" style={{ padding: '20px 40px', fontSize: '1rem', borderRadius: '18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }} onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -295,8 +324,10 @@ export default function LandingPage() {
                             <li>Métricas básicas de uso y créditos de IA</li>
                         </ul>
 
-                        <Link href="/login" style={{ textDecoration: 'none' }}>
-                            <button className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '1.2rem' }}>Empezar con el Plan Pro →</button>
+                        <Link href={user ? "/dashboard" : "/login"} style={{ textDecoration: 'none' }}>
+                            <button className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '1.2rem' }}>
+                                {user ? 'Volver a mi Panel →' : 'Empezar con el Plan Pro →'}
+                            </button>
                         </Link>
 
                         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

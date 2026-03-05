@@ -1,6 +1,9 @@
 /* app/dashboard/estrategia/page.js */
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createSupabaseClient } from '@/lib/supabase';
 import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft } from 'lucide-react';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
@@ -353,7 +356,7 @@ export default function EstrategiaPage() {
     };
 
     const handleExportExcel = async (specificIdeas = null) => {
-        const ideasToExport = specificIdeas || generatedIdeas;
+        const ideasToExport = specificIdeas || ideas;
         if (!ideasToExport || ideasToExport.length === 0) {
             alert('No hay ideas para exportar.');
             return;
@@ -904,15 +907,15 @@ export default function EstrategiaPage() {
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
-                                                const { saveToLibrary } = await import('@/lib/library');
+                                                // Using the top-level import 'saveToLibrary'
                                                 await saveToLibrary({
-                                                    userId: profile.id,
+                                                    userId: profile?.id,
                                                     type: 'idea',
-                                                    platform: idea.plataforma || 'General',
-                                                    goal: idea.objetivo || 'engagement',
-                                                    titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
+                                                    platform: idea?.plataforma || 'General',
+                                                    goal: idea?.objetivo || 'engagement',
+                                                    titulo: idea?.titulo_idea || idea?.titulo || 'Idea Estratégica',
                                                     content: idea,
-                                                    tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
+                                                    tags: [idea?.plataforma, idea?.tipo, idea?.objetivo].filter(Boolean)
                                                 });
                                                 alert('✓ Guardado en tu biblioteca');
                                             }}
@@ -1048,6 +1051,15 @@ export default function EstrategiaPage() {
                     </div>
                 )}
             </div>
+
+            {/* Modal de éxito (Global) */}
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                title={successModalData.title}
+                message={successModalData.message}
+                actionOnClick={() => router.push('/dashboard/library')}
+            />
 
             <style jsx global>{`
                 .premium-card {

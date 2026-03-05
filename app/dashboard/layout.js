@@ -11,6 +11,8 @@ import CreditsModal from '@/app/components/CreditsModal';
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadingStatus, setLoadingStatus] = useState('Verificando acceso...');
+    const [authError, setAuthError] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profile, setProfile] = useState(null);
     const [hoveredItem, setHoveredItem] = useState(null);
@@ -20,79 +22,121 @@ export default function DashboardLayout({ children }) {
     const supabase = createSupabaseClient();
 
     const fetchProfile = async (userId) => {
-        const { data: profileData } = await supabase
-            .from('users_profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
+        try {
+            // Set a 4s timeout for profile fetch specifically
+            const profilePromise = supabase
+                .from('users_profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
 
-        if (profileData) {
-            setProfile(profileData);
-            return profileData;
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Profile Timeout')), 4000));
+
+            const { data: profileData, error } = await Promise.race([profilePromise, timeoutPromise]);
+
+            if (error) console.error('Error fetching profile:', error);
+            if (profileData) {
+                setProfile(profileData);
+                return profileData;
+            }
+        } catch (err) {
+            console.error('FetchProfile catch:', err);
         }
         return null;
     };
 
     useEffect(() => {
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (!session) {
-                router.replace('/login');
-            } else {
-                setUser(session.user);
-                const profileData = await fetchProfile(session.user.id);
+        let isMounted = true;
+        // timer variable removed to prevent ReferenceError since it wasn't defined elsewhere
 
-                if (profileData) {
-                    // Check trial expiry
-                    const now = new Date();
-                    const trialEnds = profileData.trial_ends_at ? new Date(profileData.trial_ends_at) : null;
+        const checkAuth = async () => {
+            if (!isMounted) return;
+            setLoadingStatus('Verificando sesión...');
 
-                    if (profileData.plan === 'trial' && trialEnds && trialEnds < now) {
-                        if (pathname !== '/dashboard/expired' && pathname !== '/dashboard/settings') {
-                            router.replace('/dashboard/expired');
-                        }
-                    }
+            try {
+                // Short timeout for the initial session check
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Session Timeout')), 3000)
+                );
+
+                const { data: { session }, error: sessionError } = await Promise.race([
+                    supabase.auth.getSession(),
+                    timeoutPromise
+                ]);
+
+                if (!isMounted) return;
+
+                if (sessionError || !session) {
+                    console.log('No active session found in checkAuth');
+                    setLoadingStatus('Sesión no encontrada. Redirigiendo...');
+                    router.replace('/login');
+                    setLoading(false);
+                    return;
                 }
-                setLoading(false);
+
+                setUser(session.user);
+                setLoadingStatus('Sincronizando perfil...');
+                await fetchProfile(session.user.id);
+            } catch (err) {
+                console.warn('Initial session check timed out or failed:', err.message);
+                // We don't necessarily fail here, as onAuthStateChange might still kick in
+                setAuthError(true);
+            } finally {
+                if (isMounted) setLoading(false);
             }
-        });
+        };
+
+        checkAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                if (!session) {
+            async (event, session) => {
+                console.log('Dashboard Auth Event:', event);
+                if (!isMounted) return;
+
+                if (event === 'SIGNED_OUT' || !session) {
+                    setUser(null);
+                    setProfile(null);
                     router.replace('/login');
-                } else {
+                    setLoading(false);
+                } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                     setUser(session.user);
-                    await fetchProfile(session.user.id);
+                    if (!profile) await fetchProfile(session.user.id);
+                    setLoading(false);
+                    setAuthError(false);
+                } else {
+                    // Update user for other events (TOKEN_REFRESHED, etc)
+                    setUser(session.user);
                     setLoading(false);
                 }
             }
         );
 
-        // Listen for internal profile refreshes — get fresh user from Supabase to avoid stale closure
         const handleRefreshProfile = async () => {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
-            if (currentUser) fetchProfile(currentUser.id);
+            if (currentUser && isMounted) fetchProfile(currentUser.id);
         };
         window.addEventListener('refresh-profile', handleRefreshProfile);
 
-        // Handle success redirect or explicit open
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('credits_purchased')) {
-            alert(`¡Pago completado! En breves momentos se añadirán ${urlParams.get('credits_purchased')} créditos a tu cuenta.`);
-            router.replace('/dashboard');
-            handleRefreshProfile();
-        } else if (urlParams.get('open_credits')) {
-            setIsCreditsModalOpen(true);
-            router.replace('/dashboard');
+        // Handle URL params for credits
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('credits_purchased')) {
+                router.replace('/dashboard');
+                handleRefreshProfile();
+            } else if (urlParams.get('open_credits')) {
+                setIsCreditsModalOpen(true);
+                router.replace('/dashboard');
+            }
         }
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
             window.removeEventListener('refresh-profile', handleRefreshProfile);
         };
-        // NOTE: intentionally excluding `user` from deps to prevent infinite re-render loop
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pathname]);
+        // Dependency array changed to [] to run only once on mount.
+        // Protected sub-routes are handled by Next.js layout persistence.
+    }, []);
 
     async function handleLogout() {
         await supabase.auth.signOut();
@@ -101,8 +145,25 @@ export default function DashboardLayout({ children }) {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="loading-spinner"></div>
+                <p style={{ color: '#7ECECA', fontSize: '0.9rem', fontWeight: 600, animation: 'pulse 2s infinite' }}>{loadingStatus}</p>
+                {authError && (
+                    <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '20px' }}>
+                        <p style={{ color: '#888', marginBottom: '15px', maxWidth: '300px', fontSize: '0.85rem' }}>La conexión está tardando más de lo habitual...</p>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button onClick={() => window.location.reload()} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}>REINTENTAR</button>
+                            <button onClick={handleLogout} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>SALIR AL LOGIN</button>
+                        </div>
+                    </div>
+                )}
+                <style jsx>{`
+                    @keyframes pulse {
+                        0% { opacity: 0.6; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0.6; }
+                    }
+                `}</style>
             </div>
         );
     }
@@ -225,7 +286,7 @@ export default function DashboardLayout({ children }) {
                         marginTop: '10px',
                         letterSpacing: '0.05em'
                     }}>
-                        v1.6.0
+                        v1.6.1
                     </div>
                 </div>
             </aside>
@@ -339,22 +400,33 @@ export default function DashboardLayout({ children }) {
                         </Link>
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px 12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900 }}>v1.6.0</span>
+                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900, marginRight: '8px' }}>v1.6.1</span>
+                                <p style={{
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '120px',
+                                    margin: 0
+                                }} title={user?.email}>
+                                    {user?.email?.split('@')[0] || 'User'}
+                                </p>
+                                <span className="badge" style={{
+                                    fontSize: '0.6rem',
+                                    padding: '2px 8px',
+                                    background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                    color: profile?.plan === 'pro' ? 'black' : 'white',
+                                    fontWeight: 800,
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                    marginLeft: '4px'
+                                }}>
+                                    {profile?.plan?.toUpperCase() || 'FREE'}
+                                </span>
                             </div>
-                            <p style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{user?.email?.split('@')[0] || 'User'}</p>
-                            <span className="badge" style={{
-                                fontSize: '0.6rem',
-                                padding: '2px 8px',
-                                background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                color: profile?.plan === 'pro' ? 'black' : 'white',
-                                fontWeight: 800,
-                                whiteSpace: 'nowrap',
-                                flexShrink: 0
-                            }}>
-                                {profile?.plan?.toUpperCase() || 'FREE'}
-                            </span>
                         </div>
                     </div>
 
@@ -463,6 +535,20 @@ export default function DashboardLayout({ children }) {
 
                 @media (max-width: 900px) {
                     .credit-badge { display: none !important; }
+                }
+
+                .loading-spinner {
+                    width: 50px;
+                    height: 50px;
+                    border: 3px solid rgba(126, 206, 202, 0.1);
+                    border-top: 3px solid #7ECECA;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
                 }
             `}</style>
         </div>
