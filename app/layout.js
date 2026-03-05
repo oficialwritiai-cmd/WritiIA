@@ -1,4 +1,4 @@
-// Build Version: 2026-03-05-v1 - Mejoras integrales (Calendario, Biblioteca, UX)
+// Build Version: 2026-03-05-v3 - Fix: Force redeploy + Credits System + UI Polish
 import './globals.css';
 
 export const metadata = {
