@@ -6,6 +6,7 @@ import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2, Sparkles } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import GenerationProgress from '@/app/components/GenerationProgress';
+import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
 
 const SUGGESTED_TRENDS = [
@@ -69,6 +70,10 @@ export default function DashboardPage() {
     const [refiningBlock, setRefiningBlock] = useState(null);
     const [previousScripts, setPreviousScripts] = useState(null);
     const [selectedHook, setSelectedHook] = useState({});
+    const [savedScriptsIds, setSavedScriptsIds] = useState(new Set());
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
+    const [calendarDate, setCalendarDate] = useState(null);
     const [brainName, setBrainName] = useState('');
 
     const supabase = createSupabaseClient();
@@ -141,6 +146,7 @@ export default function DashboardPage() {
                 if (platformParam) setPlatform(decodeURIComponent(platformParam));
                 if (goalParam) setGoal(decodeURIComponent(goalParam));
                 if (forceCount) setQuantity(forceCount);
+                if (params.get('date')) setCalendarDate(params.get('date'));
             }
         }
     }, []);
@@ -450,8 +456,8 @@ export default function DashboardPage() {
             await saveToLibrary({
                 userId: profile.id,
                 type: 'guion',
-                platform: platform || 'General',
-                goal: goal || 'engagement',
+                platform: script.platform || platform || 'General',
+                goal: script.goal || goal || 'engagement',
                 titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
                 content: {
                     video_duration: script.video_duration || '45-60 seg',
@@ -461,13 +467,45 @@ export default function DashboardPage() {
                     cta: script.cta || '',
                     copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
-                tags: ['guion', platform, goal].filter(Boolean)
+                tags: ['guion', script.platform || platform, script.goal || goal].filter(Boolean)
             });
 
             if (!silent) alert('Guardado en biblioteca ✓');
         } catch (err) {
             console.error('Error saving script:', err);
-            if (!silent) alert('Error al guardar: ' + err.message);
+            if (!silent) throw err;
+        }
+    };
+
+    const handleSaveScript = async (scriptObj, scriptPlatform = null, scriptGoal = null) => {
+        try {
+            const savedItem = await saveScript(scriptObj, scriptPlatform, scriptGoal);
+            if (savedItem) {
+                setSavedScriptsIds(prev => new Set([...prev, scriptObj.id || scriptObj.title]));
+                setSuccessModalData({
+                    title: '¡Guion Guardado!',
+                    message: 'El guion se ha guardado correctamente en tu biblioteca de contenido.'
+                });
+                setIsSuccessModalOpen(true);
+
+                // Si venimos del calendario, crear/actualizar evento automáticamente
+                if (calendarDate) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        await supabase.from('calendar_events').insert({
+                            user_id: user.id,
+                            event_date: calendarDate,
+                            title: scriptObj.titulo_guion || scriptObj.titulo_angulo || 'Guion Generado',
+                            type: 'guion',
+                            platform: scriptPlatform || platform || 'General',
+                            reference_id: savedItem.id,
+                            description: 'Generado desde el calendario'
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error in handleSaveScript:', err);
         }
     };
 
@@ -1266,7 +1304,11 @@ export default function DashboardPage() {
                                 }}>
                                     {[
                                         { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
-                                        { icon: <Bookmark size={16} />, label: 'Guardar', action: () => saveScript(s) },
+                                        {
+                                            icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle2 size={16} color="#7ECECA" /> : <Bookmark size={16} />,
+                                            label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar',
+                                            action: () => handleSaveScript(s)
+                                        },
                                         { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
                                         { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
                                     ].map((btn, bidx) => (
@@ -1280,9 +1322,9 @@ export default function DashboardPage() {
                                                 gap: '8px',
                                                 fontSize: '0.75rem',
                                                 padding: '8px 14px',
-                                                background: 'transparent',
+                                                background: btn.label === 'Guardado' ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
                                                 border: '1px solid #2A2A2A',
-                                                color: 'rgba(255,255,255,0.6)'
+                                                color: btn.label === 'Guardado' ? '#7ECECA' : 'rgba(255,255,255,0.6)'
                                             }}
                                         >
                                             {btn.icon} {btn.label}
@@ -1367,6 +1409,15 @@ export default function DashboardPage() {
                     to { box-shadow: 0 0 20px rgba(126, 206, 202, 0.3); border-color: rgba(126, 206, 202, 0.6); }
                 }
             `}</style>
+            {isSuccessModalOpen && (
+                <SuccessModal
+                    isOpen={isSuccessModalOpen}
+                    onClose={() => setIsSuccessModalOpen(false)}
+                    title={successModalData.title}
+                    message={successModalData.message}
+                    actionOnClick={() => router.push('/dashboard/library')}
+                />
+            )}
         </div>
     );
 }

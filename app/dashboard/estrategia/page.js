@@ -1,15 +1,8 @@
 /* app/dashboard/estrategia/page.js */
-'use client';
-
-import { useState, useEffect } from 'react';
-import {
-    Target, ArrowRight, ArrowLeft, Loader2, Sparkles,
-    CheckCircle2, TrendingUp, Calendar, Brain, Search,
-    Layers, Zap, MessageSquare, Plus, Save
-} from 'lucide-react';
-import { createSupabaseClient } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft } from 'lucide-react';
 import GenerationProgress from '@/app/components/GenerationProgress';
+import SuccessModal from '@/app/components/SuccessModal';
+import { saveToLibrary } from '@/lib/library';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -70,6 +63,11 @@ export default function EstrategiaPage() {
     const [selectedIdeaIds, setSelectedIdeaIds] = useState(new Set());
     const [selectedIdeasForPlan, setSelectedIdeasForPlan] = useState([]);
     const [savingToCalendar, setSavingToCalendar] = useState(false);
+    const [savingToLibrary, setSavingToLibrary] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
+    const [selectedPhase, setSelectedPhase] = useState('ideacion');
     const [form, setForm] = useState({
         objective: '',
         launch: '',
@@ -269,6 +267,54 @@ export default function EstrategiaPage() {
         setSelectedIdeaIds(newSelected);
     };
 
+    const handleSaveSelectedIdeas = async () => {
+        if (selectedIdeaIds.size === 0) {
+            alert('No hay ideas seleccionadas para guardar.');
+            return;
+        }
+
+        const ideasToSave = ideas.filter((i, idx) => {
+            const id = i?.id || i?.titulo_idea || i?.titulo || String(idx);
+            return selectedIdeaIds.has(id);
+        });
+
+        if (ideasToSave.length === 0) return;
+
+        setSavingToLibrary(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión activa');
+
+            for (const idea of ideasToSave) {
+                await saveToLibrary({
+                    userId: user.id,
+                    type: 'idea',
+                    platform: idea.plataforma || form.platforms[0] || 'General',
+                    goal: idea.objetivo || form.objective || 'Viralidad',
+                    titulo: idea.titulo_idea || idea.titulo || 'Sin título',
+                    content: {
+                        descripcion: idea.descripcion || '',
+                        por_que_funciona: idea.por_que_funciona || '',
+                        cta: idea.cta || ''
+                    },
+                    tags: ['idea', idea.plataforma || 'General', idea.objetivo || 'Viralidad'].filter(Boolean)
+                });
+            }
+
+            setSuccessModalData({
+                title: '¡Ideas Guardadas!',
+                message: `Se han guardado ${ideasToSave.length} ideas exitosamente en tu biblioteca.`
+            });
+            setIsSuccessModalOpen(true);
+            setSelectedIdeaIds(new Set()); // Clear selection after success
+        } catch (err) {
+            console.error('Error al guardar masivamente:', err);
+            alert('Error al guardar algunas ideas: ' + err.message);
+        } finally {
+            setSavingToLibrary(false);
+        }
+    };
+
     const handleGoToPlan = () => {
         if (selectedIdeaIds.size === 0) {
             alert('Selecciona al menos una idea para crear tu plan.');
@@ -302,6 +348,43 @@ export default function EstrategiaPage() {
 
         setSelectedIdeasForPlan(selectedIdeas);
         setStep(2);
+    };
+
+    const handleExportExcel = async (specificIdeas = null) => {
+        const ideasToExport = specificIdeas || generatedIdeas;
+        if (!ideasToExport || ideasToExport.length === 0) {
+            alert('No hay ideas para exportar.');
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const res = await fetch('/api/export/ideas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: ideasToExport.map(i => i.id).filter(Boolean),
+                    userId: user.id
+                })
+            });
+
+            if (!res.ok) throw new Error('Error al exportar');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `WritiIA_Ideas_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            alert('Error al exportar: ' + err.message);
+        } finally {
+            setExporting(false);
+        }
     };
 
     const handleSendToCalendar = async () => {
@@ -672,8 +755,28 @@ export default function EstrategiaPage() {
                         <p style={{ color: 'var(--text-secondary)' }}>Selecciona las mejores ideas para crear tu plan mensual de contenido.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <button className="btn-secondary" onClick={() => setSelectedIdeaIds(new Set(ideasList.map((i, idx) => i?.id || i?.titulo_idea || i?.titulo || String(idx)).filter(Boolean)))}>
-                            Seleccionar todas
+                        <button
+                            className="btn-secondary"
+                            onClick={() => {
+                                const allIds = ideasList.map((i, idx) => i?.id || i?.titulo_idea || i?.titulo || String(idx)).filter(Boolean);
+                                if (selectedIdeaIds.size === allIds.length) {
+                                    setSelectedIdeaIds(new Set());
+                                } else {
+                                    setSelectedIdeaIds(new Set(allIds));
+                                }
+                            }}
+                            style={{ background: selectedIdeaIds.size === ideasList.length && ideasList.length > 0 ? 'rgba(255,255,255,0.1)' : 'transparent' }}
+                        >
+                            {selectedIdeaIds.size === ideasList.length && ideasList.length > 0 ? 'Deseleccionar todas' : 'Seleccionar todas'}
+                        </button>
+                        <button
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7ECECA', borderColor: 'rgba(126, 206, 202, 0.3)' }}
+                            onClick={handleSaveSelectedIdeas}
+                            disabled={selectedIdeaIds.size === 0 || savingToLibrary}
+                        >
+                            {savingToLibrary ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                            Guardar seleccionadas ({selectedIdeaIds.size})
                         </button>
                         <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handleDownloadPDF}>
                             <Save size={16} /> Descargar ideas (.pdf)
@@ -802,6 +905,9 @@ export default function EstrategiaPage() {
                                                 const { saveToLibrary } = await import('@/lib/library');
                                                 await saveToLibrary({
                                                     userId: profile.id,
+                                                    type: 'idea',
+                                                    platform: idea.plataforma || 'General',
+                                                    goal: idea.objetivo || 'engagement',
                                                     titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
                                                     content: idea,
                                                     tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean)
@@ -850,6 +956,15 @@ export default function EstrategiaPage() {
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => handleExportExcel(selectedIdeasForPlan)}
+                                disabled={exporting}
+                                className="btn-secondary"
+                                style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                                {exporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+                                Exportar Excel
+                            </button>
                             <button
                                 className="btn-secondary"
                                 style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', border: 'none' }}
@@ -923,17 +1038,8 @@ export default function EstrategiaPage() {
                     <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
                         <button
                             onClick={() => setStep(step - 1)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                color: 'rgba(255,255,255,0.4)',
-                                background: 'transparent',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: 700
-                            }}
+                            className="btn-secondary"
+                            style={{ padding: '12px 24px' }}
                         >
                             <ArrowLeft size={16} /> Volver al paso anterior
                         </button>

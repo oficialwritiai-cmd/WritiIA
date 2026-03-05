@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search } from 'lucide-react';
+import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search, ExternalLink } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
+import SuccessModal from '@/app/components/SuccessModal';
+import { saveToLibrary } from '@/lib/library';
 
 const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'Blog / SEO'];
 const GOALS = ['Ganar seguidores', 'Generar leads/ventas', 'Viralidad pura', 'Autoridad'];
@@ -18,9 +20,12 @@ export default function IdeasViralesPage() {
     const [goal, setGoal] = useState('Viralidad pura');
     const [quantity, setQuantity] = useState(10);
     const [loading, setLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const [error, setError] = useState('');
     const [ideas, setIdeas] = useState([]);
     const [savedIdeasIds, setSavedIdeasIds] = useState(new Set());
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
     const [profile, setProfile] = useState(null);
 
     const supabase = createSupabaseClient();
@@ -105,28 +110,70 @@ export default function IdeasViralesPage() {
 
     const handleSaveIdea = async (idea, index) => {
         if (!profile?.id) return;
-
         try {
-            // Save to Unified Library
-            const { saveToLibrary } = await import('@/lib/library');
             await saveToLibrary({
                 userId: profile.id,
                 type: 'idea',
-                platform: idea.plataforma || 'Reels',
-                goal: idea.objetivo || 'Viral',
-                titulo: idea.titulo || idea.titulo_idea || 'Idea Viral',
-                content: idea,
-                tags: [idea.plataforma, idea.tipo_contenido || idea.tipo_idea].filter(Boolean)
+                platform: selectedPlatforms[0] || 'General',
+                goal: goal,
+                titulo: idea.titulo_idea || idea.titulo_gancho || 'Sin título',
+                content: {
+                    descripcion: idea.descripcion || '',
+                    por_que_funciona: idea.por_que_funciona || '',
+                    cta: idea.cta || ''
+                },
+                tags: ['idea', ...selectedPlatforms, goal].filter(Boolean)
             });
 
-            setSavedIdeasIds(prev => {
-                const newSet = new Set(prev);
-                newSet.add(index);
-                return newSet;
+            setSavedIdeasIds(prev => new Set([...prev, idea.titulo_idea || idea.titulo_gancho]));
+            setSuccessModalData({
+                title: '¡Idea Guardada!',
+                message: 'La idea se ha guardado correctamente en tu biblioteca de contenido.'
             });
-
+            setIsSuccessModalOpen(true);
         } catch (err) {
             alert('Error al guardar: ' + err.message);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        if (ideas.length === 0) {
+            alert('No hay ideas para exportar.');
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const res = await fetch('/api/export/ideas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: ideas.map((_, idx) => idx), // In this page, ideas don't have IDs yet as they are fresh. 
+                    // WAIT: The API expects IDs from the library.
+                    // If they are not saved, I should probably send the raw data or save them first.
+                    // The user said: "Si hay ideas seleccionadas, exporta solo esas".
+                    // Let's modify the API to accept raw items too if IDs are not provided.
+                    items: ideas,
+                    userId: user.id
+                })
+            });
+
+            if (!res.ok) throw new Error('Error al exportar');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `WritiIA_Viral_Ideas_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            alert('Error al exportar: ' + err.message);
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -249,7 +296,18 @@ export default function IdeasViralesPage() {
 
             {ideas.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '20px' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{ideas.length} ideas encontradas</h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>{ideas.length} ideas encontradas</h2>
+                        <button
+                            onClick={handleExportExcel}
+                            disabled={exporting}
+                            className="btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px' }}
+                        >
+                            {exporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+                            Exportar Excel
+                        </button>
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px', paddingBottom: '60px' }}>
                         {ideas.map((idea, idx) => (
                             <div key={idx} className="premium-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px' }}>
@@ -283,6 +341,14 @@ export default function IdeasViralesPage() {
                     </div>
                 </div>
             )}
+            {/* Modal de éxito */}
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                title={successModalData.title}
+                message={successModalData.message}
+                actionOnClick={() => router.push('/dashboard/library')}
+            />
         </div>
     );
 }

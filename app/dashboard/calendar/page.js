@@ -149,6 +149,18 @@ export default function CalendarPage() {
         loadData();
     };
 
+    const handleCreateScriptFromCalendar = (idea = null) => {
+        let url = `/dashboard?mode=single&date=${selectedDate}`;
+        if (idea) {
+            const content = idea.content || {};
+            const titulo = encodeURIComponent(idea.titulo || content.titulo_angulo || content.titulo_idea || '');
+            const platform = encodeURIComponent(idea.platform || 'General');
+            const goal = encodeURIComponent(item.goal || '');
+            url += `&topic=${titulo}&platform=${platform}&goal=${goal}&idea_id=${idea.id}`;
+        }
+        router.push(url);
+    };
+
     const onDragStart = (e, id) => {
         e.dataTransfer.setData('eventId', id);
     };
@@ -715,6 +727,14 @@ export default function CalendarPage() {
                         <div className="cal-modal-content">
                             {modalStep === 'choice' && (
                                 <div className="cal-choice-grid">
+                                    <div className="cal-choice-card" onClick={() => handleCreateScriptFromCalendar()} style={{ background: 'rgba(126, 206, 202, 0.05)', borderColor: 'rgba(126, 206, 202, 0.2)' }}>
+                                        <div style={{ color: '#7ECECA' }}><Sparkles size={24} /></div>
+                                        <div>
+                                            <strong style={{ display: 'block' }}>Crear Guión IA</strong>
+                                            <span style={{ fontSize: '0.8rem', color: '#666' }}>Generar guión para este día</span>
+                                        </div>
+                                    </div>
+
                                     <div className="cal-choice-card" onClick={() => setModalStep('library')}>
                                         <div className="cal-choice-icon"><BookOpen size={24} /></div>
                                         <div className="cal-choice-info">
