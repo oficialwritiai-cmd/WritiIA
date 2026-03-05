@@ -63,13 +63,15 @@ export default function DashboardLayout({ children }) {
                 } else {
                     setUser(session.user);
                     await fetchProfile(session.user.id);
+                    setLoading(false);
                 }
             }
         );
 
-        // Listen for internal profile refreshes
-        const handleRefreshProfile = () => {
-            if (user) fetchProfile(user.id);
+        // Listen for internal profile refreshes — get fresh user from Supabase to avoid stale closure
+        const handleRefreshProfile = async () => {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) fetchProfile(currentUser.id);
         };
         window.addEventListener('refresh-profile', handleRefreshProfile);
 
@@ -88,7 +90,9 @@ export default function DashboardLayout({ children }) {
             subscription.unsubscribe();
             window.removeEventListener('refresh-profile', handleRefreshProfile);
         };
-    }, [pathname, user]);
+        // NOTE: intentionally excluding `user` from deps to prevent infinite re-render loop
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname]);
 
     async function handleLogout() {
         await supabase.auth.signOut();
@@ -328,59 +332,64 @@ export default function DashboardLayout({ children }) {
                     </div>
                 )}
                 {/* Topbar refined */}
-                <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                        <Link href="/" style={{ textDecoration: 'none' }}>
+                <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, overflow: 'hidden', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
                             <Logo />
                         </Link>
-                        <div className="desktop-only" style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
-                        <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px 12px' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
                                 <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900 }}>v1.6.0</span>
                             </div>
-                            <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
+                            <p style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{user?.email?.split('@')[0] || 'User'}</p>
                             <span className="badge" style={{
                                 fontSize: '0.6rem',
                                 padding: '2px 8px',
                                 background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
                                 color: profile?.plan === 'pro' ? 'black' : 'white',
-                                fontWeight: 800
+                                fontWeight: 800,
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
                             }}>
                                 {profile?.plan?.toUpperCase() || 'FREE'}
                             </span>
                         </div>
                     </div>
 
-                    <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                             <button
                                 onClick={() => setIsCreditsModalOpen(true)}
                                 className="btn-primary"
                                 style={{
-                                    padding: '8px 20px',
-                                    fontSize: '0.85rem',
+                                    padding: '8px 16px',
+                                    fontSize: '0.8rem',
                                     fontWeight: 900,
                                     background: 'rgba(255,255,255,0.05)',
                                     color: 'white',
                                     borderRadius: '100px',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0
                                 }}
                             >
                                 🪙 COMPRAR CRÉDITOS
                             </button>
-                            <Link href="/dashboard/settings" style={{ textDecoration: 'none' }}>
+                            <Link href="/dashboard/settings" style={{ textDecoration: 'none', flexShrink: 0 }}>
                                 <button className="btn-primary" style={{
-                                    padding: '8px 20px',
-                                    fontSize: '0.85rem',
+                                    padding: '8px 16px',
+                                    fontSize: '0.8rem',
                                     fontWeight: 900,
                                     background: 'var(--accent-gradient)',
                                     color: 'black',
                                     borderRadius: '100px',
                                     boxShadow: '0 0 15px rgba(126, 206, 202, 0.4)',
                                     border: 'none',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
                                 }}>
                                     🚀 PLAN PRO
                                 </button>
@@ -389,13 +398,14 @@ export default function DashboardLayout({ children }) {
                         <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            gap: '6px',
                             background: 'rgba(255,255,255,0.05)',
                             borderRadius: '100px',
-                            padding: '6px 16px',
+                            padding: '6px 14px',
                             cursor: 'pointer',
                             transition: '0.2s',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            flexShrink: 0
                         }}>
                             <span style={{ fontSize: '1rem' }}>🪙</span>
                             <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>{profile?.credits_balance || 0}</span>
@@ -406,15 +416,16 @@ export default function DashboardLayout({ children }) {
                                 fontSize: '0.75rem',
                                 fontWeight: 900,
                                 cursor: 'pointer',
-                                padding: '2px 4px'
+                                padding: '2px 4px',
+                                whiteSpace: 'nowrap'
                             }}>
                                 + DEPOSITAR
                             </button>
                         </div>
 
-                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }}></div>
+                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
 
-                        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', gap: '14px', color: 'var(--text-secondary)', flexShrink: 0 }}>
                             <span style={{ cursor: 'pointer' }}>🔔</span>
                             <span style={{ cursor: 'pointer' }}>🔍</span>
                             <Link href="/dashboard/settings" style={{ textDecoration: 'none', color: 'inherit' }}>⚙️</Link>
@@ -436,8 +447,9 @@ export default function DashboardLayout({ children }) {
 
             <style jsx>{`
                 .app-layout { display: flex; height: 100vh; overflow: hidden; }
-                .sidebar { width: 240px; padding: 24px; display: flex; flex-direction: column; background: var(--bg-sidebar); flex-shrink: 0; }
+                .sidebar { width: 72px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; background: var(--bg-sidebar); flex-shrink: 0; }
                 .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+                .topbar { flex-shrink: 0; }
                 .main-content { flex: 1; overflow-y: auto; }
                 .sidebar-nav { display: flex; flex-direction: column; }
                 .sidebar-btn { display: flex; align-items: center; gap: 12px; text-decoration: none; transition: 0.2s; }
@@ -447,6 +459,10 @@ export default function DashboardLayout({ children }) {
                     .sidebar { display: none !important; }
                     .main-wrapper { width: 100% !important; max-width: 100% !important; }
                     .main-content { padding: 16px !important; width: 100% !important; max-width: 100% !important; }
+                }
+
+                @media (max-width: 900px) {
+                    .credit-badge { display: none !important; }
                 }
             `}</style>
         </div>
