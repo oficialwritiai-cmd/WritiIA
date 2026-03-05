@@ -1,3 +1,4 @@
+// Build Version: 2026-03-05-v1 - Mejoras integrales (Calendario, Biblioteca, UX)
 import './globals.css';
 
 export const metadata = {
