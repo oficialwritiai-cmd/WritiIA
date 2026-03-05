@@ -47,16 +47,15 @@ export default function DashboardLayout({ children }) {
 
     useEffect(() => {
         let isMounted = true;
-        // timer variable removed to prevent ReferenceError since it wasn't defined elsewhere
 
         const checkAuth = async () => {
             if (!isMounted) return;
             setLoadingStatus('Verificando sesión...');
 
             try {
-                // Short timeout for the initial session check
+                // Short timeout for the initial session check - increased speed
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Session Timeout')), 3000)
+                    setTimeout(() => reject(new Error('Session Timeout')), 2500)
                 );
 
                 const { data: { session }, error: sessionError } = await Promise.race([
@@ -67,30 +66,36 @@ export default function DashboardLayout({ children }) {
                 if (!isMounted) return;
 
                 if (sessionError || !session) {
-                    console.log('No active session found in checkAuth');
-                    setLoadingStatus('Sesión no encontrada. Redirigiendo...');
                     router.replace('/login');
                     setLoading(false);
                     return;
                 }
 
                 setUser(session.user);
-                setLoadingStatus('Sincronizando perfil...');
-                await fetchProfile(session.user.id);
+
+                // RADICAL OPTIMIZATION: Reveal UI IMMEDIATELY after session is found
+                // Don't wait for profile.
+                setLoading(false);
+
+                // Fetch profile in background
+                fetchProfile(session.user.id);
             } catch (err) {
                 console.warn('Initial session check timed out or failed:', err.message);
-                // We don't necessarily fail here, as onAuthStateChange might still kick in
                 setAuthError(true);
-            } finally {
-                if (isMounted) setLoading(false);
+                // Even on timeout, try to let onAuthStateChange handle it or show the retry UI
+                setLoading(false);
             }
         };
 
         checkAuth();
 
+        // EMERGENCY OVERRIDE: If after 5.5 seconds it's still loading, show the skip option
+        const forceTimer = setTimeout(() => {
+            if (isMounted) setAuthError(true);
+        }, 5500);
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                console.log('Dashboard Auth Event:', event);
                 if (!isMounted) return;
 
                 if (event === 'SIGNED_OUT' || !session) {
@@ -100,13 +105,10 @@ export default function DashboardLayout({ children }) {
                     setLoading(false);
                 } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                     setUser(session.user);
-                    if (!profile) await fetchProfile(session.user.id);
+                    // Background profile load
+                    fetchProfile(session.user.id);
                     setLoading(false);
                     setAuthError(false);
-                } else {
-                    // Update user for other events (TOKEN_REFRESHED, etc)
-                    setUser(session.user);
-                    setLoading(false);
                 }
             }
         );
@@ -131,11 +133,10 @@ export default function DashboardLayout({ children }) {
 
         return () => {
             isMounted = false;
+            clearTimeout(forceTimer);
             subscription.unsubscribe();
             window.removeEventListener('refresh-profile', handleRefreshProfile);
         };
-        // Dependency array changed to [] to run only once on mount.
-        // Protected sub-routes are handled by Next.js layout persistence.
     }, []);
 
     async function handleLogout() {
@@ -145,24 +146,44 @@ export default function DashboardLayout({ children }) {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                <div className="loading-spinner"></div>
-                <p style={{ color: '#7ECECA', fontSize: '0.9rem', fontWeight: 600, animation: 'pulse 2s infinite' }}>{loadingStatus}</p>
-                {authError && (
-                    <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '20px' }}>
-                        <p style={{ color: '#888', marginBottom: '15px', maxWidth: '300px', fontSize: '0.85rem' }}>La conexión está tardando más de lo habitual...</p>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => window.location.reload()} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}>REINTENTAR</button>
-                            <button onClick={handleLogout} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>SALIR AL LOGIN</button>
-                        </div>
+            <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                <div className="emergency-spinner"></div>
+                <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
+                    {loadingStatus} (v1.6.5)
+                </p>
+
+                <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
+                    <p style={{ color: '#666', marginBottom: '20px', maxWidth: '350px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                        Si el acelerador de IA tarda demasiado, puedes forzar la entrada manual:
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                        <button
+                            onClick={() => setLoading(false)}
+                            className="btn-primary"
+                            style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)' }}
+                        >
+                            ⚡ FORZAR ENTRADA AL DASHBOARD
+                        </button>
+                        <button
+                            onClick={() => window.location.reload(true)}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px 20px', borderRadius: '12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                        >
+                            LIMPIAR CACHÉ Y RECARGAR
+                        </button>
                     </div>
-                )}
+                </div>
+
                 <style jsx>{`
-                    @keyframes pulse {
-                        0% { opacity: 0.6; }
-                        50% { opacity: 1; }
-                        100% { opacity: 0.6; }
+                    .emergency-spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 4px solid rgba(255, 215, 0, 0.1);
+                        border-top: 4px solid #FFD700;
+                        border-radius: 50%;
+                        animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
                     }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
                 `}</style>
             </div>
         );
@@ -286,7 +307,7 @@ export default function DashboardLayout({ children }) {
                         marginTop: '10px',
                         letterSpacing: '0.05em'
                     }}>
-                        v1.6.1
+                        v1.6.5
                     </div>
                 </div>
             </aside>
@@ -402,7 +423,7 @@ export default function DashboardLayout({ children }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900, marginRight: '8px' }}>v1.6.1</span>
+                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v1.6.5</span>
                                 <p style={{
                                     fontWeight: 600,
                                     fontSize: '0.85rem',

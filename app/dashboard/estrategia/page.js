@@ -82,21 +82,111 @@ export default function EstrategiaPage() {
         platforms: [],
     });
 
+    // Presets State
+    const [presets, setPresets] = useState([]);
+    const [loadingPresets, setLoadingPresets] = useState(false);
+    const [isNamingModalOpen, setIsNamingModalOpen] = useState(false);
+    const [newPresetName, setNewPresetName] = useState('');
+    const [savingPreset, setSavingPreset] = useState(false);
+
     const supabase = createSupabaseClient();
 
     useEffect(() => {
-        async function loadProfile() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: prof } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
-                setProfile(prof);
+        async function loadInitialData() {
+            // Use getSession for faster non-blocking load
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // background load
+                const userId = session.user.id;
 
-                const { data: brain } = await supabase.from('brand_brain').select('id').eq('user_id', user.id).single();
-                setBrainActive(!!brain);
+                // Fetch profile
+                supabase.from('users_profiles').select('*').eq('id', userId).single()
+                    .then(({ data: prof }) => { if (prof) setProfile(prof); });
+
+                // Fetch brain status
+                supabase.from('brand_brain').select('id').eq('user_id', userId).single()
+                    .then(({ data: brain }) => setBrainActive(!!brain));
+
+                // Fetch Presets
+                fetchPresets(userId);
             }
         }
-        loadProfile();
+        loadInitialData();
     }, []);
+
+    const fetchPresets = async (userId) => {
+        if (!userId) return;
+        setLoadingPresets(true);
+        try {
+            const { data, error } = await supabase
+                .from('strategy_presets')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setPresets(data || []);
+        } catch (err) {
+            console.error('Error fetching presets:', err);
+        } finally {
+            setLoadingPresets(false);
+        }
+    };
+
+    const handleSavePreset = async () => {
+        if (!newPresetName.trim()) {
+            alert('Por favor ingresa un nombre para el preajuste');
+            return;
+        }
+
+        setSavingPreset(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión');
+
+            const { error } = await supabase
+                .from('strategy_presets')
+                .insert({
+                    user_id: user.id,
+                    nombre_preset: newPresetName.trim(),
+                    data: form
+                });
+
+            if (error) throw error;
+
+            setIsNamingModalOpen(false);
+            setNewPresetName('');
+            fetchPresets(user.id);
+            alert('✓ Preajuste guardado correctamente');
+        } catch (err) {
+            alert('Error al guardar: ' + err.message);
+        } finally {
+            setSavingPreset(false);
+        }
+    };
+
+    const handleLoadPreset = (preset) => {
+        if (!preset || !preset.data) return;
+        setForm(preset.data);
+        alert(`✓ Preajuste "${preset.nombre_preset}" cargado`);
+    };
+
+    const handleDeletePreset = async (e, id) => {
+        e.stopPropagation();
+        if (!confirm('¿Seguro que quieres borrar este preajuste?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('strategy_presets')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            setPresets(prev => prev.filter(p => p.id !== id));
+        } catch (err) {
+            alert('Error al borrar: ' + err.message);
+        }
+    };
 
     const ideasLoadingSteps = [
         "Leyendo tu Cerebro IA…",
@@ -123,8 +213,10 @@ export default function EstrategiaPage() {
         const { name, value, type, checked } = e.target;
         if (type === 'checkbox') {
             setForm((prev) => {
-                const arr = [...prev[name]];
-                if (checked) arr.push(value);
+                const arr = Array.isArray(prev[name]) ? [...prev[name]] : [];
+                if (checked) {
+                    if (!arr.includes(value)) arr.push(value);
+                }
                 else {
                     const idx = arr.indexOf(value);
                     if (idx > -1) arr.splice(idx, 1);
@@ -558,10 +650,83 @@ export default function EstrategiaPage() {
                 <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Target size={32} color="var(--accent)" />
                     Sesión de Descubrimiento
+                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v1.6.5</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '1.1rem' }}>
                     Diseñaremos tu estrategia basándonos en tus objetivos reales para los próximos 30 días.
                 </p>
+
+                {/* Presets Manager Section */}
+                <div style={{ marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                            Tus Preajustes ({presets.length})
+                        </h3>
+                        {presets.length > 0 && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>Selecciona uno para cargar</span>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', minHeight: '60px' }}>
+                        {loadingPresets ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>
+                                <Loader2 size={16} className="animate-spin" /> Cargando preajustes...
+                            </div>
+                        ) : presets.length === 0 ? (
+                            <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.9rem', fontStyle: 'italic', padding: '10px' }}>
+                                No tienes preajustes guardados.
+                            </div>
+                        ) : (
+                            presets.map(p => (
+                                <div
+                                    key={p.id}
+                                    onClick={() => handleLoadPreset(p)}
+                                    style={{
+                                        flexShrink: 0,
+                                        padding: '12px 20px',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '16px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: '0.2s',
+                                        position: 'relative',
+                                        group: 'true'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
+                                        e.currentTarget.style.borderColor = 'var(--accent)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                                    }}
+                                >
+                                    <Layers size={16} color="var(--accent)" />
+                                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.nombre_preset}</span>
+                                    <button
+                                        onClick={(e) => handleDeletePreset(e, p.id)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: 'rgba(255,0,0,0.5)',
+                                            cursor: 'pointer',
+                                            padding: '4px',
+                                            display: 'flex',
+                                            borderRadius: '6px'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.color = '#FF4D4D'}
+                                        onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,0,0,0.5)'}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
 
                 {brainActive ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', borderRadius: '12px', marginBottom: '32px', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: '0.9rem', fontWeight: 700 }}>
@@ -672,22 +837,98 @@ export default function EstrategiaPage() {
                         </div>
                     </div>
 
-                    {loading ? (
-                        <GenerationProgress
-                            steps={ideasLoadingSteps}
-                            currentPhase={loadingPhase}
-                            brainName={brainActive ? 'perfil configurado' : null}
-                            subtitle="Esto suele tomar entre 15 y 30 segundos…"
-                        />
-                    ) : (
-                        <button
-                            onClick={handleGenerateIdeas}
-                            disabled={loading}
-                            className="btn-primary"
-                            style={{ height: '64px', fontSize: '1.1rem', fontWeight: 900, marginTop: '20px' }}
-                        >
-                            <Sparkles size={20} /> Analizar y generar banco de ideas →
-                        </button>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '20px' }}>
+                        {loading ? (
+                            <div style={{ flex: 1 }}>
+                                <GenerationProgress
+                                    steps={ideasLoadingSteps}
+                                    currentPhase={loadingPhase}
+                                    brainName={brainActive ? (profile?.nombre_marca || 'perfil configurado') : null}
+                                    subtitle="Esto suele tomar entre 15 y 30 segundos…"
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleGenerateIdeas}
+                                    disabled={loading}
+                                    className="btn-primary"
+                                    style={{ flex: 2, height: '64px', fontSize: '1.1rem', fontWeight: 900 }}
+                                >
+                                    <Sparkles size={20} /> Analizar y generar banco de ideas →
+                                </button>
+                                <button
+                                    onClick={() => setIsNamingModalOpen(true)}
+                                    disabled={loading || !form.objective}
+                                    className="btn-secondary"
+                                    title="Guardar esta configuración como preajuste"
+                                    style={{
+                                        flex: 1,
+                                        height: '64px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        borderColor: 'rgba(126, 206, 202, 0.3)',
+                                        color: '#7ECECA'
+                                    }}
+                                >
+                                    <Save size={20} />
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>GUARDAR PREAJUSTE</span>
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Modal para nombre del preajuste */}
+                    {isNamingModalOpen && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.85)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            backdropFilter: 'blur(8px)'
+                        }}>
+                            <div className="premium-card" style={{ padding: '32px', maxWidth: '400px', width: '90%' }}>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '20px' }}>Guardar Preajuste</h3>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+                                    Dale un nombre a esta configuración para reutilizarla luego.
+                                </p>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Ej: Lanzamiento Marzo / Consultoría"
+                                    value={newPresetName}
+                                    onChange={(e) => setNewPresetName(e.target.value)}
+                                    autoFocus
+                                    style={{ marginBottom: '24px' }}
+                                />
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button
+                                        onClick={() => setIsNamingModalOpen(false)}
+                                        className="btn-secondary"
+                                        style={{ flex: 1 }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleSavePreset}
+                                        disabled={savingPreset || !newPresetName.trim()}
+                                        className="btn-primary"
+                                        style={{ flex: 1 }}
+                                    >
+                                        {savingPreset ? <Loader2 className="animate-spin" size={18} /> : 'Guardar'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
                     {error && <p style={{ color: '#FF4D4D', textAlign: 'center', fontSize: '0.9rem' }}>{error}</p>}
                 </div>
