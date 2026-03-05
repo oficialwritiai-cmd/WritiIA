@@ -221,7 +221,7 @@ export default function DashboardLayout({ children }) {
                         marginTop: '10px',
                         letterSpacing: '0.05em'
                     }}>
-                        v1.4.0
+                        v1.5.3
                     </div>
                 </div>
             </aside>
