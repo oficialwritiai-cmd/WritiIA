@@ -1,4 +1,4 @@
-// Build Version: 2026-03-05-v3 - Fix: Force redeploy + Credits System + UI Polish
+// Build Version: 2026-03-05-v4 - Fix: Auth Redirects + Version v1.6.0 + Premium Email Template
 import './globals.css';
 
 export const metadata = {

@@ -221,7 +221,7 @@ export default function DashboardLayout({ children }) {
                         marginTop: '10px',
                         letterSpacing: '0.05em'
                     }}>
-                        v1.5.3
+                        v1.6.0
                     </div>
                 </div>
             </aside>
@@ -337,7 +337,7 @@ export default function DashboardLayout({ children }) {
                         <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px 12px' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900 }}>v1.5.3</span>
+                                <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 900 }}>v1.6.0</span>
                             </div>
                             <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.email?.split('@')[0] || 'User'}</p>
                             <span className="badge" style={{
