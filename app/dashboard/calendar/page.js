@@ -153,10 +153,10 @@ export default function CalendarPage() {
     const handleCreateScriptFromCalendar = (idea = null) => {
         let url = `/dashboard?mode=single&date=${selectedDate}`;
         if (idea) {
-            const titulo = encodeURIComponent(idea.title || idea.titulo_idea || idea.titulo || '');
-            const platform = encodeURIComponent(idea.platform || 'General');
-            const goal = encodeURIComponent(idea.goal || idea.objetivo || 'engagement');
-            url += `&topic=${titulo}&platform=${platform}&goal=${goal}&idea_id=${idea.reference_id || idea.id}`;
+            const titulo = encodeURIComponent(idea.title || '');
+            const platformParam = encodeURIComponent(idea.platform || 'General');
+            const descParam = encodeURIComponent(idea.description || '');
+            url += `&topic=${titulo}&platform=${platformParam}&description=${descParam}&source_event_id=${idea.id}&source_reference_id=${idea.reference_id || ''}`;
         }
         router.push(url);
     };
@@ -173,8 +173,26 @@ export default function CalendarPage() {
     const onDrop = async (e, date) => {
         const id = e.dataTransfer.getData('eventId');
         if (!id) return;
-        await supabase.from('calendar_events').update({ event_date: date }).eq('id', id);
-        loadData();
+
+        try {
+            const { error: updateErr } = await supabase.from('calendar_events').update({ event_date: date }).eq('id', id);
+            if (updateErr) throw updateErr;
+
+            // Show feedback
+            const toast = document.createElement('div');
+            toast.innerText = '📅 Fecha actualizada';
+            toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#7ECECA; color:#000; padding:12px 24px; borderRadius:12px; fontWeight:800; zIndex:10001; animation: slideUp 0.3s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideDown 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+
+            loadData();
+        } catch (err) {
+            console.error('Error updating date:', err);
+            alert('No se pudo actualizar la fecha');
+        }
     };
 
     const renderGrid = () => {
@@ -217,10 +235,13 @@ export default function CalendarPage() {
                                     draggable
                                     onDragStart={e => { e.stopPropagation(); onDragStart(e, ev.id); }}
                                     onClick={e => { e.stopPropagation(); handleOpenModal(dateStr, ev); }}
-                                    className={`cal-event-pill ${ev.type} ${ev.platform === 'General' ? '' : 'has-platform'}`}
+                                    className={`cal-event-pill ${ev.type} platform-${(ev.platform || 'General').toLowerCase().replace(/\s+/g, '-')}`}
                                 >
                                     <span className="pill-dot"></span>
                                     <span className="pill-text">{ev.title}</span>
+                                    {(ev.has_script || ev.type === 'guion') && (
+                                        <span style={{ marginLeft: 'auto', fontSize: '10px' }}>⚡</span>
+                                    )}
                                 </div>
                             );
                         })}
@@ -434,6 +455,16 @@ export default function CalendarPage() {
                     color: #7ECECA;
                     border-color: rgba(126, 206, 202, 0.1);
                 }
+
+                .platform-instagram { background: rgba(225, 48, 108, 0.15) !important; color: #E1306C !important; }
+                .platform-tiktok { background: rgba(0, 242, 255, 0.1) !important; color: #00F3FF !important; border-left: 2px solid #fe2c55 !important; }
+                .platform-youtube { background: rgba(255, 0, 0, 0.1) !important; color: #FF0000 !important; }
+                .platform-linkedin { background: rgba(10, 102, 194, 0.1) !important; color: #0A66C2 !important; }
+                .platform-x { background: rgba(255, 255, 255, 0.1) !important; color: #fff !important; }
+                .platform-facebook { background: rgba(24, 119, 242, 0.1) !important; color: #1877F2 !important; }
+
+                @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
 
                 .pill-dot {
                     width: 5px;
@@ -818,24 +849,37 @@ export default function CalendarPage() {
                                     </div>
 
                                     <div className="cal-input-group">
-                                        <label><Search size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Notas Adicionales</label>
-                                        <textarea className="cal-input" style={{ minHeight: '80px' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Detalles de la publicación..." />
+                                        <label><Search size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Notas / Descripción</label>
+                                        <div style={{
+                                            background: 'rgba(255,255,255,0.02)',
+                                            padding: '16px',
+                                            borderRadius: '12px',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            fontSize: '0.85rem',
+                                            color: '#aaa',
+                                            lineHeight: '1.5',
+                                            maxHeight: '120px',
+                                            overflowY: 'auto',
+                                            marginBottom: '10px'
+                                        }}>
+                                            {desc || 'Sin descripción adicional.'}
+                                        </div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-                                        {modalStep === 'edit' && editingEvent?.type === 'idea' && editingEvent?.reference_id && (
+                                        {modalStep === 'edit' && editingEvent?.type === 'idea' && !editingEvent?.has_script && (
                                             <button
                                                 className="cal-btn-primary"
-                                                style={{ flex: 1, background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', color: 'white' }}
+                                                style={{ flex: 1, background: 'var(--accent-gradient)', color: '#000' }}
                                                 onClick={() => handleCreateScriptFromCalendar(editingEvent)}
                                             >
                                                 <Sparkles size={18} /> Generar Guion
                                             </button>
                                         )}
-                                        {modalStep === 'edit' && editingEvent?.type === 'guion' && editingEvent?.reference_id && (
+                                        {modalStep === 'edit' && (editingEvent?.has_script || editingEvent?.type === 'guion') && editingEvent?.reference_id && (
                                             <button
                                                 className="cal-btn-primary"
-                                                style={{ flex: 1, background: 'linear-gradient(135deg, #7ECECA 0%, #29A19C 100%)', color: 'white' }}
+                                                style={{ flex: 1, background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}
                                                 onClick={() => handleViewScript(editingEvent.reference_id)}
                                             >
                                                 <BookOpen size={18} /> Ver Guion
@@ -844,12 +888,12 @@ export default function CalendarPage() {
 
                                         <div style={{ display: 'flex', width: '100%', gap: '12px' }}>
                                             {modalStep === 'edit' && (
-                                                <button className="cal-btn-delete" onClick={handleDeleteEvent}>
+                                                <button className="cal-btn-delete" onClick={handleDeleteEvent} title="Eliminar">
                                                     <Trash2 size={20} />
                                                 </button>
                                             )}
                                             <button className="cal-btn-primary" style={{ flex: 1 }} onClick={handleSaveEvent}>
-                                                <Save size={18} /> Guardar Cambios
+                                                <Save size={18} /> {modalStep === 'edit' ? 'Actualizar' : 'Guardar'}
                                             </button>
                                         </div>
                                     </div>

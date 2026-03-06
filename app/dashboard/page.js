@@ -145,8 +145,10 @@ export default function DashboardPage() {
                 if (topicParam) setTopic(decodeURIComponent(topicParam));
                 if (platformParam) setPlatform(decodeURIComponent(platformParam));
                 if (goalParam) setGoal(decodeURIComponent(goalParam));
+                if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
+                // source_event_id is handled in handleSaveScript via URLSearchParams on demand
             }
         }
     }, []);
@@ -163,12 +165,14 @@ export default function DashboardPage() {
                 if (savedTopic) setTopic(decodeURIComponent(savedTopic));
                 if (savedPlatform) setPlatform(decodeURIComponent(savedPlatform));
                 if (savedGoal) setGoal(decodeURIComponent(savedGoal));
+                if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
 
                 setGenerationMode('single');
                 setWizardStep(3); // Land on Step 3 (Details/Hooks)
                 setStep(1); // Stay on form view
 
-                window.history.replaceState({}, document.title, '/dashboard');
+                // Do not clear history yet if we need source_event_id in handleSaveScript
+                // window.history.replaceState({}, document.title, '/dashboard');
             }
         }
     }, [hasBrain]);
@@ -488,8 +492,18 @@ export default function DashboardPage() {
                 });
                 setIsSuccessModalOpen(true);
 
-                // Si venimos del calendario, crear/actualizar evento automáticamente
-                if (calendarDate) {
+                // Sync with Calendar if it came from a calendar event
+                const params = new URLSearchParams(window.location.search);
+                const sourceEventId = params.get('source_event_id');
+
+                if (sourceEventId) {
+                    await supabase.from('calendar_events').update({
+                        type: 'guion',
+                        reference_id: savedItem.id,
+                        has_script: true
+                    }).eq('id', sourceEventId);
+                } else if (calendarDate) {
+                    // Fallback for legacy date-only param
                     const { data: { user } } = await supabase.auth.getUser();
                     if (user) {
                         await supabase.from('calendar_events').insert({
@@ -499,7 +513,8 @@ export default function DashboardPage() {
                             type: 'guion',
                             platform: scriptPlatform || platform || 'General',
                             reference_id: savedItem.id,
-                            description: 'Generado desde el calendario'
+                            description: 'Generado desde el calendario',
+                            has_script: true
                         });
                     }
                 }
