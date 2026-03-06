@@ -1,6 +1,31 @@
 -- migration.sql: Actualización de la BD para Historial y Ideas Virales
 
--- 1. Actualizar tabla scripts
+-- 1. Añadir campos de trial a users_profiles
+ALTER TABLE users_profiles ADD COLUMN IF NOT EXISTS trial_active boolean DEFAULT false;
+ALTER TABLE users_profiles ADD COLUMN IF NOT EXISTS trial_started_at timestamp with time zone;
+ALTER TABLE users_profiles ADD COLUMN IF NOT EXISTS access_key_used text;
+
+-- 2. Crear tabla access_keys para llaves de acceso
+CREATE TABLE IF NOT EXISTS access_keys (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  key_value text UNIQUE NOT NULL,
+  max_uses integer DEFAULT 1,
+  uses_count integer DEFAULT 0,
+  credits_amount integer DEFAULT 200,
+  trial_days integer DEFAULT 7,
+  expires_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true
+);
+
+-- RLS para access_keys (solo admins pueden gestionar)
+ALTER TABLE access_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read active access keys" 
+ON access_keys FOR SELECT 
+USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));
+
+-- 3. Actualizar tabla scripts
 ALTER TABLE scripts ADD COLUMN IF NOT EXISTS source_type text;
 ALTER TABLE scripts ADD COLUMN IF NOT EXISTS source_reference_id uuid;
 ALTER TABLE scripts ADD COLUMN IF NOT EXISTS titulo_angulo text;

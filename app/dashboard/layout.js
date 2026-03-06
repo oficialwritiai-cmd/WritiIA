@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Sparkles as SparklesIcon } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 
@@ -17,6 +17,8 @@ export default function DashboardLayout({ children }) {
     const [profile, setProfile] = useState(null);
     const [hoveredItem, setHoveredItem] = useState(null);
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
+    const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
+    const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -137,6 +139,29 @@ export default function DashboardLayout({ children }) {
             subscription.unsubscribe();
             window.removeEventListener('refresh-profile', handleRefreshProfile);
         };
+    }, []);
+
+    useEffect(() => {
+        if (profile?.trial_active && profile?.trial_started_at) {
+            const trialStart = new Date(profile.trial_started_at);
+            const now = new Date();
+            const daysPassed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
+            const daysRemaining = Math.max(0, 7 - daysPassed);
+            setTrialDaysRemaining(daysRemaining);
+            
+            if (daysRemaining <= 0) {
+                supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id);
+                setTrialDaysRemaining(0);
+            }
+        } else {
+            setTrialDaysRemaining(0);
+        }
+    }, [profile]);
+
+    useEffect(() => {
+        const handleShowNoCredits = () => setShowNoCreditsModal(true);
+        window.addEventListener('show-no-credits', handleShowNoCredits);
+        return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, []);
 
     async function handleLogout() {
@@ -423,7 +448,7 @@ export default function DashboardLayout({ children }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v1.7.0.2</span>
+                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v1.8.0</span>
                                 <p style={{
                                     fontWeight: 600,
                                     fontSize: '0.85rem',
@@ -438,14 +463,14 @@ export default function DashboardLayout({ children }) {
                                 <span className="badge" style={{
                                     fontSize: '0.6rem',
                                     padding: '2px 8px',
-                                    background: profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                    color: profile?.plan === 'pro' ? 'black' : 'white',
+                                    background: profile?.trial_active ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                    color: profile?.trial_active || profile?.plan === 'pro' ? 'white' : 'white',
                                     fontWeight: 800,
                                     whiteSpace: 'nowrap',
                                     flexShrink: 0,
                                     marginLeft: '4px'
                                 }}>
-                                    {profile?.plan?.toUpperCase() || 'FREE'}
+                                    {profile?.trial_active ? `TRIAL ${trialDaysRemaining}d` : profile?.plan?.toUpperCase() || 'FREE'}
                                 </span>
                             </div>
                         </div>
@@ -492,20 +517,28 @@ export default function DashboardLayout({ children }) {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            background: 'rgba(255,255,255,0.05)',
+                            background: (profile?.credits_balance || 0) > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.1)',
                             borderRadius: '100px',
                             padding: '6px 14px',
                             cursor: 'pointer',
                             transition: '0.2s',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: (profile?.credits_balance || 0) > 0 ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(239, 68, 68, 0.3)',
                             flexShrink: 0
                         }}>
                             <span style={{ fontSize: '1rem' }}>🪙</span>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent)' }}>{profile?.credits_balance || 0}</span>
+                            <span style={{ 
+                                fontSize: '0.85rem', 
+                                fontWeight: 800, 
+                                color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5' 
+                            }}>
+                                {(profile?.credits_balance || 0) > 0 
+                                    ? `${profile.credits_balance} créditos` 
+                                    : 'Sin créditos'}
+                            </span>
                             <button style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#7ECECA',
+                                color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
                                 fontSize: '0.75rem',
                                 fontWeight: 900,
                                 cursor: 'pointer',
@@ -536,6 +569,51 @@ export default function DashboardLayout({ children }) {
                     balance={profile?.credits_balance || 0}
                     user={user}
                 />
+
+                {showNoCreditsModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
+                    }} onClick={() => setShowNoCreditsModal(false)}>
+                        <div style={{
+                            background: '#1a1a1a', borderRadius: '24px', padding: '40px', maxWidth: '480px', width: '90%',
+                            border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center'
+                        }} onClick={e => e.stopPropagation()}>
+                            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🔒</div>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px', color: 'white' }}>
+                                Activa WRITI
+                            </h2>
+                            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                                Necesitas créditos o un plan activo para usar las funciones de IA. 
+                                {profile?.trial_active && trialDaysRemaining > 0 && (
+                                    <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {trialDaysRemaining} días de prueba gratis!</span></>
+                                )}
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <button 
+                                    onClick={() => { setShowNoCreditsModal(false); router.push('/dashboard/settings'); }}
+                                    className="btn-primary"
+                                    style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
+                                >
+                                    🎯 Elegir Plan Pro
+                                </button>
+                                <button 
+                                    onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}
+                                    className="btn-secondary"
+                                    style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                                >
+                                    🪙 Depositar Créditos
+                                </button>
+                            </div>
+                            <button 
+                                onClick={() => setShowNoCreditsModal(false)}
+                                style={{ marginTop: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <style jsx>{`
