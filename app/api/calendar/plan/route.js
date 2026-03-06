@@ -18,20 +18,21 @@ export async function POST(request) {
 
         const systemPrompt = `Eres un experto en estrategia de contenido y calendarización.
 Tengo una lista de ideas/guiones que quiero agendar en mi calendario de contenidos.
-Tu tarea es asignar a cada ítem un DÍA (asumiendo que empezamos HOY) y una HORA óptima de publicación.
+Tu tarea es asignar a cada ítem un DÍA y una HORA óptima de publicación, proyectando a partir de hoy o el rango de fechas implícito en el mes actual.
 
 REGLAS:
-1. Distribuye los contenidos de forma lógica (ej: no pongas 5 el mismo día).
+1. Distribuye los contenidos de forma lógica (ej: no pongas 5 el mismo día, a menos que se pidan muy juntos).
 2. Sugiere horas basadas en el tipo de contenido (mañana para educativo, tarde/noche para viral/entretenimiento).
-3. Responde ÚNICAMENTE con un array JSON:
+3. Responde ÚNICAMENTE con un array JSON estrictamente con este formato:
 [
   {
-    "id": "item_id_original",
-    "fecha": "YYYY-MM-DD",
-    "hora": "HH:mm",
-    "razon": "Breve explicación de por qué este momento"
+    "id_idea": "ID_ORIGINAL_DEL_ITEM",
+    "fecha_sugerida": "YYYY-MM-DD",
+    "hora_sugerida": "HH:mm",
+    "motivo": "Breve explicación de por qué este momento"
   }
-]`;
+]
+No añadas texto antes ni después del JSON.`;
 
         const userMessage = `
 PERFIL: ${brandBrain?.biography || 'Creador de contenido'}

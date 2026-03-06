@@ -528,27 +528,59 @@ export default function EstrategiaPage() {
 
             if (planError) throw planError;
 
-            // 3. Prepare events for calendar_events (visible monthly)
-            const eventsToInsert = selectedIdeasForPlan.map((idea, idx) => {
-                const suggestion = schedule?.find(s => s.id === idea.id) || {};
-                const targetDate = suggestion.fecha || new Date(new Date().setDate(new Date().getDate() + idx + 1)).toISOString().split('T')[0];
+            // 3. Prepare events and ensure all ideas are in library
+            const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+            const eventsToInsert = [];
 
-                console.log(`[CALENDARIO] creando evento para idea "${idea.titulo_idea || idea.titulo}" en fecha ${targetDate}`);
+            for (let idx = 0; idx < selectedIdeasForPlan.length; idx++) {
+                let idea = { ...selectedIdeasForPlan[idx] };
+                const suggestion = schedule?.find(s => s.id_idea === idea.id || s.id === idea.id) || {};
+                const targetDate = suggestion.fecha_sugerida || suggestion.fecha || new Date(new Date().setDate(new Date().getDate() + idx + 1)).toISOString().split('T')[0];
 
-                // Validar si idea.id es un UUID válido (36 caracteres, formato con guiones)
-                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-                const validRefId = isValidUUID(idea.id) ? idea.id : null;
+                let validRefId = isValidUUID(idea.id) ? idea.id : null;
 
-                return {
+                // Si no tiene UUID válido, guardarla primero en biblioteca para obtener uno
+                if (!validRefId) {
+                    try {
+                        const savedData = await supabase.from('library').insert({
+                            user_id: user.id,
+                            type: 'idea',
+                            platform: idea.plataforma || 'General',
+                            goal: idea.objetivo || 'engagement',
+                            titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
+                            content: idea,
+                            tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean),
+                            status: 'borrador'
+                        }).select().single();
+
+                        if (savedData.data && savedData.data.id) {
+                            validRefId = savedData.data.id;
+                        }
+                    } catch (saveErr) {
+                        console.error('Error auto-guardando idea antes de calendario:', saveErr);
+                    }
+                }
+
+                console.log(`[PLAN_CALENDARIO] creando evento para idea ${validRefId || 'SIN_ID'} en ${targetDate}`);
+
+                let descriptionStr = idea.descripcion || '';
+                if (suggestion.motivo || suggestion.razon) {
+                    descriptionStr += `\n\n🎯 AI Tip: ${suggestion.motivo || suggestion.razon}`;
+                }
+                if (suggestion.hora_sugerida || suggestion.hora) {
+                    descriptionStr += `\n⏰ Hora Sugerida: ${suggestion.hora_sugerida || suggestion.hora}`;
+                }
+
+                eventsToInsert.push({
                     user_id: user.id,
                     title: idea.titulo_idea || idea.titulo || 'Sin título',
-                    description: (idea.descripcion || '') + (suggestion.razon ? `\n\nAI Tip: ${suggestion.razon}` : ''),
+                    description: descriptionStr,
                     event_date: targetDate,
                     type: idea.tipo || idea.tipo_contenido || 'idea',
                     platform: idea.plataforma || 'General',
-                    reference_id: validRefId // Solo si es un UUID válido de la biblioteca
-                };
-            });
+                    reference_id: validRefId
+                });
+            }
 
             const { error: eventError } = await supabase
                 .from('calendar_events')
@@ -558,11 +590,12 @@ export default function EstrategiaPage() {
 
             // 4. (Optional) Also save to slots for backward compatibility if needed
             const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => {
-                const suggestion = schedule?.find(s => s.id === idea.id) || {};
+                const suggestion = schedule?.find(s => s.id_idea === idea.id || s.id === idea.id) || {};
+                const targetDate = suggestion.fecha_sugerida || suggestion.fecha;
                 return {
                     plan_id: planData.id,
                     user_id: user.id,
-                    day_number: suggestion.fecha ? parseInt(suggestion.fecha.split('-')[2]) : idx + 1,
+                    day_number: targetDate ? parseInt(targetDate.split('-')[2]) : idx + 1,
                     platform: idea.plataforma || 'Reels',
                     content_type: idea.tipo || idea.tipo_contenido || 'viral',
                     idea_title: idea.titulo_idea || idea.titulo || 'Sin título',
@@ -576,12 +609,11 @@ export default function EstrategiaPage() {
             const maxDate = new Date(Math.max(...dates)).toLocaleDateString();
 
             setSuccessModalData({
-                title: '¡Ideas Planificadas!',
-                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}.`
+                title: '¡Plan Calendario Creado!',
+                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}. ¿Quieres ver tu calendario?`,
+                redirectTo: '/dashboard/calendar'
             });
             setIsSuccessModalOpen(true);
-            // El usuario pidió "No borres la selección de ideas hasta que el usuario cambie de pantalla"
-            // Por lo tanto evitamos el router.push('/dashboard/calendar');
         } catch (err) {
             console.error('[Estrategia] Error sending to calendar:', err);
             alert('Error al enviar al calendario: ' + err.message);
@@ -1316,7 +1348,14 @@ export default function EstrategiaPage() {
                 onClose={() => setIsSuccessModalOpen(false)}
                 title={successModalData.title}
                 message={successModalData.message}
-                actionOnClick={() => router.push('/dashboard/library')}
+                actionOnClick={() => {
+                    setIsSuccessModalOpen(false);
+                    if (successModalData.redirectTo) {
+                        router.push(successModalData.redirectTo);
+                    } else {
+                        router.push('/dashboard/library');
+                    }
+                }}
             />
 
             <style jsx global>{`

@@ -17,7 +17,8 @@ import {
     Type,
     Tag,
     Globe,
-    Share2
+    Share2,
+    Sparkles
 } from 'lucide-react';
 
 export default function CalendarPage() {
@@ -152,13 +153,17 @@ export default function CalendarPage() {
     const handleCreateScriptFromCalendar = (idea = null) => {
         let url = `/dashboard?mode=single&date=${selectedDate}`;
         if (idea) {
-            const content = idea.content || {};
-            const titulo = encodeURIComponent(idea.titulo || content.titulo_angulo || content.titulo_idea || '');
+            const titulo = encodeURIComponent(idea.title || idea.titulo_idea || idea.titulo || '');
             const platform = encodeURIComponent(idea.platform || 'General');
-            const goal = encodeURIComponent(item.goal || '');
-            url += `&topic=${titulo}&platform=${platform}&goal=${goal}&idea_id=${idea.id}`;
+            const goal = encodeURIComponent(idea.goal || idea.objetivo || 'engagement');
+            url += `&topic=${titulo}&platform=${platform}&goal=${goal}&idea_id=${idea.reference_id || idea.id}`;
         }
         router.push(url);
+    };
+
+    const handleViewScript = (scriptId) => {
+        // Redirigir a la biblioteca o cargar en el visor de guiones
+        router.push(`/dashboard/library?view=${scriptId}`);
     };
 
     const onDragStart = (e, id) => {
@@ -817,15 +822,36 @@ export default function CalendarPage() {
                                         <textarea className="cal-input" style={{ minHeight: '80px' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Detalles de la publicación..." />
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                        {modalStep === 'edit' && (
-                                            <button className="cal-btn-delete" onClick={handleDeleteEvent}>
-                                                <Trash2 size={20} />
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                                        {modalStep === 'edit' && editingEvent?.type === 'idea' && editingEvent?.reference_id && (
+                                            <button
+                                                className="cal-btn-primary"
+                                                style={{ flex: 1, background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', color: 'white' }}
+                                                onClick={() => handleCreateScriptFromCalendar(editingEvent)}
+                                            >
+                                                <Sparkles size={18} /> Generar Guion
                                             </button>
                                         )}
-                                        <button className="cal-btn-primary" style={{ flex: 1 }} onClick={handleSaveEvent}>
-                                            <Save size={18} /> Guardar Cambios
-                                        </button>
+                                        {modalStep === 'edit' && editingEvent?.type === 'guion' && editingEvent?.reference_id && (
+                                            <button
+                                                className="cal-btn-primary"
+                                                style={{ flex: 1, background: 'linear-gradient(135deg, #7ECECA 0%, #29A19C 100%)', color: 'white' }}
+                                                onClick={() => handleViewScript(editingEvent.reference_id)}
+                                            >
+                                                <BookOpen size={18} /> Ver Guion
+                                            </button>
+                                        )}
+
+                                        <div style={{ display: 'flex', width: '100%', gap: '12px' }}>
+                                            {modalStep === 'edit' && (
+                                                <button className="cal-btn-delete" onClick={handleDeleteEvent}>
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            )}
+                                            <button className="cal-btn-primary" style={{ flex: 1 }} onClick={handleSaveEvent}>
+                                                <Save size={18} /> Guardar Cambios
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {modalStep === 'note' && (
