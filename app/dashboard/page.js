@@ -638,7 +638,7 @@ export default function DashboardPage() {
                 body: JSON.stringify({
                     topic: slot.idea_title,
                     platform: slot.platform,
-                    tone: tone,
+                    tone: toneBrand || 'Profesional',
                     goal: slot.goal,
                     count: 1,
                     ideas: `Enfoque: ${slot.content_type}`,
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                 content: fullContent,
                 platform: slot.platform,
                 topic: slot.idea_title,
-                tone: tone,
+                tone: toneBrand || 'Profesional',
                 is_saved: true
             };
 
