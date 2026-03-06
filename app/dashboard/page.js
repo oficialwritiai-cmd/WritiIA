@@ -451,27 +451,53 @@ export default function DashboardPage() {
 
             const data = await res.json();
             const slots = data.slots || [];
-            setPlanSlots(slots);
+            
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            const slotsWithDates = slots.map((slot, index) => {
+                let scheduledDate = slot.scheduled_date;
+                if (!scheduledDate) {
+                    const slotDate = new Date(currentYear, currentMonth, today.getDate() + index);
+                    scheduledDate = slotDate.toISOString().split('T')[0];
+                }
+                return { ...slot, scheduled_date: scheduledDate };
+            });
+            
+            setPlanSlots(slotsWithDates);
 
-            // Now start the massive generation
-            setStep(3); // Result view
+            for (const slot of slotsWithDates) {
+                await supabase.from('content_slots').update({
+                    scheduled_date: slot.scheduled_date
+                }).eq('id', slot.id);
+            }
+
+            setStep(3);
             setIsGeneratingMassive(true);
-            setGenerationProgress({ current: 0, total: slots.length, status: 'Iniciando generación masiva...' });
+            setGenerationProgress({ current: 0, total: slotsWithDates.length, status: 'Iniciando generación masiva...' });
 
-            for (let i = 0; i < slots.length; i++) {
-                const slot = slots[i];
-                setGenerationProgress({ current: i + 1, total: slots.length, status: `Generando guion ${i + 1} de ${slots.length}: ${slot.idea_title}` });
+            const slotsWithScripts = [];
+            for (let i = 0; i < slotsWithDates.length; i++) {
+                const slot = slotsWithDates[i];
+                setGenerationProgress({ current: i + 1, total: slotsWithDates.length, status: `Generando guion ${i + 1} de ${slotsWithDates.length}: ${slot.idea_title}` });
 
                 try {
-                    await handleGenerateSlotScript(slot, true); // Silent/Background generation
+                    const script = await handleGenerateSlotScript(slot, true);
+                    slotsWithScripts.push({ ...slot, has_script: !!script, script_id: script?.id || null });
                 } catch (e) {
                     console.error(`Error generating script for slot ${slot.id}:`, e);
-                    // Continue with next one
+                    slotsWithScripts.push({ ...slot, has_script: false, script_id: null });
                 }
             }
 
+            setPlanSlots(slotsWithScripts);
             setIsGeneratingMassive(false);
-            setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Plan completo y guiones listos!' });
+            setGenerationProgress({ current: slotsWithScripts.length, total: slotsWithScripts.length, status: '¡Plan completo! Enviando al calendario...' });
+
+            setTimeout(async () => {
+                await handleSendPlanToCalendar();
+            }, 1500);
 
         } catch (err) {
             setError(err.message);
@@ -594,7 +620,7 @@ export default function DashboardPage() {
         }
     };
 
-    const handleGenerateSlotScript = async (slot) => {
+    const handleGenerateSlotScript = async (slot, silent = false) => {
         setGeneratingSlotId(slot.id);
 
         try {
@@ -606,7 +632,7 @@ export default function DashboardPage() {
                     platform: slot.platform,
                     tone: tone,
                     goal: slot.goal,
-                    count: 1, // Generate only 1 script
+                    count: 1,
                     ideas: `Enfoque: ${slot.content_type}`,
                     userId: profile?.id
                 }),
@@ -627,7 +653,6 @@ export default function DashboardPage() {
                 throw new Error('El guion recibido está vacío. Intenta de nuevo.');
             }
 
-            // Subir a BD
             const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.join('\n') : (generatedScript.desarrollo || '');
             const fullContent = (generatedScript.gancho || '') + '\n\n' + desarrolloStr + '\n\n' + (generatedScript.cta || '');
             const insertPayload = {
@@ -639,7 +664,6 @@ export default function DashboardPage() {
                 is_saved: true
             };
 
-            // If the slot had a scheduled date, transfer it to the script
             if (slot.scheduled_date) {
                 insertPayload.scheduled_date = slot.scheduled_date;
             }
@@ -648,7 +672,6 @@ export default function DashboardPage() {
 
             if (scriptErr) throw scriptErr;
 
-            // Update local slot status
             const { error: slotErr } = await supabase.from('content_slots').update({
                 has_script: true,
                 script_id: insertedScript.id
@@ -661,8 +684,12 @@ export default function DashboardPage() {
                 return s;
             }));
 
+            return insertedScript;
+
         } catch (err) {
-            alert(err.message);
+            if (!silent) alert(err.message);
+            console.error('[Dashboard] Error generating script:', err);
+            return null;
         } finally {
             setGeneratingSlotId(null);
         }
@@ -681,7 +708,6 @@ export default function DashboardPage() {
                 return s;
             }));
 
-            // If there's an associated script, update it too
             const slot = planSlots.find(s => s.id === slotId);
             if (slot && slot.script_id) {
                 await supabase.from('scripts').update({ scheduled_date: dateValue }).eq('id', slot.script_id);
@@ -690,6 +716,110 @@ export default function DashboardPage() {
             alert('Añadido al calendario ✅');
         } catch (err) {
             alert('Error al programar: ' + err.message);
+        }
+    };
+
+    const [sendingToCalendar, setSendingToCalendar] = useState(false);
+
+    const handleSendPlanToCalendar = async () => {
+        if (!profile?.id) {
+            alert('Error: No hay sesión de usuario');
+            return;
+        }
+        if (!planSlots || planSlots.length === 0) {
+            alert('No hay contenido para enviar al calendario');
+            return;
+        }
+
+        setSendingToCalendar(true);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión');
+
+            const existingPlanId = planSlots[0]?.plan_id;
+            let planId = existingPlanId;
+
+            if (!planId) {
+                const currentMonth = new Date().getMonth() + 1;
+                const currentYear = new Date().getFullYear();
+                const { data: planData, error: planError } = await supabase
+                    .from('content_plans')
+                    .insert({
+                        user_id: user.id,
+                        month: currentMonth,
+                        year: currentYear,
+                        frequency: `${planSlots.length} publicaciones`,
+                        platforms: [...new Set(planSlots.map(s => s.platform))],
+                        focus: 'plan_mensual'
+                    })
+                    .select()
+                    .single();
+
+                if (planError) throw planError;
+                planId = planData.id;
+            }
+
+            const eventsToInsert = [];
+
+            for (let i = 0; i < planSlots.length; i++) {
+                const slot = planSlots[i];
+                
+                let targetDate = slot.scheduled_date;
+                if (!targetDate) {
+                    const slotDate = new Date();
+                    slotDate.setDate(slotDate.getDate() + i + 1);
+                    targetDate = slotDate.toISOString().split('T')[0];
+                }
+
+                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
+                let refId = slot.id && isValidUUID(slot.id) ? slot.id : null;
+
+                if (!refId) {
+                    const { data: savedIdea } = await supabase.from('library').insert({
+                        user_id: user.id,
+                        type: 'idea',
+                        platform: slot.platform,
+                        goal: slot.goal,
+                        titulo: slot.idea_title,
+                        content: { ...slot },
+                        tags: [slot.platform, slot.content_type, slot.goal].filter(Boolean),
+                        status: 'planificado'
+                    }).select().single();
+
+                    if (savedIdea?.id) {
+                        refId = savedIdea.id;
+                    }
+                }
+
+                eventsToInsert.push({
+                    user_id: user.id,
+                    title: slot.idea_title,
+                    description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
+                    event_date: targetDate,
+                    type: slot.content_type || 'idea',
+                    platform: slot.platform,
+                    reference_id: refId
+                });
+            }
+
+            const { error: eventError } = await supabase
+                .from('calendar_events')
+                .insert(eventsToInsert);
+
+            if (eventError) throw eventError;
+
+            setPlanSlots(planSlots.map(s => ({ ...s, sent_to_calendar: true })));
+
+            alert(`✅ Plan enviado al calendario: ${planSlots.length} eventos creados`);
+            router.push('/dashboard/calendar');
+
+        } catch (err) {
+            console.error('[Plan Mensual] Error sending to calendar:', err);
+            alert('Error al enviar al calendario: ' + err.message);
+        } finally {
+            setSendingToCalendar(false);
         }
     };
 
@@ -1480,7 +1610,22 @@ export default function DashboardPage() {
                             <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => router.push('/dashboard/calendar')} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={16} /> Ver Calendario</button>
+                            <button 
+                                onClick={async () => {
+                                    const hasSentSlots = planSlots.some(s => s.sent_to_calendar);
+                                    if (!hasSentSlots && !sendingToCalendar) {
+                                        await handleSendPlanToCalendar();
+                                    } else {
+                                        router.push('/dashboard/calendar');
+                                    }
+                                }} 
+                                disabled={sendingToCalendar}
+                                className="btn-primary" 
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: sendingToCalendar ? 0.7 : 1 }}
+                            >
+                                {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />} 
+                                {sendingToCalendar ? 'Enviando...' : 'Ver Calendario'}
+                            </button>
                             <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
                         </div>
                     </div>
