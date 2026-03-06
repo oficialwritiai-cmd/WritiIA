@@ -149,8 +149,8 @@ Ejemplo de respuesta válida:
     } catch (err) {
         console.error('Error en estrategia generate-ideas:', err);
         const errorMsg = err?.message || 'Error interno';
-        if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded')) {
-            return NextResponse.json({ error: 'El servicio de IA está temporalmente ocupado. Intenta de nuevo en unos segundos.', ideas: [] }, { status: 503 });
+        if (errorMsg.includes('sobrecargado') || errorMsg.includes('overloaded') || errorMsg.includes('intentos')) {
+            return NextResponse.json({ error: 'El servicio de IA está muy saturado en este momento. Hemos reintentado 3 veces sin éxito. Por favor, espera un minuto e intenta de nuevo.', ideas: [] }, { status: 503 });
         }
         return NextResponse.json({ error: errorMsg, ideas: [] }, { status: 500 });
     }
