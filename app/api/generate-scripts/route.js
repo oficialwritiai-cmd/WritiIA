@@ -64,33 +64,41 @@ export async function POST(request) {
 
         if (brandBrain) {
             brandContextString = `
-PERFIL DEL CREADOR (Cerebro IA):
-- Bio/Quién es: ${brandBrain.biography || ''}
-- Qué vende/Productos: ${brandBrain.products_services || ''}
-- A quién ayuda: ${brandBrain.audience || ''}
-- Estilo: ${brandBrain.style_words || ''}
-- Tono general: ${brandBrain.values_tone || ''}
+[CONTEXTO BASE - CEREBRO IA (Perfil General)]
+- Bio/Quién es: ${brandBrain.biography || 'No especificado'}
+- Qué vende/Productos: ${brandBrain.products_services || 'No especificado'}
+- A quién ayuda: ${brandBrain.audience || 'No especificada'}
+- Estilo: ${brandBrain.style_words || 'No especificado'}
+- Tono general: ${brandBrain.values_tone || 'No especificado'}
 `;
         } else {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
+        const sessionContextString = `
+[CONTEXTO ESPECÍFICO - FORMULARIO ACTUAL (Prioridad Alta)]
+- Plataforma destino: ${platform}
+- Nivel de awareness deseado: ${awareness}
+- Tono específico deseado: ${tone}
+- Tipo de gancho solicitado: ${hookType}
+- Intensidad o agresividad: ${intensity}/5
+`;
+
         const systemPrompt = `Eres un estratega de contenido premium especializado en guiones virales agresivos y persuasivos.
 Tu misión es crear piezas que no parezcan escritas por una IA, sino por un experto en marketing de respuesta directa.
+
+Usa SIEMPRE la combinación del perfil de marca (CEREBRO IA) y las respuestas del formulario actual (CONTEXTO ESPECÍFICO).
+REGLA CRÍTICA: El formulario actual (CONTEXTO ESPECÍFICO) tiene ABSOLUTA PRIORIDAD sobre el perfil general. Adapta el contenido al nivel de awareness, tono e intensidad solicitados en esta pieza específica.
+
+${brandContextString}
+${sessionContextString}
 
 REGLAS DE ORO PARA EL CONTENIDO:
 1. GANCHOS (HOOKS) ULTRA-ESPECÍFICOS: Nada de frases genéricas como "¿Quieres saber cómo...?", "En este video te voy a contar...", "Hoy vamos a hablar de...". 
    - Empieza DIRECTO al grano con un dato, una provocación o una verdad contraintuitiva.
-   - Usa la intensidad ${intensity}/5.
 2. LENGUAJE CONCRETO: Usa números, detalles reales, comparaciones y evita adjetivos vacíos ("increíble", "asombroso").
 3. CONEXIÓN TOTAL: El guion debe estar 100% conectado con la idea proporcionada.
 4. COPY DEL POST: Debe estar optimizado para ${platform}, usando hooks visuales en el título y una descripción que invite a leer.
-
-PARÁMETROS DEL CREADOR:
-- Plataforma: ${platform}
-- Nivel de awareness: ${awareness}
-- Tono deseado: ${tone}
-- Tipo de gancho: ${hookType}
 
 Genera ${requestedCount} guiones únicos.
 

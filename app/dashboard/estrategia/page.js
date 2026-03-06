@@ -403,7 +403,8 @@ export default function EstrategiaPage() {
                 message: `Se han guardado ${ideasToSave.length} ideas exitosamente en tu biblioteca.`
             });
             setIsSuccessModalOpen(true);
-            setSelectedIdeaIds(new Set()); // Clear selection after success
+            // NOTA: A petición del usuario, NO limpiamos la selección para permitir enviarlas al calendario.
+            // setSelectedIdeaIds(new Set()); 
         } catch (err) {
             console.error('Error al guardar masivamente:', err);
             alert('Error al guardar algunas ideas: ' + err.message);
@@ -461,12 +462,15 @@ export default function EstrategiaPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ids: ideasToExport.map(i => i.id).filter(Boolean),
+                    items: ideasToExport, // Send the full objects, not just 'ids' which might be "1"
                     userId: user.id
                 })
             });
 
-            if (!res.ok) throw new Error('Error al exportar');
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Error al exportar');
+            }
 
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
@@ -531,6 +535,10 @@ export default function EstrategiaPage() {
 
                 console.log(`[CALENDARIO] creando evento para idea "${idea.titulo_idea || idea.titulo}" en fecha ${targetDate}`);
 
+                // Validar si idea.id es un UUID válido (36 caracteres, formato con guiones)
+                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                const validRefId = isValidUUID(idea.id) ? idea.id : null;
+
                 return {
                     user_id: user.id,
                     title: idea.titulo_idea || idea.titulo || 'Sin título',
@@ -538,7 +546,7 @@ export default function EstrategiaPage() {
                     event_date: targetDate,
                     type: idea.tipo || idea.tipo_contenido || 'idea',
                     platform: idea.plataforma || 'General',
-                    reference_id: idea.id // Link to original library item if exists
+                    reference_id: validRefId // Solo si es un UUID válido de la biblioteca
                 };
             });
 
@@ -563,8 +571,17 @@ export default function EstrategiaPage() {
             });
             await supabase.from('content_slots').insert(slotsToInsert);
 
-            alert(`✓ ${selectedIdeasForPlan.length} ideas enviadas al calendario con éxito`);
-            router.push('/dashboard/calendar');
+            const dates = eventsToInsert.map(e => new Date(e.event_date));
+            const minDate = new Date(Math.min(...dates)).toLocaleDateString();
+            const maxDate = new Date(Math.max(...dates)).toLocaleDateString();
+
+            setSuccessModalData({
+                title: '¡Ideas Planificadas!',
+                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}.`
+            });
+            setIsSuccessModalOpen(true);
+            // El usuario pidió "No borres la selección de ideas hasta que el usuario cambie de pantalla"
+            // Por lo tanto evitamos el router.push('/dashboard/calendar');
         } catch (err) {
             console.error('[Estrategia] Error sending to calendar:', err);
             alert('Error al enviar al calendario: ' + err.message);

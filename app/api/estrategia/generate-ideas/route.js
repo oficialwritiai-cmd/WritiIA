@@ -44,18 +44,35 @@ export async function POST(request) {
         let brandContextString = '';
         if (brandBrain) {
             brandContextString = `
-CONTEXTO DE MARCA (Cerebro IA):
-- Bio/Historia: ${brandBrain.biography || ''}
-- Audiencia: ${brandBrain.audience || ''}
-- Valores y Tono: ${brandBrain.values_tone || ''}
-- Nicho: ${brandBrain.niche_topics || ''}
+[CONTEXTO BASE - CEREBRO IA (Perfil General)]
+- Bio/Historia: ${brandBrain.biography || 'No especificado'}
+- Audiencia General: ${brandBrain.audience || 'No especificada'}
+- Valores y Tono Base: ${brandBrain.values_tone || 'No especificado'}
+- Nicho/Temas Base: ${brandBrain.niche_topics || 'No especificado'}
 `;
+        } else {
+            brandContextString = `[CONTEXTO BASE - CEREBRO IA] No configurado. Usa solo el contexto específico a continuación.\n`;
         }
 
-        const systemPrompt = `Eres un estratega de contenido de élite para redes sociales.
-${brandContextString}
+        const sessionContextString = `
+[CONTEXTO ESPECÍFICO - FORMULARIO ACTUAL (Prioridad Alta)]
+- Objetivo de este contenido: ${objective || 'No especificado'}
+- Próximo lanzamiento/oferta: ${launch || 'Ninguno'}
+- Objeción principal a derribar: ${objection || 'No especificada'}
+- Historia personal a usar: ${story || 'Ninguna'}
+- Tipos de contenido deseados: ${types.length > 0 ? types.join(', ') : 'Cualquiera'}
+- Plataformas destino: ${platforms.length > 0 ? platforms.join(', ') : 'Reels, TikTok, etc.'}
+`;
 
-Tu objetivo es crear un Banco de Ideas Estratégicas.
+        const systemPrompt = `Eres un estratega de contenido de élite para redes sociales.
+
+Usa SIEMPRE la combinación del perfil de marca (CEREBRO IA) y las respuestas del formulario actual (CONTEXTO ESPECÍFICO).
+REGLA CRÍTICA: El formulario actual (CONTEXTO ESPECÍFICO) tiene ABSOLUTA PRIORIDAD sobre el perfil general. Si hay conflicto entre el Cerebro IA y el Formulario (ej. plataformas diferentes, o un objetivo distinto), siempre manda el Formulario.
+
+${brandContextString}
+${sessionContextString}
+
+Tu objetivo es crear un Banco de Ideas Estratégicas altamente personalizado que refleje perfectamente la voz del creador y se alinee a su objetivo actual.
 
 IMPORTANTE: Responde EXCLUSIVAMENTE con un array JSON válido. Nada de texto antes o después. Sin markdown, sin código, solo JSON puro.
 
