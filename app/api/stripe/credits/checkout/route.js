@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,30 @@ export async function POST(request) {
 
         if (!['100', '250', '500'].includes(String(pack))) {
             return NextResponse.json({ error: 'Pack de créditos inválido' }, { status: 400 });
+        }
+
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        const { data: profile, error: profileError } = await supabase
+            .from('users_profiles')
+            .select('plan, subscription_status')
+            .eq('id', userId)
+            .single();
+
+        if (profileError) {
+            console.error('Error fetching profile:', profileError);
+            return NextResponse.json({ error: 'Error al verificar el plan' }, { status: 500 });
+        }
+
+        const hasActivePlan = profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+
+        if (!hasActivePlan) {
+            return NextResponse.json({ 
+                error: 'PLAN_REQUIRED',
+                message: 'Necesitas un plan activo para comprar créditos adicionales.'
+            }, { status: 402 });
         }
 
         let priceId;

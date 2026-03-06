@@ -535,18 +535,39 @@ export default function DashboardLayout({ children }) {
                                     ? `${profile.credits_balance} créditos` 
                                     : 'Sin créditos'}
                             </span>
-                            <button style={{
-                                background: 'none',
-                                border: 'none',
-                                color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
-                                fontSize: '0.75rem',
-                                fontWeight: 900,
-                                cursor: 'pointer',
-                                padding: '2px 4px',
-                                whiteSpace: 'nowrap'
-                            }}>
-                                + DEPOSITAR
-                            </button>
+                            {profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' ? (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsCreditsModalOpen(true); }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 900,
+                                        cursor: 'pointer',
+                                        padding: '2px 4px',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    + DEPOSITAR
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); router.push('/dashboard/settings'); }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#9D00FF',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 900,
+                                        cursor: 'pointer',
+                                        padding: '2px 4px',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    + PLAN
+                                </button>
+                            )}
                         </div>
 
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>

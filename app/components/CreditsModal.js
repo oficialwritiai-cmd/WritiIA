@@ -27,6 +27,15 @@ export default function CreditsModal({ isOpen, onClose, balance, user }) {
             });
 
             const data = await res.json();
+            
+            if (data.error === 'PLAN_REQUIRED') {
+                alert('Necesitas un plan activo para comprar créditos adicionales. ¡Elige tu plan Pro!');
+                if (window.location.href.includes('/dashboard')) {
+                    window.location.href = '/dashboard/settings';
+                }
+                return;
+            }
+            
             if (data.url) {
                 window.location.href = data.url;
             } else {
