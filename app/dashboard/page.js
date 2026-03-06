@@ -65,6 +65,7 @@ export default function DashboardPage() {
     const [planWizardStep, setPlanWizardStep] = useState(1);
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
+    const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
 
     const [loadingPhase, setLoadingPhase] = useState(0);
     const [error, setError] = useState('');
@@ -438,6 +439,11 @@ export default function DashboardPage() {
                     context: ideas,
                     userId: profile?.id,
                     selectedIdeas: selectedPlanIdeas.map(id => {
+                        if (id.startsWith('extra-')) {
+                            const idx = parseInt(id.replace('extra-', ''));
+                            const extraIdea = extraIdeasModal.ideas[idx];
+                            return extraIdea ? `${extraIdea.titulo_idea}: ${extraIdea.descripcion || ''}` : null;
+                        }
                         const idea = libIdeas.find(li => li.id === id);
                         return idea ? `${idea.titulo}: ${idea.content?.descripcion || ''}` : null;
                     }).filter(Boolean)
@@ -498,6 +504,8 @@ export default function DashboardPage() {
             setTimeout(async () => {
                 await handleSendPlanToCalendar();
             }, 1500);
+
+            setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
         } catch (err) {
             setError(err.message);
@@ -1099,8 +1107,17 @@ export default function DashboardPage() {
                         ))}
                     </div>
 
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center' }}>
+                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                         {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
+                        {planWizardStep === 1 && (
+                            <button 
+                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} 
+                                className="btn-secondary" 
+                                style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <Search size={16} /> Explorar más ideas
+                            </button>
+                        )}
                     </h2>
 
                     {planWizardStep === 1 && (
@@ -1110,37 +1127,76 @@ export default function DashboardPage() {
                             </p>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxHeight: '400px', overflowY: 'auto', padding: '10px' }}>
-                                {libIdeas.length > 0 ? libIdeas.map(idea => (
-                                    <div
-                                        key={idea.id}
-                                        onClick={() => {
-                                            if (selectedPlanIdeas.includes(idea.id)) {
-                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
-                                            } else {
-                                                setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
-                                            }
-                                        }}
-                                        style={{
-                                            padding: '20px',
-                                            background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
-                                            borderRadius: '16px',
-                                            border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
-                                            cursor: 'pointer',
-                                            transition: '0.2s',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
-                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
+                                {libIdeas.length > 0 || extraIdeasModal.ideas.length > 0 ? (
+                                    <>
+                                        {extraIdeasModal.ideas.map((idea, idx) => {
+                                            const ideaId = `extra-${idx}`;
+                                            return (
+                                                <div
+                                                    key={ideaId}
+                                                    onClick={() => {
+                                                        if (selectedPlanIdeas.includes(ideaId)) {
+                                                            setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
+                                                        } else {
+                                                            setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '20px',
+                                                        background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(157, 0, 255, 0.05)',
+                                                        borderRadius: '16px',
+                                                        border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(157, 0, 255, 0.3)',
+                                                        cursor: 'pointer',
+                                                        transition: '0.2s',
+                                                        position: 'relative'
+                                                    }}
+                                                >
+                                                    <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <span style={{ fontSize: '0.65rem', background: '#9D00FF', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>NUEVA</span>
+                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
+                                                        </div>
+                                                    </div>
+                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
+                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                        {idea.descripcion}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                        {libIdeas.map(idea => (
+                                            <div
+                                                key={idea.id}
+                                                onClick={() => {
+                                                    if (selectedPlanIdeas.includes(idea.id)) {
+                                                        setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
+                                                    } else {
+                                                        setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
+                                                    }
+                                                }}
+                                                style={{
+                                                    padding: '20px',
+                                                    background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
+                                                    borderRadius: '16px',
+                                                    border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
+                                                    cursor: 'pointer',
+                                                    transition: '0.2s',
+                                                    position: 'relative'
+                                                }}
+                                            >
+                                                <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                                                    <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
+                                                    </div>
+                                                </div>
+                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                    {idea.content?.descripcion || 'Sin descripción'}
+                                                </p>
                                             </div>
-                                        </div>
-                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
-                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                            {idea.content?.descripcion || 'Sin descripción'}
-                                        </p>
-                                    </div>
-                                )) : (
+                                        ))}
+                                    </>
+                                ) : (
                                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
                                         <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
                                         <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir a Estrategia →</button>
@@ -1713,6 +1769,127 @@ export default function DashboardPage() {
                     message={successModalData.message}
                     actionOnClick={() => router.push('/dashboard/library')}
                 />
+            )}
+
+            {extraIdeasModal.open && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }} onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}>
+                    <div style={{
+                        background: '#1a1a1a', borderRadius: '20px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar más ideas</h3>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                            Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué quieres este mes? *</p>
+                                <textarea
+                                    className="textarea-field"
+                                    placeholder="Ej: Quiero crear contenido sobre cómo vender programas de mentoría online..."
+                                    value={extraIdeasModal.form.context}
+                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, context: e.target.value } })}
+                                    style={{ minHeight: '80px' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Nivel de experiencia</p>
+                                    <input
+                                        className="input-field"
+                                        placeholder="Ej: Principiante"
+                                        value={extraIdeasModal.form.experienceLevel}
+                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, experienceLevel: e.target.value } })}
+                                    />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ticket de producto</p>
+                                    <input
+                                        className="input-field"
+                                        placeholder="Ej: 500-2000€"
+                                        value={extraIdeasModal.form.productTicket}
+                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, productTicket: e.target.value } })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Objeciones clave</p>
+                                <input
+                                    className="input-field"
+                                    placeholder="Ej: Es caro, no tengo tiempo, no funciona"
+                                    value={extraIdeasModal.form.objections}
+                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, objections: e.target.value } })}
+                                />
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ejemplos de contenido que te gustan</p>
+                                <input
+                                    className="input-field"
+                                    placeholder="Ej: Videos de '@coach' o '@experto'"
+                                    value={extraIdeasModal.form.examples}
+                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, examples: e.target.value } })}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                            <button
+                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}
+                                className="btn-secondary"
+                                style={{ flex: 1 }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!extraIdeasModal.form.context.trim()) {
+                                        alert('Escribe qué quieres este mes');
+                                        return;
+                                    }
+                                    setExtraIdeasModal({ ...extraIdeasModal, loading: true });
+                                    try {
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        const res = await fetch('/api/ideas-extra', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                context: extraIdeasModal.form.context,
+                                                experienceLevel: extraIdeasModal.form.experienceLevel,
+                                                productTicket: extraIdeasModal.form.productTicket,
+                                                objections: extraIdeasModal.form.objections,
+                                                examples: extraIdeasModal.form.examples,
+                                                userId: user?.id
+                                            })
+                                        });
+                                        const data = await res.json();
+                                        if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
+                                        
+                                        setExtraIdeasModal({
+                                            open: false,
+                                            ideas: data.ideas || [],
+                                            loading: false,
+                                            form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' }
+                                        });
+                                    } catch (err) {
+                                        alert(err.message);
+                                        setExtraIdeasModal({ ...extraIdeasModal, loading: false });
+                                    }
+                                }}
+                                disabled={extraIdeasModal.loading}
+                                className="btn-primary"
+                                style={{ flex: 2, opacity: extraIdeasModal.loading ? 0.7 : 1 }}
+                            >
+                                {extraIdeasModal.loading ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px' }} /> Generando ideas...</> : <>Generar Ideas <Sparkles size={16} style={{ marginLeft: '8px' }} /></>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
