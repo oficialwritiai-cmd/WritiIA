@@ -31,6 +31,7 @@ export default function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingEvent, setEditingEvent] = useState(null);
+    const [dragOverDate, setDragOverDate] = useState(null);
 
     // Form states
     const [title, setTitle] = useState('');
@@ -171,6 +172,7 @@ export default function CalendarPage() {
     };
 
     const onDrop = async (e, date) => {
+        setDragOverDate(null);
         const id = e.dataTransfer.getData('eventId');
         if (!id) return;
 
@@ -215,8 +217,9 @@ export default function CalendarPage() {
             cells.push(
                 <div
                     key={d}
-                    className={`cal-cell ${isToday ? 'today' : ''}`}
-                    onDragOver={e => e.preventDefault()}
+                    className={`cal-cell ${isToday ? 'today' : ''} ${dragOverDate === dateStr ? 'drag-over' : ''}`}
+                    onDragOver={e => { e.preventDefault(); setDragOverDate(dateStr); }}
+                    onDragLeave={() => setDragOverDate(null)}
                     onDrop={e => onDrop(e, dateStr)}
                     onClick={() => handleOpenModal(dateStr)}
                 >
@@ -374,6 +377,12 @@ export default function CalendarPage() {
                     background: #080808;
                 }
 
+                .cal-cell.drag-over {
+                    background: rgba(126, 206, 202, 0.1) !important;
+                    border: 1px dashed #7ECECA;
+                    transform: scale(0.98);
+                }
+
                 .cal-cell.today {
                     background: radial-gradient(circle at top right, rgba(126, 206, 202, 0.08), transparent);
                 }
@@ -428,9 +437,12 @@ export default function CalendarPage() {
                     font-weight: 600;
                     white-space: nowrap;
                     overflow: hidden;
-                    text-overflow: ellipsis;
-                    transition: 0.2s;
                     border: 1px solid transparent;
+                    cursor: grab;
+                }
+
+                .cal-event-pill:active {
+                    cursor: grabbing;
                 }
 
                 .cal-event-pill:hover {
@@ -867,10 +879,15 @@ export default function CalendarPage() {
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-                                        {modalStep === 'edit' && editingEvent?.type === 'idea' && !editingEvent?.has_script && (
+                                        {modalStep === 'edit' && (editingEvent?.type === 'idea' || editingEvent?.type === 'note') && !editingEvent?.has_script && (
                                             <button
                                                 className="cal-btn-primary"
-                                                style={{ flex: 1, background: 'var(--accent-gradient)', color: '#000' }}
+                                                style={{
+                                                    flex: 1,
+                                                    background: 'var(--accent-gradient)',
+                                                    color: '#000',
+                                                    boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)'
+                                                }}
                                                 onClick={() => handleCreateScriptFromCalendar(editingEvent)}
                                             >
                                                 <Sparkles size={18} /> Generar Guion
@@ -879,7 +896,12 @@ export default function CalendarPage() {
                                         {modalStep === 'edit' && (editingEvent?.has_script || editingEvent?.type === 'guion') && editingEvent?.reference_id && (
                                             <button
                                                 className="cal-btn-primary"
-                                                style={{ flex: 1, background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}
+                                                style={{
+                                                    flex: 1,
+                                                    background: 'rgba(126, 206, 202, 0.2)',
+                                                    color: '#7ECECA',
+                                                    border: '1px solid #7ECECA'
+                                                }}
                                                 onClick={() => handleViewScript(editingEvent.reference_id)}
                                             >
                                                 <BookOpen size={18} /> Ver Guion

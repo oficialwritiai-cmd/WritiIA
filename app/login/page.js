@@ -141,7 +141,7 @@ export default function LoginPage() {
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                         {mode === 'login' ? 'Bienvenido al futuro del contenido' : 'Exclusivo para usuarios con llave beta'}
                     </p>
-                    <div id="antigravity-verify" style={{ display: 'none' }}>v1.7.0-PROD</div>
+                    <div id="antigravity-verify" style={{ display: 'none' }}>v1.7.0.1-PROD</div>
                 </div>
 
                 <div style={{ display: 'flex', background: 'var(--bg-sidebar)', borderRadius: 'var(--radius-md)', padding: '6px', marginBottom: '32px', border: '1px solid var(--border)' }}>
