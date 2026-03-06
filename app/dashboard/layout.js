@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }) {
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
     const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
     const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
+    const [planCheckoutLoading, setPlanCheckoutLoading] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -148,7 +149,7 @@ export default function DashboardLayout({ children }) {
             const daysPassed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
             const daysRemaining = Math.max(0, 7 - daysPassed);
             setTrialDaysRemaining(daysRemaining);
-            
+
             if (daysRemaining <= 0) {
                 supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id);
                 setTrialDaysRemaining(0);
@@ -163,6 +164,34 @@ export default function DashboardLayout({ children }) {
         window.addEventListener('show-no-credits', handleShowNoCredits);
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, []);
+
+    async function handleCheckoutPlan() {
+        if (profile?.plan === 'pro') {
+            router.push('/dashboard/settings');
+            return;
+        }
+
+        setPlanCheckoutLoading(true);
+        try {
+            const res = await fetch('/api/stripe/checkout-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, email: user.email }),
+            });
+
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error(data.error || 'Error');
+            }
+        } catch (err) {
+            console.error('Error checkout plan:', err);
+            alert('Error al conectar con Stripe: ' + err.message);
+        } finally {
+            setPlanCheckoutLoading(false);
+        }
+    }
 
     async function handleLogout() {
         await supabase.auth.signOut();
@@ -496,22 +525,25 @@ export default function DashboardLayout({ children }) {
                             >
                                 🪙 COMPRAR CRÉDITOS
                             </button>
-                            <Link href="/dashboard/settings" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                                <button className="btn-primary" style={{
+                            <button
+                                onClick={handleCheckoutPlan}
+                                disabled={planCheckoutLoading}
+                                className="btn-primary"
+                                style={{
                                     padding: '8px 16px',
                                     fontSize: '0.8rem',
                                     fontWeight: 900,
-                                    background: 'var(--accent-gradient)',
-                                    color: 'black',
+                                    background: profile?.plan === 'pro' ? 'rgba(126, 206, 202, 0.2)' : 'var(--accent-gradient)',
+                                    color: profile?.plan === 'pro' ? '#7ECECA' : 'black',
                                     borderRadius: '100px',
-                                    boxShadow: '0 0 15px rgba(126, 206, 202, 0.4)',
-                                    border: 'none',
+                                    boxShadow: profile?.plan === 'pro' ? 'none' : '0 0 15px rgba(126, 206, 202, 0.4)',
+                                    border: profile?.plan === 'pro' ? '1px solid rgba(126, 206, 202, 0.3)' : 'none',
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap'
-                                }}>
-                                    🚀 PLAN PRO
-                                </button>
-                            </Link>
+                                }}
+                            >
+                                {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? '✅ PRO' : '🚀 PLAN PRO'}
+                            </button>
                         </div>
                         <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
                             display: 'flex',
@@ -526,17 +558,17 @@ export default function DashboardLayout({ children }) {
                             flexShrink: 0
                         }}>
                             <span style={{ fontSize: '1rem' }}>🪙</span>
-                            <span style={{ 
-                                fontSize: '0.85rem', 
-                                fontWeight: 800, 
-                                color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5' 
+                            <span style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 800,
+                                color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5'
                             }}>
-                                {(profile?.credits_balance || 0) > 0 
-                                    ? `${profile.credits_balance} créditos` 
+                                {(profile?.credits_balance || 0) > 0
+                                    ? `${profile.credits_balance} créditos`
                                     : 'Sin créditos'}
                             </span>
                             {profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' ? (
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); setIsCreditsModalOpen(true); }}
                                     style={{
                                         background: 'none',
@@ -552,7 +584,7 @@ export default function DashboardLayout({ children }) {
                                     + DEPOSITAR
                                 </button>
                             ) : (
-                                <button 
+                                <button
                                     onClick={(e) => { e.stopPropagation(); router.push('/dashboard/settings'); }}
                                     style={{
                                         background: 'none',
@@ -605,20 +637,20 @@ export default function DashboardLayout({ children }) {
                                 Activa WRITI
                             </h2>
                             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
-                                Necesitas créditos o un plan activo para usar las funciones de IA. 
+                                Necesitas créditos o un plan activo para usar las funciones de IA.
                                 {profile?.trial_active && trialDaysRemaining > 0 && (
                                     <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {trialDaysRemaining} días de prueba gratis!</span></>
                                 )}
                             </p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <button 
-                                    onClick={() => { setShowNoCreditsModal(false); router.push('/dashboard/settings'); }}
+                                <button
+                                    onClick={() => { setShowNoCreditsModal(false); handleCheckoutPlan(); }}
                                     className="btn-primary"
                                     style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
                                 >
                                     🎯 Elegir Plan Pro
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}
                                     className="btn-secondary"
                                     style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
@@ -626,7 +658,7 @@ export default function DashboardLayout({ children }) {
                                     🪙 Depositar Créditos
                                 </button>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowNoCreditsModal(false)}
                                 style={{ marginTop: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
                             >

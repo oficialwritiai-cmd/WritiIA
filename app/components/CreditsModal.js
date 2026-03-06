@@ -16,26 +16,18 @@ export default function CreditsModal({ isOpen, onClose, balance, user }) {
                 return;
             }
 
-            const res = await fetch('/api/stripe/credits/checkout', {
+            const res = await fetch('/api/stripe/checkout-credits', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    pack: packId,
+                    pack_type: packId,
                     userId: user.id,
                     email: user.email
                 }),
             });
 
             const data = await res.json();
-            
-            if (data.error === 'PLAN_REQUIRED') {
-                alert('Necesitas un plan activo para comprar créditos adicionales. ¡Elige tu plan Pro!');
-                if (window.location.href.includes('/dashboard')) {
-                    window.location.href = '/dashboard/settings';
-                }
-                return;
-            }
-            
+
             if (data.url) {
                 window.location.href = data.url;
             } else {

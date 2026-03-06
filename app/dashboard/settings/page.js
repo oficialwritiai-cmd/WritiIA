@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Rocket } from 'lucide-react';
+import { Rocket, Loader2 } from 'lucide-react';
 import { createSupabaseClient } from '@/lib/supabase';
 
 const TONOS = ['Profesional', 'Cercano', 'Inspiracional', 'Directo', 'Divertido'];
@@ -16,6 +16,8 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
+    const [planLoading, setPlanLoading] = useState(false);
+    const [userId, setUserId] = useState(null);
     const supabase = createSupabaseClient();
 
     const [isAdmin, setIsAdmin] = useState(false);
@@ -32,6 +34,7 @@ export default function SettingsPage() {
             if (!user) return;
 
             setEmail(user.email || '');
+            setUserId(user.id);
 
             const { data, error: fetchError } = await supabase
                 .from('users_profiles')
@@ -52,6 +55,34 @@ export default function SettingsPage() {
             setError('Error al cargar el perfil.');
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleCheckoutPlan() {
+        if (plan === 'pro') return; // Already on pro
+
+        setPlanLoading(true);
+        setError('');
+
+        try {
+            const res = await fetch('/api/stripe/checkout-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, email }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Error al crear sesión de pago');
+
+            if (data.url) {
+                window.location.href = data.url;
+            }
+        } catch (err) {
+            console.error('Error checkout plan:', err);
+            setError(err.message);
+        } finally {
+            setPlanLoading(false);
         }
     }
 
@@ -176,8 +207,20 @@ export default function SettingsPage() {
                             <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca + Calendario</strong> — organiza tu contenido</div>
                         </div>
 
-                        <button type="button" className="btn-primary" style={{ padding: '16px 40px', fontSize: '1rem' }}>
-                            {plan === 'pro' ? 'Gestionar suscripción' : 'Empezar ahora por €39/mes →'}
+                        <button
+                            type="button"
+                            className="btn-primary"
+                            style={{ padding: '16px 40px', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                            onClick={handleCheckoutPlan}
+                            disabled={planLoading || plan === 'pro'}
+                        >
+                            {planLoading ? (
+                                <><Loader2 size={20} className="animate-spin" /> Redirigiendo a Stripe...</>
+                            ) : plan === 'pro' ? (
+                                '✅ Plan Pro Activo'
+                            ) : (
+                                'Empezar ahora por €39/mes →'
+                            )}
                         </button>
                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>
                             ✓ Sin permanencias · ✓ Cancelas cuando quieras
@@ -193,7 +236,7 @@ export default function SettingsPage() {
                             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '8px' }}>Actualizar App en Vercel</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
                                 Si has hecho cambios en el código y quieres que se reflejen en <strong>público</strong> ahora mismo,
-                                usa este botón. Se lanzará un "build" automático en tu panel de Vercel.
+                                usa este botón. Se lanzará un &quot;build&quot; automático en tu panel de Vercel.
                             </p>
 
                             <button
