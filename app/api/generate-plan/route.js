@@ -26,7 +26,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
         }
 
-        const { description, platforms, frequency, focus, tone, context, userId } = validation.data;
+        const { description, platforms, frequency, focus, tone, context, userId, selectedIdeas } = validation.data;
         const apiKey = process.env.ANTHROPIC_API_KEY;
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -65,6 +65,16 @@ PERFIL DEL CREADOR (Cerebro IA):
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
+        let ideasContextString = '';
+        if (selectedIdeas && selectedIdeas.length > 0) {
+            ideasContextString = `
+IDEAS BASE SELECCIONADAS POR EL USUARIO (Prioridad Máxima):
+${selectedIdeas.map((id, i) => `${i + 1}. ${id}`).join('\n')}
+
+IMPORTANTE: Debes integrar estas ideas obligatoriamente en el plan de 30 días, expandiéndolas y dándoles un ángulo profesional. Los días restantes deben completarse con contenido coherente.
+`;
+        }
+
         const systemPrompt = `Eres un estratega de contenido premium especializado en planes mensuales agresivos y persuasivos.
 Tu misión es crear piezas que no parezcan escritas por una IA. 
 
@@ -73,8 +83,10 @@ REGLAS DE ORO:
 2. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
 3. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
 4. Cada día debe tener: plataforma, tipo de contenido (autoridad/historia/venta/comunidad), título de idea, y objetivo específico.
+5. IDEAS BASE: Si el usuario proporciona ideas base, úsalas como núcleo del plan.
 
 ${brandContextString}
+${ideasContextString}
 
 Diseña un PLAN DE CONTENIDO para 30 días en español.
 Responde ÚNICAMENTE en JSON array:
@@ -97,7 +109,7 @@ CONTEXTO:
 - Notas adicionales: ${context || 'Ninguna'}
 - Cantidad de posts a generar: ${postCount}
 
-Genera un plan de contenido para 30 días con variedad de tipos (autoridad, historia personal, venta, comunidad).`;
+Genera un plan de contenido para 30 días basándote en el contexto y las ideas base proporcionadas (si las hay).`;
 
         const { parsed: results, usage } = await generateIdeasWithHaiku({
             apiKey,

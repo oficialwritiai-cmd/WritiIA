@@ -60,6 +60,11 @@ export default function DashboardPage() {
     const [planCampaigns, setPlanCampaigns] = useState('');
     const [planSlots, setPlanSlots] = useState([]);
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
+    const [libIdeas, setLibIdeas] = useState([]);
+    const [selectedPlanIdeas, setSelectedPlanIdeas] = useState([]);
+    const [planWizardStep, setPlanWizardStep] = useState(1);
+    const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
 
     const [loadingPhase, setLoadingPhase] = useState(0);
     const [error, setError] = useState('');
@@ -152,6 +157,19 @@ export default function DashboardPage() {
             }
         }
     }, []);
+
+    useEffect(() => {
+        if (generationMode === 'plan' && planWizardStep === 1) {
+            fetchLibraryIdeas();
+        }
+    }, [generationMode, planWizardStep]);
+
+    const fetchLibraryIdeas = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea').order('created_at', { ascending: false });
+        setLibIdeas(data || []);
+    };
 
     // Land on Wizard Step 3 if coming from strategy to allow refinement
     useEffect(() => {
@@ -389,7 +407,22 @@ export default function DashboardPage() {
             setError('Debes seleccionar al menos una plataforma.');
             return;
         }
-        setStep(2);
+
+        // Pre-check credits: 5 (plan) + postCount (for each script)
+        let postCount = 12;
+        if (planFrequency === '4 publicaciones por semana') postCount = 16;
+        if (planFrequency === '5 publicaciones por semana') postCount = 20;
+        if (planFrequency === '7 publicaciones por semana') postCount = 28;
+
+        const totalCost = 5 + postCount;
+        const available = aiCredits.total - aiCredits.used;
+
+        if (available < totalCost) {
+            setError(`Créditos insuficientes. Necesitas ${totalCost} créditos (5 para el plan + ${postCount} para los guiones) y tienes ${available}.`);
+            return;
+        }
+
+        setStep(2); // Show initial general loader
         setError('');
 
         try {
@@ -401,16 +434,45 @@ export default function DashboardPage() {
                     platforms: planPlatforms,
                     frequency: planFrequency,
                     focus: planFocus,
-                    tone,
+                    tone: toneBrand,
                     context: ideas,
-                    userId: profile?.id
+                    userId: profile?.id,
+                    selectedIdeas: selectedPlanIdeas.map(id => {
+                        const idea = libIdeas.find(li => li.id === id);
+                        return idea ? `${idea.titulo}: ${idea.content?.descripcion || ''}` : null;
+                    }).filter(Boolean)
                 }),
             });
 
-            if (!res.ok) throw new Error('Error al generar el plan de contenido');
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Error al generar el esquema del plan');
+            }
+
             const data = await res.json();
-            setPlanSlots(data.slots || []);
-            setStep(3);
+            const slots = data.slots || [];
+            setPlanSlots(slots);
+
+            // Now start the massive generation
+            setStep(3); // Result view
+            setIsGeneratingMassive(true);
+            setGenerationProgress({ current: 0, total: slots.length, status: 'Iniciando generación masiva...' });
+
+            for (let i = 0; i < slots.length; i++) {
+                const slot = slots[i];
+                setGenerationProgress({ current: i + 1, total: slots.length, status: `Generando guion ${i + 1} de ${slots.length}: ${slot.idea_title}` });
+
+                try {
+                    await handleGenerateSlotScript(slot, true); // Silent/Background generation
+                } catch (e) {
+                    console.error(`Error generating script for slot ${slot.id}:`, e);
+                    // Continue with next one
+                }
+            }
+
+            setIsGeneratingMassive(false);
+            setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Plan completo y guiones listos!' });
+
         } catch (err) {
             setError(err.message);
             setStep(1);
@@ -888,58 +950,134 @@ export default function DashboardPage() {
             {/* Plan Monthly Mode */}
             {step === 1 && generationMode === 'plan' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800 }}>Tu Planificador Mensual de Contenido</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        <div>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos del mes</p>
-                            <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
-                        </div>
-                        <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {PLATAFORMAS.map(p => (
-                                        <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
-                                    ))}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
+                        {[1, 2].map(w => (
+                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                    color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
+                                }}>
+                                    {planWizardStep > w ? '✓' : w}
                                 </div>
+                                <span style={{ color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: planWizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
+                                    {w === 1 ? 'Ideas Base' : 'Configuración'}
+                                </span>
+                                {w < 2 && <div style={{ width: '40px', height: '2px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
                             </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {FRECUENCIAS.map(f => (
-                                        <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                                {CONTENT_TYPES_PLAN.map(type => (
-                                    <div key={type}>
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
-                                        <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({ ...planContentTypes, [type]: parseInt(e.target.value) || 0 })} style={{ width: '100%', textAlign: 'center' }} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
-                                <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
-                                <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                            <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>← Volver</button>
-                            <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
-                        </div>
-                        {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
+                        ))}
                     </div>
+
+                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center' }}>
+                        {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
+                    </h2>
+
+                    {planWizardStep === 1 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxHeight: '400px', overflowY: 'auto', padding: '10px' }}>
+                                {libIdeas.length > 0 ? libIdeas.map(idea => (
+                                    <div
+                                        key={idea.id}
+                                        onClick={() => {
+                                            if (selectedPlanIdeas.includes(idea.id)) {
+                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
+                                            } else {
+                                                setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '20px',
+                                            background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
+                                            borderRadius: '16px',
+                                            border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
+                                            cursor: 'pointer',
+                                            transition: '0.2s',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
+                                            </div>
+                                        </div>
+                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                            {idea.content?.descripcion || 'Sin descripción'}
+                                        </p>
+                                    </div>
+                                )) : (
+                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
+                                        <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
+                                        <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir a Estrategia →</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
+                                <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) →</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {planWizardStep === 2 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos extra del mes</p>
+                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
+                            </div>
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        {PLATAFORMAS.map(p => (
+                                            <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        {FRECUENCIAS.map(f => (
+                                            <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                                    {CONTENT_TYPES_PLAN.map(type => (
+                                        <div key={type}>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
+                                            <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({ ...planContentTypes, [type]: parseInt(e.target.value) || 0 })} style={{ width: '100%', textAlign: 'center' }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
+                                    <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
+                                    <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                                <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
+                            </div>
+                            {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1336,15 +1474,32 @@ export default function DashboardPage() {
 
             {step === 3 && generationMode === 'plan' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '20px' }}>
+                        <div style={{ flex: 1 }}>
                             <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>Plan de contenido a 30 días</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Haz clic en cada idea para generar su guión con un solo botón.</p>
+                            <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
+                            <button onClick={() => router.push('/dashboard/calendar')} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={16} /> Ver Calendario</button>
+                            <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
                         </div>
                     </div>
+
+                    {isGeneratingMassive && (
+                        <div className="premium-card" style={{ padding: '32px', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Loader2 className="animate-spin" size={20} color="#7ECECA" />
+                                    <h4 style={{ fontWeight: 800 }}>{generationProgress.status}</h4>
+                                </div>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{Math.round((generationProgress.current / generationProgress.total) * 100)}%</span>
+                            </div>
+                            <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%`, height: '100%', background: 'var(--accent-gradient)', transition: '0.3s' }} />
+                            </div>
+                            <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generación.</p>
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {Array.isArray(planSlots) && planSlots.map((slot, i) => (
