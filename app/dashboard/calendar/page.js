@@ -426,21 +426,40 @@ export default function CalendarPage() {
                 .cal-event-list {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 6px;
+                }
+
+                .cal-more-indicator {
+                    font-size: 0.65rem;
+                    color: #666;
+                    padding: 4px 8px;
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 8px;
+                    text-align: center;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: 0.2s;
+                }
+
+                .cal-more-indicator:hover {
+                    background: rgba(255,255,255,0.1);
+                    color: #fff;
                 }
 
                 .cal-event-pill {
                     font-size: 0.7rem;
-                    padding: 5px 8px;
-                    border-radius: 6px;
+                    padding: 8px 10px;
+                    border-radius: 10px;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    font-weight: 600;
+                    gap: 8px;
+                    font-weight: 700;
                     white-space: nowrap;
                     overflow: hidden;
                     border: 1px solid transparent;
                     cursor: grab;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 }
 
                 .cal-event-pill:active {
@@ -448,43 +467,101 @@ export default function CalendarPage() {
                 }
 
                 .cal-event-pill:hover {
-                    transform: translateX(2px);
-                    filter: brightness(1.2);
+                    transform: translateY(-2px) scale(1.02);
+                    filter: brightness(1.1);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                    z-index: 10;
+                    position: relative;
                 }
 
                 .cal-event-pill.note {
-                    background: rgba(255,255,255,0.03);
-                    color: #bbb;
-                    border-color: rgba(255,255,255,0.05);
+                    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+                    color: #ccc;
+                    border: 1px solid rgba(255,255,255,0.1);
                 }
 
                 .cal-event-pill.idea {
-                    background: rgba(183, 77, 255, 0.1);
-                    color: #B74DFF;
-                    border-color: rgba(183, 77, 255, 0.1);
+                    background: linear-gradient(135deg, rgba(157, 0, 255, 0.2) 0%, rgba(157, 0, 255, 0.05) 100%);
+                    color: #d4aaff;
+                    border: 1px solid rgba(157, 0, 255, 0.3);
                 }
 
                 .cal-event-pill.guion {
-                    background: rgba(126, 206, 202, 0.1);
+                    background: linear-gradient(135deg, rgba(126, 206, 202, 0.2) 0%, rgba(126, 206, 202, 0.05) 100%);
                     color: #7ECECA;
-                    border-color: rgba(126, 206, 202, 0.1);
+                    border: 1px solid rgba(126, 206, 202, 0.3);
                 }
 
-                .platform-instagram { background: rgba(225, 48, 108, 0.15) !important; color: #E1306C !important; }
-                .platform-tiktok { background: rgba(0, 242, 255, 0.1) !important; color: #00F3FF !important; border-left: 2px solid #fe2c55 !important; }
-                .platform-youtube { background: rgba(255, 0, 0, 0.1) !important; color: #FF0000 !important; }
-                .platform-linkedin { background: rgba(10, 102, 194, 0.1) !important; color: #0A66C2 !important; }
-                .platform-x { background: rgba(255, 255, 255, 0.1) !important; color: #fff !important; }
-                .platform-facebook { background: rgba(24, 119, 242, 0.1) !important; color: #1877F2 !important; }
+                .cal-event-pill.autoridad {
+                    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%);
+                    color: #FBBF24;
+                    border: 1px solid rgba(245, 158, 11, 0.3);
+                }
+
+                .cal-event-pill.venta {
+                    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%);
+                    color: #FCA5A5;
+                    border: 1px solid rgba(239, 68, 68, 0.3);
+                }
+
+                .cal-event-pill.historia {
+                    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.05) 100%);
+                    color: #4ADE80;
+                    border: 1px solid rgba(34, 197, 94, 0.3);
+                }
+
+                .cal-event-pill.comunidad {
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.05) 100%);
+                    color: #60A5FA;
+                    border: 1px solid rgba(59, 130, 246, 0.3);
+                }
+
+                .platform-instagram { 
+                    background: linear-gradient(135deg, rgba(225, 48, 108, 0.2) 0%, rgba(225, 48, 108, 0.05) 100%) !important; 
+                    color: #FF6B9D !important; 
+                    border: 1px solid rgba(225, 48, 108, 0.3) !important;
+                }
+                .platform-tiktok { 
+                    background: linear-gradient(135deg, rgba(0, 242, 255, 0.15) 0%, rgba(0, 242, 255, 0.05) 100%) !important; 
+                    color: #00F3FF !important; 
+                    border: 1px solid rgba(0, 242, 255, 0.3) !important;
+                }
+                .platform-youtube { 
+                    background: linear-gradient(135deg, rgba(255, 0, 0, 0.15) 0%, rgba(255, 0, 0, 0.05) 100%) !important; 
+                    color: #FF5555 !important; 
+                    border: 1px solid rgba(255, 0, 0, 0.3) !important;
+                }
+                .platform-linkedin { 
+                    background: linear-gradient(135deg, rgba(10, 102, 194, 0.2) 0%, rgba(10, 102, 194, 0.05) 100%) !important; 
+                    color: #4DABF7 !important; 
+                    border: 1px solid rgba(10, 102, 194, 0.3) !important;
+                }
+                .platform-x { 
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%) !important; 
+                    color: #fff !important; 
+                    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                }
+                .platform-facebook { 
+                    background: linear-gradient(135deg, rgba(24, 119, 242, 0.2) 0%, rgba(24, 119, 242, 0.05) 100%) !important; 
+                    color: #74B9FF !important; 
+                    border: 1px solid rgba(24, 119, 242, 0.3) !important;
+                }
+
+                .platform-reels {
+                    background: linear-gradient(135deg, rgba(225, 48, 108, 0.2) 0%, rgba(225, 48, 108, 0.05) 100%) !important;
+                    color: #FF6B9D !important;
+                    border: 1px solid rgba(225, 48, 108, 0.3) !important;
+                }
 
                 @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                 @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
 
                 .pill-dot {
-                    width: 5px;
-                    height: 5px;
+                    width: 6px;
+                    height: 6px;
                     border-radius: 50%;
                     background: currentColor;
+                    flex-shrink: 0;
                 }
 
                 .cal-more-indicator {

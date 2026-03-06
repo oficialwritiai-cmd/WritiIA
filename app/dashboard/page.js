@@ -502,7 +502,7 @@ export default function DashboardPage() {
             setGenerationProgress({ current: slotsWithScripts.length, total: slotsWithScripts.length, status: '¡Plan completo! Enviando al calendario...' });
 
             setTimeout(async () => {
-                await handleSendPlanToCalendar();
+                await handleSendPlanToCalendar(slotsWithScripts);
             }, 1500);
 
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
@@ -727,12 +727,14 @@ export default function DashboardPage() {
 
     const [sendingToCalendar, setSendingToCalendar] = useState(false);
 
-    const handleSendPlanToCalendar = async () => {
+    const handleSendPlanToCalendar = async (slotsToSend = null) => {
+        const slots = slotsToSend || planSlots;
+        
         if (!profile?.id) {
             alert('Error: No hay sesión de usuario');
             return;
         }
-        if (!planSlots || planSlots.length === 0) {
+        if (!slots || slots.length === 0) {
             alert('No hay contenido para enviar al calendario');
             return;
         }
@@ -743,7 +745,7 @@ export default function DashboardPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión');
 
-            const existingPlanId = planSlots[0]?.plan_id;
+            const existingPlanId = slots[0]?.plan_id;
             let planId = existingPlanId;
 
             if (!planId) {
@@ -755,8 +757,8 @@ export default function DashboardPage() {
                         user_id: user.id,
                         month: currentMonth,
                         year: currentYear,
-                        frequency: `${planSlots.length} publicaciones`,
-                        platforms: [...new Set(planSlots.map(s => s.platform))],
+                        frequency: `${slots.length} publicaciones`,
+                        platforms: [...new Set(slots.map(s => s.platform))],
                         focus: 'plan_mensual'
                     })
                     .select()
@@ -768,8 +770,8 @@ export default function DashboardPage() {
 
             const eventsToInsert = [];
 
-            for (let i = 0; i < planSlots.length; i++) {
-                const slot = planSlots[i];
+            for (let i = 0; i < slots.length; i++) {
+                const slot = slots[i];
                 
                 let targetDate = slot.scheduled_date;
                 if (!targetDate) {
@@ -816,9 +818,9 @@ export default function DashboardPage() {
 
             if (eventError) throw eventError;
 
-            setPlanSlots(planSlots.map(s => ({ ...s, sent_to_calendar: true })));
+            setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
 
-            alert(`✅ Plan enviado al calendario: ${planSlots.length} eventos creados`);
+            alert(`✅ Plan enviado al calendario: ${slots.length} eventos creados`);
             router.push('/dashboard/calendar');
 
         } catch (err) {
