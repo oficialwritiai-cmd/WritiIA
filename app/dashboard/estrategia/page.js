@@ -610,8 +610,11 @@ export default function EstrategiaPage() {
 
             setSuccessModalData({
                 title: '¡Plan Calendario Creado!',
-                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}. ¿Quieres ver tu calendario?`,
-                redirectTo: '/dashboard/calendar'
+                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}. ¿Qué quieres hacer ahora?`,
+                redirectTo: '/dashboard/calendar',
+                actionLabel: 'Ver Calendario',
+                secondaryActionLabel: 'Ver en Biblioteca',
+                secondaryActionRedirect: '/dashboard/library'
             });
             setIsSuccessModalOpen(true);
         } catch (err) {
@@ -1102,8 +1105,8 @@ export default function EstrategiaPage() {
                             // Extract fields with fallbacks
                             const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
                             const isSelected = selectedIdeaIds.has(id);
-                            const titulo = idea?.titulo_idea || idea?.titulo || idea?.title || 'Idea sin título';
-                            const desc = idea?.descripcion || idea?.description || '';
+                            const titulo = idea?.titulo_idea || idea?.titulo || idea?.title || idea?.titulo_angulo || 'Idea Estratégica';
+                            const desc = idea?.descripcion || idea?.description || idea?.contenido || '';
 
                             const truncateDesc = (text, maxLen = 100) => {
                                 if (!text) return '';
@@ -1294,7 +1297,7 @@ export default function EstrategiaPage() {
                                         <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{idea.plataforma}</span>
                                         <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Objetivo: {idea.objetivo}</span>
                                     </div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{idea.titulo_idea}</h4>
+                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{idea.titulo_idea || idea.titulo || idea.title || 'Idea Estratégica'}</h4>
                                 </div>
 
                                 <div>
@@ -1348,12 +1351,20 @@ export default function EstrategiaPage() {
                 onClose={() => setIsSuccessModalOpen(false)}
                 title={successModalData.title}
                 message={successModalData.message}
+                actionLabel={successModalData.actionLabel}
                 actionOnClick={() => {
                     setIsSuccessModalOpen(false);
                     if (successModalData.redirectTo) {
                         router.push(successModalData.redirectTo);
                     } else {
                         router.push('/dashboard/library');
+                    }
+                }}
+                secondaryActionLabel={successModalData.secondaryActionLabel}
+                secondaryActionOnClick={() => {
+                    setIsSuccessModalOpen(false);
+                    if (successModalData.secondaryActionRedirect) {
+                        router.push(successModalData.secondaryActionRedirect);
                     }
                 }}
             />

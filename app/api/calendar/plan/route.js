@@ -34,14 +34,19 @@ REGLAS:
 ]
 No añadas texto antes ni después del JSON.`;
 
+        const todayStr = new Date().toISOString().split('T')[0];
+
         const userMessage = `
+FECHA ACTUAL (HOY): ${todayStr}
+INSTRUCCIÓN VITAL: Todas las "fecha_sugerida" DEBEN ser en el año ${new Date().getFullYear()} y a partir de la fecha de hoy. NO planifiques NADA en el pasado.
+
 PERFIL: ${brandBrain?.biography || 'Creador de contenido'}
 ÍTEMS A PLANIFICAR:
 ${items.map(it => `- [ID: ${it.id}] ${it.titulo || it.content?.titulo_idea || 'Sin título'} (${it.platform})`).join('\n')}
 
-Genera la planificación óptima para estos contenidos.`;
+Genera la planificación óptima para estos contenidos asegurando que "fecha_sugerida" sea posterior o igual a ${todayStr}.`;
 
-        console.log(`[CALENDARIO] Solicitando plan inteligente para ${items.length} ítems de usuario ${userId}`);
+        console.log(`[CALENDARIO] Solicitando plan inteligente para ${items.length} ítems desde ${todayStr}`);
 
         const { parsed: schedule } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,

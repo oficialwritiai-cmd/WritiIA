@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, ExternalLink, X } from 'lucide-react';
 
-const SuccessModal = ({ isOpen, onClose, title, message, actionLabel, actionOnClick }) => {
+const SuccessModal = ({ isOpen, onClose, title, message, actionLabel, actionOnClick, secondaryActionLabel, secondaryActionOnClick }) => {
     if (!isOpen) return null;
 
     return (
@@ -91,15 +91,42 @@ const SuccessModal = ({ isOpen, onClose, title, message, actionLabel, actionOnCl
                         <ExternalLink size={18} />
                     </button>
 
+                    {secondaryActionLabel && (
+                        <button
+                            onClick={secondaryActionOnClick}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                color: '#fff',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                padding: '14px 24px',
+                                borderRadius: '12px',
+                                fontWeight: 700,
+                                fontSize: '0.95rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                        >
+                            {secondaryActionLabel}
+                            <ExternalLink size={16} />
+                        </button>
+                    )}
+
                     <button
                         onClick={onClose}
                         style={{
                             background: 'transparent',
                             color: 'rgba(255, 255, 255, 0.5)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '16px 24px',
+                            border: 'none',
+                            padding: '8px 24px',
                             borderRadius: '12px',
-                            fontWeight: 700,
+                            fontWeight: 600,
+                            fontSize: '0.9rem',
                             cursor: 'pointer',
                         }}
                     >
