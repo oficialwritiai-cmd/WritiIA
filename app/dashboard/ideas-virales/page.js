@@ -59,6 +59,10 @@ export default function IdeasViralesPage() {
             setError('Debes seleccionar al menos una plataforma.');
             return;
         }
+        if (!profile?.id) {
+            setError('Cargando perfil... Por favor, espera un momento y vuelve a intentar.');
+            return;
+        }
 
         setLoading(true);
         setError('');
