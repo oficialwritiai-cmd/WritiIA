@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
     ChevronLeft,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export default function CalendarPage() {
+    const router = useRouter();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState([]);
     const [libraryItems, setLibraryItems] = useState([]);
@@ -847,6 +849,9 @@ export default function CalendarPage() {
                                                 <option value="note">Nota</option>
                                                 <option value="idea">Idea</option>
                                                 <option value="guion">Guion</option>
+                                                <option value="viral">Viral</option>
+                                                <option value="authority">Autoridad</option>
+                                                <option value="storytelling">Storytelling</option>
                                             </select>
                                         </div>
                                         <div className="cal-input-group">
@@ -879,7 +884,7 @@ export default function CalendarPage() {
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-                                        {modalStep === 'edit' && (editingEvent?.type === 'idea' || editingEvent?.type === 'note') && !editingEvent?.has_script && (
+                                        {modalStep === 'edit' && (editingEvent?.type !== 'guion') && !editingEvent?.has_script && (
                                             <button
                                                 className="cal-btn-primary"
                                                 style={{
