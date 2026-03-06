@@ -1,4 +1,4 @@
-// Build Version: 2026-03-05-v5 - Force Force v1.6.5 - Gold Spinner Emergency Bypass
+// Build Version: 2026-03-05-v6 - Force v1.6.8 (Calendar + Export Fixes)
 import './globals.css';
 
 export const metadata = {
