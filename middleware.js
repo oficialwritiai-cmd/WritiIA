@@ -54,12 +54,11 @@ export async function middleware(req) {
         }
     );
 
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
+    // Optimized: Use getUser() for security, as it verifies the token on every request
+    const { data: { user } } = await supabase.auth.getUser();
 
-    // If there is no session and the user is trying to access a protected route
-    if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
+    // If there is no user and they're trying to access a protected route
+    if (!user && req.nextUrl.pathname.startsWith('/dashboard')) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = '/login';
         redirectUrl.searchParams.set('redirectedFrom', req.nextUrl.pathname);
