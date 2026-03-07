@@ -57,6 +57,8 @@ export async function POST(request) {
                 .eq('id', userId);
         }
 
+        const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://writi.ai';
+
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ['card'],
@@ -67,8 +69,8 @@ export async function POST(request) {
                 },
             ],
             mode: 'subscription',
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?plan_activated=true`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/settings`,
+            success_url: `${origin}/dashboard?plan_activated=true`,
+            cancel_url: `${origin}/dashboard/settings`,
             client_reference_id: userId,
             metadata: {
                 userId: userId,

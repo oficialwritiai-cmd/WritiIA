@@ -124,6 +124,23 @@ export default function LoginPage() {
                             used_at: now.toISOString()
                         }).eq('id', keyData.id);
                     }
+
+                    if (plan === 'pending') {
+                        try {
+                            const resp = await fetch('/api/stripe/checkout-plan', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id, email: user.email }),
+                            });
+                            const data = await resp.json();
+                            if (data.url) {
+                                window.location.href = data.url;
+                                return;
+                            }
+                        } catch (err) {
+                            console.error('Checkout error:', err);
+                        }
+                    }
                 }
                 router.push('/dashboard');
             } else {

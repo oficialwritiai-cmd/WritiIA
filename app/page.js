@@ -192,8 +192,8 @@ export default function LandingPage() {
                         </button>
                     ) : (
                         <>
-                            <Link href={loginHref} className="lp-btn-login">Login</Link>
-                            <button onClick={handleStart} className="lp-btn-start">Empezar →</button>
+                            <Link href="/login" className="lp-btn-login">Iniciar sesión</Link>
+                            <button onClick={() => router.push('/login?mode=register')} className="lp-btn-start">Registrarse</button>
                         </>
                     )}
                 </div>
