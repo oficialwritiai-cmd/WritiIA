@@ -54,12 +54,12 @@ export default function LoginPage() {
 
         try {
             if (mode === 'register') {
-                if (!accessKey.trim()) throw new Error('Se requiere una llave de acceso para el registro.');
-
-                const isMasterKey = accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY;
+                // Check access key if provided
+                const hasAccessKey = accessKey.trim().length > 0;
+                const isMasterKey = hasAccessKey && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY;
                 let keyData = null;
 
-                if (!isMasterKey) {
+                if (hasAccessKey && !isMasterKey) {
                     const { data, error: keyQueryError } = await supabase
                         .from('access_keys')
                         .select('*')
@@ -99,15 +99,21 @@ export default function LoginPage() {
                     const trialEnds = new Date();
                     trialEnds.setDate(now.getDate() + 7);
 
+                    // New Logic: 
+                    // No key -> plan: 'pending', is_trial_active: false
+                    // Key -> plan: 'trial', is_trial_active: true
+                    const isTrialActive = hasAccessKey;
+                    const plan = isMasterKey ? 'pro' : (hasAccessKey ? 'trial' : 'pending');
+
                     await supabase.from('users_profiles').upsert({
                         id: user.id,
                         email: user.email,
                         name: email.split('@')[0],
-                        plan: isMasterKey ? 'pro' : 'trial',
+                        plan: plan,
                         is_admin: isMasterKey ? true : false,
-                        trial_started_at: now.toISOString(),
-                        trial_ends_at: trialEnds.toISOString(),
-                        is_trial_active: true,
+                        trial_started_at: isTrialActive ? now.toISOString() : null,
+                        trial_ends_at: isTrialActive ? trialEnds.toISOString() : null,
+                        is_trial_active: isTrialActive,
                         created_at: now.toISOString()
                     });
 
@@ -159,7 +165,7 @@ export default function LoginPage() {
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                         {mode === 'login' ? 'Bienvenido al futuro del contenido' :
-                            mode === 'register' ? 'Exclusivo para usuarios con llave beta' :
+                            mode === 'register' ? 'Regístrate y empieza a crear' :
                                 'Recuperar acceso a tu cuenta'}
                     </p>
                 </div>
@@ -212,15 +218,17 @@ export default function LoginPage() {
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {mode === 'register' && (
                             <div>
-                                <span className="script-label">Llave de acceso a la beta</span>
+                                <span className="script-label">Llave Beta (Opcional)</span>
                                 <input
                                     type="text"
                                     className="input-field"
-                                    placeholder="Introduce tu llave especial"
+                                    placeholder="Si tienes una llave, obtendrás 7 días gratis"
                                     value={accessKey}
                                     onChange={(e) => setAccessKey(e.target.value)}
-                                    required
                                 />
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                                    Si no tienes llave, podrás registrarte y adquirir un plan para empezar.
+                                </p>
                             </div>
                         )}
                         <div>
@@ -241,7 +249,7 @@ export default function LoginPage() {
                                     <button
                                         type="button"
                                         onClick={() => setMode('forgot_password')}
-                                        style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}
                                     >
                                         ¿Olvidaste tu contraseña?
                                     </button>
@@ -253,13 +261,13 @@ export default function LoginPage() {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                required={mode !== 'forgot_password'}
+                                required
                                 minLength={6}
                             />
                         </div>
 
                         <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
-                            {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Poner en Marcha WRITI.AI'}
+                            {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Crear mi cuenta'}
                         </button>
                     </form>
                 )}

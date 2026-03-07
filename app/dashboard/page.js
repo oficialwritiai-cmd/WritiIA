@@ -259,6 +259,12 @@ export default function DashboardPage() {
                 body: JSON.stringify(requestBody),
             });
 
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                setStep(1);
+                return;
+            }
+
             const data = await res.json();
             console.log('[Dashboard] Response:', data);
 
@@ -343,6 +349,11 @@ export default function DashboardPage() {
                     userId: profile.id
                 }),
             });
+
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                return;
+            }
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -450,6 +461,12 @@ export default function DashboardPage() {
                 }),
             });
 
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                setStep(1);
+                return;
+            }
+
             if (!res.ok) {
                 const errData = await res.json();
                 throw new Error(errData.error || 'Error al generar el esquema del plan');
@@ -457,11 +474,11 @@ export default function DashboardPage() {
 
             const data = await res.json();
             const slots = data.slots || [];
-            
+
             const today = new Date();
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
-            
+
             const slotsWithDates = slots.map((slot, index) => {
                 let scheduledDate = slot.scheduled_date;
                 if (!scheduledDate) {
@@ -470,7 +487,7 @@ export default function DashboardPage() {
                 }
                 return { ...slot, scheduled_date: scheduledDate };
             });
-            
+
             setPlanSlots(slotsWithDates);
 
             for (const slot of slotsWithDates) {
@@ -644,6 +661,11 @@ export default function DashboardPage() {
                 }),
             });
 
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                return null;
+            }
+
             if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
             console.log('[Dashboard] Generate script response:', data);
@@ -729,7 +751,7 @@ export default function DashboardPage() {
 
     const handleSendPlanToCalendar = async (slotsToSend = null) => {
         const slots = slotsToSend || planSlots;
-        
+
         if (!profile?.id) {
             alert('Error: No hay sesión de usuario');
             return;
@@ -772,7 +794,7 @@ export default function DashboardPage() {
 
             for (let i = 0; i < slots.length; i++) {
                 const slot = slots[i];
-                
+
                 let targetDate = slot.scheduled_date;
                 if (!targetDate) {
                     const slotDate = new Date();
@@ -1109,9 +1131,9 @@ export default function DashboardPage() {
                     <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                         {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
                         {planWizardStep === 1 && (
-                            <button 
-                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} 
-                                className="btn-secondary" 
+                            <button
+                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })}
+                                className="btn-secondary"
                                 style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
                             >
                                 <Search size={16} /> Explorar más ideas
@@ -1665,7 +1687,7 @@ export default function DashboardPage() {
                             <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button 
+                            <button
                                 onClick={async () => {
                                     const hasSentSlots = planSlots.some(s => s.sent_to_calendar);
                                     if (!hasSentSlots && !sendingToCalendar) {
@@ -1673,12 +1695,12 @@ export default function DashboardPage() {
                                     } else {
                                         router.push('/dashboard/calendar');
                                     }
-                                }} 
+                                }}
                                 disabled={sendingToCalendar}
-                                className="btn-primary" 
+                                className="btn-primary"
                                 style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: sendingToCalendar ? 0.7 : 1 }}
                             >
-                                {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />} 
+                                {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />}
                                 {sendingToCalendar ? 'Enviando...' : 'Ver Calendario'}
                             </button>
                             <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
@@ -1866,9 +1888,16 @@ export default function DashboardPage() {
                                                 userId: user?.id
                                             })
                                         });
+
+                                        if (res.status === 402) {
+                                            window.dispatchEvent(new CustomEvent('show-no-credits'));
+                                            setExtraIdeasModal({ ...extraIdeasModal, open: false, loading: false });
+                                            return;
+                                        }
+
                                         const data = await res.json();
                                         if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
-                                        
+
                                         setExtraIdeasModal({
                                             open: false,
                                             ideas: data.ideas || [],

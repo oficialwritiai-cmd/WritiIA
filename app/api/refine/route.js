@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { RefineSchema } from '@/lib/validations';
-import rateLimit from '@/lib/rate-limit';
+import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -11,61 +12,53 @@ const limiter = rateLimit({
 
 export async function POST(request) {
     try {
-        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const ip = (request.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
+
+        let body;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json({ error: 'Cuerpo de solicitud inválido.' }, { status: 400 });
+        }
+
         const resObj = new NextResponse();
         try {
-            await limiter.check(resObj, 25, ip);
-        } catch (rateErr) {
+            const rlKey = buildRateLimitKey(ip, body?.userId);
+            await limiter.check(resObj, 25, rlKey);
+        } catch {
             return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
         }
 
-        const body = await request.json();
         const validation = RefineSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+            return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
         const { text, type, context, userId } = validation.data;
-        const apiKey = process.env.ANTHROPIC_API_KEY;
+        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        if (!userId) {
-            return NextResponse.json({ error: 'No se detectó sesión de usuario.' }, { status: 401 });
-        }
-
-        const cost = 1;
-        const { data: profile, error: creditError } = await supabase
-            .from('users_profiles')
-            .select('credits_balance')
-            .eq('id', userId)
-            .single();
-
-        if (!profile || profile.credits_balance < cost) {
-            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        // Charge Credits (1 credit)
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_text');
+        if (!creditResult.success) {
+            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
         const systemPrompt = `Mejora el ${type} (gancho, desarrollo o cta) de un guion viral.
-Mantén la intención original pero hazlo más claro y potente.
+Mantén la intención original pero hazlo más potente y persuasivo.
 Alineado con: ${context || 'redes sociales'}. 
 Responde SOLO con la versión final mejorada.`;
 
-        const userPrompt = `Texto a mejorar: ${text}`;
-
         const { content: refinedText } = await improveBlockWithHaiku({
-            apiKey,
+            apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
-            userMessage: userPrompt,
+            userMessage: `Texto a mejorar: ${text}`,
         });
 
-        await supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost });
-
         return NextResponse.json({ refinedText: refinedText.trim() });
+
     } catch (err) {
-        console.error('Error en refine:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error('[refine] Error:', err?.message);
+        return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }

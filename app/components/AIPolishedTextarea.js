@@ -32,6 +32,11 @@ export default function AIPolishedTextarea({
                 body: JSON.stringify({ text: value, userId: user?.id }),
             });
 
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                return;
+            }
+
             if (!res.ok) {
                 const errorData = await res.json();
                 throw new Error(errorData.error || 'Error al mejorar el texto');

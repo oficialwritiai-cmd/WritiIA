@@ -1,10 +1,15 @@
-// Build Version: 2026-03-05-v6 - Force v1.6.8 (Calendar + Export Fixes)
+// Build Version: 2026-03-07-v8 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
 import './globals.css';
 
 export const metadata = {
     title: 'WRITI.AI — Genera guiones virales para Reels y TikTok con IA',
     description: 'Genera 5 guiones listos para grabar en 30 segundos. Para creadores y agencias. Prueba gratis sin tarjeta.',
-    viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+};
+
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
 };
 
 // EXTREME CACHE BUSTING FOR VERCEL

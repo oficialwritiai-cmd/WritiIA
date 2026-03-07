@@ -247,6 +247,12 @@ export default function EstrategiaPage() {
                 })
             });
 
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                setLoading(false);
+                return;
+            }
+
             const data = await res.json();
             console.log('[Estrategia] Response:', data);
 

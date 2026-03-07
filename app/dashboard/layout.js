@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Sparkles as SparklesIcon } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 
@@ -178,8 +178,9 @@ export default function DashboardLayout({ children }) {
             profile.subscription_status === 'trialing';
 
         const isTrialStillActive = profile.trial_active && trialDaysRemaining > 0;
+        const isPending = profile.plan === 'pending';
 
-        if (!hasActivePlan && !isTrialStillActive) {
+        if ((!hasActivePlan && !isTrialStillActive) || isPending) {
             router.replace('/dashboard/expired');
         }
     }, [profile, trialDaysRemaining, pathname, loading, router]);

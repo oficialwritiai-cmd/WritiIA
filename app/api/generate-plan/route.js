@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GeneratePlanSchema } from '@/lib/validations';
-import rateLimit from '@/lib/rate-limit';
+import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -11,135 +12,78 @@ const limiter = rateLimit({
 
 export async function POST(request) {
     try {
-        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const ip = (request.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
+
+        let body;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json({ error: 'Cuerpo de solicitud inválido.' }, { status: 400 });
+        }
+
         const resObj = new NextResponse();
         try {
-            await limiter.check(resObj, 5, ip);
-        } catch (rateErr) {
+            const rlKey = buildRateLimitKey(ip, body?.userId);
+            await limiter.check(resObj, 5, rlKey);
+        } catch {
             return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
         }
 
-        const body = await request.json();
         const validation = GeneratePlanSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+            return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { description, platforms, frequency, focus, tone, context, userId, selectedIdeas } = validation.data;
-        const apiKey = process.env.ANTHROPIC_API_KEY;
+        const { description, platforms, frequency, focus, userId, selectedIdeas } = validation.data;
+        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        const cost = 5; // Cost for generating a plan
-        const { data: profile, error: creditError } = await supabase
-            .from('users_profiles')
-            .select('credits_balance')
-            .eq('id', userId)
-            .single();
-
-        if (!profile || profile.credits_balance < cost) {
-            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        // Credit Check & Charge (3 credits)
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_PLAN, 'generate_plan');
+        if (!creditResult.success) {
+            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        let postCount = 12;
-        if (frequency === '4 publicaciones por semana') postCount = 16;
-        if (frequency === '5 publicaciones por semana') postCount = 20;
-        if (frequency === '7 publicaciones por semana') postCount = 28;
-
+        // Fetch Brand Brain
         let brandContextString = '';
         const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
 
         if (brandBrain) {
-            brandContextString = `
-PERFIL DEL CREADOR (Cerebro IA):
-- Bio/Quién es: ${brandBrain.biography || ''}
-- Qué vende/Productos: ${brandBrain.products_services || ''}
-- A quién ayuda: ${brandBrain.audience || ''}
-- Estilo: ${brandBrain.style_words || ''}
-- Tono general: ${brandBrain.values_tone || ''}
-`;
+            brandContextString = `PERFIL: ${brandBrain.biography || ''}. ESTILO: ${brandBrain.style_words || ''}.`;
         } else {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
-        let ideasContextString = '';
-        if (selectedIdeas && selectedIdeas.length > 0) {
-            ideasContextString = `
-IDEAS BASE SELECCIONADAS POR EL USUARIO (Prioridad Máxima):
-${selectedIdeas.map((id, i) => `${i + 1}. ${id}`).join('\n')}
-
-IMPORTANTE: Debes integrar estas ideas obligatoriamente en el plan de 30 días, expandiéndolas y dándoles un ángulo profesional. Los días restantes deben completarse con contenido coherente.
-`;
-        }
-
-        const systemPrompt = `Eres un estratega de contenido premium especializado en planes mensuales agresivos y persuasivos.
-Tu misión es crear piezas que no parezcan escritas por una IA. 
-
-REGLAS DE ORO:
-1. MARCA PERSONAL: Inyecta la voz del creador basándote en su Cerebro IA.
-2. ESTRUCTURA: Los guiones deben ser rápidos, directos y con frases cortas.
-3. CERO CLICHÉS: Prohibido "Hoy te traigo...", "Seguro que...", "En este vídeo...".
-4. Cada día debe tener: plataforma, tipo de contenido (autoridad/historia/venta/comunidad), título de idea, y objetivo específico.
-5. IDEAS BASE: Si el usuario proporciona ideas base, úsalas como núcleo del plan.
-
+        const systemPrompt = `Eres un estratega de contenido premium.
 ${brandContextString}
-${ideasContextString}
+Diseña un PLAN DE CONTENIDO para 30 días. Responde ÚNICAMENTE en JSON array.`;
 
-Diseña un PLAN DE CONTENIDO para 30 días en español.
-Responde ÚNICAMENTE en JSON array:
-[
-  {
-    "dia": 1,
-    "plataforma": "Reels",
-    "tipo_contenido": "autoridad",
-    "titulo_idea": "...",
-    "objetivo": "atraer leads"
-  }
-]`;
+        const userMessage = `Descripción: ${description}. Frecuencia: ${frequency}.`;
 
-        const userMessage = `
-CONTEXTO:
-- Descripción de marca: ${description}
-- Plataformas: ${platforms.join(', ')}
-- Frecuencia: ${frequency}
-- Enfoque: ${focus}
-- Notas adicionales: ${context || 'Ninguna'}
-- Cantidad de posts a generar: ${postCount}
-
-Genera un plan de contenido para 30 días basándote en el contexto y las ideas base proporcionadas (si las hay).`;
-
-        const { parsed: results, usage } = await generateIdeasWithHaiku({
-            apiKey,
+        const { parsed: results } = await generateIdeasWithHaiku({
+            apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
             userMessage,
         });
 
-        const totalTokens = (usage?.input_tokens || 0) + (usage?.output_tokens || 0);
-
-        // Deduct credits and log usage
-        await Promise.all([
-            supabase.rpc('decrement_credits_balance', { u_id: userId, amount: cost }),
-            supabase.from('usage_logs').insert({ user_id: userId, action: 'generate_plan', tokens_used: totalTokens })
-        ]);
-
-        const { data: planData } = await supabase.from('content_plans').insert({
+        const { data: planData, error: planErr } = await supabase.from('content_plans').insert({
             user_id: userId, month: new Date().getMonth() + 1, year: new Date().getFullYear(),
             frequency, platforms, focus
         }).select().single();
+
+        if (planErr) throw planErr;
 
         const slotsToInsert = results.map(r => ({
             plan_id: planData.id, user_id: userId, day_number: Number(r.dia) || 1,
             platform: r.plataforma, content_type: r.tipo_contenido, idea_title: r.titulo_idea, goal: r.objetivo
         }));
 
-        const { data: slotData } = await supabase.from('content_slots').insert(slotsToInsert).select();
+        await supabase.from('content_slots').insert(slotsToInsert);
 
-        return NextResponse.json({ plan: planData, slots: slotData });
+        return NextResponse.json({ plan: planData, slots: results });
+
     } catch (err) {
-        console.error('Error en generate-plan:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error('[generate-plan] Error:', err?.message);
+        return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }

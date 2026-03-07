@@ -1,35 +1,63 @@
+/**
+ * /api/admin/deploy/route.js
+ * 
+ * SECURITY: Admin-only endpoint to trigger a Vercel deployment.
+ * Auth is verified server-side via session JWT (Authorization header),
+ * never via client-supplied userId in the request body.
+ */
+
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import rateLimit from '@/lib/rate-limit';
+import { getServerSession, isAdmin } from '@/lib/auth-guard';
+
+// Extremely tight rate limit for admin actions
+const limiter = rateLimit({
+    interval: 60 * 1000,
+    uniqueTokenPerInterval: 100,
+});
 
 export async function POST(request) {
     try {
-        const { userId } = await request.json();
+        // 1. Rate limit by IP
+        const ip = (request.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
+        const resObj = new NextResponse();
+        try {
+            await limiter.check(resObj, 5, ip); // 5 deploy attempts per minute
+        } catch {
+            return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
+        }
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        // 2. SECURITY: Verify session from JWT header (NOT from request body)
+        const { user, supabase } = await getServerSession(request);
+        if (!user) {
+            return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
+        }
 
-        // Verify admin
-        const { data: profile } = await supabase.from('users_profiles').select('is_admin').eq('id', userId).single();
-
-        if (!profile?.is_admin) {
-            return NextResponse.json({ error: 'No tienes permisos para realizar esta accion.' }, { status: 403 });
+        // 3. Verify admin privileges using the verified user ID
+        const adminCheck = await isAdmin(supabase, user.id);
+        if (!adminCheck) {
+            console.warn(`[SECURITY][Admin] Non-admin user ${user.id} attempted deploy`);
+            return NextResponse.json({ error: 'Acceso denegado.' }, { status: 403 });
         }
 
         const deployHook = process.env.VERCEL_DEPLOY_HOOK;
         if (!deployHook) {
-            return NextResponse.json({ error: 'El Deploy Hook de Vercel no esta configurado en las variables de entorno.' }, { status: 500 });
+            console.error('[admin/deploy] VERCEL_DEPLOY_HOOK not configured');
+            return NextResponse.json({ error: 'Configuración de despliegue no disponible.' }, { status: 500 });
         }
 
         const res = await fetch(deployHook, { method: 'POST' });
 
         if (!res.ok) {
-            throw new Error('Vercel rechazo la solicitud de despliegue.');
+            console.error('[admin/deploy] Vercel rejected deployment request');
+            return NextResponse.json({ error: 'Error al iniciar el despliegue.' }, { status: 500 });
         }
 
+        console.log(`[admin/deploy] Deployment triggered by admin user: ${user.id}`);
         return NextResponse.json({ success: true, message: 'Despliegue iniciado correctamente en Vercel.' });
+
     } catch (err) {
-        console.error('Error en deploy admin:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error('[admin/deploy] Critical error:', err?.message);
+        return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
