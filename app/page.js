@@ -165,39 +165,42 @@ export default function LandingPage() {
     return (
         <div className="landing">
 
-            {/* ═══ TRUST BANNER ═══ */}
-            <div className="lp-trust-banner">
-                <span className="lp-trust-item"><span style={{ color: '#9D00FF' }}>🛡️</span> Cancelación en 1 clic</span>
-                <span className="lp-trust-item"><span style={{ color: '#34d399' }}>🔒</span> Pago seguro vía Stripe</span>
-                <span className="lp-trust-item"><span style={{ color: '#fbbf24' }}>⚡</span> Acceso inmediato</span>
-                <span className="lp-trust-item"><span style={{ color: '#60a5fa' }}>👥</span> +100 creadores activos</span>
-            </div>
-
-            {/* ═══ NAVBAR ═══ */}
-            <nav className={`lp-nav ${scrolled ? 'scrolled' : ''}`}>
-                <Link href="/" className="lp-nav-logo">
-                    <Logo size="1.15rem" />
-                </Link>
-
-                <div className="lp-nav-links">
-                    <a href="#how-it-works" className="lp-nav-link">Cómo funciona</a>
-                    <a href="#features" className="lp-nav-link">Producto</a>
-                    <a href="#pricing" className="lp-nav-link">Pricing</a>
+            {/* ═══ HEADER WRAPPER ═══ */}
+            <header className={`lp-header-wrap ${scrolled ? 'scrolled' : ''}`}>
+                {/* ═══ TRUST BANNER ═══ */}
+                <div className="lp-trust-banner">
+                    <span className="lp-trust-item"><span style={{ color: '#9D00FF' }}>🛡️</span> Cancelación en 1 clic</span>
+                    <span className="lp-trust-item"><span style={{ color: '#34d399' }}>🔒</span> Pago seguro vía Stripe</span>
+                    <span className="lp-trust-item"><span style={{ color: '#fbbf24' }}>⚡</span> Acceso inmediato</span>
+                    <span className="lp-trust-item"><span style={{ color: '#60a5fa' }}>👥</span> +100 creadores activos</span>
                 </div>
 
-                <div className="lp-nav-right">
-                    {user ? (
-                        <button onClick={handleStart} className="lp-btn-start" disabled={loading}>
-                            {loading ? 'Cargando...' : 'Ir a mi Panel →'}
-                        </button>
-                    ) : (
-                        <>
-                            <Link href="/login" className="lp-btn-login">Iniciar sesión</Link>
-                            <button onClick={() => router.push('/login?mode=register')} className="lp-btn-start">Registrarse</button>
-                        </>
-                    )}
-                </div>
-            </nav>
+                {/* ═══ NAVBAR ═══ */}
+                <nav className="lp-nav">
+                    <Link href="/" className="lp-nav-logo">
+                        <Logo size="1.15rem" />
+                    </Link>
+
+                    <div className="lp-nav-links">
+                        <a href="#how-it-works" className="lp-nav-link">Cómo funciona</a>
+                        <a href="#features" className="lp-nav-link">Producto</a>
+                        <a href="#pricing" className="lp-nav-link">Pricing</a>
+                    </div>
+
+                    <div className="lp-nav-right">
+                        {user ? (
+                            <button onClick={handleStart} className="lp-btn-start" disabled={loading}>
+                                {loading ? 'Cargando...' : 'Ir a mi Panel →'}
+                            </button>
+                        ) : (
+                            <>
+                                <Link href="/login" className="lp-btn-login">Iniciar sesión</Link>
+                                <button onClick={() => router.push('/login?mode=register')} className="lp-btn-start">Registrarse</button>
+                            </>
+                        )}
+                    </div>
+                </nav>
+            </header>
 
             {/* ═══ HERO ═══ */}
             <section className="lp-hero">
