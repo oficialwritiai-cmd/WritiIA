@@ -165,6 +165,25 @@ export default function DashboardLayout({ children }) {
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, []);
 
+    // NEW: Enforce access restriction
+    // If trial is over and no plan is active, redirect to /dashboard/expired
+    useEffect(() => {
+        if (loading || !profile || !pathname) return;
+
+        // Permanent ignore paths
+        if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
+
+        const hasActivePlan = profile.plan === 'pro' ||
+            profile.subscription_status === 'active' ||
+            profile.subscription_status === 'trialing';
+
+        const isTrialStillActive = profile.trial_active && trialDaysRemaining > 0;
+
+        if (!hasActivePlan && !isTrialStillActive) {
+            router.replace('/dashboard/expired');
+        }
+    }, [profile, trialDaysRemaining, pathname, loading, router]);
+
     async function handleCheckoutPlan() {
         if (profile?.plan === 'pro') {
             router.push('/dashboard/settings');
