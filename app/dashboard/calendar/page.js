@@ -41,6 +41,18 @@ export default function CalendarPage() {
     const [tempStatus, setTempStatus] = useState('idea');
     const [tempPlatform, setTempPlatform] = useState('General');
     const [tempNotes, setTempNotes] = useState('');
+    const [tempColor, setTempColor] = useState('');
+
+    const THEME_COLORS = [
+        { id: '', hex: '#333333', name: 'Default' },
+        { id: 'purple', hex: '#9D00FF', name: 'Morado' },
+        { id: 'pink', hex: '#EC4899', name: 'Rosa' },
+        { id: 'blue', hex: '#3B82F6', name: 'Azul' },
+        { id: 'green', hex: '#10B981', name: 'Verde' },
+        { id: 'yellow', hex: '#F59E0B', name: 'Amarillo' },
+        { id: 'red', hex: '#EF4444', name: 'Rojo' },
+        { id: 'gray', hex: '#6B7280', name: 'Gris' }
+    ];
 
     // -- Lifecycle --
     useEffect(() => {
@@ -85,6 +97,7 @@ export default function CalendarPage() {
         setTempStatus('idea');
         setTempPlatform('General');
         setTempNotes('');
+        setTempColor('');
         setIsPanelOpen(true);
     };
 
@@ -96,6 +109,7 @@ export default function CalendarPage() {
         setTempStatus(event.status || 'idea');
         setTempPlatform(event.platform || 'General');
         setTempNotes(event.notes || '');
+        setTempColor(event.type || '');
         setIsPanelOpen(true);
     };
 
@@ -109,7 +123,8 @@ export default function CalendarPage() {
             status: tempStatus,
             platform: tempPlatform,
             notes: tempNotes,
-            event_date: selectedDate
+            event_date: selectedDate,
+            type: tempColor
         };
 
         if (selectedEvent) {
@@ -255,9 +270,9 @@ export default function CalendarPage() {
                                 onDragStart={e => onDragStart(e, ev.id)}
                                 onClick={e => handleEventClick(e, ev)}
                                 onContextMenu={e => handleContextMenu(e, ev.id)}
-                                className={`cal-event-pill ${getStatusClass(ev.status)}`}
+                                className={`cal-event-pill ${ev.type ? `theme-${ev.type}` : getStatusClass(ev.status)}`}
                             >
-                                <div className="pill-dot" />
+                                <div className="pill-dot" style={{ display: ev.type ? 'none' : 'block' }} />
                                 <span className="pill-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {ev.title}
                                 </span>
@@ -435,6 +450,22 @@ export default function CalendarPage() {
                                         <option value="rec">En grabación</option>
                                         <option value="pub">Publicado</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div className="cal-prop-row">
+                                <div className="cal-prop-label"><Palette size={16} /> Color</div>
+                                <div className="cal-prop-value">
+                                    <div className="color-picker-group">
+                                        {THEME_COLORS.map(color => (
+                                            <div
+                                                key={color.id}
+                                                className={`color-swatch ${tempColor === color.id ? 'active' : ''}`}
+                                                style={{ background: color.hex }}
+                                                onClick={() => setTempColor(color.id)}
+                                                title={color.name}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -85,7 +85,7 @@
 
 .cal-monthly-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
@@ -94,10 +94,31 @@
 
 .cal-day-cell {
     background: #080808;
-    min-height: 140px;
-    padding: 12px;
+    height: 160px;
+    padding: 10px;
     border: 0.5px solid rgba(255, 255, 255, 0.03);
     transition: background 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.cal-event-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 2px;
+}
+
+.cal-event-wrapper::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cal-event-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
 }
 
 .cal-day-cell:hover {
@@ -108,10 +129,18 @@
     background: rgba(157, 0, 255, 0.03);
 }
 
+.cal-cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
 .cal-day-num {
     font-size: 0.8rem;
     font-weight: 500;
-    color: #444;
+    color: #555;
 }
 
 .today .cal-day-num {
@@ -121,25 +150,32 @@
 
 /* Event Pills */
 .cal-event-pill {
-    margin-top: 4px;
-    padding: 6px 10px;
-    border-radius: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.2s;
     border: 1px solid transparent;
+    width: 100%;
+}
+
+.pill-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 .cal-event-pill:hover {
-    transform: translateX(4px);
     filter: brightness(1.2);
 }
 
-/* Status Colors */
+/* Status Colors (Legacy / Fallback) */
 .status-idea {
     background: rgba(255, 255, 255, 0.05);
     color: #888;
@@ -162,6 +198,76 @@
     background: rgba(52, 211, 153, 0.1);
     color: #34d399;
     border-color: rgba(52, 211, 153, 0.2);
+}
+
+/* Custom Color Themes for Events */
+.theme-purple {
+    background: rgba(157, 0, 255, 0.15) !important;
+    color: #D8B4FF !important;
+    border-color: rgba(157, 0, 255, 0.3) !important;
+}
+
+.theme-pink {
+    background: rgba(236, 72, 153, 0.15) !important;
+    color: #F87171 !important;
+    border-color: rgba(236, 72, 153, 0.3) !important;
+}
+
+.theme-blue {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #93C5FD !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.theme-green {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #6EE7B7 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.theme-yellow {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #FCD34D !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.theme-red {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #FCA5A5 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.theme-gray {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #E5E7EB !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Color Picker UI */
+.color-picker-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.2s;
+    border: 2px solid transparent;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+
+.color-swatch.active {
+    border-color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 /* Right Panel / Drawer (Refined "White Page" in Dark Mode) */
