@@ -59,17 +59,16 @@ export async function POST(req) {
 ${brandContextString}
 
 Genera IDEAS DE CONTENIDO de alto impacto para redes sociales. 
-Responde EXCLUSIVAMENTE con un array JSON válido.
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar:
 
-Format:
 [
   {
-    "titulo": "...",
-    "hook": "...",
-    "descripcion": "...",
-    "plataforma": "...",
-    "tipo_contenido": "...",
-    "cta": "..."
+    "titulo": "Título corto y llamativo",
+    "hook": "Frase gancho para los primeros 3 segundos",
+    "descripcion": "Descripción detallada del contenido",
+    "plataforma": "Reels / TikTok / YouTube Shorts",
+    "tipo_contenido": "Educativo / Entretenimiento / Vlog / Storytelling",
+    "cta": "Llamado a la acción"
   }
 ]`;
 

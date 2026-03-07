@@ -65,7 +65,25 @@ Usa el contexto base para inyectar la personalidad del creador.
 ${brandContextString}
 
 Genera un guion para ${platform} con tono ${tone} e intensidad ${intensity}/5.
-Formato: JSON array obligatorio.`;
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar:
+[
+  {
+    "titulo_guion": "Título llamativo interno",
+    "video_duration": "ej: 45-60 seg",
+    "gancho": "El hook inicial (primeros 3 segundos) muy visual y directo",
+    "desarrollo": [
+      "Punto 1 que desarrolla el hook y da valor",
+      "Punto 2 que mantiene la retención",
+      "Punto 3 o conclusión clave"
+    ],
+    "cierre": "Call to action simple",
+    "copy_post": {
+      "titulo": "Título para el texto del post",
+      "descripcion_larga": "Texto largo, persuasivo y con valor para la descripción del video",
+      "hashtags": ["#tag1", "#tag2", "#tag3"]
+    }
+  }
+]`;
 
         const userMessage = `Tema central: ${topic}`;
 

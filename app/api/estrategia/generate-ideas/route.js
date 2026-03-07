@@ -64,7 +64,20 @@ export async function POST(request) {
         const systemPrompt = `Eres un estratega de contenido de élite.
 ${brandContextString}
 Analiza el objetivo: ${objective}.
-Genera 10 ideas estratégicas en JSON array.`;
+Genera 10 ideas estratégicas.
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar:
+[
+  {
+    "titulo_idea": "Título atractivo de la idea",
+    "descripcion": "Descripción detallada de la idea y cómo ejecutarla",
+    "plataforma": "Plataforma sugerida (ej: Reels, TikTok, YouTube)",
+    "tipo": "Tipo de contenido (ej: Tutorial, Storytelling, Viral)",
+    "por_que_funciona": "Explicación psicológica de por qué esta idea funcionará",
+    "objetivo": "engagement, leads, ventas, etc.",
+    "potencial": "Alto / Medio / Viral",
+    "cta": "Llamado a la acción del post"
+  }
+]`;
 
         const userMessage = 'Genera el Banco de Ideas Estratégicas.';
 
