@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 
 export default function LoginPage() {
-    const [mode, setMode] = useState('login'); // 'login' | 'register'
+    const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot_password'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [accessKey, setAccessKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [mounted, setMounted] = useState(false);
 
     const router = useRouter();
@@ -20,15 +21,36 @@ export default function LoginPage() {
         setMounted(true);
         const params = new URLSearchParams(window.location.search);
         const initialMode = params.get('mode');
-        if (initialMode === 'register' || initialMode === 'login') {
+        if (['register', 'login', 'forgot_password'].includes(initialMode)) {
             setMode(initialMode);
         }
     }, []);
+
+    async function handleResetPassword(e) {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/dashboard/settings`,
+            });
+
+            if (error) throw error;
+            setSuccess('Se ha enviado un enlace de recuperación a tu email.');
+        } catch (err) {
+            setError(err.message || 'Error al enviar el email de recuperación.');
+        } finally {
+            setLoading(false);
+        }
+    }
 
     async function handleSubmit(e) {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
             if (mode === 'register') {
@@ -61,7 +83,6 @@ export default function LoginPage() {
 
                 if (signUpError) {
                     if (signUpError.message.includes('already registered')) {
-                        // If already registered, try to log in instead if using master key
                         if (isMasterKey) {
                             setError('Este email ya existe. Intenta iniciar sesión con tu contraseña.');
                             setMode('login');
@@ -111,8 +132,6 @@ export default function LoginPage() {
                     throw signInError;
                 }
 
-                // If logged in successfully, check if we need to apply master key privileges
-                // This allows the admin to regain status if they login normally
                 if (process.env.NEXT_PUBLIC_MASTER_KEY && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY) {
                     await supabase.from('users_profiles').update({
                         plan: 'pro',
@@ -139,72 +158,114 @@ export default function LoginPage() {
                         <span style={{ color: 'var(--accent)' }}>W</span>RITI.AI
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                        {mode === 'login' ? 'Bienvenido al futuro del contenido' : 'Exclusivo para usuarios con llave beta'}
+                        {mode === 'login' ? 'Bienvenido al futuro del contenido' :
+                            mode === 'register' ? 'Exclusivo para usuarios con llave beta' :
+                                'Recuperar acceso a tu cuenta'}
                     </p>
-                    <div id="antigravity-verify" style={{ display: 'none' }}>v1.7.0.2-PROD</div>
                 </div>
 
-                <div style={{ display: 'flex', background: 'var(--bg-sidebar)', borderRadius: 'var(--radius-md)', padding: '6px', marginBottom: '32px', border: '1px solid var(--border)' }}>
-                    <button
-                        onClick={() => { setMode('login'); setError(''); }}
-                        className={mode === 'login' ? 'btn-primary' : 'btn-secondary'}
-                        style={{ flex: 1, padding: '12px', border: 'none', background: mode === 'login' ? 'var(--accent-gradient)' : 'transparent' }}
-                    >
-                        ACCEDER
-                    </button>
-                    <button
-                        onClick={() => { setMode('register'); setError(''); }}
-                        className={mode === 'register' ? 'btn-primary' : 'btn-secondary'}
-                        style={{ flex: 1, padding: '12px', border: 'none', background: mode === 'register' ? 'var(--accent-gradient)' : 'transparent' }}
-                    >
-                        REGISTRO
-                    </button>
-                </div>
+                {mode !== 'forgot_password' && (
+                    <div style={{ display: 'flex', background: 'var(--bg-sidebar)', borderRadius: 'var(--radius-md)', padding: '6px', marginBottom: '32px', border: '1px solid var(--border)' }}>
+                        <button
+                            onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+                            className={mode === 'login' ? 'btn-primary' : 'btn-secondary'}
+                            style={{ flex: 1, padding: '12px', border: 'none', background: mode === 'login' ? 'var(--accent-gradient)' : 'transparent' }}
+                        >
+                            ACCEDER
+                        </button>
+                        <button
+                            onClick={() => { setMode('register'); setError(''); setSuccess(''); }}
+                            className={mode === 'register' ? 'btn-primary' : 'btn-secondary'}
+                            style={{ flex: 1, padding: '12px', border: 'none', background: mode === 'register' ? 'var(--accent-gradient)' : 'transparent' }}
+                        >
+                            REGISTRO
+                        </button>
+                    </div>
+                )}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {mode === 'register' && (
+                {mode === 'forgot_password' ? (
+                    <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div>
-                            <span className="script-label">Llave de acceso a la beta</span>
+                            <span className="script-label">Email de tu cuenta</span>
                             <input
-                                type="text"
+                                type="email"
                                 className="input-field"
-                                placeholder="Introduce tu llave especial"
-                                value={accessKey}
-                                onChange={(e) => setAccessKey(e.target.value)}
+                                placeholder="nombre@ejemplo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
                         </div>
-                    )}
-                    <div>
-                        <span className="script-label">Email</span>
-                        <input
-                            type="email"
-                            className="input-field"
-                            placeholder="nombre@ejemplo.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <span className="script-label">Contraseña</span>
-                        <input
-                            type="password"
-                            className="input-field"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={6}
-                        />
-                    </div>
+                        <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%' }}>
+                            {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode('login')}
+                            className="btn-secondary"
+                            style={{ background: 'transparent', border: 'none', fontSize: '0.85rem' }}
+                        >
+                            ← Volver al inicio
+                        </button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {mode === 'register' && (
+                            <div>
+                                <span className="script-label">Llave de acceso a la beta</span>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Introduce tu llave especial"
+                                    value={accessKey}
+                                    onChange={(e) => setAccessKey(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <span className="script-label">Email</span>
+                            <input
+                                type="email"
+                                className="input-field"
+                                placeholder="nombre@ejemplo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span className="script-label" style={{ marginBottom: 0 }}>Contraseña</span>
+                                {mode === 'login' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setMode('forgot_password')}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                                    >
+                                        ¿Olvidaste tu contraseña?
+                                    </button>
+                                )}
+                            </div>
+                            <input
+                                type="password"
+                                className="input-field"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required={mode !== 'forgot_password'}
+                                minLength={6}
+                            />
+                        </div>
 
-                    <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
-                        {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Poner en Marcha WRITI.AI'}
-                    </button>
-                </form>
+                        <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
+                            {loading ? 'Procesando...' : mode === 'login' ? 'Entrar al Escritorio' : 'Poner en Marcha WRITI.AI'}
+                        </button>
+                    </form>
+                )}
 
-                {error && <div className="error-message" style={{ textAlign: 'center' }}>{error}</div>}
+                {error && <div className="error-message" style={{ textAlign: 'center', marginTop: '20px' }}>{error}</div>}
+                {success && <div className="success-message" style={{ textAlign: 'center', marginTop: '20px', color: 'var(--accent)' }}>{success}</div>}
             </div>
         </div>
     );
