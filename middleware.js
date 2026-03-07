@@ -65,9 +65,16 @@ export async function middleware(req) {
         return NextResponse.redirect(redirectUrl);
     }
 
+    // Anti-loop for authenticated users trying to go to login
+    if (user && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/auth')) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/dashboard';
+        return NextResponse.redirect(redirectUrl);
+    }
+
     return res;
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*'],
+    matcher: ['/dashboard/:path*', '/login', '/auth'],
 };

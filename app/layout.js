@@ -1,12 +1,12 @@
 // Build Version: 2026-03-07-v8 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
-// Build Version: 2026-03-07-v11 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
+// Build Version: 2026-03-07-v12 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
 import './globals.css';
 
 export const metadata = {
-    title: 'WRITI.AI — Genera guiones virales para Reels y TikTok con IA',
+    title: 'WRITI.AI | De Idea a Guion Viral en Segundos',
     description: 'Genera 5 guiones listos para grabar en 30 segundos. Para creadores y agencias. Prueba gratis sin tarjeta.',
 };
-// v11
+// v12
 export const viewport = {
     themeColor: '#050505',
     width: 'device-width',

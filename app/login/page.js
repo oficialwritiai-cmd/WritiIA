@@ -26,6 +26,25 @@ export default function LoginPage() {
         }
     }, []);
 
+    const handleGoBack = () => {
+        // If there is history and previous page wasn't login/auth itself
+        if (window.history.length > 1 && document.referrer && !document.referrer.includes('/login') && !document.referrer.includes('/auth')) {
+            router.back();
+        } else {
+            router.push('/');
+        }
+    };
+
+    const handleLogoClick = async () => {
+        // If logged in go to dashboard, else landing
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            router.push('/dashboard');
+        } else {
+            router.push('/');
+        }
+    };
+
     async function handleResetPassword(e) {
         e.preventDefault();
         setLoading(true);
@@ -174,10 +193,24 @@ export default function LoginPage() {
     if (!mounted) return null;
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-main)', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-main)', padding: '20px', position: 'relative' }}>
+
+            <button
+                onClick={handleGoBack}
+                style={{ position: 'absolute', top: '24px', left: '24px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600, transition: '0.2s', zIndex: 10 }}
+                onMouseOver={(e) => { e.currentTarget.style.color = '#FFF'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+            >
+                ← Volver
+            </button>
+
             <div className="card" style={{ width: '100%', maxWidth: '440px', padding: '40px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '12px' }}>
+                    <h1
+                        onClick={handleLogoClick}
+                        style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', cursor: 'pointer', display: 'inline-block' }}
+                        title="Ir al Inicio"
+                    >
                         <span style={{ color: 'var(--accent)' }}>W</span>RITI.AI
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>

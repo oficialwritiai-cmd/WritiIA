@@ -184,19 +184,26 @@ h4 {
 /* ── Layout ── */
 .app-layout {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
+  width: 100%;
   overflow: hidden;
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  z-index: 1;
 }
 
 .sidebar {
-  width: 260px; /* Ancho por defecto para desktop */
+  width: 260px;
+  /* Ancho por defecto para desktop */
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 30px 20px;
   gap: 40px;
-  transition: width 0.3s ease; /* Transición para el ancho */
+  transition: width 0.3s ease;
+  /* Transición para el ancho */
 }
 
 @media (max-width: 768px) {
@@ -243,7 +250,7 @@ h4 {
     height: 64px;
   }
 
-  .topbar > div:first-child {
+  .topbar>div:first-child {
     gap: 8px;
   }
 
@@ -255,12 +262,12 @@ h4 {
     display: none;
   }
 
-  .topbar > div:last-child {
+  .topbar>div:last-child {
     gap: 8px;
   }
 
-  .topbar > div:first-child > a,
-  .topbar > div:first-child > div {
+  .topbar>div:first-child>a,
+  .topbar>div:first-child>div {
     display: none;
   }
 }
@@ -269,7 +276,7 @@ h4 {
   .premium-card {
     padding: 16px;
   }
-  
+
   .btn-primary {
     padding: 10px 16px;
     font-size: 0.8rem;
@@ -290,7 +297,8 @@ h4 {
     gap: 24px !important;
   }
 
-  h1, h2 {
+  h1,
+  h2 {
     font-size: 1.5rem !important;
   }
 
@@ -408,13 +416,21 @@ h4 {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
 ::-webkit-scrollbar {
   width: 8px;
 }
