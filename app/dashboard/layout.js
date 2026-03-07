@@ -497,7 +497,7 @@ export default function DashboardLayout({ children }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v1.8.0</span>
+                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v1.8.1</span>
                                 <p style={{
                                     fontWeight: 600,
                                     fontSize: '0.85rem',
