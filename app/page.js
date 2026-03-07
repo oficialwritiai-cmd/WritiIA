@@ -112,31 +112,8 @@ export default function LandingPage() {
     async function handleStart() {
         if (!user) {
             router.push('/login?mode=register');
-            return;
-        }
-
-        // If logged in, trigger direct Stripe Checkout
-        setLoading(true);
-        try {
-            const resp = await fetch('/api/stripe/checkout-plan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    email: user.email,
-                }),
-            });
-            const data = await resp.json();
-            if (data.url) {
-                window.location.href = data.url;
-            } else {
-                router.push('/dashboard');
-            }
-        } catch (err) {
-            console.error('Checkout error:', err);
+        } else {
             router.push('/dashboard');
-        } finally {
-            setLoading(false);
         }
     }
 
@@ -188,7 +165,9 @@ export default function LandingPage() {
                     </div>
 
                     <div className="lp-nav-right">
-                        {user ? (
+                        {!mounted ? (
+                            <div style={{ width: '180px' }}></div>
+                        ) : user ? (
                             <button onClick={handleStart} className="lp-btn-start" disabled={loading}>
                                 {loading ? 'Cargando...' : 'Ir a mi Panel →'}
                             </button>
@@ -246,15 +225,21 @@ export default function LandingPage() {
                     </p>
 
                     <div className="lp-hero-ctas">
-                        <button onClick={handleStart} className="lp-cta-primary" disabled={loading}>
-                            ⚡ {loading ? 'Preparando...' : startLabel}
-                        </button>
-                        <button
-                            className="lp-cta-secondary"
-                            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                        >
-                            ▷ Ver WRITI en acción
-                        </button>
+                        {!mounted ? (
+                            <div style={{ height: '56px' }}></div>
+                        ) : (
+                            <>
+                                <button onClick={handleStart} className="lp-cta-primary" disabled={loading}>
+                                    ⚡ {loading ? 'Preparando...' : startLabel}
+                                </button>
+                                <button
+                                    className="lp-cta-secondary"
+                                    onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                                >
+                                    ▷ Ver WRITI en acción
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
