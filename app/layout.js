@@ -1,5 +1,6 @@
 // Build Version: 2026-03-07-v8 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
-// Build Version: 2026-03-07-v14 - Generador Avanzado (Calidad de Script, Strict CTA, Default 2)
+// Build Version: 2026-03-08-v15 - Generador Pro (v1.10.0) + Sync de Créditos + Duración de Video
+// v1.10.0 - FORCE_REPLOY_2026_03_08_01
 import './globals.css';
 
 export const metadata = {

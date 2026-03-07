@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateScriptSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateScriptsWithSonnet } from '@/lib/anthropic';
-import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
+import { chargeCredits, getScriptCost } from '@/lib/credits';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -36,11 +36,12 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { topic, platform, tone, userId, hookType, intensity, count } = validation.data;
+        const { topic, platform, tone, userId, hookType, intensity, count, videoDuration } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        // Credit Check & Charge (2 credits)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_SCRIPTS, 'generate_scripts');
+        // Credit Check & Charge (Dynamic Cost)
+        const totalCost = getScriptCost(videoDuration, count || 2);
+        const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts');
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -61,36 +62,49 @@ export async function POST(request) {
         }
 
         const systemPrompt = `Eres un estratega de contenido logrando retención masiva y copys virales.
-Usa el contexto base para inyectar la personalidad del creador, responde en lenguaje humano, directo y muy natural. PROHIBIDO sonar genérico (nada de "es importante destacar" o "en este video te enseñaré").
+Usa el contexto base para inyectar la personalidad del creador, responde en lenguaje humano, directo y muy natural. PROHIBIDO sonar genérico (nada de "es importante destacar", "en este video te enseñaré" o frases vacías). Quiero que suenes como una persona joven, directa y auténtica.
+
 ${brandContextString}
 
 OBJETIVOS ESTRICTOS PARA CADA GUION:
-1. Hook: Primeros 3 segundos. DEBE ser fuerte, visual y específico. (Mínimo 10 palabras).
-2. Desarrollo: 3 a 5 frases con ejemplos, microhistorias o detalles específicos.
-3. CTA: Call to action OBLIGATORIO al final, conectado emocionalmente con el objetivo del video (ej: leads, ventas, followers).
+1. Calidad y Estilo:
+   - Hook (Gancho) ultra específico: Los primeros 3 segundos deben ser visuales, impactantes y prometer una transformación o curiosidad extrema. Mínimo 10-15 palabras.
+   - Lenguaje Humano: Usa frases cortas, dinámicas, con ritmo. Evita el tono de "tutorial aburrido".
+   - Desarrollo Real: No des consejos vagos. Da ejemplos, microhistorias o detalles concretos acordes a la duración.
+   - Cierre Emocional: Conecta el tema con la identidad del seguidor antes del CTA.
 
-Genera EXACTAMENTE ${count || 2} guiones distintos para ${platform} con tono ${tone} e intensidad ${intensity}/5.
+2. Duración y Estructura (${videoDuration}):
+   - Si es 30s - 60s: Un solo gancho potente, 3-5 frases de desarrollo clave, CTA rápido.
+   - Si es 90s - 2 min: Gancho, desarrollo con 2-3 puntos detallados, cierre emocional, CTA.
+   - Si es 3 min - 5 min (YouTube): Estructura completa con Introducción, Desarrollo profundo (secciones con ejemplos reales), Conclusión y CTA extendido.
 
-RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar (todas las keys obligatorias):
+3. CTA (Llamada a la Acción): 
+   - SIEMPRE genera un CTA obligatorio al final.
+   - Debe ser relevante al objetivo (leads, ventas, seguimiento, comentario).
+
+Genera EXACTAMENTE ${count || 2} (NI UNO MÁS, NI UNO MENOS) guiones distintos para ${platform} con tono ${tone}, intensidad ${intensity}/5 y duración de ${videoDuration}.
+
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO:
 [
   {
-    "titulo_guion": "Título llamativo interno",
-    "video_duration": "ej: 45-60 seg",
-    "gancho": "El hook inicial. Al menos 10 palabras, muy visual.",
+    "titulo_guion": "Título interno",
+    "video_duration": "${videoDuration}",
+    "gancho": "El hook inicial impactante",
     "desarrollo": [
-      "Punto 1 que desarrolla el hook (nada de frases vacías)",
-      "Punto 2 con detalle o insight específico",
-      "Punto 3 o conclusión clave"
+      "Punto 1 detallado",
+      "Punto 2 detallado",
+      "Punto 3 detallado (añadir más si la duración es larga)"
     ],
-    "cierre": "Cierre natural del tema",
-    "cta": "Llamada a la acción clara, directa y NO VACÍA",
+    "cierre": "Cierre emocional / conexión",
+    "cta": "CTA claro y directo",
     "copy_post": {
-      "titulo": "Título para el texto del post",
-      "descripcion_larga": "Texto largo, persuasivo y con valor para la descripción del video",
+      "titulo": "Título del post",
+      "descripcion_larga": "Texto persuasivo para el pie de foto",
       "hashtags": ["#tag1", "#tag2", "#tag3"]
     }
   }
-]`;
+]
+`;
 
         const userMessage = `Tema central: ${topic}`;
 

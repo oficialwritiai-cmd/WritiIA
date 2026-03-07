@@ -23,6 +23,7 @@ const HOOK_TYPES = ['historia personal', 'pain fuerte', 'contraintuitivo', 'prue
 const FRECUENCIAS = ['3 publicaciones por semana', '4 publicaciones por semana', '5 publicaciones por semana', '7 publicaciones por semana'];
 const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcla equilibrada'];
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
+const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState('single');
@@ -45,6 +46,7 @@ export default function DashboardPage() {
     const [story, setStory] = useState('');
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [intensity, setIntensity] = useState(3);
+    const [videoDuration, setVideoDuration] = useState('60 seg');
 
     // Brain profile
     const [brainProfile, setBrainProfile] = useState(null);
@@ -247,7 +249,8 @@ export default function DashboardPage() {
                 opinion: opinion || '',
                 story: story || '',
                 hookType: hookType || 'question',
-                intensity: intensity || 'medium',
+                intensity: intensity || 3,
+                videoDuration: videoDuration || '60 seg',
                 sourceType: params.get('source_type') || null,
                 sourceReferenceId: params.get('source_reference_id') || null
             };
@@ -446,8 +449,8 @@ export default function DashboardPage() {
                     platforms: planPlatforms,
                     frequency: planFrequency,
                     focus: planFocus,
-                    tone: toneBrand,
-                    context: ideas,
+                    tone: toneBrand || 'Profesional',
+                    videoDuration: videoDuration || '60 seg',
                     userId: profile?.id,
                     selectedIdeas: selectedPlanIdeas.map(id => {
                         if (id.startsWith('extra-')) {
@@ -460,18 +463,6 @@ export default function DashboardPage() {
                     }).filter(Boolean)
                 }),
             });
-
-            if (res.status === 402) {
-                window.dispatchEvent(new CustomEvent('show-no-credits'));
-                setStep(1);
-                return;
-            }
-
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.error || 'Error al generar el esquema del plan');
-            }
-
             const data = await res.json();
             const slots = data.slots || [];
 
@@ -656,6 +647,7 @@ export default function DashboardPage() {
                     tone: toneBrand || 'Profesional',
                     goal: slot.goal,
                     count: 1,
+                    videoDuration: videoDuration || '60 seg',
                     ideas: `Enfoque: ${slot.content_type}`,
                     userId: profile?.id
                 }),
@@ -1041,6 +1033,14 @@ export default function DashboardPage() {
                                     ))}
                                 </div>
                             </div>
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración del video</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {DURACIONES.map(d => (
+                                        <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white', fontWeight: videoDuration === d ? 700 : 400 }}>{d}</button>
+                                    ))}
+                                </div>
+                            </div>
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                 <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle →</button>
@@ -1107,818 +1107,839 @@ export default function DashboardPage() {
             )}
 
             {/* Plan Monthly Mode */}
-            {step === 1 && generationMode === 'plan' && (
-                <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
-                        {[1, 2].map(w => (
-                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                    color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
-                                }}>
-                                    {planWizardStep > w ? '✓' : w}
+            {
+                step === 1 && generationMode === 'plan' && (
+                    <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
+                            {[1, 2].map(w => (
+                                <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                        width: '36px', height: '36px', borderRadius: '50%',
+                                        background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                        color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
+                                    }}>
+                                        {planWizardStep > w ? '✓' : w}
+                                    </div>
+                                    <span style={{ color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: planWizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
+                                        {w === 1 ? 'Ideas Base' : 'Configuración'}
+                                    </span>
+                                    {w < 2 && <div style={{ width: '40px', height: '2px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
                                 </div>
-                                <span style={{ color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: planWizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
-                                    {w === 1 ? 'Ideas Base' : 'Configuración'}
-                                </span>
-                                {w < 2 && <div style={{ width: '40px', height: '2px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-                        {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
+                        <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                            {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
+                            {planWizardStep === 1 && (
+                                <button
+                                    onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })}
+                                    className="btn-secondary"
+                                    style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Search size={16} /> Explorar más ideas
+                                </button>
+                            )}
+                        </h2>
+
                         {planWizardStep === 1 && (
-                            <button
-                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })}
-                                className="btn-secondary"
-                                style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                <Search size={16} /> Explorar más ideas
-                            </button>
-                        )}
-                    </h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                    Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
+                                </p>
 
-                    {planWizardStep === 1 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
-                            </p>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxHeight: '400px', overflowY: 'auto', padding: '10px' }}>
-                                {libIdeas.length > 0 || extraIdeasModal.ideas.length > 0 ? (
-                                    <>
-                                        {extraIdeasModal.ideas.map((idea, idx) => {
-                                            const ideaId = `extra-${idx}`;
-                                            return (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxHeight: '400px', overflowY: 'auto', padding: '10px' }}>
+                                    {libIdeas.length > 0 || extraIdeasModal.ideas.length > 0 ? (
+                                        <>
+                                            {extraIdeasModal.ideas.map((idea, idx) => {
+                                                const ideaId = `extra-${idx}`;
+                                                return (
+                                                    <div
+                                                        key={ideaId}
+                                                        onClick={() => {
+                                                            if (selectedPlanIdeas.includes(ideaId)) {
+                                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
+                                                            } else {
+                                                                setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '20px',
+                                                            background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(157, 0, 255, 0.05)',
+                                                            borderRadius: '16px',
+                                                            border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(157, 0, 255, 0.3)',
+                                                            cursor: 'pointer',
+                                                            transition: '0.2s',
+                                                            position: 'relative'
+                                                        }}
+                                                    >
+                                                        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span style={{ fontSize: '0.65rem', background: '#9D00FF', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>NUEVA</span>
+                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
+                                                            </div>
+                                                        </div>
+                                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
+                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                            {idea.descripcion}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                            {libIdeas.map(idea => (
                                                 <div
-                                                    key={ideaId}
+                                                    key={idea.id}
                                                     onClick={() => {
-                                                        if (selectedPlanIdeas.includes(ideaId)) {
-                                                            setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
+                                                        if (selectedPlanIdeas.includes(idea.id)) {
+                                                            setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
                                                         } else {
-                                                            setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
+                                                            setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
                                                         }
                                                     }}
                                                     style={{
                                                         padding: '20px',
-                                                        background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(157, 0, 255, 0.05)',
+                                                        background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
                                                         borderRadius: '16px',
-                                                        border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(157, 0, 255, 0.3)',
+                                                        border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
                                                         cursor: 'pointer',
                                                         transition: '0.2s',
                                                         position: 'relative'
                                                     }}
                                                 >
-                                                    <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <span style={{ fontSize: '0.65rem', background: '#9D00FF', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>NUEVA</span>
-                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
+                                                    <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
+                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
                                                         </div>
                                                     </div>
-                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
+                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
                                                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                        {idea.descripcion}
+                                                        {idea.content?.descripcion || 'Sin descripción'}
                                                     </p>
                                                 </div>
-                                            );
-                                        })}
-                                        {libIdeas.map(idea => (
-                                            <div
-                                                key={idea.id}
-                                                onClick={() => {
-                                                    if (selectedPlanIdeas.includes(idea.id)) {
-                                                        setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
-                                                    } else {
-                                                        setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
-                                                    }
-                                                }}
-                                                style={{
-                                                    padding: '20px',
-                                                    background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
-                                                    borderRadius: '16px',
-                                                    border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
-                                                    cursor: 'pointer',
-                                                    transition: '0.2s',
-                                                    position: 'relative'
-                                                }}
-                                            >
-                                                <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
-                                                    <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
-                                                    </div>
-                                                </div>
-                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
-                                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                    {idea.content?.descripcion || 'Sin descripción'}
-                                                </p>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
+                                            <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
+                                            <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir a Estrategia →</button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                    <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
+                                    <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) →</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {planWizardStep === 2 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos extra del mes</p>
+                                    <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
+                                </div>
+                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                            {PLATAFORMAS.map(p => (
+                                                <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                            {FRECUENCIAS.map(f => (
+                                                <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                                        {CONTENT_TYPES_PLAN.map(type => (
+                                            <div key={type}>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
+                                                <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({ ...planContentTypes, [type]: parseInt(e.target.value) || 0 })} style={{ width: '100%', textAlign: 'center' }} />
                                             </div>
                                         ))}
-                                    </>
-                                ) : (
-                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
-                                        <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
-                                        <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir a Estrategia →</button>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
+                                        <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
+                                        <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
+                                    </div>
+                                </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
-                                <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) →</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {planWizardStep === 2 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos extra del mes</p>
-                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
-                            </div>
-                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración de los videos</p>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                        {PLATAFORMAS.map(p => (
-                                            <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                        {DURACIONES.map(d => (
+                                            <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white' }}>{d}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                        {FRECUENCIAS.map(f => (
-                                            <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                                    {CONTENT_TYPES_PLAN.map(type => (
-                                        <div key={type}>
-                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
-                                            <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({ ...planContentTypes, [type]: parseInt(e.target.value) || 0 })} style={{ width: '100%', textAlign: 'center' }} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
-                                    <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
-                                    <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
-                                </div>
-                            </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                                <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
-                                <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
+                                <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                    <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
+                                </div>
+                                {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                             </div>
-                            {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {step === 2 && (
-                <GenerationProgress
-                    steps={loadingSteps}
-                    currentPhase={loadingPhase}
-                    brainName={hasBrain ? (brainName || 'perfil configurado') : null}
-                    subtitle="Esto suele tomar entre 15 y 30 segundos..."
-                />
-            )}
-
-            {step === 3 && generationMode === 'single' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '100px' }}>
-                    {/* Header Editor */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Editor de Guiones</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '0.95rem' }}>
-                                Ajusta cada gancho, desarrollo y CTA a tu estilo. Usa IA solo donde la necesitas.
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem' }}>
-                                <RefreshCcw size={16} /> Volver
-                            </button>
-                            <button onClick={handleSaveAll} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}>
-                                Guardar todos
-                            </button>
-                        </div>
+                        )}
                     </div>
+                )
+            }
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        {Array.isArray(scripts) && scripts.map((s, i) => (
-                            <div key={i} className="premium-card" style={{
-                                padding: '0',
-                                background: '#101010',
-                                border: '1px solid #1E1E1E',
-                                borderRadius: '16px',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-                            }}>
-                                {/* Card Header */}
-                                <div style={{
-                                    padding: '20px 32px',
-                                    borderBottom: '1px solid #1E1E1E',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    background: 'rgba(255,255,255,0.02)'
+            {
+                step === 2 && (
+                    <GenerationProgress
+                        steps={loadingSteps}
+                        currentPhase={loadingPhase}
+                        brainName={hasBrain ? (brainName || 'perfil configurado') : null}
+                        subtitle="Esto suele tomar entre 15 y 30 segundos..."
+                    />
+                )
+            }
+
+            {
+                step === 3 && generationMode === 'single' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '100px' }}>
+                        {/* Header Editor */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>Editor de Guiones</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '0.95rem' }}>
+                                    Ajusta cada gancho, desarrollo y CTA a tu estilo. Usa IA solo donde la necesitas.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem' }}>
+                                    <RefreshCcw size={16} /> Volver
+                                </button>
+                                <button onClick={handleSaveAll} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}>
+                                    Guardar todos
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            {Array.isArray(scripts) && scripts.map((s, i) => (
+                                <div key={i} className="premium-card" style={{
+                                    padding: '0',
+                                    background: '#101010',
+                                    border: '1px solid #1E1E1E',
+                                    borderRadius: '16px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
                                 }}>
-                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                                        <div style={{
-                                            width: '28px',
-                                            height: '28px',
-                                            borderRadius: '50%',
-                                            background: 'var(--accent-gradient)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#000',
-                                            fontWeight: 900,
-                                            fontSize: '0.8rem'
-                                        }}>
-                                            #{i + 1}
+                                    {/* Card Header */}
+                                    <div style={{
+                                        padding: '20px 32px',
+                                        borderBottom: '1px solid #1E1E1E',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        background: 'rgba(255,255,255,0.02)'
+                                    }}>
+                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                background: 'var(--accent-gradient)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#000',
+                                                fontWeight: 900,
+                                                fontSize: '0.8rem'
+                                            }}>
+                                                #{i + 1}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <input
+                                                    value={s.titulo_guion || s.titulo_angulo || `Guion #${i + 1}`}
+                                                    onChange={(e) => {
+                                                        const news = [...scripts];
+                                                        news[i].titulo_guion = e.target.value;
+                                                        setScripts(news);
+                                                    }}
+                                                    placeholder="Título del guion..."
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        borderBottom: '1px dashed rgba(255,255,255,0.2)',
+                                                        color: '#fff',
+                                                        fontSize: '1.2rem',
+                                                        fontWeight: 800,
+                                                        width: '100%',
+                                                        outline: 'none',
+                                                        padding: '4px 0'
+                                                    }}
+                                                />
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
+                                                        <Loader2 size={12} className="animate-spin" />
+                                                        <input
+                                                            value={s.video_duration || '45-60 seg'}
+                                                            onChange={(e) => {
+                                                                const news = [...scripts];
+                                                                news[i].video_duration = e.target.value;
+                                                                setScripts(news);
+                                                            }}
+                                                            style={{ background: 'transparent', border: 'none', color: 'inherit', width: '80px', fontSize: 'inherit', fontWeight: 'inherit', padding: 0, outline: 'none' }}
+                                                        />
+                                                    </div>
+                                                    <span className="badge" style={{
+                                                        background: 'rgba(255, 255, 255, 0.05)',
+                                                        color: 'rgba(255,255,255,0.6)',
+                                                        fontSize: '0.7rem',
+                                                        padding: '4px 10px',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>{platform}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <input
-                                                value={s.titulo_guion || s.titulo_angulo || `Guion #${i + 1}`}
+                                    </div>
+
+                                    {/* Card Body */}
+                                    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+                                        {/* GANCHO */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>GANCHO</label>
+                                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                    {previousScripts && (
+                                                        <button onClick={handleUndo} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Deshacer</button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleRefineBlock(i, 'gancho')}
+                                                        disabled={refiningBlock === `${i}-gancho`}
+                                                        title="Mejorar gancho con IA"
+                                                        style={{
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '50%',
+                                                            background: refiningBlock === `${i}-gancho` ? 'transparent' : 'rgba(126, 206, 202, 0.1)',
+                                                            color: '#7ECECA',
+                                                            border: refiningBlock === `${i}-gancho` ? 'none' : '1px solid rgba(126, 206, 202, 0.2)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            transition: '0.2s'
+                                                        }}
+                                                    >
+                                                        {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <textarea
+                                                value={s.hook || s.gancho || ''}
+                                                disabled={refiningBlock === `${i}-gancho`}
                                                 onChange={(e) => {
                                                     const news = [...scripts];
-                                                    news[i].titulo_guion = e.target.value;
+                                                    news[i].hook = e.target.value;
+                                                    news[i].gancho = e.target.value;
                                                     setScripts(news);
                                                 }}
-                                                placeholder="Título del guion..."
+                                                className="textarea-field"
                                                 style={{
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    borderBottom: '1px dashed rgba(255,255,255,0.2)',
-                                                    color: '#fff',
-                                                    fontSize: '1.2rem',
-                                                    fontWeight: 800,
-                                                    width: '100%',
-                                                    outline: 'none',
-                                                    padding: '4px 0'
+                                                    minHeight: '80px',
+                                                    fontSize: '1.25rem',
+                                                    fontWeight: 700,
+                                                    background: '#080808',
+                                                    border: '1px solid #1E1E1E',
+                                                    fontFamily: 'monospace',
+                                                    padding: '20px',
+                                                    transition: '0.3s'
                                                 }}
                                             />
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
-                                                    <Loader2 size={12} className="animate-spin" />
-                                                    <input
-                                                        value={s.video_duration || '45-60 seg'}
-                                                        onChange={(e) => {
-                                                            const news = [...scripts];
-                                                            news[i].video_duration = e.target.value;
-                                                            setScripts(news);
-                                                        }}
-                                                        style={{ background: 'transparent', border: 'none', color: 'inherit', width: '80px', fontSize: 'inherit', fontWeight: 'inherit', padding: 0, outline: 'none' }}
-                                                    />
-                                                </div>
-                                                <span className="badge" style={{
-                                                    background: 'rgba(255, 255, 255, 0.05)',
-                                                    color: 'rgba(255,255,255,0.6)',
-                                                    fontSize: '0.7rem',
-                                                    padding: '4px 10px',
-                                                    whiteSpace: 'nowrap'
-                                                }}>{platform}</span>
+                                            {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>Versión mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
+                                        </div>
+
+                                        {/* DESARROLLO (3 PUNTOS) */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO (3 PUNTOS ACCIONABLES)</label>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                {Array.isArray(s.desarrollo) && [0, 1, 2].map(idx => (
+                                                    <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                                        <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>0{idx + 1}</div>
+                                                        <div style={{ flex: 1, position: 'relative' }}>
+                                                            <textarea
+                                                                value={s.desarrollo[idx] || ''}
+                                                                disabled={refiningBlock === `${i}-punto${idx + 1}`}
+                                                                onChange={(e) => {
+                                                                    const news = [...scripts];
+                                                                    if (!Array.isArray(news[i].desarrollo)) news[i].desarrollo = ['', '', ''];
+                                                                    news[i].desarrollo[idx] = e.target.value;
+                                                                    setScripts(news);
+                                                                }}
+                                                                className="textarea-field"
+                                                                style={{
+                                                                    minHeight: '60px',
+                                                                    fontSize: '0.95rem',
+                                                                    background: '#080808',
+                                                                    border: '1px solid #1E1E1E',
+                                                                    padding: '12px 48px 12px 16px'
+                                                                }}
+                                                            />
+                                                            <button
+                                                                onClick={() => handleRefineBlock(i, `punto${idx + 1}`)}
+                                                                disabled={refiningBlock === `${i}-punto${idx + 1}`}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    right: '12px',
+                                                                    top: '12px',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    color: '#7ECECA',
+                                                                    cursor: 'pointer',
+                                                                    opacity: 0.6
+                                                                }}
+                                                            >
+                                                                {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
 
-                                {/* Card Body */}
-                                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-                                    {/* GANCHO */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>GANCHO</label>
-                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                {previousScripts && (
-                                                    <button onClick={handleUndo} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Deshacer</button>
-                                                )}
+                                        {/* CTA */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÓN (CTA)</label>
                                                 <button
-                                                    onClick={() => handleRefineBlock(i, 'gancho')}
-                                                    disabled={refiningBlock === `${i}-gancho`}
-                                                    title="Mejorar gancho con IA"
+                                                    onClick={() => handleRefineBlock(i, 'cta')}
+                                                    disabled={refiningBlock === `${i}-cta`}
                                                     style={{
                                                         width: '32px',
                                                         height: '32px',
                                                         borderRadius: '50%',
-                                                        background: refiningBlock === `${i}-gancho` ? 'transparent' : 'rgba(126, 206, 202, 0.1)',
+                                                        background: 'rgba(126, 206, 202, 0.1)',
                                                         color: '#7ECECA',
-                                                        border: refiningBlock === `${i}-gancho` ? 'none' : '1px solid rgba(126, 206, 202, 0.2)',
+                                                        border: '1px solid rgba(126, 206, 202, 0.2)',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        transition: '0.2s'
+                                                        cursor: 'pointer'
                                                     }}
                                                 >
-                                                    {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                                    {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                 </button>
                                             </div>
-                                        </div>
-                                        <textarea
-                                            value={s.hook || s.gancho || ''}
-                                            disabled={refiningBlock === `${i}-gancho`}
-                                            onChange={(e) => {
-                                                const news = [...scripts];
-                                                news[i].hook = e.target.value;
-                                                news[i].gancho = e.target.value;
-                                                setScripts(news);
-                                            }}
-                                            className="textarea-field"
-                                            style={{
-                                                minHeight: '80px',
-                                                fontSize: '1.25rem',
-                                                fontWeight: 700,
-                                                background: '#080808',
-                                                border: '1px solid #1E1E1E',
-                                                fontFamily: 'monospace',
-                                                padding: '20px',
-                                                transition: '0.3s'
-                                            }}
-                                        />
-                                        {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>Versión mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
-                                    </div>
-
-                                    {/* DESARROLLO (3 PUNTOS) */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO (3 PUNTOS ACCIONABLES)</label>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {Array.isArray(s.desarrollo) && [0, 1, 2].map(idx => (
-                                                <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                                    <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>0{idx + 1}</div>
-                                                    <div style={{ flex: 1, position: 'relative' }}>
-                                                        <textarea
-                                                            value={s.desarrollo[idx] || ''}
-                                                            disabled={refiningBlock === `${i}-punto${idx + 1}`}
-                                                            onChange={(e) => {
-                                                                const news = [...scripts];
-                                                                if (!Array.isArray(news[i].desarrollo)) news[i].desarrollo = ['', '', ''];
-                                                                news[i].desarrollo[idx] = e.target.value;
-                                                                setScripts(news);
-                                                            }}
-                                                            className="textarea-field"
-                                                            style={{
-                                                                minHeight: '60px',
-                                                                fontSize: '0.95rem',
-                                                                background: '#080808',
-                                                                border: '1px solid #1E1E1E',
-                                                                padding: '12px 48px 12px 16px'
-                                                            }}
-                                                        />
-                                                        <button
-                                                            onClick={() => handleRefineBlock(i, `punto${idx + 1}`)}
-                                                            disabled={refiningBlock === `${i}-punto${idx + 1}`}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                right: '12px',
-                                                                top: '12px',
-                                                                background: 'transparent',
-                                                                border: 'none',
-                                                                color: '#7ECECA',
-                                                                cursor: 'pointer',
-                                                                opacity: 0.6
-                                                            }}
-                                                        >
-                                                            {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* CTA */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÓN (CTA)</label>
-                                            <button
-                                                onClick={() => handleRefineBlock(i, 'cta')}
-                                                disabled={refiningBlock === `${i}-cta`}
-                                                style={{
-                                                    width: '32px',
-                                                    height: '32px',
-                                                    borderRadius: '50%',
-                                                    background: 'rgba(126, 206, 202, 0.1)',
-                                                    color: '#7ECECA',
-                                                    border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                                            </button>
-                                        </div>
-                                        <input
-                                            value={s.cta}
-                                            disabled={refiningBlock === `${i}-cta`}
-                                            onChange={(e) => {
-                                                const news = [...scripts];
-                                                news[i].cta = e.target.value;
-                                                setScripts(news);
-                                            }}
-                                            className="input-field"
-                                            style={{
-                                                fontSize: '1rem',
-                                                fontWeight: 600,
-                                                background: '#080808',
-                                                border: '1px solid #1E1E1E',
-                                                padding: '16px'
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* CIERRE */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>CIERRE / REMATE</label>
-                                        <textarea
-                                            value={s.cierre || ''}
-                                            onChange={(e) => {
-                                                const news = [...scripts];
-                                                news[i].cierre = e.target.value;
-                                                setScripts(news);
-                                            }}
-                                            className="textarea-field"
-                                            style={{
-                                                minHeight: '60px',
-                                                fontSize: '1rem',
-                                                background: '#080808',
-                                                border: '1px solid #1E1E1E',
-                                                padding: '16px'
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* COPY DEL POST */}
-                                    <div style={{
-                                        marginTop: '20px',
-                                        padding: '32px',
-                                        background: 'rgba(126, 206, 202, 0.03)',
-                                        borderRadius: '24px',
-                                        border: '1px solid rgba(126, 206, 202, 0.1)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '24px'
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <PenLine size={20} color="#7ECECA" />
-                                            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7ECECA' }}>Copy para publicación</h4>
-                                        </div>
-
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>TÍTULO DEL POST</label>
                                             <input
-                                                value={s.copy_post?.titulo || ''}
+                                                value={s.cta}
+                                                disabled={refiningBlock === `${i}-cta`}
                                                 onChange={(e) => {
                                                     const news = [...scripts];
-                                                    if (!news[i].copy_post) news[i].copy_post = {};
-                                                    news[i].copy_post.titulo = e.target.value;
+                                                    news[i].cta = e.target.value;
                                                     setScripts(news);
                                                 }}
                                                 className="input-field"
-                                                style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                                style={{
+                                                    fontSize: '1rem',
+                                                    fontWeight: 600,
+                                                    background: '#080808',
+                                                    border: '1px solid #1E1E1E',
+                                                    padding: '16px'
+                                                }}
                                             />
                                         </div>
 
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>DESCRIPCIÓN LARGA / CAPTION</label>
+                                        {/* CIERRE */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>CIERRE / REMATE</label>
                                             <textarea
-                                                value={s.copy_post?.descripcion_larga || ''}
+                                                value={s.cierre || ''}
                                                 onChange={(e) => {
                                                     const news = [...scripts];
-                                                    if (!news[i].copy_post) news[i].copy_post = {};
-                                                    news[i].copy_post.descripcion_larga = e.target.value;
+                                                    news[i].cierre = e.target.value;
                                                     setScripts(news);
                                                 }}
                                                 className="textarea-field"
-                                                style={{ minHeight: '120px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                                style={{
+                                                    minHeight: '60px',
+                                                    fontSize: '1rem',
+                                                    background: '#080808',
+                                                    border: '1px solid #1E1E1E',
+                                                    padding: '16px'
+                                                }}
                                             />
                                         </div>
 
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '12px', display: 'block' }}>HASHTAGS RECOMENDADOS</label>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                                {s.copy_post?.hashtags?.map((tag, tidx) => (
-                                                    <span key={tidx} style={{
-                                                        fontSize: '0.75rem',
-                                                        background: 'rgba(126, 206, 202, 0.1)',
-                                                        color: '#7ECECA',
-                                                        padding: '4px 12px',
-                                                        borderRadius: '100px',
-                                                        border: '1px solid rgba(126, 206, 202, 0.2)'
-                                                    }}>
-                                                        #{tag}
-                                                    </span>
-                                                ))}
+                                        {/* COPY DEL POST */}
+                                        <div style={{
+                                            marginTop: '20px',
+                                            padding: '32px',
+                                            background: 'rgba(126, 206, 202, 0.03)',
+                                            borderRadius: '24px',
+                                            border: '1px solid rgba(126, 206, 202, 0.1)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '24px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <PenLine size={20} color="#7ECECA" />
+                                                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7ECECA' }}>Copy para publicación</h4>
+                                            </div>
+
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>TÍTULO DEL POST</label>
+                                                <input
+                                                    value={s.copy_post?.titulo || ''}
+                                                    onChange={(e) => {
+                                                        const news = [...scripts];
+                                                        if (!news[i].copy_post) news[i].copy_post = {};
+                                                        news[i].copy_post.titulo = e.target.value;
+                                                        setScripts(news);
+                                                    }}
+                                                    className="input-field"
+                                                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>DESCRIPCIÓN LARGA / CAPTION</label>
+                                                <textarea
+                                                    value={s.copy_post?.descripcion_larga || ''}
+                                                    onChange={(e) => {
+                                                        const news = [...scripts];
+                                                        if (!news[i].copy_post) news[i].copy_post = {};
+                                                        news[i].copy_post.descripcion_larga = e.target.value;
+                                                        setScripts(news);
+                                                    }}
+                                                    className="textarea-field"
+                                                    style={{ minHeight: '120px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(126, 206, 202, 0.2)' }}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '12px', display: 'block' }}>HASHTAGS RECOMENDADOS</label>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                    {s.copy_post?.hashtags?.map((tag, tidx) => (
+                                                        <span key={tidx} style={{
+                                                            fontSize: '0.75rem',
+                                                            background: 'rgba(126, 206, 202, 0.1)',
+                                                            color: '#7ECECA',
+                                                            padding: '4px 12px',
+                                                            borderRadius: '100px',
+                                                            border: '1px solid rgba(126, 206, 202, 0.2)'
+                                                        }}>
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Card Footer */}
-                                <div style={{
-                                    padding: '20px 32px',
-                                    background: 'rgba(255,255,255,0.01)',
-                                    borderTop: '1px solid #1E1E1E',
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    gap: '12px'
-                                }}>
-                                    {[
-                                        { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
-                                        {
-                                            icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle2 size={16} color="#7ECECA" /> : <Bookmark size={16} />,
-                                            label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar',
-                                            action: () => handleSaveScript(s)
-                                        },
-                                        { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
-                                        { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
-                                    ].map((btn, bidx) => (
-                                        <button
-                                            key={bidx}
-                                            onClick={btn.action}
-                                            className="btn-secondary"
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                fontSize: '0.75rem',
-                                                padding: '8px 14px',
-                                                background: btn.label === 'Guardado' ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
-                                                border: '1px solid #2A2A2A',
-                                                color: btn.label === 'Guardado' ? '#7ECECA' : 'rgba(255,255,255,0.6)'
-                                            }}
-                                        >
-                                            {btn.icon} {btn.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-
-            {step === 3 && generationMode === 'plan' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '20px' }}>
-                        <div style={{ flex: 1 }}>
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>Plan de contenido a 30 días</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button
-                                onClick={async () => {
-                                    const hasSentSlots = planSlots.some(s => s.sent_to_calendar);
-                                    if (!hasSentSlots && !sendingToCalendar) {
-                                        await handleSendPlanToCalendar();
-                                    } else {
-                                        router.push('/dashboard/calendar');
-                                    }
-                                }}
-                                disabled={sendingToCalendar}
-                                className="btn-primary"
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: sendingToCalendar ? 0.7 : 1 }}
-                            >
-                                {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />}
-                                {sendingToCalendar ? 'Enviando...' : 'Ver Calendario'}
-                            </button>
-                            <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
-                        </div>
-                    </div>
-
-                    {isGeneratingMassive && (
-                        <div className="premium-card" style={{ padding: '32px', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', marginBottom: '24px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <Loader2 className="animate-spin" size={20} color="#7ECECA" />
-                                    <h4 style={{ fontWeight: 800 }}>{generationProgress.status}</h4>
-                                </div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{Math.round((generationProgress.current / generationProgress.total) * 100)}%</span>
-                            </div>
-                            <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
-                                <div style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%`, height: '100%', background: 'var(--accent-gradient)', transition: '0.3s' }} />
-                            </div>
-                            <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generación.</p>
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {Array.isArray(planSlots) && planSlots.map((slot, i) => (
-                            <div key={slot.id} className="premium-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: slot.has_script ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)' }}>
-                                <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', minWidth: '60px', height: '60px' }}>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase' }}>DÍA</span>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{slot.day_number}</span>
+                                    {/* Card Footer */}
+                                    <div style={{
+                                        padding: '20px 32px',
+                                        background: 'rgba(255,255,255,0.01)',
+                                        borderTop: '1px solid #1E1E1E',
+                                        display: 'flex',
+                                        justifyContent: 'flex-end',
+                                        gap: '12px'
+                                    }}>
+                                        {[
+                                            { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
+                                            {
+                                                icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle2 size={16} color="#7ECECA" /> : <Bookmark size={16} />,
+                                                label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar',
+                                                action: () => handleSaveScript(s)
+                                            },
+                                            { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
+                                            { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
+                                        ].map((btn, bidx) => (
+                                            <button
+                                                key={bidx}
+                                                onClick={btn.action}
+                                                className="btn-secondary"
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    fontSize: '0.75rem',
+                                                    padding: '8px 14px',
+                                                    background: btn.label === 'Guardado' ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
+                                                    border: '1px solid #2A2A2A',
+                                                    color: btn.label === 'Guardado' ? '#7ECECA' : 'rgba(255,255,255,0.6)'
+                                                }}
+                                            >
+                                                {btn.icon} {btn.label}
+                                            </button>
+                                        ))}
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            }
 
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{slot.platform}</span>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}> Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
-                                            {slot.has_script && (
-                                                <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid #00ff00' }}>✓ Guión Listo</span>
-                                            )}
+
+            {
+                step === 3 && generationMode === 'plan' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '20px' }}>
+                            <div style={{ flex: 1 }}>
+                                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>Plan de contenido a 30 días</h2>
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button
+                                    onClick={async () => {
+                                        const hasSentSlots = planSlots.some(s => s.sent_to_calendar);
+                                        if (!hasSentSlots && !sendingToCalendar) {
+                                            await handleSendPlanToCalendar();
+                                        } else {
+                                            router.push('/dashboard/calendar');
+                                        }
+                                    }}
+                                    disabled={sendingToCalendar}
+                                    className="btn-primary"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: sendingToCalendar ? 0.7 : 1 }}
+                                >
+                                    {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />}
+                                    {sendingToCalendar ? 'Enviando...' : 'Ver Calendario'}
+                                </button>
+                                <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
+                            </div>
+                        </div>
+
+                        {isGeneratingMassive && (
+                            <div className="premium-card" style={{ padding: '32px', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <Loader2 className="animate-spin" size={20} color="#7ECECA" />
+                                        <h4 style={{ fontWeight: 800 }}>{generationProgress.status}</h4>
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{Math.round((generationProgress.current / generationProgress.total) * 100)}%</span>
+                                </div>
+                                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%`, height: '100%', background: 'var(--accent-gradient)', transition: '0.3s' }} />
+                                </div>
+                                <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generación.</p>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {Array.isArray(planSlots) && planSlots.map((slot, i) => (
+                                <div key={slot.id} className="premium-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: slot.has_script ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)' }}>
+                                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', minWidth: '60px', height: '60px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase' }}>DÍA</span>
+                                            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{slot.day_number}</span>
                                         </div>
-                                        <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', marginTop: '4px' }}>{slot.idea_title}</h4>
-                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Enfoque: {slot.content_type}</p>
-                                    </div>
 
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', paddingLeft: '24px', borderLeft: '1px solid rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                        <Calendar size={14} color="var(--text-secondary)" />
-                                        <input
-                                            type="date"
-                                            value={slot.scheduled_date || ''}
-                                            onChange={(e) => handleScheduleSlot(slot.id, e.target.value)}
-                                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', colorScheme: 'dark' }}
-                                        />
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{slot.platform}</span>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}> Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
+                                                {slot.has_script && (
+                                                    <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid #00ff00' }}>✓ Guión Listo</span>
+                                                )}
+                                            </div>
+                                            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', marginTop: '4px' }}>{slot.idea_title}</h4>
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Enfoque: {slot.content_type}</p>
+                                        </div>
+
                                     </div>
-                                    {!slot.has_script ? (
-                                        <button
-                                            onClick={() => handleGenerateSlotScript(slot)}
-                                            disabled={generatingSlotId === slot.id}
-                                            className="btn-primary"
-                                            style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1 }}
-                                        >
-                                            {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
-                                        </button>
-                                    ) : (
-                                        <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem' }}>
-                                            Ver Calendario →
-                                        </button>
-                                    )}
+                                    <div style={{ display: 'flex', gap: '8px', paddingLeft: '24px', borderLeft: '1px solid rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <Calendar size={14} color="var(--text-secondary)" />
+                                            <input
+                                                type="date"
+                                                value={slot.scheduled_date || ''}
+                                                onChange={(e) => handleScheduleSlot(slot.id, e.target.value)}
+                                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', colorScheme: 'dark' }}
+                                            />
+                                        </div>
+                                        {!slot.has_script ? (
+                                            <button
+                                                onClick={() => handleGenerateSlotScript(slot)}
+                                                disabled={generatingSlotId === slot.id}
+                                                className="btn-primary"
+                                                style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1 }}
+                                            >
+                                                {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
+                                            </button>
+                                        ) : (
+                                            <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem' }}>
+                                                Ver Calendario →
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
             <style jsx>{`
                 @keyframes pulse-glow {
                     from { box-shadow: 0 0 5px rgba(126, 206, 202, 0.1); border-color: rgba(126, 206, 202, 0.3); }
                     to { box-shadow: 0 0 20px rgba(126, 206, 202, 0.3); border-color: rgba(126, 206, 202, 0.6); }
                 }
             `}</style>
-            {isSuccessModalOpen && (
-                <SuccessModal
-                    isOpen={isSuccessModalOpen}
-                    onClose={() => setIsSuccessModalOpen(false)}
-                    title={successModalData.title}
-                    message={successModalData.message}
-                    actionOnClick={() => router.push('/dashboard/library')}
-                />
-            )}
+            {
+                isSuccessModalOpen && (
+                    <SuccessModal
+                        isOpen={isSuccessModalOpen}
+                        onClose={() => setIsSuccessModalOpen(false)}
+                        title={successModalData.title}
+                        message={successModalData.message}
+                        actionOnClick={() => router.push('/dashboard/library')}
+                    />
+                )
+            }
 
-            {extraIdeasModal.open && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                }} onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}>
+            {
+                extraIdeasModal.open && (
                     <div style={{
-                        background: '#1a1a1a', borderRadius: '20px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
-                    }} onClick={e => e.stopPropagation()}>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar más ideas</h3>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-                            Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
-                        </p>
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    }} onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}>
+                        <div style={{
+                            background: '#1a1a1a', borderRadius: '20px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
+                        }} onClick={e => e.stopPropagation()}>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar más ideas</h3>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                                Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
+                            </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué quieres este mes? *</p>
-                                <textarea
-                                    className="textarea-field"
-                                    placeholder="Ej: Quiero crear contenido sobre cómo vender programas de mentoría online..."
-                                    value={extraIdeasModal.form.context}
-                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, context: e.target.value } })}
-                                    style={{ minHeight: '80px' }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Nivel de experiencia</p>
-                                    <input
-                                        className="input-field"
-                                        placeholder="Ej: Principiante"
-                                        value={extraIdeasModal.form.experienceLevel}
-                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, experienceLevel: e.target.value } })}
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué quieres este mes? *</p>
+                                    <textarea
+                                        className="textarea-field"
+                                        placeholder="Ej: Quiero crear contenido sobre cómo vender programas de mentoría online..."
+                                        value={extraIdeasModal.form.context}
+                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, context: e.target.value } })}
+                                        style={{ minHeight: '80px' }}
                                     />
                                 </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Nivel de experiencia</p>
+                                        <input
+                                            className="input-field"
+                                            placeholder="Ej: Principiante"
+                                            value={extraIdeasModal.form.experienceLevel}
+                                            onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, experienceLevel: e.target.value } })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ticket de producto</p>
+                                        <input
+                                            className="input-field"
+                                            placeholder="Ej: 500-2000€"
+                                            value={extraIdeasModal.form.productTicket}
+                                            onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, productTicket: e.target.value } })}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ticket de producto</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Objeciones clave</p>
                                     <input
                                         className="input-field"
-                                        placeholder="Ej: 500-2000€"
-                                        value={extraIdeasModal.form.productTicket}
-                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, productTicket: e.target.value } })}
+                                        placeholder="Ej: Es caro, no tengo tiempo, no funciona"
+                                        value={extraIdeasModal.form.objections}
+                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, objections: e.target.value } })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ejemplos de contenido que te gustan</p>
+                                    <input
+                                        className="input-field"
+                                        placeholder="Ej: Videos de '@coach' o '@experto'"
+                                        value={extraIdeasModal.form.examples}
+                                        onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, examples: e.target.value } })}
                                     />
                                 </div>
                             </div>
 
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Objeciones clave</p>
-                                <input
-                                    className="input-field"
-                                    placeholder="Ej: Es caro, no tengo tiempo, no funciona"
-                                    value={extraIdeasModal.form.objections}
-                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, objections: e.target.value } })}
-                                />
-                            </div>
-
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ejemplos de contenido que te gustan</p>
-                                <input
-                                    className="input-field"
-                                    placeholder="Ej: Videos de '@coach' o '@experto'"
-                                    value={extraIdeasModal.form.examples}
-                                    onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, examples: e.target.value } })}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                            <button
-                                onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}
-                                className="btn-secondary"
-                                style={{ flex: 1 }}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={async () => {
-                                    if (!extraIdeasModal.form.context.trim()) {
-                                        alert('Escribe qué quieres este mes');
-                                        return;
-                                    }
-                                    setExtraIdeasModal({ ...extraIdeasModal, loading: true });
-                                    try {
-                                        const { data: { user } } = await supabase.auth.getUser();
-                                        const res = await fetch('/api/ideas-extra', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                context: extraIdeasModal.form.context,
-                                                experienceLevel: extraIdeasModal.form.experienceLevel,
-                                                productTicket: extraIdeasModal.form.productTicket,
-                                                objections: extraIdeasModal.form.objections,
-                                                examples: extraIdeasModal.form.examples,
-                                                userId: user?.id
-                                            })
-                                        });
-
-                                        if (res.status === 402) {
-                                            window.dispatchEvent(new CustomEvent('show-no-credits'));
-                                            setExtraIdeasModal({ ...extraIdeasModal, open: false, loading: false });
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                                <button
+                                    onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: false })}
+                                    className="btn-secondary"
+                                    style={{ flex: 1 }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!extraIdeasModal.form.context.trim()) {
+                                            alert('Escribe qué quieres este mes');
                                             return;
                                         }
+                                        setExtraIdeasModal({ ...extraIdeasModal, loading: true });
+                                        try {
+                                            const { data: { user } } = await supabase.auth.getUser();
+                                            const res = await fetch('/api/ideas-extra', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    context: extraIdeasModal.form.context,
+                                                    experienceLevel: extraIdeasModal.form.experienceLevel,
+                                                    productTicket: extraIdeasModal.form.productTicket,
+                                                    objections: extraIdeasModal.form.objections,
+                                                    examples: extraIdeasModal.form.examples,
+                                                    userId: user?.id
+                                                })
+                                            });
 
-                                        const data = await res.json();
-                                        if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
+                                            if (res.status === 402) {
+                                                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                                                setExtraIdeasModal({ ...extraIdeasModal, open: false, loading: false });
+                                                return;
+                                            }
 
-                                        setExtraIdeasModal({
-                                            open: false,
-                                            ideas: data.ideas || [],
-                                            loading: false,
-                                            form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' }
-                                        });
-                                    } catch (err) {
-                                        alert(err.message);
-                                        setExtraIdeasModal({ ...extraIdeasModal, loading: false });
-                                    }
-                                }}
-                                disabled={extraIdeasModal.loading}
-                                className="btn-primary"
-                                style={{ flex: 2, opacity: extraIdeasModal.loading ? 0.7 : 1 }}
-                            >
-                                {extraIdeasModal.loading ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px' }} /> Generando ideas...</> : <>Generar Ideas <Sparkles size={16} style={{ marginLeft: '8px' }} /></>}
-                            </button>
+                                            const data = await res.json();
+                                            if (!res.ok) throw new Error(data.error || 'Error al generar ideas');
+
+                                            setExtraIdeasModal({
+                                                open: false,
+                                                ideas: data.ideas || [],
+                                                loading: false,
+                                                form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' }
+                                            });
+                                        } catch (err) {
+                                            alert(err.message);
+                                            setExtraIdeasModal({ ...extraIdeasModal, loading: false });
+                                        }
+                                    }}
+                                    disabled={extraIdeasModal.loading}
+                                    className="btn-primary"
+                                    style={{ flex: 2, opacity: extraIdeasModal.loading ? 0.7 : 1 }}
+                                >
+                                    {extraIdeasModal.loading ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px' }} /> Generando ideas...</> : <>Generar Ideas <Sparkles size={16} style={{ marginLeft: '8px' }} /></>}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
