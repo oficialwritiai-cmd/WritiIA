@@ -708,7 +708,7 @@ export default function EstrategiaPage() {
                 <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Target size={32} color="var(--accent)" />
                     Sesión de Descubrimiento
-                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v1.6.5</span>
+                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v1.10.0</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '1.1rem' }}>
                     Diseñaremos tu estrategia basándonos en tus objetivos reales para los próximos 30 días.
