@@ -36,7 +36,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { topic, platform, tone, userId, hookType, intensity } = validation.data;
+        const { topic, platform, tone, userId, hookType, intensity, count } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Credit Check & Charge (2 credits)
@@ -60,23 +60,30 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
-        const systemPrompt = `Eres un estratega de contenido premium especializado en guiones virales.
-Usa el contexto base para inyectar la personalidad del creador.
+        const systemPrompt = `Eres un estratega de contenido logrando retención masiva y copys virales.
+Usa el contexto base para inyectar la personalidad del creador, responde en lenguaje humano, directo y muy natural. PROHIBIDO sonar genérico (nada de "es importante destacar" o "en este video te enseñaré").
 ${brandContextString}
 
-Genera un guion para ${platform} con tono ${tone} e intensidad ${intensity}/5.
-RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar:
+OBJETIVOS ESTRICTOS PARA CADA GUION:
+1. Hook: Primeros 3 segundos. DEBE ser fuerte, visual y específico. (Mínimo 10 palabras).
+2. Desarrollo: 3 a 5 frases con ejemplos, microhistorias o detalles específicos.
+3. CTA: Call to action OBLIGATORIO al final, conectado emocionalmente con el objetivo del video (ej: leads, ventas, followers).
+
+Genera EXACTAMENTE ${count || 2} guiones distintos para ${platform} con tono ${tone} e intensidad ${intensity}/5.
+
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar (todas las keys obligatorias):
 [
   {
     "titulo_guion": "Título llamativo interno",
     "video_duration": "ej: 45-60 seg",
-    "gancho": "El hook inicial (primeros 3 segundos) muy visual y directo",
+    "gancho": "El hook inicial. Al menos 10 palabras, muy visual.",
     "desarrollo": [
-      "Punto 1 que desarrolla el hook y da valor",
-      "Punto 2 que mantiene la retención",
+      "Punto 1 que desarrolla el hook (nada de frases vacías)",
+      "Punto 2 con detalle o insight específico",
       "Punto 3 o conclusión clave"
     ],
-    "cierre": "Call to action simple",
+    "cierre": "Cierre natural del tema",
+    "cta": "Llamada a la acción clara, directa y NO VACÍA",
     "copy_post": {
       "titulo": "Título para el texto del post",
       "descripcion_larga": "Texto largo, persuasivo y con valor para la descripción del video",
@@ -94,6 +101,21 @@ RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que de
         });
 
         const scriptsArray = Array.isArray(results) ? results : [results];
+
+        // Strict Validation
+        const isValid = scriptsArray.every(s => {
+            const hasHook = s.gancho && s.gancho.trim().split(' ').length >= 5; // Limite laxo pero previene estafa
+            const hasDesarrollo = Array.isArray(s.desarrollo) && s.desarrollo.length >= 3;
+            const hasCta = s.cta && s.cta.trim().length > 0;
+            return hasHook && hasDesarrollo && hasCta;
+        });
+
+        if (!isValid) {
+            console.error('[generate-scripts] La IA falló la validación estricta de CTA o Formato:', scriptsArray);
+            return NextResponse.json({
+                error: 'El modelo proporcionó guiones incompletos (falta CTA, hook débil o desarrollo corto). Por favor, intenta de nuevo.'
+            }, { status: 422 });
+        }
 
         return NextResponse.json({ scripts: scriptsArray });
 

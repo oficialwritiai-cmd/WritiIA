@@ -1,12 +1,12 @@
 // Build Version: 2026-03-07-v8 - Rediseño Premium Completado (Landing, Calendario + UI Logic)
-// Build Version: 2026-03-07-v13 - Calendario Mejorado (Grid, Scroll, Colores Personalizados)
+// Build Version: 2026-03-07-v14 - Generador Avanzado (Calidad de Script, Strict CTA, Default 2)
 import './globals.css';
 
 export const metadata = {
     title: 'WRITI.AI | De Idea a Guion Viral en Segundos',
     description: 'Genera 5 guiones listos para grabar en 30 segundos. Para creadores y agencias. Prueba gratis sin tarjeta.',
 };
-// v13
+// v14
 export const viewport = {
     themeColor: '#050505',
     width: 'device-width',

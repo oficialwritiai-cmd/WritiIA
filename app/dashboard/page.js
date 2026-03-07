@@ -35,7 +35,7 @@ export default function DashboardPage() {
     const [toneBrand, setToneBrand] = useState('cercano');
     const [goal, setGoal] = useState('engagement');
     const [awareness, setAwareness] = useState('tibia');
-    const [quantity, setQuantity] = useState(4);
+    const [quantity, setQuantity] = useState(2);
     const [ideas, setIdeas] = useState('');
     const [scripts, setScripts] = useState([]);
 
@@ -232,7 +232,7 @@ export default function DashboardPage() {
             // Priority check for count to avoid state race conditions from strategy
             const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
             const urlCount = params.get('count');
-            const finalQuantity = urlCount ? parseInt(urlCount) : (quantity || 3);
+            const finalQuantity = urlCount ? parseInt(urlCount) : (quantity || 2);
 
             const requestBody = {
                 topic: topic.trim(),
