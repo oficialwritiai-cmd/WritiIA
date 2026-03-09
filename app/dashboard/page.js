@@ -8,6 +8,7 @@ import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
+import VoiceDictation from '@/app/components/VoiceDictation';
 
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
@@ -1185,7 +1186,10 @@ export default function DashboardPage() {
                     {wizardStep === 3 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Sobre qué va el contenido</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Sobre qué va el contenido</p>
+                                    <VoiceDictation onResult={(text) => setTopic(prev => prev ? `${prev} ${text}` : text)} />
+                                </div>
                                 <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '100px' }} />
                             </div>
                             <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -1226,7 +1230,10 @@ export default function DashboardPage() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Idea para el CTA <span style={{ color: '#FF4D4D' }}>*</span></p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Idea para el CTA <span style={{ color: '#FF4D4D' }}>*</span></p>
+                                        <VoiceDictation onResult={(text) => setCtaIdea(prev => prev ? `${prev} ${text}` : text)} />
+                                    </div>
                                     <input
                                         className="input-field"
                                         placeholder="Ej: Que comenten la palabra 'IA', que vayan al link de mi bio, que me pidan una demo..."
@@ -1237,7 +1244,10 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Temas o detalles específicos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Temas o detalles específicos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
+                                    <VoiceDictation onResult={(text) => setSpecificDetails(prev => prev ? `${prev} ${text}` : text)} />
+                                </div>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Ej: "Lista las 5 mejores IA para crear contenido: Notion AI, Jasper, Copy.ai, ChatGPT, Claude" · "Habla del error de publicar sin estrategia" · "Añade la técnica del loop abierto"</p>
                                 <textarea
                                     className="textarea-field"
@@ -1253,6 +1263,13 @@ export default function DashboardPage() {
                                 <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#7ECECA' }} />
                                 <p style={{ textAlign: 'center', marginTop: '8px', fontWeight: 700, color: '#7ECECA' }}>{quantity} guiones</p>
                             </div>
+
+                            <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#7ECECA', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0 }}>
+                                    <Mic size={16} /> Puedes rellenar cada campo hablando: pulsa el icono del micrófono y dicta tu idea.
+                                </p>
+                            </div>
+
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                 <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>

@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v37 - Anthropic Integration Fix v1.14.2
-// v1.14.2 - HOTFIX_ANTHROPIC_2026_03_09_17
+// Build Version: 2026-03-09-v38 - Voice Dictation Integration v1.14.3
+// v1.14.3 - FEATURE_VOICE_DICTATION_2026_03_09_19
 import './globals.css';
 
 export const metadata = {
