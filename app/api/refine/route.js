@@ -45,13 +45,15 @@ export async function POST(request) {
         }
 
         const improvementGoal = instruction && instruction.trim().length > 0
-            ? `El usuario pide específicamente: "${instruction.trim()}"`
+            ? `[MANDATO OBLIGATORIO]: Debes aplicar exactamente esta instrucción del usuario: "${instruction.trim()}". Si el usuario pide añadir una herramienta, frase o cambio específico, HAZLO DE FORMA EXPLÍCITA. No la ignores.`
             : `Mejora automáticamente el bloque para que sea más humano, impactante y menos genérico.`;
 
         const systemPrompt = `Eres un editor experto de guiones de video viral.
 Tu tarea es mejorar un bloque específico (${type}: gancho, desarrollo o cta).
 
-REGLAS:
+REGLAS CRÍTICAS:
+- Las instrucciones del usuario son PRIORIDAD MÁXIMA y OBLIGATORIAS.
+- Si el usuario pide incluir "WRITI IA", debe aparecer con una descripción potente ("la mejor del momento para crear contenido viral").
 - Mantén la idea principal pero hazla más potente y persuasiva.
 - Evita frases vacías ("en este video...", "es clave...").
 - ${improvementGoal}

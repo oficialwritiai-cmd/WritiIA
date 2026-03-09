@@ -45,8 +45,14 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        const systemPrompt = `Mejora este texto para que suene más profesional y persuasivo. 
-Responde SOLO con el texto mejorado, sin explicaciones adicionales.`;
+        const systemPrompt = `Eres un editor experto en ganchos y conceptos virales.
+Tu tarea es "madurar" y profesionalizar la idea del usuario.
+
+REGLAS:
+1. NO CAMBIES EL TEMA CENTRAL. Si el usuario habla de "X", mantén "X".
+2. Mejora la redacción para que sea más impactante, use palabras de poder y despierte curiosidad.
+3. Mantén la misma estructura/enfoque que el usuario escribió, solo hazlo sonar como un creador de contenido Pro.
+4. Responde SOLO con el texto mejorado, sin explicaciones ni comillas.`;
 
         const { content: polishedText } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,

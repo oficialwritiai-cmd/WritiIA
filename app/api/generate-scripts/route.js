@@ -12,38 +12,37 @@ const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 });
 // that the AI actually produced enough content.
 // (150 words/min speaking pace, slightly faster for short formats)
 // ─────────────────────────────────────────────
-const WORDS_PER_DURATION = {
-    '30 seg': 70,
-    '60 seg': 140,
-    '90 seg': 200,
-    '2 min': 280,
-    '3 min': 420,
-    '5 min': 700,
-};
+function extractRequestedCount(topic, details) {
+    const combined = `${topic} ${details}`.toLowerCase();
+    const match = combined.match(/(?:top|mejores|las|los)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips)/);
+    if (match) return parseInt(match[1]);
 
-// Minimum acceptable ratio before we trigger an expansion call
-const MIN_WORD_RATIO = 0.55;
+    // Fallback search for just "X mejores" or "X items"
+    const simpleMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas)/);
+    if (simpleMatch) return parseInt(simpleMatch[1]);
 
-function countScriptWords(script) {
-    const parts = [
-        script.gancho || '',
-        ...(Array.isArray(script.desarrollo) ? script.desarrollo : []),
-        script.cierre || '',
-        script.cta || '',
-    ];
-    return parts.join(' ').split(/\s+/).filter(Boolean).length;
+    return null;
 }
 
-function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails }) {
+function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount }) {
     // Structure rules vary by duration
     const duracionRules = videoDuration === '30 seg' || videoDuration === '60 seg'
-        ? `- DURACIÓN: ${videoDuration} → UN solo gancho potente, 3 frases de desarrollo concisas, CTA rápido. Max ~${WORDS_PER_DURATION[videoDuration] * 1.15} palabras en total.`
+        ? `- DURACIÓN: ${videoDuration} → UN solo gancho potente, ${requestedCount || 3} frases de desarrollo concisas, CTA rápido. Max ~${WORDS_PER_DURATION[videoDuration] * 1.15} palabras en total.`
         : videoDuration === '90 seg' || videoDuration === '2 min'
-            ? `- DURACIÓN: ${videoDuration} → Gancho, desarrollo 4-5 puntos con ejemplos breves, cierre emocional, CTA. ~${WORDS_PER_DURATION[videoDuration]} palabras.`
-            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Estructura completa: Intro (incógnita), 5-7 bloques de desarrollo con ejemplos reales/datos, Conclusión, CTA extendido. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras en total. Añade transiciones entre secciones.`;
+            ? `- DURACIÓN: ${videoDuration} → Gancho, desarrollo ${requestedCount || '4-5'} puntos con ejemplos breves, cierre emocional, CTA. ~${WORDS_PER_DURATION[videoDuration]} palabras.`
+            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Estructura completa: Intro (incógnita), ${requestedCount || '5-7'} bloques de desarrollo con ejemplos reales/datos, Conclusión, CTA extendido. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras en total. Añade transiciones entre secciones.`;
+
+    // Force WRITI IA if mentioned
+    let mandatoryTools = "";
+    if (specificDetails?.toLowerCase().includes("writi ia")) {
+        mandatoryTools = `\n[MANDATO CRÍTICO]: Has detectado "WRITI IA" en los detalles. 
+1. DEBE ser la herramienta #1 de la lista.
+2. DESCRIBELA EXACTAMENTE ASÍ: "la mejor del momento para crear contenido viral, guiones y calendario en segundos".
+3. NO la sustituyas por ChatGPT, Writesonic u otras.`;
+    }
 
     const specificDetailsBlock = specificDetails && specificDetails.trim()
-        ? `\nDETALLES Y TEMAS ESPECÍFICOS A CUBRIR (OBLIGATORIO mencionarlos uno por uno):\n${specificDetails.trim()}\n- Para listas tipo "mejores herramientas/IA": nombra herramientas reales, descríbelas brevemente y explica por qué son buenas.\n- NUNCA uses frases vacías como "es muy importante…" sin explicar el por qué.`
+        ? `\nDETALLES Y TEMAS ESPECÍFICOS A CUBRIR (OBLIGATORIO - PRIORIDAD MÁXIMA):\n${specificDetails.trim()}\n${mandatoryTools}\n- Para listas: nombra herramientas reales, descríbelas brevemente y explica por qué son buenas.\n- Si el usuario pidió un número específico (${requestedCount || 'N/A'}), genera EXACTAMENTE esa cantidad de ítems.`
         : '';
 
     return `Eres un estratega de contenido viral. Creas guiones auténticos, directos y profundos.
@@ -144,6 +143,8 @@ export async function POST(request) {
         if (story) brandContextString += `\n- Caso real/Historia: ${story}`;
         if (awareness) brandContextString += `\n- Nivel de awareness de la audiencia: ${awareness}`;
 
+        const requestedCount = extractRequestedCount(topic, specificDetails || "");
+
         // Pick the right generator based on duration
         const isLongScript = videoDuration === '3 min' || videoDuration === '5 min';
         const generateFn = isLongScript ? generateScriptsLong : generateScriptsWithSonnet;
@@ -153,7 +154,7 @@ export async function POST(request) {
 
         const systemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-            count: finalCount, specificDetails
+            count: finalCount, specificDetails, requestedCount
         });
 
         const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;
@@ -174,7 +175,7 @@ export async function POST(request) {
 
             const retryPrompt = buildSystemPrompt({
                 brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-                count: missing, specificDetails
+                count: missing, specificDetails, requestedCount
             });
             const retryMsg = `${userMessage} (VARIANTES DISTINTAS a las ya generadas, distintos ángulos)`;
 
@@ -187,11 +188,40 @@ export async function POST(request) {
             scriptsArray = [...scriptsArray, ...retryScripts].slice(0, finalCount);
         }
 
+        // ── LIST COUNT VALIDATION & EXPANSION ────────────────
+        if (requestedCount) {
+            scriptsArray = await Promise.all(scriptsArray.map(async (s) => {
+                const currentItems = Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo];
+                if (currentItems.length < requestedCount) {
+                    console.log(`[generate-scripts] List too short (${currentItems.length}/${requestedCount}). Expanding...`);
+                    const missing = requestedCount - currentItems.length;
+                    const expansionPrompt = `El usuario pidió una lista de ${requestedCount} elementos, pero solo generaste ${currentItems.length}.
+Genera EXACTAMENTE ${missing} puntos de desarrollo adicionales que sigan la misma temática y estilo.
+Tema: ${topic}
+Puntos actuales: ${currentItems.join(' | ')}
+Responde SOLO con un JSON array de string con los puntos faltantes: ["Punto extra 1", "Punto extra 2", ...]`;
+
+                    const { parsed: extraPoints } = await generateFn({
+                        apiKey: process.env.ANTHROPIC_API_KEY,
+                        systemPrompt: expansionPrompt,
+                        userMessage: "Genera solo los puntos faltantes.",
+                    });
+
+                    if (Array.isArray(extraPoints)) {
+                        s.desarrollo = [...currentItems, ...extraPoints].slice(0, requestedCount);
+                    }
+                } else if (currentItems.length > requestedCount) {
+                    s.desarrollo = currentItems.slice(0, requestedCount);
+                }
+                return s;
+            }));
+        }
+
         // ── WORD COUNT VALIDATION: expand short scripts ──────
         const minWords = Math.floor(targetWords * MIN_WORD_RATIO);
-        const needsExpansion = scriptsArray.some(s => countScriptWords(s) < minWords);
+        const needsWordExpansion = scriptsArray.some(s => countScriptWords(s) < minWords);
 
-        if (needsExpansion) {
+        if (needsWordExpansion) {
             console.log(`[generate-scripts] Word count too low for ${videoDuration}. Requesting expansion…`);
             const expandPrompt = `El guion que generaste es DEMASIADO CORTO para ${videoDuration}.
 Expande CADA bloque de desarrollo con más información, ejemplos concretos y datos reales.
