@@ -37,19 +37,33 @@ function countScriptWords(script) {
 function extractRequestedCount(topic, details) {
     const combined = `${topic} ${details}`.toLowerCase();
 
-    // Pattern: "5 herramientas", "top 10", "3 pasos"
-    const match = combined.match(/(?:top|mejores|las|los)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips|ideas|claves)/);
-    if (match) return parseInt(match[1]);
+    // Pattern: "5 herramientas", "las 5 mejores", "top 10", "3 pasos"
+    // Use a more relaxed match: looking for a number followed by relevant keywords or preceding them
+    const match = combined.match(/(?:top|las|los|mejores|las\s+(\d+)\s+mejores)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips|ideas|claves|puntos|cosas|herramienta|secreto|paso|truco)/i);
+    if (match) {
+        return parseInt(match[2] || match[1]);
+    }
 
     // Pattern: 1) Tool 2) Tool ...
     const listMatches = combined.match(/\d\s*[\)\.]\s*[A-Za-z]/g);
     if (listMatches && listMatches.length > 1) return listMatches.length;
 
-    // Fallback: Just "5 mejores"
-    const simpleMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas)/);
+    // Fallback: Just any number near "mejores" or in title
+    const simpleMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas|herramientas|ia)/i);
     if (simpleMatch) return parseInt(simpleMatch[1]);
 
     return null;
+}
+
+// Helper to safely parse JSON arrays even with junk
+function extractJSONArray(text) {
+    try {
+        const match = text.match(/\[\s*[\s\S]*\s*\]/);
+        if (match) return JSON.parse(match[0]);
+        return JSON.parse(text);
+    } catch (e) {
+        return null;
+    }
 }
 
 function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount }) {
@@ -221,20 +235,29 @@ export async function POST(request) {
                     console.log(`[generate-scripts] List too short (${currentItems.length}/${requestedCount}). Expanding...`);
                     const missing = requestedCount - currentItems.length;
 
-                    // Try to identify which tools are missing if user gave a list
-                    const userList = specificDetails ? specificDetails.split('\n').filter(l => /^\d+[\)\.]/.test(l.trim())) : [];
-                    const missingContext = userList.length > 0 ? `\nHERRAMIENTAS SOLICITADAS QUE FALTAN:\n${userList.slice(currentItems.length).join('\n')}` : "";
+                    // Try to identify which tools/items are missing if user gave any hints
+                    const userLines = specificDetails ? specificDetails.split(/[\n,;]+/).map(l => l.trim()).filter(l => l.length > 3) : [];
+                    const missingContext = userLines.length > 0
+                        ? `\nLAS ÚLTIMAS ${missing} COSAS QUE EL USUARIO PIDIÓ SON:\n${userLines.slice(-missing).join('\n')}`
+                        : "";
 
                     const expansionPrompt = `El usuario pidió una lista de ${requestedCount} elementos, pero solo generaste ${currentItems.length}.
-Genera EXACTAMENTE ${missing} puntos de desarrollo adicionales.
-REGLA CRÍTICA: Si el usuario listó herramientas específicas en los detalles, USA ESAS HERRAMIENTAS.${missingContext}
-Responde SOLO con un JSON array de strings con los puntos faltantes: ["Punto extra 1", "Punto extra 2", ...]`;
+Genera EXACTAMENTE ${missing} puntos de desarrollo adicionales (puntos ${currentItems.length + 1} a ${requestedCount}).
+REGLA CRÍTICA: Si el usuario listó herramientas o puntos concretos, DEBES inclurlos.${missingContext}
+Responde SOLO con un JSON array de strings: ["Punto extra 1", "Punto extra 2", ...]`;
 
-                    const { parsed: extraPoints } = await generateFn({
+                    const { parsed: rawExtra } = await generateFn({
                         apiKey: process.env.ANTHROPIC_API_KEY,
                         systemPrompt: expansionPrompt,
-                        userMessage: `Genera los ${missing} puntos faltantes para este guion: ${s.titulo_guion}`,
+                        userMessage: `Genera los ${missing} puntos faltantes para este guion: ${s.titulo_guion}. Responde SOLO con el JSON array.`,
                     });
+
+                    // Hardened parsing
+                    let extraPoints = Array.isArray(rawExtra) ? rawExtra : extractJSONArray(rawExtra);
+
+                    if (!Array.isArray(extraPoints) && typeof rawExtra === 'string') {
+                        extraPoints = extractJSONArray(rawExtra);
+                    }
 
                     if (Array.isArray(extraPoints)) {
                         s.desarrollo = [...currentItems, ...extraPoints].slice(0, requestedCount);

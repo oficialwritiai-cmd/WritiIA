@@ -1648,20 +1648,20 @@ export default function DashboardPage() {
                                         {/* DESARROLLO (3 PUNTOS) */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO (3 PUNTOS ACCIONABLES)</label>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO ({(s.desarrollo || []).length} PUNTOS ACCIONABLES)</label>
                                             </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                {Array.isArray(s.desarrollo) && [0, 1, 2].map(idx => (
+                                                {Array.isArray(s.desarrollo) && s.desarrollo.map((item, idx) => (
                                                     <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                                        <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>0{idx + 1}</div>
+                                                        <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>{idx < 9 ? `0${idx + 1}` : idx + 1}</div>
                                                         <div style={{ flex: 1, position: 'relative' }}>
                                                             <textarea
                                                                 value={s.desarrollo[idx] || ''}
                                                                 disabled={refiningBlock === `${i}-punto${idx + 1}`}
                                                                 onChange={(e) => {
                                                                     const news = [...scripts];
-                                                                    if (!Array.isArray(news[i].desarrollo)) news[i].desarrollo = ['', '', ''];
+                                                                    if (!Array.isArray(news[i].desarrollo)) news[i].desarrollo = [];
                                                                     news[i].desarrollo[idx] = e.target.value;
                                                                     setScripts(news);
                                                                 }}
