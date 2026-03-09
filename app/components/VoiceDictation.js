@@ -35,14 +35,15 @@ export default function VoiceDictation({
                 recognition.onerror = (event) => {
                     console.error("Speech recognition error", event.error);
                     if (event.error === 'not-allowed') {
-                        setError('Permiso denegado. Permite el micrófono en el icono 🔒 del navegador.');
+                        setError('Permiso denegado por el navegador.');
+                        alert('MICRÓFONO BLOQUEADO 🔒\\n\\nTu navegador ha bloqueado el acceso al micrófono. Para activarlo:\\n\\n1. Ve a la parte superior de tu pantalla, a la barra de direcciones (donde escribes las URLs).\\n2. Haz clic en el icono del candado 🔒 o en el icono de ajustes.\\n3. Busca la opción "Micrófono" y cambia su estado a "Permitir".\\n4. Recarga la página (F5) para aplicar los cambios.');
                     } else if (event.error === 'no-speech') {
                         setError('No se detectó voz.');
                     } else {
                         setError('Error al escuchar (' + event.error + ')');
                     }
                     setIsRecording(false);
-                    setTimeout(() => setError(''), 5000);
+                    setTimeout(() => setError(''), 8000);
                 };
 
                 recognition.onend = () => {
@@ -71,13 +72,15 @@ export default function VoiceDictation({
             } catch (err) {
                 console.error("Microphone permission error:", err);
                 if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                    setError('Permiso bloqueado. Haz clic en el icono 🔒 de la URL.');
+                    setError('Permiso bloqueado por el navegador.');
+                    alert('MICRÓFONO BLOQUEADO 🔒\\n\\nTu navegador ha bloqueado el acceso al micrófono. Para activarlo:\\n\\n1. Ve a la parte superior, a la barra de direcciones de la web.\\n2. Haz clic en el icono del candado 🔒 o en el icono de información.\\n3. Activa el interruptor de "Micrófono" o ponlo en "Permitir".\\n4. Recarga la página (F5) temporalmente y vuelve a pulsar el dictado.');
                 } else if (err.name === 'NotFoundError') {
                     setError('No se encontró micrófono.');
+                    alert('No hemos detectado ningún micrófono conectado a tu PC/móvil. Asegúrate de tener un micrófono y vuelve a cargar.');
                 } else {
                     setError('Error al acceder al micrófono.');
                 }
-                setTimeout(() => setError(''), 5000);
+                setTimeout(() => setError(''), 8000);
             }
         }
     };
