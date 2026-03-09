@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v38 - Voice Dictation Integration v1.14.3
-// v1.14.3 - FEATURE_VOICE_DICTATION_2026_03_09_19
+// Build Version: 2026-03-09-v39 - Voice Dictation Hotfix v1.14.4
+// v1.14.4 - HOTFIX_MIC_IMPORT_2026_03_09_19
 import './globals.css';
 
 export const metadata = {
