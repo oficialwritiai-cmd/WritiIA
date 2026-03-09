@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v28 - Script & Calendar Overhaul v1.13.2
-// v1.13.2 - FORCE_REPLOY_2026_03_09_08
+// Build Version: 2026-03-09-v29 - AI Suggestion & Multi-Script Fix v1.13.3
+// v1.13.3 - FORCE_REPLOY_2026_03_09_09
 import './globals.css';
 
 export const metadata = {

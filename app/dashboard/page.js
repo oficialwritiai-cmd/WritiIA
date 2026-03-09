@@ -96,6 +96,9 @@ export default function DashboardPage() {
     const [plannedDate, setPlannedDate] = useState('');
     const [plannedTime, setPlannedTime] = useState('18:00');
     const [isPlanningLoading, setIsPlanningLoading] = useState(false);
+    const [events, setEvents] = useState([]);
+    const [isSuggestingAI, setIsSuggestingAI] = useState(false);
+    const [suggestedReasoning, setSuggestedReasoning] = useState('');
 
     const supabase = createSupabaseClient();
     const router = useRouter();
@@ -146,6 +149,21 @@ export default function DashboardPage() {
                 }
 
                 fetchCredits(user.id);
+
+                // Load next 30 days of events for collision avoidance
+                const start = new Date().toISOString().split('T')[0];
+                const end = new Date();
+                end.setDate(end.getDate() + 30);
+                const endStr = end.toISOString().split('T')[0];
+
+                const { data: eventData } = await supabase
+                    .from('calendar_events')
+                    .select('event_date')
+                    .eq('user_id', user.id)
+                    .gte('event_date', start)
+                    .lte('event_date', endStr);
+
+                setEvents(eventData || []);
             }
         }
         loadData();
@@ -652,6 +670,33 @@ export default function DashboardPage() {
         setPlannedTime(bestTime);
 
         setIsPlannerModalOpen(true);
+    };
+
+    const handleAISuggestion = async () => {
+        if (!planningScript || !brainProfile) return;
+        setIsSuggestingAI(true);
+        try {
+            const res = await fetch('/api/suggest-planning', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    topic: planningScript.titulo_guion || planningScript.titulo_angulo || topic,
+                    platform: planningScript.platform || platform || 'General',
+                    brainProfile,
+                    existingEvents: events.map(e => e.event_date)
+                })
+            });
+            const data = await res.json();
+            if (data.suggestedDate) {
+                setPlannedDate(data.suggestedDate);
+                setPlannedTime(data.suggestedTime);
+                setSuggestedReasoning(data.reasoning);
+            }
+        } catch (err) {
+            console.error('Error in handleAISuggestion:', err);
+        } finally {
+            setIsSuggestingAI(false);
+        }
     };
 
     const handleConfirmPlanning = async () => {
@@ -2163,9 +2208,45 @@ export default function DashboardPage() {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7ECECA', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-                                        <Sparkles size={14} /> Sugerencia de la IA
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7ECECA', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            <Sparkles size={14} /> Sugerencia de la IA
+                                        </div>
+                                        <button
+                                            onClick={handleAISuggestion}
+                                            disabled={isSuggestingAI}
+                                            style={{
+                                                background: 'rgba(126, 206, 202, 0.1)',
+                                                border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA',
+                                                fontSize: '0.7rem',
+                                                padding: '4px 10px',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}
+                                        >
+                                            {isSuggestingAI ? <Loader2 className="animate-spin" size={12} /> : <RefreshCcw size={12} />}
+                                            Analizar con IA
+                                        </button>
                                     </div>
+
+                                    {suggestedReasoning && (
+                                        <div style={{
+                                            background: 'rgba(126, 206, 202, 0.05)',
+                                            padding: '10px 14px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.75rem',
+                                            color: '#7ECECA',
+                                            marginBottom: '16px',
+                                            lineHeight: 1.4,
+                                            borderLeft: '2px solid #7ECECA'
+                                        }}>
+                                            {suggestedReasoning}
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', gap: '12px' }}>
                                         <div style={{ flex: 1 }}>
                                             <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px' }}>FECHA</label>
