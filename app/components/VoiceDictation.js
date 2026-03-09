@@ -34,9 +34,15 @@ export default function VoiceDictation({
 
                 recognition.onerror = (event) => {
                     console.error("Speech recognition error", event.error);
-                    setError(event.error === 'not-allowed' ? 'Permiso denegado' : 'Error al escuchar');
+                    if (event.error === 'not-allowed') {
+                        setError('Permiso denegado. Permite el micrófono en el icono 🔒 del navegador.');
+                    } else if (event.error === 'no-speech') {
+                        setError('No se detectó voz.');
+                    } else {
+                        setError('Error al escuchar (' + event.error + ')');
+                    }
                     setIsRecording(false);
-                    setTimeout(() => setError(''), 3000);
+                    setTimeout(() => setError(''), 5000);
                 };
 
                 recognition.onend = () => {
@@ -48,7 +54,7 @@ export default function VoiceDictation({
         }
     }, [onResult]);
 
-    const toggleRecording = (e) => {
+    const toggleRecording = async (e) => {
         e.preventDefault(); // Prevent form submission or bubbling
         e.stopPropagation();
 
@@ -58,10 +64,20 @@ export default function VoiceDictation({
         } else {
             setError('');
             try {
+                // Explicitly request microphone permission to trigger the browser prompt
+                await navigator.mediaDevices.getUserMedia({ audio: true });
                 recognitionRef.current?.start();
                 setIsRecording(true);
             } catch (err) {
-                // Ignore "already started" errors
+                console.error("Microphone permission error:", err);
+                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+                    setError('Permiso bloqueado. Haz clic en el icono 🔒 de la URL.');
+                } else if (err.name === 'NotFoundError') {
+                    setError('No se encontró micrófono.');
+                } else {
+                    setError('Error al acceder al micrófono.');
+                }
+                setTimeout(() => setError(''), 5000);
             }
         }
     };
