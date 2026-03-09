@@ -46,6 +46,16 @@ export default function KnowledgePage() {
                     products_services: data.products_services || '',
                     style_words: data.style_words || ''
                 });
+            } else {
+                setBrain({
+                    biography: '',
+                    audience: '',
+                    values_tone: '',
+                    niche_topics: '',
+                    knowledge_raw: '',
+                    products_services: '',
+                    style_words: ''
+                });
             }
         } catch (err) {
             console.error('Error loading project brain:', err);

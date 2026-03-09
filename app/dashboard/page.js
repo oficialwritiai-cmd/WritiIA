@@ -104,13 +104,21 @@ export default function DashboardPage() {
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
     useEffect(() => {
+        // Clear generation results when switching project to avoid confusion
+        setScripts([]);
+        setStep(1);
+        setTopic('');
+        setIdeas('');
         loadData();
     }, [activeProject]);
 
     async function loadData() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
-        setProfile(user);
+
+        // Profile
+        const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
+        setProfile(profileData || user);
 
         // Credits
         const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
@@ -125,6 +133,18 @@ export default function DashboardPage() {
         }
         const { data: ideasData } = await query.order('created_at', { ascending: false });
         setLibIdeas(ideasData || []);
+
+        // Load next 30 days of events for collision avoidance
+        const start = new Date().toISOString().split('T')[0];
+        const end = new Date();
+        end.setDate(end.getDate() + 30);
+        const { data: eventData } = await supabase
+            .from('calendar_events')
+            .select('event_date')
+            .eq('user_id', user.id)
+            .gte('event_date', start)
+            .lte('event_date', end.toISOString().split('T')[0]);
+        setEvents(eventData || []);
     }
 
     // Brain Setup (Project Scoped)
@@ -175,45 +195,6 @@ export default function DashboardPage() {
     }
 
     useEffect(() => {
-        async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
-                setProfile(profileData);
-
-                const { data: brainData } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
-                if (brainData) {
-                    setHasBrain(true);
-                    setBrainProfile(brainData);
-                    setBrainName(brainData.biography ? brainData.biography.substring(0, 30) + '...' : 'Perfil');
-                    setBrainForm({
-                        biography: brainData.biography || '',
-                        sells: brainData.products_services || '',
-                        helps: brainData.audience || '',
-                        style_words: brainData.style_words || ''
-                    });
-                }
-
-                fetchCredits(user.id);
-
-                // Load next 30 days of events for collision avoidance
-                const start = new Date().toISOString().split('T')[0];
-                const end = new Date();
-                end.setDate(end.getDate() + 30);
-                const endStr = end.toISOString().split('T')[0];
-
-                const { data: eventData } = await supabase
-                    .from('calendar_events')
-                    .select('event_date')
-                    .eq('user_id', user.id)
-                    .gte('event_date', start)
-                    .lte('event_date', endStr);
-
-                setEvents(eventData || []);
-            }
-        }
-        loadData();
-
         // Load params from URL on initial load
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
@@ -233,10 +214,9 @@ export default function DashboardPage() {
                 if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
-                // source_event_id is handled in handleSaveScript via URLSearchParams on demand
             }
         }
-    }, []);
+    }, [supabase, router]);
 
     useEffect(() => {
         if (generationMode === 'plan' && planWizardStep === 1) {
