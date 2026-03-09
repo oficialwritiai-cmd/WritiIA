@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v26 - Script & Calendar Overhaul v1.13.0
-// v1.13.0 - FORCE_REPLOY_2026_03_09_06
+// Build Version: 2026-03-09-v27 - Script & Calendar Overhaul v1.13.1
+// v1.13.1 - FORCE_REPLOY_2026_03_09_07
 import './globals.css';
 
 export const metadata = {

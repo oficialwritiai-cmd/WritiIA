@@ -718,8 +718,8 @@ export default function DashboardPage() {
             if (calErr) throw calErr;
 
             setSuccessModalData({
-                title: '¡Añadido al Calendario!',
-                message: `Tu contenido ha sido agendado correctamente para el ${plannedDate} a las ${plannedTime}.`,
+                title: '¡Añadido al Calendario! ✅',
+                message: `Tu contenido ha sido agendado correctamente para el ${plannedDate} a las ${plannedTime}. (Estado: En preparación)`,
                 actionLabel: 'Ver Calendario',
                 actionRedirect: '/dashboard/calendar'
             });
@@ -1552,8 +1552,8 @@ export default function DashboardPage() {
                                     }}>
                                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                             <div style={{
-                                                width: '28px',
-                                                height: '28px',
+                                                width: '24px',
+                                                height: '24px',
                                                 borderRadius: '50%',
                                                 background: 'var(--accent-gradient)',
                                                 display: 'flex',
@@ -1561,7 +1561,7 @@ export default function DashboardPage() {
                                                 justifyContent: 'center',
                                                 color: '#000',
                                                 fontWeight: 900,
-                                                fontSize: '0.8rem'
+                                                fontSize: '0.7rem'
                                             }}>
                                                 #{i + 1}
                                             </div>
@@ -1579,7 +1579,7 @@ export default function DashboardPage() {
                                                         border: 'none',
                                                         borderBottom: '1px dashed rgba(255,255,255,0.2)',
                                                         color: '#fff',
-                                                        fontSize: '1.2rem',
+                                                        fontSize: '1rem',
                                                         fontWeight: 800,
                                                         width: '100%',
                                                         outline: 'none',
