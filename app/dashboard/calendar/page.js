@@ -138,6 +138,12 @@ export default function CalendarPage() {
         }
     };
 
+    const handleViewInLibrary = () => {
+        if (linkedScript && linkedScript.id) {
+            router.push(`/dashboard/library?id=${linkedScript.id}`);
+        }
+    };
+
     const handleSavePanel = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -546,6 +552,12 @@ export default function CalendarPage() {
                                                         <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
                                                     </div>
                                                 ))}
+                                            {(Array.isArray(linkedScript.content?.puntos) ? linkedScript.content.puntos : []).map((p, i) => (
+                                                <div key={`p-${i}`} style={{ display: 'flex', gap: '10px' }}>
+                                                    <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
+                                                    <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                     <div className="script-block-mini">
@@ -560,7 +572,8 @@ export default function CalendarPage() {
                                                 {linkedScript.content?.copy_post?.descripcion_larga ||
                                                     linkedScript.content?.copy_post?.caption ||
                                                     linkedScript.copy_post?.descripcion_larga ||
-                                                    linkedScript.copy_post?.caption}
+                                                    linkedScript.copy_post?.caption ||
+                                                    linkedScript.content?.copy_post?.texto}
                                             </div>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
                                                 {(linkedScript.content?.copy_post?.hashtags || linkedScript.copy_post?.hashtags || []).map(tag => (
@@ -569,6 +582,14 @@ export default function CalendarPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    <button
+                                        className="btn-secondary"
+                                        onClick={handleViewInLibrary}
+                                        style={{ marginTop: '20px', width: '100%', borderColor: 'rgba(157, 0, 255, 0.3)', color: '#9D00FF' }}
+                                    >
+                                        Ver / Editar en Biblioteca
+                                    </button>
                                 </div>
                             </div>
                         ) : selectedEvent && (

@@ -611,46 +611,10 @@ export default function DashboardPage() {
         }
     };
 
-    const handleSaveScript = async (scriptObj, scriptPlatform = null, scriptGoal = null) => {
+    const handleSaveScript = async (scriptObj) => {
         try {
-            const savedItem = await saveScript(scriptObj, scriptPlatform, scriptGoal);
-            if (savedItem) {
-                setSavedScriptsIds(prev => new Set([...prev, scriptObj.id || scriptObj.title]));
-                setSuccessModalData({
-                    title: '¡Guion Guardado!',
-                    message: 'El guion se ha guardado correctamente en tu biblioteca de contenido.',
-                    actionLabel: 'Ver en Biblioteca',
-                    actionRedirect: '/dashboard/library'
-                });
-                setIsSuccessModalOpen(true);
-
-                // Sync with Calendar if it came from a calendar event
-                const params = new URLSearchParams(window.location.search);
-                const sourceEventId = params.get('source_event_id');
-
-                if (sourceEventId) {
-                    await supabase.from('calendar_events').update({
-                        type: 'guion',
-                        reference_id: savedItem.id,
-                        has_script: true
-                    }).eq('id', sourceEventId);
-                } else if (calendarDate) {
-                    // Fallback for legacy date-only param
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user) {
-                        await supabase.from('calendar_events').insert({
-                            user_id: user.id,
-                            event_date: calendarDate,
-                            title: scriptObj.titulo_guion || scriptObj.titulo_angulo || 'Guion Generado',
-                            type: 'guion',
-                            platform: scriptPlatform || platform || 'General',
-                            reference_id: savedItem.id,
-                            description: 'Generado desde el calendario',
-                            has_script: true
-                        });
-                    }
-                }
-            }
+            await saveScript(scriptObj);
+            setSavedScriptsIds(prev => new Set([...prev, scriptObj.id || scriptObj.titulo_guion || scriptObj.titulo_angulo]));
         } catch (err) {
             console.error('Error in handleSaveScript:', err);
         }
@@ -659,10 +623,25 @@ export default function DashboardPage() {
     const handleOpenPlanner = (script) => {
         setPlanningScript(script);
 
-        // Suggest date (tomorrow)
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        setPlannedDate(tomorrow.toISOString().split('T')[0]);
+        // Advanced date suggestion: avoid existing events
+        const findBestDate = () => {
+            const start = new Date();
+            start.setDate(start.getDate() + 1); // Start from tomorrow
+
+            // Search for the next 30 days
+            for (let i = 0; i < 30; i++) {
+                const checkDate = new Date(start);
+                checkDate.setDate(start.getDate() + i);
+                const dateStr = checkDate.toISOString().split('T')[0];
+
+                // Check if any event already exists on this day
+                const hasExisting = events && events.some(e => e.event_date === dateStr);
+                if (!hasExisting) return dateStr;
+            }
+            return start.toISOString().split('T')[0];
+        };
+
+        setPlannedDate(findBestDate());
 
         // Suggest time based on platform
         let bestTime = '18:00';
@@ -682,25 +661,25 @@ export default function DashboardPage() {
         try {
             // 1. First save script to library to get a reference_id
             let scriptId = planningScript.id;
-            if (!scriptId) {
-                const savedItem = await saveToLibrary({
-                    userId: profile.id,
-                    type: 'guion',
-                    platform: planningScript.platform || platform || 'General',
-                    goal: planningScript.goal || goal || 'engagement',
-                    titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
-                    content: {
-                        video_duration: planningScript.video_duration || '45-60 seg',
-                        hook: planningScript.hook || planningScript.gancho || '',
-                        desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
-                        cierre: planningScript.cierre || '',
-                        cta: planningScript.cta || '',
-                        copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
-                    },
-                    tags: ['guion', planningScript.platform || platform, scriptId ? 'revisado' : 'nuevo'].filter(Boolean)
-                });
-                scriptId = savedItem.id;
-            }
+
+            // ALways save/update to library to ensure full data (forced save)
+            const savedItem = await saveToLibrary({
+                userId: profile.id,
+                type: 'guion',
+                platform: planningScript.platform || platform || 'General',
+                goal: planningScript.goal || goal || 'engagement',
+                titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
+                content: {
+                    video_duration: planningScript.video_duration || '45-60 seg',
+                    hook: planningScript.hook || planningScript.gancho || '',
+                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
+                    cierre: planningScript.cierre || '',
+                    cta: planningScript.cta || '',
+                    copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                },
+                tags: ['guion', planningScript.platform || platform, 'planificado'].filter(Boolean)
+            });
+            scriptId = savedItem.id;
 
             // 2. Insert into calendar_events with 'En preparación' status
             const { error: calErr } = await supabase.from('calendar_events').insert({
