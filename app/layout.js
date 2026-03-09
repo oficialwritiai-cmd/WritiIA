@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v20 - Adherencia Pro & Planning (v1.12.0)
-// v1.12.0 - FORCE_REPLOY_2026_03_09_01
+// Build Version: 2026-03-09-v22 - Adherencia Pro & Planning (v1.12.2)
+// v1.12.2 - FORCE_REPLOY_2026_03_09_02
 import './globals.css';
 
 export const metadata = {
