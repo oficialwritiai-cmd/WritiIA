@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.3.1
+// Calendar Page v2.4.0
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -136,7 +136,17 @@ export default function CalendarPage() {
 
         // Fetch linked script if exists
         if (event.content) {
-            setLinkedScript({ content: event.content });
+            let parsedContent = event.content;
+            if (typeof event.content === 'string') {
+                try {
+                    parsedContent = JSON.parse(event.content);
+                } catch (e) {
+                    console.error("Error parsing event content:", e);
+                    // Fallback to extracting fields if string is not JSON
+                    parsedContent = { hook: event.content };
+                }
+            }
+            setLinkedScript({ content: parsedContent });
             setLoadingScript(false);
         } else if (event.reference_id && event.has_script) {
             setLoadingScript(true);
@@ -567,16 +577,16 @@ export default function CalendarPage() {
                                     <BookOpen size={16} color="#9D00FF" />
                                     <span style={{ fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Guion Vinculado</span>
                                 </div>
-                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <div className="script-block-mini">
-                                        <div className="block-label-mini">GANCHO</div>
+                                        <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>GANCHO</div>
                                         <textarea
                                             className="cal-textarea-minimal"
-                                            style={{ minHeight: '100px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.5' }}
+                                            style={{ minHeight: '120px', padding: '16px', fontSize: '1rem', lineHeight: '1.6', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}
                                             value={linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || ''}
                                             onChange={e => {
                                                 const newContent = { ...(linkedScript.content || {}) };
-                                                if (newContent.gancho) newContent.gancho = e.target.value;
+                                                newContent.gancho = e.target.value;
                                                 newContent.hook = e.target.value;
                                                 setLinkedScript({ ...linkedScript, content: newContent });
                                             }}
@@ -584,26 +594,30 @@ export default function CalendarPage() {
                                         />
                                     </div>
                                     <div className="script-block-mini">
-                                        <div className="block-label-mini">DESARROLLO</div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>DESARROLLO</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             {(() => {
                                                 const des = linkedScript.content?.desarrollo || linkedScript.desarrollo || linkedScript.content?.puntos || linkedScript.puntos;
-                                                const desArray = Array.isArray(des) ? des : (typeof des === 'string' ? des.split('\n').filter(Boolean) : ['', '', '']);
+                                                const desArray = Array.isArray(des) ? des : (typeof des === 'string' ? des.split('\n').filter(Boolean) : []);
 
-                                                return desArray.map((p, i) => (
-                                                    <div key={i} style={{ display: 'flex', gap: '10px' }}>
-                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.9rem', marginTop: '12px' }}>{i + 1}.</span>
+                                                // If empty, show at least one box to allow typing
+                                                const finalArray = desArray.length > 0 ? desArray : [''];
+
+                                                return finalArray.map((p, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '1rem', marginTop: '14px' }}>{i + 1}.</span>
                                                         <textarea
                                                             className="cal-textarea-minimal"
-                                                            style={{ minHeight: '80px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.4' }}
-                                                            value={p.replace(/^\d+\.\s*/, '')}
+                                                            style={{ minHeight: '100px', padding: '16px', fontSize: '1rem', lineHeight: '1.5', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}
+                                                            value={String(p).replace(/^\d+\.\s*/, '')}
                                                             onChange={e => {
-                                                                const newDes = [...desArray];
+                                                                const newDes = [...finalArray];
                                                                 newDes[i] = e.target.value;
                                                                 const newContent = { ...(linkedScript.content || {}) };
                                                                 newContent.desarrollo = newDes;
                                                                 setLinkedScript({ ...linkedScript, content: newContent });
                                                             }}
+                                                            placeholder={`Punto ${i + 1}...`}
                                                         />
                                                     </div>
                                                 ));
@@ -611,14 +625,14 @@ export default function CalendarPage() {
                                         </div>
                                     </div>
                                     <div className="script-block-mini">
-                                        <div className="block-label-mini">CTA</div>
+                                        <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>CTA</div>
                                         <textarea
                                             className="cal-textarea-minimal"
-                                            style={{ minHeight: '80px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.4' }}
+                                            style={{ minHeight: '100px', padding: '16px', fontSize: '1rem', lineHeight: '1.5', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}
                                             value={linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || ''}
                                             onChange={e => {
                                                 const newContent = { ...(linkedScript.content || {}) };
-                                                if (newContent.cierre) newContent.cierre = e.target.value;
+                                                newContent.cierre = e.target.value;
                                                 newContent.cta = e.target.value;
                                                 setLinkedScript({ ...linkedScript, content: newContent });
                                             }}
@@ -634,11 +648,11 @@ export default function CalendarPage() {
                                         const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags : [];
 
                                         return (
-                                            <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <div className="block-label-mini">COPY & HASHTAGS</div>
+                                            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>COPY & HASHTAGS</div>
                                                 <textarea
                                                     className="cal-textarea-minimal"
-                                                    style={{ minHeight: '80px', padding: '10px', fontSize: '0.85rem', fontStyle: 'italic', color: '#ccc' }}
+                                                    style={{ minHeight: '120px', padding: '16px', fontSize: '0.95rem', fontStyle: 'italic', color: '#ccc', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}
                                                     value={caption}
                                                     onChange={e => {
                                                         const newContent = { ...(linkedScript.content || {}) };
