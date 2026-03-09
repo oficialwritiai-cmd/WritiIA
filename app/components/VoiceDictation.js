@@ -173,35 +173,50 @@ export default function VoiceDictation({
                                 <AlertCircle size={32} color="#FF4D4D" />
                             </div>
                             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '8px' }}>Micrófono Bloqueado</h2>
-                            <p style={{ color: '#aaa', fontSize: '0.95rem' }}>Tu navegador ha restringido el acceso. Sigue estos pasos para activarlo:</p>
+                            <p style={{ color: '#aaa', fontSize: '0.95rem' }}>El navegador no volverá a preguntarte hasta que lo desbloquees manualmente:</p>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>1</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Haz clic en el icono del <b>candado 🔒</b> junto a la dirección web (URL).</p>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Busca en la barra de arriba (URL) un icono de <b>cámara/micro con una X roja</b> o el icono del <b>candado 🔒</b>.</p>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Busca <b>Micrófono</b> y cámbialo a <b>"Permitir"</b>.</p>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Haz clic en él y selecciona <b>"Permitir siempre"</b> o <b>"Permitir"</b>.</p>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>3</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Pulsa el botón de abajo para <b>Recargar</b> y guardar cambios.</p>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Pulsa el botón <b>Recargar</b> para activar el cambio.</p>
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => window.location.reload()}
-                            style={{
-                                width: '100%', height: '56px', background: 'var(--accent-gradient)',
-                                color: 'black', border: 'none', borderRadius: '16px',
-                                fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-                            }}
-                        >
-                            <RefreshCw size={20} /> RECARGAR AHORA
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => {
+                                    setShowGuidance(false);
+                                    setTimeout(() => toggleRecording({ preventDefault: () => { }, stopPropagation: () => { } }), 300);
+                                }}
+                                style={{
+                                    flex: 1, height: '56px', background: 'rgba(255,255,255,0.05)',
+                                    color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px',
+                                    fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer'
+                                }}
+                            >
+                                REINTENTAR
+                            </button>
+                            <button
+                                onClick={() => window.location.reload()}
+                                style={{
+                                    flex: 2, height: '56px', background: 'var(--accent-gradient)',
+                                    color: 'black', border: 'none', borderRadius: '16px',
+                                    fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                                }}
+                            >
+                                <RefreshCw size={20} /> RECARGAR AHORA
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
