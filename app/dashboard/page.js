@@ -85,7 +85,7 @@ export default function DashboardPage() {
     const [selectedHook, setSelectedHook] = useState({});
     const [savedScriptsIds, setSavedScriptsIds] = useState(new Set());
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-    const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
+    const [successModalData, setSuccessModalData] = useState({ title: '', message: '', actionLabel: '', actionRedirect: '' });
     const [calendarDate, setCalendarDate] = useState(null);
     const [brainName, setBrainName] = useState('');
 
@@ -611,7 +611,9 @@ export default function DashboardPage() {
                 setSavedScriptsIds(prev => new Set([...prev, scriptObj.id || scriptObj.title]));
                 setSuccessModalData({
                     title: '¡Guion Guardado!',
-                    message: 'El guion se ha guardado correctamente en tu biblioteca de contenido.'
+                    message: 'El guion se ha guardado correctamente en tu biblioteca de contenido.',
+                    actionLabel: 'Ver en Biblioteca',
+                    actionRedirect: '/dashboard/library'
                 });
                 setIsSuccessModalOpen(true);
 
@@ -709,7 +711,9 @@ export default function DashboardPage() {
 
             setSuccessModalData({
                 title: '¡Planificado!',
-                message: `Tu guion ha sido agendado para el ${plannedDate} a las ${plannedTime}.`
+                message: `Tu guion ha sido agendado para el ${plannedDate} a las ${plannedTime}.`,
+                actionLabel: 'Ver en Calendario',
+                actionRedirect: '/dashboard/calendar'
             });
             setIsPlannerModalOpen(false);
             setIsSuccessModalOpen(true);
@@ -1989,7 +1993,15 @@ export default function DashboardPage() {
                         onClose={() => setIsSuccessModalOpen(false)}
                         title={successModalData.title}
                         message={successModalData.message}
-                        actionOnClick={() => router.push('/dashboard/library')}
+                        actionLabel={successModalData.actionLabel}
+                        actionOnClick={() => {
+                            if (successModalData.actionRedirect) {
+                                router.push(successModalData.actionRedirect);
+                            } else {
+                                router.push('/dashboard/library');
+                            }
+                            setIsSuccessModalOpen(false);
+                        }}
                     />
                 )
             }

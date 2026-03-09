@@ -152,14 +152,22 @@ export default function CalendarPage() {
             type: tempColor
         };
 
-        if (selectedEvent) {
-            await supabase.from('calendar_events').update(payload).eq('id', selectedEvent.id);
-        } else {
-            await supabase.from('calendar_events').insert(payload);
-        }
+        try {
+            if (selectedEvent) {
+                const { error: updateErr } = await supabase.from('calendar_events').update(payload).eq('id', selectedEvent.id);
+                if (updateErr) throw updateErr;
+            } else {
+                const { error: insertErr } = await supabase.from('calendar_events').insert(payload);
+                if (insertErr) throw insertErr;
+            }
 
-        setIsPanelOpen(false);
-        loadData();
+            setIsPanelOpen(false);
+            loadData();
+            alert('Cambios guardados correctamente ✓');
+        } catch (err) {
+            console.error('Error saving panel:', err);
+            alert('Error al guardar: ' + err.message);
+        }
     };
 
     const handleDeleteEvent = async (id) => {
@@ -439,7 +447,7 @@ export default function CalendarPage() {
                         </div>
                         <input
                             className="cal-input-minimal"
-                            style={{ fontSize: '1.5rem', fontWeight: 950, marginTop: '20px' }}
+                            style={{ fontSize: '1.25rem', fontWeight: 950, marginTop: '20px', color: 'white' }}
                             placeholder="Título de la publicación..."
                             value={tempTitle}
                             onChange={e => setTempTitle(e.target.value)}
@@ -526,31 +534,37 @@ export default function CalendarPage() {
                                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">GANCHO</div>
-                                        <p className="block-text-mini">{linkedScript.gancho}</p>
+                                        <p className="block-text-mini">{linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || 'Sin gancho'}</p>
                                     </div>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">DESARROLLO</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {(linkedScript.desarrollo || []).map((p, i) => (
-                                                <div key={i} style={{ display: 'flex', gap: '10px' }}>
-                                                    <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
-                                                    <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
-                                                </div>
-                                            ))}
+                                            {(Array.isArray(linkedScript.content?.desarrollo) ? linkedScript.content.desarrollo :
+                                                (Array.isArray(linkedScript.desarrollo) ? linkedScript.desarrollo : [])).map((p, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '10px' }}>
+                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
+                                                        <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
+                                                    </div>
+                                                ))}
                                         </div>
                                     </div>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">CTA</div>
-                                        <p className="block-text-mini">{linkedScript.cta}</p>
+                                        <p className="block-text-mini">{linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || 'Sin CTA'}</p>
                                     </div>
 
-                                    {linkedScript.copy_post && (
+                                    {(linkedScript.content?.copy_post || linkedScript.copy_post) && (
                                         <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                             <div className="block-label-mini">COPY & HASHTAGS</div>
-                                            <p className="block-text-mini" style={{ fontStyle: 'italic', color: '#aaa' }}>{linkedScript.copy_post.descripcion_larga || linkedScript.copy_post.caption}</p>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-                                                {(linkedScript.copy_post.hashtags || []).map(tag => (
-                                                    <span key={tag} style={{ color: '#9D00FF', fontSize: '0.75rem', fontWeight: 600 }}>{tag}</span>
+                                            <div className="block-text-mini" style={{ fontStyle: 'italic', color: '#aaa', whiteSpace: 'pre-wrap' }}>
+                                                {linkedScript.content?.copy_post?.descripcion_larga ||
+                                                    linkedScript.content?.copy_post?.caption ||
+                                                    linkedScript.copy_post?.descripcion_larga ||
+                                                    linkedScript.copy_post?.caption}
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
+                                                {(linkedScript.content?.copy_post?.hashtags || linkedScript.copy_post?.hashtags || []).map(tag => (
+                                                    <span key={tag} style={{ color: '#9D00FF', fontSize: '0.8rem', fontWeight: 700 }}>{tag.startsWith('#') ? tag : `#${tag}`}</span>
                                                 ))}
                                             </div>
                                         </div>
