@@ -49,8 +49,7 @@ export default function LibraryPage() {
                 .eq('user_id', user.id);
 
             if (activeProject) {
-                // Return items for THIS project OR global items (for backward compat/shared assets)
-                query = query.or(`project_id.eq.${activeProject.id},project_id.is.null`);
+                query = query.eq('project_id', activeProject.id);
             } else {
                 query = query.is('project_id', null);
             }
