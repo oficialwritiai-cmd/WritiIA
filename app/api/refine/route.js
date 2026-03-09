@@ -35,24 +35,33 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, type, context, userId } = validation.data;
+        const { text, type, context, instruction, userId } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_text');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block');
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        const systemPrompt = `Mejora el ${type} (gancho, desarrollo o cta) de un guion viral.
-Mantén la intención original pero hazlo más potente y persuasivo.
-Alineado con: ${context || 'redes sociales'}. 
-Responde SOLO con la versión final mejorada.`;
+        const improvementGoal = instruction && instruction.trim().length > 0
+            ? `El usuario pide específicamente: "${instruction.trim()}"`
+            : `Mejora automáticamente el bloque para que sea más humano, impactante y menos genérico.`;
+
+        const systemPrompt = `Eres un editor experto de guiones de video viral.
+Tu tarea es mejorar un bloque específico (${type}: gancho, desarrollo o cta).
+
+REGLAS:
+- Mantén la idea principal pero hazla más potente y persuasiva.
+- Evita frases vacías ("en este video...", "es clave...").
+- ${improvementGoal}
+- Contexto del guion: ${context || 'redes sociales'}. 
+- Responde SOLO con el texto del bloque mejorado, sin introducciones ni comillas.`;
 
         const { content: refinedText } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
-            userMessage: `Texto a mejorar: ${text}`,
+            userMessage: `Texto actual del ${type}: "${text}"`,
         });
 
         return NextResponse.json({ refinedText: refinedText.trim() });
