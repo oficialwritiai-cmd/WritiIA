@@ -186,14 +186,14 @@ export default function VoiceDictation({
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>1</div>
                                 <div>
-                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Abre Inicio -> Configuración ⚙️</p>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Abre Inicio {'->'} Configuración ⚙️</p>
                                     <span style={{ fontSize: '0.8rem', color: '#888' }}>En tu ordenador Windows.</span>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
                                 <div>
-                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Privacidad -> Micrófono</p>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Privacidad {'->'} Micrófono</p>
                                     <span style={{ fontSize: '0.8rem', color: '#888' }}>Busca la sección de Micrófono en el menú izquierdo.</span>
                                 </div>
                             </div>
