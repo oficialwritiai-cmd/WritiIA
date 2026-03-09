@@ -115,7 +115,10 @@ export default function CalendarPage() {
         setIsPanelOpen(true);
 
         // Fetch linked script if exists
-        if (event.reference_id && event.has_script) {
+        if (event.content) {
+            setLinkedScript({ content: event.content });
+            setLoadingScript(false);
+        } else if (event.reference_id && event.has_script) {
             setLoadingScript(true);
             setLinkedScript(null);
             try {
@@ -583,12 +586,45 @@ export default function CalendarPage() {
                                         </div>
                                     )}
 
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                                        <button
+                                            className="btn-secondary"
+                                            onClick={() => {
+                                                const hook = linkedScript.content?.hook || linkedScript.content?.gancho || '';
+                                                const des = (Array.isArray(linkedScript.content?.desarrollo) ? linkedScript.content.desarrollo :
+                                                    (Array.isArray(linkedScript.desarrollo) ? linkedScript.desarrollo : [])).join('\n');
+                                                const cta = linkedScript.content?.cta || linkedScript.content?.cierre || '';
+                                                const full = `GANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}`;
+                                                navigator.clipboard.writeText(full);
+                                                alert('Guion completo copiado al portapapeles ✓');
+                                            }}
+                                            style={{ fontSize: '0.7rem', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                        >
+                                            <Copy size={12} /> Copiar Guion
+                                        </button>
+                                        <button
+                                            className="btn-secondary"
+                                            onClick={() => {
+                                                const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
+                                                const title = copy?.titulo || '';
+                                                const caption = copy?.descripcion_larga || copy?.caption || copy?.texto || '';
+                                                const tags = (copy?.hashtags || []).map(t => t.startsWith('#') ? t : `#${t}`).join(' ');
+                                                const full = `${title}\n\n${caption}\n\n${tags}`;
+                                                navigator.clipboard.writeText(full);
+                                                alert('Copy de publicación copiado ✓');
+                                            }}
+                                            style={{ fontSize: '0.7rem', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                        >
+                                            <Share2 size={12} /> Copiar Copy
+                                        </button>
+                                    </div>
+
                                     <button
                                         className="btn-secondary"
                                         onClick={handleViewInLibrary}
-                                        style={{ marginTop: '20px', width: '100%', borderColor: 'rgba(157, 0, 255, 0.3)', color: '#9D00FF' }}
+                                        style={{ marginTop: '10px', width: '100%', borderColor: 'rgba(157, 0, 255, 0.2)', color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}
                                     >
-                                        Ver / Editar en Biblioteca
+                                        Ver en Biblioteca
                                     </button>
                                 </div>
                             </div>

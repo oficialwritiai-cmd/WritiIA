@@ -739,7 +739,15 @@ export default function DashboardPage() {
                 reference_id: scriptId,
                 has_script: true,
                 status: 'En preparación',
-                description: `Planificado para las ${plannedTime}`
+                description: `Planificado para las ${plannedTime}`,
+                content: {
+                    video_duration: planningScript.video_duration || '45-60 seg',
+                    hook: planningScript.hook || planningScript.gancho || '',
+                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
+                    cierre: planningScript.cierre || '',
+                    cta: planningScript.cta || '',
+                    copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                }
             });
 
             if (calErr) throw calErr;
