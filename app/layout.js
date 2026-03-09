@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v29 - AI Suggestion & Multi-Script Fix v1.13.3
-// v1.13.3 - FORCE_REPLOY_2026_03_09_09
+// Build Version: 2026-03-09-v31 - Forced Sync & Scroll Fix v1.13.5
+// v1.13.5 - FORCE_REPLOY_2026_03_09_11
 import './globals.css';
 
 export const metadata = {

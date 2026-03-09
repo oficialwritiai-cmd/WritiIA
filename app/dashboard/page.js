@@ -640,6 +640,7 @@ export default function DashboardPage() {
 
     const handleOpenPlanner = (script) => {
         setPlanningScript(script);
+        setSuggestedReasoning(''); // Reset old reasoning
 
         // Advanced date suggestion: avoid existing events
         const findBestDate = () => {
@@ -670,6 +671,7 @@ export default function DashboardPage() {
         setPlannedTime(bestTime);
 
         setIsPlannerModalOpen(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleAISuggestion = async () => {
