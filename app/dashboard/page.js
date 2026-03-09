@@ -764,9 +764,9 @@ export default function DashboardPage() {
                 content: {
                     video_duration: planningScript.video_duration || '45-60 seg',
                     hook: planningScript.hook || planningScript.gancho || '',
-                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
+                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : (planningScript.puntos ? planningScript.puntos : []),
                     cierre: planningScript.cierre || '',
-                    cta: planningScript.cta || '',
+                    cta: planningScript.cta || planningScript.cierre || '',
                     copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
                 tags: ['guion', planningScript.platform || platform, 'planificado'].filter(Boolean),
@@ -788,9 +788,9 @@ export default function DashboardPage() {
                 content: {
                     video_duration: planningScript.video_duration || '45-60 seg',
                     hook: planningScript.hook || planningScript.gancho || '',
-                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
+                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : (planningScript.puntos ? planningScript.puntos : []),
                     cierre: planningScript.cierre || '',
-                    cta: planningScript.cta || '',
+                    cta: planningScript.cta || planningScript.cierre || '',
                     copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
                 project_id: activeProject?.id
@@ -890,7 +890,17 @@ export default function DashboardPage() {
             if (slotErr) throw slotErr;
 
             setPlanSlots(planSlots.map(s => {
-                if (s.id === slot.id) return { ...s, has_script: true, script_id: insertedScript.id };
+                if (s.id === slot.id) return {
+                    ...s,
+                    has_script: true,
+                    script_id: insertedScript.id,
+                    script_data: {
+                        hook: generatedScript.gancho || '',
+                        desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
+                        cta: generatedScript.cta || generatedScript.cierre || '',
+                        copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                    }
+                };
                 return s;
             }));
 
@@ -1015,7 +1025,13 @@ export default function DashboardPage() {
                     event_date: targetDate,
                     type: slot.content_type || 'idea',
                     platform: slot.platform,
-                    reference_id: refId
+                    reference_id: refId,
+                    has_script: slot.has_script || false,
+                    content: slot.script_data || {
+                        hook: slot.idea_title,
+                        desarrollo: [slot.goal, slot.content_type],
+                        cta: 'Click aquí'
+                    }
                 });
             }
 

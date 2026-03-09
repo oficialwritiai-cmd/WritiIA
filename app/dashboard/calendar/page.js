@@ -177,7 +177,11 @@ export default function CalendarPage() {
             platform: tempPlatform,
             notes: tempNotes,
             event_date: selectedDate,
-            type: tempColor
+            type: tempColor,
+            // Preserve linked script fields if they exist
+            reference_id: selectedEvent?.reference_id || null,
+            has_script: selectedEvent?.has_script || false,
+            content: selectedEvent?.content || null
         };
 
         try {
@@ -223,7 +227,8 @@ export default function CalendarPage() {
             event_date: eventToDup.event_date,
             type: eventToDup.type,
             reference_id: eventToDup.reference_id,
-            has_script: eventToDup.has_script
+            has_script: eventToDup.has_script,
+            content: eventToDup.content || null
         };
 
         await supabase.from('calendar_events').insert(payload);
