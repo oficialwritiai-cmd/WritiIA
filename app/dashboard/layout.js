@@ -8,62 +8,7 @@ import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Me
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
-
-function ProjectSelector() {
-    const { projects, activeProject, setActiveProject } = useProject();
-    const [selectorOpen, setSelectorOpen] = useState(false);
-    if (!activeProject || projects.length === 0) return null;
-    return (
-        <div style={{ position: 'relative' }}>
-            <button
-                onClick={() => setSelectorOpen(!selectorOpen)}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    background: 'rgba(126,206,202,0.08)',
-                    border: '1px solid rgba(126,206,202,0.15)',
-                    borderRadius: '12px', padding: '6px 14px',
-                    color: '#7ECECA', cursor: 'pointer', fontSize: '0.8rem',
-                    fontWeight: 700, whiteSpace: 'nowrap', transition: '0.2s',
-                }}
-            >
-                <FolderOpen size={14} />
-                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeProject.name}</span>
-                <ChevronDown size={14} style={{ transform: selectorOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
-            </button>
-            {selectorOpen && (
-                <div style={{
-                    position: 'absolute', top: '115%', left: 0, minWidth: '220px',
-                    background: 'rgba(15, 15, 15, 0.98)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.7)',
-                    zIndex: 1000, overflow: 'hidden', padding: '6px'
-                }}>
-                    {projects.map(p => (
-                        <button
-                            key={p.id}
-                            onClick={() => { setActiveProject(p.id); setSelectorOpen(false); }}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '10px',
-                                width: '100%', padding: '10px 12px',
-                                background: p.id === activeProject.id ? 'rgba(126,206,202,0.12)' : 'transparent',
-                                border: 'none', color: p.id === activeProject.id ? '#7ECECA' : '#eee',
-                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
-                                textAlign: 'left', transition: '0.15s',
-                                borderRadius: '10px', marginBottom: '2px'
-                            }}
-                            onMouseEnter={e => { if (p.id !== activeProject.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-                            onMouseLeave={e => { if (p.id !== activeProject.id) e.currentTarget.style.background = 'transparent' }}
-                        >
-                            <FolderOpen size={14} color={p.id === activeProject.id ? '#7ECECA' : '#666'} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
+import ProjectSelector from '@/app/components/ProjectSelector';
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -496,6 +441,11 @@ export default function DashboardLayout({ children }) {
                                         <Logo mobile={true} />
                                     </Link>
                                 </div>
+
+                                {/* Project Selector in Mobile Sidebar */}
+                                <div style={{ marginBottom: '10px' }}>
+                                    <ProjectSelector mobile={true} />
+                                </div>
                                 <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     {navItems.map((item) => {
                                         const Icon = item.icon;
@@ -552,14 +502,16 @@ export default function DashboardLayout({ children }) {
                             <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
                                 <Logo />
                             </Link>
-                            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
-                            <ProjectSelector />
-                            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                            <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                                <ProjectSelector />
+                                <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                            </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.4.0</span>
-                                    <p style={{
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.4.1</span>
+                                    <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
                                         whiteSpace: 'nowrap',
@@ -764,6 +716,7 @@ export default function DashboardLayout({ children }) {
                     .sidebar { display: none !important; }
                     .main-wrapper { width: 100% !important; max-width: 100% !important; }
                     .main-content { padding: 16px !important; width: 100% !important; max-width: 100% !important; }
+                    .desktop-only { display: none !important; }
                 }
 
                 @media (max-width: 900px) {
