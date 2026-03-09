@@ -109,6 +109,7 @@ export default function DashboardPage() {
         setStep(1);
         setTopic('');
         setIdeas('');
+        setLibIdeas([]); // Clear library ideas too
         loadData();
     }, [activeProject]);
 
@@ -122,7 +123,9 @@ export default function DashboardPage() {
 
         // Credits
         const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
-        if (creds) setAiCredits(creds);
+        if (creds) {
+            setAiCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+        }
 
         // Library Ideas - FILTERED BY PROJECT
         let query = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea');
@@ -227,7 +230,17 @@ export default function DashboardPage() {
     const fetchLibraryIdeas = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea').order('created_at', { ascending: false });
+
+        let query = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea');
+
+        // Filter by project if active
+        if (activeProject) {
+            query = query.eq('project_id', activeProject.id);
+        } else {
+            query = query.is('project_id', null);
+        }
+
+        const { data } = await query.order('created_at', { ascending: false });
         setLibIdeas(data || []);
     };
 
