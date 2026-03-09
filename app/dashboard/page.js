@@ -1536,13 +1536,13 @@ export default function DashboardPage() {
                                                     <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>
                                                         {(() => {
                                                             let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
-                                                            return idea.titulo || c.titulo_idea || c.hook?.substring(0, 40) || c.titulo || 'Idea sin título';
+                                                            return idea.titulo || c.titulo_idea || c.Título || c.Titulo || c.titulo || c.hook?.substring(0, 40) || 'Idea sin título';
                                                         })()}
                                                     </h4>
                                                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                         {(() => {
                                                             let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
-                                                            return c.descripcion || c.hook || idea.descripcion || (c.desarrollo ? c.desarrollo[0] : 'Sin descripción disponible');
+                                                            return c.descripcion || c.Descripción || c.Descripcion || c.hook || idea.descripcion || (c.desarrollo ? c.desarrollo[0] : 'Sin descripción disponible');
                                                         })()}
                                                     </p>
                                                 </div>

@@ -1,0 +1,252 @@
+[
+  {
+    "id": "93461dab-6776-497b-bbe7-c21b01afa450",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "Tendencias emergentes en la industria de la IA",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Analiza las últimas tendencias y avances en el campo de la inteligencia artificial que están impactando en el mundo empresarial.",
+      "scheduled_date": "2026-03-13",
+      "Tipo de contenido": "Podcast"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:02.793742+00:00",
+    "updated_at": "2026-03-09T21:33:02.793742+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "96cfb7ed-bf19-41b3-ac7b-ff5f5c742c1d",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "Los 3 mejores chatbots para potenciar tu negocio",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Realiza una revisión y comparación de las principales herramientas de chatbots que has utilizado para tus clientes, destacando sus beneficios.",
+      "scheduled_date": "2026-03-12",
+      "Tipo de contenido": "Blog"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:02.592011+00:00",
+    "updated_at": "2026-03-09T21:33:02.592011+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "11305905-cd57-470f-a13e-66b286139ca2",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "Cómo utilizar IA para automatizar tu negocio",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Muestra ejemplos concretos de cómo has aplicado la inteligencia artificial para automatizar y optimizar los procesos en tu propia agencia.",
+      "scheduled_date": "2026-03-11",
+      "Tipo de contenido": "Vídeo"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:02.486394+00:00",
+    "updated_at": "2026-03-09T21:33:02.486394+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "94e4d651-0913-4230-9ad0-27eb24ead318",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "Entrevista a un emprendedor de éxito en IA",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Realiza una entrevista a otro emprendedor destacado en el campo de la inteligencia artificial, compartiendo sus estrategias y lecciones aprendidas.",
+      "scheduled_date": "2026-03-10",
+      "Tipo de contenido": "Podcast"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:02.326712+00:00",
+    "updated_at": "2026-03-09T21:33:02.326712+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "d7a642af-e654-4e83-85b9-c9a4295d249d",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "5 pasos para lanzar tu propia agencia de IA",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Detalla los pasos clave que seguiste para iniciar y escalar tu agencia de IA, desde la ideación hasta la adquisición de clientes.",
+      "scheduled_date": "2026-03-09",
+      "Tipo de contenido": "Blog"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:02.109164+00:00",
+    "updated_at": "2026-03-09T21:33:02.109164+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "c80fadea-d1d8-4e01-964a-6530f6ee90c4",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": null,
+    "goal": null,
+    "content": {
+      "Título": "Cómo generar tu primera venta con IA",
+      "script_id": null,
+      "has_script": false,
+      "script_data": null,
+      "Descripción": "Comparte tu experiencia sobre cómo lograste tu primera venta utilizando inteligencia artificial para un cliente de tu agencia.",
+      "scheduled_date": "2026-03-08",
+      "Tipo de contenido": "Vídeo"
+    },
+    "metadata": {},
+    "tags": [],
+    "status": "planificado",
+    "created_at": "2026-03-09T21:33:01.885977+00:00",
+    "updated_at": "2026-03-09T21:33:01.885977+00:00",
+    "titulo": null,
+    "project_id": "f16c333c-3ba6-4d44-9a49-ea3b2d92292d"
+  },
+  {
+    "id": "763b7486-913e-4fff-aa4c-30dae4052ea1",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": "YouTube, Instagram",
+    "goal": "leads, ventas",
+    "content": {
+      "cta": "¿Listo para transformar tu negocio con IA? ¡Únete al reto y consigue una consultoría gratuita!",
+      "tipo": "Tutorial, Reto",
+      "objetivo": "leads, ventas",
+      "potencial": "Viral",
+      "plataforma": "YouTube, Instagram",
+      "descripcion": "Lanza un desafío de 30 días donde guíes a tu audiencia a implementar soluciones de IA en sus negocios. Publica videos diarios con pasos concretos y ejemplos de cómo usar chatbots, asistentes de voz y automatizaciones para aumentar ventas, mejorar la eficiencia y ahorrar tiempo. Al final, ofrece una consultoría gratuita para ayudarlos a llevar su negocio al siguiente nivel.",
+      "titulo_idea": "Reto de IA: Transforma tu negocio en 30 días",
+      "por_que_funciona": "Los retos y desafíos generan compromiso y sentido de comunidad. Al guiar a tu audiencia paso a paso, les demuestras tu experticia y los inspiras a tomar acción."
+    },
+    "metadata": {},
+    "tags": [
+      "YouTube, Instagram",
+      "Tutorial, Reto",
+      "leads, ventas"
+    ],
+    "status": "borrador",
+    "created_at": "2026-03-07T22:40:27.430856+00:00",
+    "updated_at": "2026-03-07T22:40:27.430856+00:00",
+    "titulo": "Reto de IA: Transforma tu negocio en 30 días",
+    "project_id": null
+  },
+  {
+    "id": "8ff4bdf4-d635-4185-b721-7b2b29be0699",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": "TikTok, Instagram Reels",
+    "goal": "engagement, leads",
+    "content": {
+      "cta": "¿Listo para lanzar tu propia agencia de IA? ¡Contáctame y te muestro cómo!",
+      "tipo": "Storytelling",
+      "objetivo": "engagement, leads",
+      "potencial": "Alto",
+      "plataforma": "TikTok, Instagram Reels",
+      "descripcion": "Comparte videos cortos y auténticos mostrando tu rutina diaria como emprendedor de IA: desde tu proceso de entrenamiento matutino hasta las reuniones con clientes y el desarrollo de nuevos proyectos. Deja que tu audiencia vea el día a día de alguien que está construyendo una carrera en la inteligencia artificial.",
+      "titulo_idea": "Detrás de cámaras: La vida de un emprendedor de IA",
+      "por_que_funciona": "La gente se conecta con historias personales y auténticas. Al mostrar tu proceso, les das a los espectadores una ventana a tu mundo y los inspiras a seguir su propio camino emprendedor."
+    },
+    "metadata": {},
+    "tags": [
+      "TikTok, Instagram Reels",
+      "Storytelling",
+      "engagement, leads"
+    ],
+    "status": "borrador",
+    "created_at": "2026-03-07T22:40:27.119108+00:00",
+    "updated_at": "2026-03-07T22:40:27.119108+00:00",
+    "titulo": "Detrás de cámaras: La vida de un emprendedor de IA",
+    "project_id": null
+  },
+  {
+    "id": "558aeb3a-b9a3-4d96-bb3b-5fc13afcec8e",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": "Reels, TikTok",
+    "goal": "autoridad",
+    "content": {
+      "id": "2",
+      "tipo": "autoridad",
+      "objetivo": "autoridad",
+      "potencial": "medio",
+      "plataforma": "Reels, TikTok",
+      "descripcion": "Análisis y comparativa de las 3 principales herramientas de IA para automatizar el soporte telefónico",
+      "titulo_idea": "Los 3 mejores agentes de voz para automatizar atención al cliente",
+      "por_que_funciona": "Demuestra conocimiento experto en IA aplicada a negocios"
+    },
+    "metadata": {},
+    "tags": [
+      "Reels, TikTok",
+      "autoridad",
+      "autoridad"
+    ],
+    "status": "borrador",
+    "created_at": "2026-03-06T11:36:04.982801+00:00",
+    "updated_at": "2026-03-06T11:36:04.982801+00:00",
+    "titulo": "Los 3 mejores agentes de voz para automatizar atención al cliente",
+    "project_id": null
+  },
+  {
+    "id": "fbcbea70-e169-46bb-bc59-92e406d2f245",
+    "user_id": "9f7eccc1-4bdb-4e79-aadf-a3cc5982da7c",
+    "type": "idea",
+    "platform": "Reels, TikTok",
+    "goal": "atraer leads",
+    "content": {
+      "id": "1",
+      "tipo": "educativo",
+      "objetivo": "atraer leads",
+      "potencial": "alto",
+      "plataforma": "Reels, TikTok",
+      "descripcion": "Tutorial paso a paso sobre cómo configurar un chatbot de IA para calificar y captar leads automáticamente",
+      "titulo_idea": "Cómo usar IA para captar 10 leads por día (sin anuncios)",
+      "por_que_funciona": "Resuelve un problema concreto de generación de leads que tienen los emprendedores y negocios"
+    },
+    "metadata": {},
+    "tags": [
+      "Reels, TikTok",
+      "educativo",
+      "atraer leads"
+    ],
+    "status": "borrador",
+    "created_at": "2026-03-06T11:36:04.857789+00:00",
+    "updated_at": "2026-03-06T11:36:04.857789+00:00",
+    "titulo": "Cómo usar IA para captar 10 leads por día (sin anuncios)",
+    "project_id": null
+  }
+]
