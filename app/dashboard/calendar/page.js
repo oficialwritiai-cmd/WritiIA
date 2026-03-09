@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.3.0
+// Calendar Page v2.3.1
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -572,7 +572,7 @@ export default function CalendarPage() {
                                         <div className="block-label-mini">GANCHO</div>
                                         <textarea
                                             className="cal-textarea-minimal"
-                                            style={{ minHeight: '60px', padding: '8px', fontSize: '0.85rem' }}
+                                            style={{ minHeight: '100px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.5' }}
                                             value={linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || ''}
                                             onChange={e => {
                                                 const newContent = { ...(linkedScript.content || {}) };
@@ -592,11 +592,11 @@ export default function CalendarPage() {
 
                                                 return desArray.map((p, i) => (
                                                     <div key={i} style={{ display: 'flex', gap: '10px' }}>
-                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem', marginTop: '10px' }}>{i + 1}.</span>
+                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.9rem', marginTop: '12px' }}>{i + 1}.</span>
                                                         <textarea
                                                             className="cal-textarea-minimal"
-                                                            style={{ minHeight: '50px', padding: '8px', fontSize: '0.85rem' }}
-                                                            value={p}
+                                                            style={{ minHeight: '80px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.4' }}
+                                                            value={p.replace(/^\d+\.\s*/, '')}
                                                             onChange={e => {
                                                                 const newDes = [...desArray];
                                                                 newDes[i] = e.target.value;
@@ -614,7 +614,7 @@ export default function CalendarPage() {
                                         <div className="block-label-mini">CTA</div>
                                         <textarea
                                             className="cal-textarea-minimal"
-                                            style={{ minHeight: '50px', padding: '8px', fontSize: '0.85rem' }}
+                                            style={{ minHeight: '80px', padding: '12px', fontSize: '0.95rem', lineHeight: '1.4' }}
                                             value={linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || ''}
                                             onChange={e => {
                                                 const newContent = { ...(linkedScript.content || {}) };
