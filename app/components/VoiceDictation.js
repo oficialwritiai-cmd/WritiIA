@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Square, X, AlertCircle, RefreshCw, ShieldAlert, Copy, Settings } from 'lucide-react';
+import { Mic, Square, X, AlertCircle, RefreshCw, ShieldAlert, Copy, Settings, Monitor, Lock } from 'lucide-react';
 
 export default function VoiceDictation({
     onResult,
@@ -150,7 +150,7 @@ export default function VoiceDictation({
                 )}
             </div>
 
-            {/* MODAL DE EMERGENCIA - GUÍA DEFINITIVA */}
+            {/* MODAL DE EMERGENCIA - GUÍA DEFINITIVA v1.15.5 */}
             {showGuidance && (
                 <div style={{
                     position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)',
@@ -159,7 +159,8 @@ export default function VoiceDictation({
                 }}>
                     <div style={{
                         background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '32px', maxWidth: '480px', width: '100%',
+                        borderRadius: '32px', maxWidth: '520px', width: '100%',
+                        maxHeight: '90vh', overflowY: 'auto',
                         padding: '40px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
                     }}>
                         <button
@@ -177,36 +178,37 @@ export default function VoiceDictation({
                             }}>
                                 <ShieldAlert size={32} color="#FF4D4D" />
                             </div>
-                            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '8px' }}>Micrófono Bloqueado</h2>
-                            <p style={{ color: '#aaa', fontSize: '0.9rem' }}>El navegador ha bloqueado el acceso. No volverá a preguntarte hasta que hagas esto:</p>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '8px' }}>Bloqueo de Sistema Detectado</h2>
+                            <p style={{ color: '#aaa', fontSize: '0.9rem' }}>Si ya diste permiso en el buscador y sigue fallando, el problema es de <b>Windows</b>:</p>
                         </div>
-
-                        {!isSecure && (
-                            <div style={{ background: 'rgba(255,165,0,0.1)', padding: '15px', borderRadius: '15px', border: '1px solid orange', color: 'orange', fontSize: '0.8rem', marginBottom: '20px' }}>
-                                ⚠️ <b>ERROR DE SEGURIDAD:</b> No estás en una conexión segura (HTTPS). Entra en <code>https://writi.ai</code> para usar el micro.
-                            </div>
-                        )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>1</div>
                                 <div>
-                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Pulsa el Candado 🔒 o Micro 🎥</p>
-                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>En la barra de direcciones (donde escribes la web).</span>
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,77,77,0.3)' }}>
-                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
-                                <div>
-                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Elige "Configuración de sitios"</p>
-                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Busca **Micrófono** y cámbialo a **PERMITIR**.</span>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Abre Inicio -> Configuración ⚙️</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>En tu ordenador Windows.</span>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
+                                <div>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Privacidad -> Micrófono</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Busca la sección de Micrófono en el menú izquierdo.</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,77,77,0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,77,77,0.3)' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>3</div>
                                 <div>
-                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Pulsa Recargar Ahora</p>
-                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Para aplicar los cambios del navegador.</span>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Activa "Permitir que las apps accedan"</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#fca5a5' }}>Baja hasta abajo y activa también: **"Permitir que las aplicaciones de escritorio accedan al micrófono"**.</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>4</div>
+                                <div>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Recarga Writi</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Pulsa el botón de abajo para terminar.</span>
                                 </div>
                             </div>
                         </div>
@@ -233,7 +235,7 @@ export default function VoiceDictation({
 
                         {rawError && (
                             <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.7rem', color: '#444' }}>
-                                Error: <code>{rawError}</code>
+                                Error detectado: <code>{rawError}</code>
                                 <button onClick={() => { navigator.clipboard.writeText(rawError); alert('Error copiado!'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', marginLeft: '5px' }}>
                                     <Copy size={12} />
                                 </button>
