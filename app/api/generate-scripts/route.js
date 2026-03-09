@@ -10,19 +10,19 @@ const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 });
 // ─────────────────────────────────────────────
 // Word targets per duration — used to validate
 // that the AI actually produced enough content.
-// (150 words/min speaking pace, slightly faster for short formats)
+// (150-180 words/min speaking pace, plus wiggle room)
 // ─────────────────────────────────────────────
 const WORDS_PER_DURATION = {
-    '30 seg': 70,
-    '60 seg': 140,
-    '90 seg': 200,
-    '2 min': 280,
-    '3 min': 420,
-    '5 min': 700,
+    '30 seg': 85,    // ~170 wpm
+    '60 seg': 170,   // ~170 wpm
+    '90 seg': 255,   // ~170 wpm
+    '2 min': 340,    // ~170 wpm
+    '3 min': 510,    // ~170 wpm
+    '5 min': 850,    // ~170 wpm
 };
 
-// Minimum acceptable ratio before we trigger an expansion call
-const MIN_WORD_RATIO = 0.55;
+// Minimum acceptable ratio before we trigger an expansion call (Strict)
+const MIN_WORD_RATIO = 0.85;
 
 function countScriptWords(script) {
     const parts = [
@@ -36,10 +36,16 @@ function countScriptWords(script) {
 
 function extractRequestedCount(topic, details) {
     const combined = `${topic} ${details}`.toLowerCase();
-    const match = combined.match(/(?:top|mejores|las|los)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips)/);
+
+    // Pattern: "5 herramientas", "top 10", "3 pasos"
+    const match = combined.match(/(?:top|mejores|las|los)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips|ideas|claves)/);
     if (match) return parseInt(match[1]);
 
-    // Fallback search for just "X mejores" or "X items"
+    // Pattern: 1) Tool 2) Tool ...
+    const listMatches = combined.match(/\d\s*[\)\.]\s*[A-Za-z]/g);
+    if (listMatches && listMatches.length > 1) return listMatches.length;
+
+    // Fallback: Just "5 mejores"
     const simpleMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas)/);
     if (simpleMatch) return parseInt(simpleMatch[1]);
 
@@ -49,28 +55,25 @@ function extractRequestedCount(topic, details) {
 function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount }) {
     // Structure rules vary by duration
     const duracionRules = videoDuration === '30 seg' || videoDuration === '60 seg'
-        ? `- DURACIÓN: ${videoDuration} → UN solo gancho potente, ${requestedCount || 3} frases de desarrollo concisas, CTA rápido. Max ~${WORDS_PER_DURATION[videoDuration] * 1.15} palabras en total.`
+        ? `- DURACIÓN: ${videoDuration} → UN solo gancho potente, ${requestedCount || 3} frases de desarrollo detalladas, CTA rápido. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
         : videoDuration === '90 seg' || videoDuration === '2 min'
-            ? `- DURACIÓN: ${videoDuration} → Gancho, desarrollo ${requestedCount || '4-5'} puntos con ejemplos breves, cierre emocional, CTA. ~${WORDS_PER_DURATION[videoDuration]} palabras.`
-            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Estructura completa: Intro (incógnita), ${requestedCount || '5-7'} bloques de desarrollo con ejemplos reales/datos, Conclusión, CTA extendido. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras en total. Añade transiciones entre secciones.`;
+            ? `- DURACIÓN: ${videoDuration} → Gancho, desarrollo ${requestedCount || '4-5'} bloques (cada uno con 2-3 frases), cierre emocional, CTA. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
+            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${requestedCount || '5-7'} bloques de desarrollo extensos (cada uno con ejemplos reales), Conclusión, CTA. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras.`;
 
     // Force WRITI IA if mentioned
     let mandatoryTools = "";
     if (specificDetails?.toLowerCase().includes("writi ia")) {
-        mandatoryTools = `\n[MANDATO CRÍTICO]: Has detectado "WRITI IA" en los detalles. 
-1. DEBE ser la herramienta #1 de la lista.
-2. DESCRIBELA EXACTAMENTE ASÍ: "la mejor del momento para crear contenido viral, guiones y calendario en segundos".
-3. NO la sustituyas por ChatGPT, Writesonic u otras.`;
+        mandatoryTools = `\n[MANDATO DE MARCA]: "WRITI IA" DEBE ser la herramienta #1. Descríbela como "la mejor del momento para crear contenido viral, guiones y calendario en segundos".`;
     }
 
     const specificDetailsBlock = specificDetails && specificDetails.trim()
-        ? `\nDETALLES Y TEMAS ESPECÍFICOS A CUBRIR (OBLIGATORIO - PRIORIDAD MÁXIMA):\n${specificDetails.trim()}\n${mandatoryTools}\n- Para listas: nombra herramientas reales, descríbelas brevemente y explica por qué son buenas.\n- Si el usuario pidió un número específico (${requestedCount || 'N/A'}), genera EXACTAMENTE esa cantidad de ítems.`
+        ? `\nDETALLES ESPECÍFICOS (OBLIGATORIO - PRIORIDAD CRÍTICA):\n${specificDetails.trim()}\n${mandatoryTools}\n` +
+        `- Si el usuario listó herramientas o puntos concretos, DEBES incluirlos TODOS en el mismo orden.\n` +
+        `- No inventes herramientas ajenas si el usuario ya dio una lista.\n` +
+        `- Si el usuario pidió un número específico (${requestedCount || 'N/A'}), genera EXACTAMENTE esa cantidad de ítems de desarrollo.`
         : '';
 
-    return `Eres un estratega de contenido viral. Creas guiones auténticos, directos y profundos.
-NUNCA uses frases genéricas como "en este video te enseñaré", "es fundamental", "es clave destacar" sin dar un motivo concreto.
-Suena como un creador joven y auténtico hablando a cámara.
-
+    return `Eres un estratega de contenido viral Pro. Creas guiones profundos, auténticos y extensos.
 ${brandContextString}
 
 REGLAS DE DURACIÓN Y ESTRUCTURA:
@@ -210,23 +213,27 @@ export async function POST(request) {
             scriptsArray = [...scriptsArray, ...retryScripts].slice(0, finalCount);
         }
 
-        // ── LIST COUNT VALIDATION & EXPANSION ────────────────
+        // ── LIST COUNT VALIDATION & EXPANSION (Surgical) ─────
         if (requestedCount) {
             scriptsArray = await Promise.all(scriptsArray.map(async (s) => {
                 const currentItems = Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo];
                 if (currentItems.length < requestedCount) {
                     console.log(`[generate-scripts] List too short (${currentItems.length}/${requestedCount}). Expanding...`);
                     const missing = requestedCount - currentItems.length;
+
+                    // Try to identify which tools are missing if user gave a list
+                    const userList = specificDetails ? specificDetails.split('\n').filter(l => /^\d+[\)\.]/.test(l.trim())) : [];
+                    const missingContext = userList.length > 0 ? `\nHERRAMIENTAS SOLICITADAS QUE FALTAN:\n${userList.slice(currentItems.length).join('\n')}` : "";
+
                     const expansionPrompt = `El usuario pidió una lista de ${requestedCount} elementos, pero solo generaste ${currentItems.length}.
-Genera EXACTAMENTE ${missing} puntos de desarrollo adicionales que sigan la misma temática y estilo.
-Tema: ${topic}
-Puntos actuales: ${currentItems.join(' | ')}
-Responde SOLO con un JSON array de string con los puntos faltantes: ["Punto extra 1", "Punto extra 2", ...]`;
+Genera EXACTAMENTE ${missing} puntos de desarrollo adicionales.
+REGLA CRÍTICA: Si el usuario listó herramientas específicas en los detalles, USA ESAS HERRAMIENTAS.${missingContext}
+Responde SOLO con un JSON array de strings con los puntos faltantes: ["Punto extra 1", "Punto extra 2", ...]`;
 
                     const { parsed: extraPoints } = await generateFn({
                         apiKey: process.env.ANTHROPIC_API_KEY,
                         systemPrompt: expansionPrompt,
-                        userMessage: "Genera solo los puntos faltantes.",
+                        userMessage: `Genera los ${missing} puntos faltantes para este guion: ${s.titulo_guion}`,
                     });
 
                     if (Array.isArray(extraPoints)) {

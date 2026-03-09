@@ -89,6 +89,13 @@ export default function DashboardPage() {
     const [calendarDate, setCalendarDate] = useState(null);
     const [brainName, setBrainName] = useState('');
 
+    // Planning Feature States
+    const [isPlannerModalOpen, setIsPlannerModalOpen] = useState(false);
+    const [planningScript, setPlanningScript] = useState(null);
+    const [plannedDate, setPlannedDate] = useState('');
+    const [plannedTime, setPlannedTime] = useState('18:00');
+    const [isPlanningLoading, setIsPlanningLoading] = useState(false);
+
     const supabase = createSupabaseClient();
     const router = useRouter();
 
@@ -636,6 +643,82 @@ export default function DashboardPage() {
             }
         } catch (err) {
             console.error('Error in handleSaveScript:', err);
+        }
+    };
+
+    const handleOpenPlanner = (script) => {
+        setPlanningScript(script);
+
+        // Suggest date (tomorrow)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setPlannedDate(tomorrow.toISOString().split('T')[0]);
+
+        // Suggest time based on platform
+        let bestTime = '18:00';
+        const p = (script.platform || '').toLowerCase();
+        if (p.includes('linkedin')) bestTime = '08:30';
+        if (p.includes('youtube')) bestTime = '11:00';
+        if (p.includes('tiktok') || p.includes('instagram') || p.includes('reels')) bestTime = '20:15';
+        setPlannedTime(bestTime);
+
+        setIsPlannerModalOpen(true);
+    };
+
+    const handleConfirmPlanning = async () => {
+        if (!planningScript || !plannedDate) return;
+        setIsPlanningLoading(true);
+
+        try {
+            // 1. First save script to library to get a reference_id
+            let scriptId = planningScript.id;
+            if (!scriptId) {
+                const savedItem = await saveToLibrary({
+                    userId: profile.id,
+                    type: 'guion',
+                    platform: planningScript.platform || platform || 'General',
+                    goal: planningScript.goal || goal || 'engagement',
+                    titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
+                    content: {
+                        video_duration: planningScript.video_duration || '45-60 seg',
+                        hook: planningScript.hook || planningScript.gancho || '',
+                        desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : [],
+                        cierre: planningScript.cierre || '',
+                        cta: planningScript.cta || '',
+                        copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                    },
+                    tags: ['guion', planningScript.platform || platform, planningScript.goal || goal].filter(Boolean)
+                });
+                scriptId = savedItem.id;
+            }
+
+            // 2. Insert into calendar_events
+            const { error: calErr } = await supabase.from('calendar_events').insert({
+                user_id: profile.id,
+                event_date: plannedDate,
+                title: planningScript.titulo_guion || 'Guion Planificado',
+                platform: planningScript.platform || platform || 'General',
+                type: 'guion',
+                reference_id: scriptId,
+                has_script: true,
+                notes: `Planificado para las ${plannedTime}`
+            });
+
+            if (calErr) throw calErr;
+
+            setSuccessModalData({
+                title: '¡Planificado!',
+                message: `Tu guion ha sido agendado para el ${plannedDate} a las ${plannedTime}.`
+            });
+            setIsPlannerModalOpen(false);
+            setIsSuccessModalOpen(true);
+
+            // Deduct credits or just log it if we want, but "Planificar" itself is free for now (it uses a saved script)
+        } catch (err) {
+            console.error('Error planning script:', err);
+            alert('Error al planificar: ' + err.message);
+        } finally {
+            setIsPlanningLoading(false);
         }
     };
 
@@ -1759,7 +1842,11 @@ export default function DashboardPage() {
                                                 label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar',
                                                 action: () => handleSaveScript(s)
                                             },
-                                            { icon: <Calendar size={16} />, label: 'Planificar', action: () => router.push('/dashboard/calendar') },
+                                            {
+                                                icon: <Calendar size={16} />,
+                                                label: 'Planificar',
+                                                action: () => handleOpenPlanner(s)
+                                            },
                                             { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
                                         ].map((btn, bidx) => (
                                             <button
@@ -2035,6 +2122,81 @@ export default function DashboardPage() {
                     </div>
                 )
             }
+
+            {/* MODAL PLANIFICAR */}
+            {isPlannerModalOpen && (
+                <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="modal-content" style={{ maxWidth: '450px', width: '100%', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(126, 206, 202, 0.08) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: 0 }} />
+
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '40px', height: '40px', background: 'rgba(126, 206, 202, 0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <CalendarDays size={20} color="#7ECECA" />
+                                    </div>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900 }}>Planificar en Calendario</h3>
+                                </div>
+                                <button onClick={() => setIsPlannerModalOpen(false)} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}><X size={20} /></button>
+                            </div>
+
+                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.5 }}>
+                                Hemos analizado tu guion. Esta es la mejor sugerencia para maximizar tu impacto:
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7ECECA', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                                        <Sparkles size={14} /> Sugerencia de la IA
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px' }}>FECHA</label>
+                                            <input
+                                                type="date"
+                                                className="input-field"
+                                                value={plannedDate}
+                                                onChange={e => setPlannedDate(e.target.value)}
+                                                style={{ fontSize: '0.9rem', padding: '10px 14px' }}
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px' }}>HORA</label>
+                                            <input
+                                                type="time"
+                                                className="input-field"
+                                                value={plannedTime}
+                                                onChange={e => setPlannedTime(e.target.value)}
+                                                style={{ fontSize: '0.9rem', padding: '10px 14px' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '0 8px' }}>
+                                    <div style={{ marginTop: '4px' }}><AlertCircle size={16} color="rgba(255,255,255,0.3)" /></div>
+                                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>
+                                        Esta publicación se añadirá a tu calendario como "En preparación". Podrás cambiar el estado a "Publicado" una vez lo subas.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+                                <button onClick={() => setIsPlannerModalOpen(false)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                <button
+                                    onClick={handleConfirmPlanning}
+                                    className="btn-primary"
+                                    style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    disabled={isPlanningLoading}
+                                >
+                                    {isPlanningLoading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
