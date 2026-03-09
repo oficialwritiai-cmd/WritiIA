@@ -77,6 +77,30 @@ export default function DashboardPage() {
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
 
+    // Missing states restored
+    const [profile, setProfile] = useState(null);
+    const [aiCredits, setAiCredits] = useState({ total: 0, used: 0 });
+    const [error, setError] = useState('');
+    const [hasBrain, setHasBrain] = useState(false);
+    const [brainName, setBrainName] = useState('');
+    const [events, setEvents] = useState([]);
+    const [calendarDate, setCalendarDate] = useState('');
+    const [loadingPhase, setLoadingPhase] = useState(0);
+    const [isPlannerModalOpen, setIsPlannerModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
+    const [isPlanningLoading, setIsPlanningLoading] = useState(false);
+
+    // Additional missing states
+    const [improvementCounts, setImprovementCounts] = useState({});
+    const [refiningBlock, setRefiningBlock] = useState(null);
+    const [savedScriptsIds, setSavedScriptsIds] = useState(new Set());
+    const [selectedHook, setSelectedHook] = useState({});
+    const [plannedDate, setPlannedDate] = useState('');
+    const [plannedTime, setPlannedTime] = useState('');
+    const [planningScript, setPlanningScript] = useState(null);
+    const [previousScripts, setPreviousScripts] = useState(null);
+
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
     useEffect(() => {
