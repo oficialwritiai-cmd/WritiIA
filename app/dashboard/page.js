@@ -46,6 +46,7 @@ export default function DashboardPage() {
     const [story, setStory] = useState('');
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [intensity, setIntensity] = useState(3);
+    const [videoDuration, setVideoDuration] = useState('60 seg');
     const [specificDetails, setSpecificDetails] = useState('');
     const [ctaIdea, setCtaIdea] = useState('');
     // Mini-chat state per script: { [scriptIndex]: { text, loading, error } }
