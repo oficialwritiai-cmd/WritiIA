@@ -32,10 +32,12 @@ function ProjectSelector() {
             </button>
             {selectorOpen && (
                 <div style={{
-                    position: 'absolute', top: '110%', left: 0, minWidth: '200px',
-                    background: '#111', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '14px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                    zIndex: 1000, overflow: 'hidden',
+                    position: 'absolute', top: '115%', left: 0, minWidth: '220px',
+                    background: 'rgba(15, 15, 15, 0.98)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.7)',
+                    zIndex: 1000, overflow: 'hidden', padding: '6px'
                 }}>
                     {projects.map(p => (
                         <button
@@ -43,14 +45,17 @@ function ProjectSelector() {
                             onClick={() => { setActiveProject(p.id); setSelectorOpen(false); }}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
-                                width: '100%', padding: '12px 16px',
-                                background: p.id === activeProject.id ? 'rgba(126,206,202,0.1)' : 'transparent',
-                                border: 'none', color: p.id === activeProject.id ? '#7ECECA' : '#aaa',
+                                width: '100%', padding: '10px 12px',
+                                background: p.id === activeProject.id ? 'rgba(126,206,202,0.12)' : 'transparent',
+                                border: 'none', color: p.id === activeProject.id ? '#7ECECA' : '#eee',
                                 cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
                                 textAlign: 'left', transition: '0.15s',
+                                borderRadius: '10px', marginBottom: '2px'
                             }}
+                            onMouseEnter={e => { if (p.id !== activeProject.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                            onMouseLeave={e => { if (p.id !== activeProject.id) e.currentTarget.style.background = 'transparent' }}
                         >
-                            <FolderOpen size={14} />
+                            <FolderOpen size={14} color={p.id === activeProject.id ? '#7ECECA' : '#666'} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                         </button>
                     ))}
@@ -542,7 +547,7 @@ export default function DashboardLayout({ children }) {
                         </div>
                     )}
                     {/* Topbar refined */}
-                    <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, overflow: 'hidden', minWidth: 0 }}>
+                    <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                             <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
                                 <Logo />
