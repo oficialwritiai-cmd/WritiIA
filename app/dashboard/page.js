@@ -100,6 +100,10 @@ export default function DashboardPage() {
     const [plannedTime, setPlannedTime] = useState('');
     const [planningScript, setPlanningScript] = useState(null);
     const [previousScripts, setPreviousScripts] = useState(null);
+    const [presets, setPresets] = useState([]);
+    const [loadingPresets, setLoadingPresets] = useState(false);
+    const [isNamingModalOpen, setIsNamingModalOpen] = useState(false);
+    const [newPresetName, setNewPresetName] = useState('');
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
@@ -136,6 +140,7 @@ export default function DashboardPage() {
         }
         const { data: ideasData } = await query.order('created_at', { ascending: false });
         setLibIdeas(ideasData || []);
+        fetchPresets(user.id);
 
         // Load next 30 days of events for collision avoidance
         const start = new Date().toISOString().split('T')[0];
@@ -149,6 +154,54 @@ export default function DashboardPage() {
             .lte('event_date', end.toISOString().split('T')[0]);
         setEvents(eventData || []);
     }
+    const fetchPresets = async (userId) => {
+        if (!userId) return;
+        setLoadingPresets(true);
+        try {
+            let query = supabase.from('strategy_presets').select('*').eq('user_id', userId);
+            if (activeProject) {
+                query = query.eq('project_id', activeProject.id);
+            } else {
+                query = query.is('project_id', null);
+            }
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (error) throw error;
+            setPresets(data || []);
+        } catch (err) {
+            console.error('Error fetching presets:', err);
+        } finally {
+            setLoadingPresets(false);
+        }
+    };
+
+    const handleSavePreset = async () => {
+        if (!newPresetName.trim()) {
+            alert('Ingresa un nombre para el preajuste');
+            return;
+        }
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error } = await supabase.from('strategy_presets').insert({
+                user_id: user.id,
+                project_id: activeProject?.id,
+                name: newPresetName,
+                config: {
+                    context: extraIdeasModal.form.context,
+                    experienceLevel: extraIdeasModal.form.experienceLevel,
+                    productTicket: extraIdeasModal.form.productTicket,
+                    objections: extraIdeasModal.form.objections,
+                    examples: extraIdeasModal.form.examples
+                }
+            });
+            if (error) throw error;
+            alert('✅ Preajuste guardado');
+            setIsNamingModalOpen(false);
+            setNewPresetName('');
+            fetchPresets(user.id);
+        } catch (err) {
+            alert('Error al guardar: ' + err.message);
+        }
+    };
 
     // Brain Setup (Project Scoped)
     useEffect(() => {
@@ -1480,9 +1533,9 @@ export default function DashboardPage() {
                                                             {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
                                                         </div>
                                                     </div>
-                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea}</h4>
+                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea || idea.content?.hook?.substring(0, 40) || 'Idea sin título'}</h4>
                                                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                        {idea.content?.descripcion || 'Sin descripción'}
+                                                        {idea.content?.descripcion || idea.content?.hook || idea.descripcion || (idea.content?.desarrollo ? idea.content?.desarrollo[0] : 'Sin descripción disponible')}
                                                     </p>
                                                 </div>
                                             ))}
@@ -2183,6 +2236,44 @@ export default function DashboardPage() {
                                 Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
                             </p>
 
+                            {/* Preset Selector */}
+                            <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Preajustes del Proyecto</p>
+                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                    {presets.length > 0 ? presets.map(p => (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => {
+                                                setExtraIdeasModal({
+                                                    ...extraIdeasModal,
+                                                    form: {
+                                                        context: p.config.context || '',
+                                                        experienceLevel: p.config.experienceLevel || '',
+                                                        productTicket: p.config.productTicket || '',
+                                                        objections: p.config.objections || '',
+                                                        examples: p.config.examples || ''
+                                                    }
+                                                });
+                                            }}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: 'rgba(126, 206, 202, 0.1)',
+                                                border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA',
+                                                borderRadius: '8px',
+                                                fontSize: '0.8rem',
+                                                whiteSpace: 'nowrap',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    )) : (
+                                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>No hay preajustes guardados aún.</p>
+                                    )}
+                                </div>
+                            </div>
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué quieres este mes? *</p>
@@ -2406,6 +2497,27 @@ export default function DashboardPage() {
                                     {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {isNamingModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100
+                }}>
+                    <div style={{ background: '#1a1a1a', borderRadius: '20px', padding: '32px', maxWidth: '400px', width: '90%' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px' }}>Nombre del Preajuste</h3>
+                        <input
+                            className="input-field"
+                            placeholder="Ej: Lanzamiento Marzo, Estrategia Leads..."
+                            value={newPresetName}
+                            onChange={(e) => setNewPresetName(e.target.value)}
+                            style={{ marginBottom: '24px' }}
+                        />
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button onClick={() => setIsNamingModalOpen(false)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                            <button onClick={handleSavePreset} className="btn-primary" style={{ flex: 2 }}>Guardar Preajuste</button>
                         </div>
                     </div>
                 </div>
