@@ -357,9 +357,10 @@ export default function DashboardPage() {
         let text = '';
         const desarrolloArray = Array.isArray(script.desarrollo) ? script.desarrollo : [];
         if (blockType === 'gancho') text = script.gancho || '';
-        else if (blockType === 'punto1') text = desarrolloArray[0] || '';
-        else if (blockType === 'punto2') text = desarrolloArray[1] || '';
-        else if (blockType === 'punto3') text = desarrolloArray[2] || '';
+        else if (blockType.startsWith('punto')) {
+            const index = parseInt(blockType.replace('punto', '')) - 1;
+            text = desarrolloArray[index] || '';
+        }
         else if (blockType === 'cta') text = script.cta || '';
 
         try {
@@ -701,7 +702,7 @@ export default function DashboardPage() {
                 type: 'guion',
                 reference_id: scriptId,
                 has_script: true,
-                notes: `Planificado para las ${plannedTime}`
+                description: `Planificado para las ${plannedTime}`
             });
 
             if (calErr) throw calErr;
