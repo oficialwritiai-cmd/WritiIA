@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v42 - Calendar Integration v1.15.0
-// v1.15.0 - CALENDAR_DATA_INTEGRATION_2026_03_09_20
+// Build Version: 2026-03-09-v43 - Mic UX Overhaul v1.15.1
+// v1.15.1 - MIC_UX_OVERHAUL_2026_03_09_20
 import './globals.css';
 
 export const metadata = {

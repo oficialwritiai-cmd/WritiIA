@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square, X, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function VoiceDictation({
     onResult,
@@ -12,19 +12,28 @@ export default function VoiceDictation({
     const [isSupported, setIsSupported] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [error, setError] = useState('');
+    const [showGuidance, setShowGuidance] = useState(false);
+    const [permissionState, setPermissionState] = useState('unknown'); // 'granted', 'denied', 'prompt'
     const recognitionRef = useRef(null);
 
     useEffect(() => {
-        // Only run on client
+        // Check permission status if API is available
+        if (typeof window !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'microphone' }).then(result => {
+                setPermissionState(result.state);
+                result.onchange = () => setPermissionState(result.state);
+            });
+        }
+
         if (typeof window !== 'undefined') {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
             if (SpeechRecognition) {
                 setIsSupported(true);
                 const recognition = new SpeechRecognition();
-                recognition.lang = 'es-ES'; // Spanish default
-                recognition.continuous = false; // Stop when the user stops talking
-                recognition.interimResults = false; // Return final result only
+                recognition.lang = 'es-ES';
+                recognition.continuous = false;
+                recognition.interimResults = false;
 
                 recognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
@@ -35,15 +44,15 @@ export default function VoiceDictation({
                 recognition.onerror = (event) => {
                     console.error("Speech recognition error", event.error);
                     if (event.error === 'not-allowed') {
-                        setError('Permiso denegado por el navegador.');
-                        alert('MICRÓFONO BLOQUEADO 🔒\\n\\nTu navegador ha bloqueado el acceso al micrófono. Para activarlo:\\n\\n1. Ve a la parte superior de tu pantalla, a la barra de direcciones (donde escribes las URLs).\\n2. Haz clic en el icono del candado 🔒 o en el icono de ajustes.\\n3. Busca la opción "Micrófono" y cambia su estado a "Permitir".\\n4. Recarga la página (F5) para aplicar los cambios.');
+                        setError('Permiso bloqueado.');
+                        setShowGuidance(true);
                     } else if (event.error === 'no-speech') {
                         setError('No se detectó voz.');
                     } else {
-                        setError('Error al escuchar (' + event.error + ')');
+                        setError('Error: ' + event.error);
                     }
                     setIsRecording(false);
-                    setTimeout(() => setError(''), 8000);
+                    setTimeout(() => setError(''), 5000);
                 };
 
                 recognition.onend = () => {
@@ -56,7 +65,7 @@ export default function VoiceDictation({
     }, [onResult]);
 
     const toggleRecording = async (e) => {
-        e.preventDefault(); // Prevent form submission or bubbling
+        e.preventDefault();
         e.stopPropagation();
 
         if (isRecording) {
@@ -65,92 +74,150 @@ export default function VoiceDictation({
         } else {
             setError('');
             try {
-                // Explicitly request microphone permission to trigger the browser prompt
-                await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Try to get stream to trigger browser prompt
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // If successful, stop the stream immediately
+                stream.getTracks().forEach(track => track.stop());
+
                 recognitionRef.current?.start();
                 setIsRecording(true);
+                setPermissionState('granted');
             } catch (err) {
                 console.error("Microphone permission error:", err);
                 if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                    setError('Permiso bloqueado por el navegador.');
-                    alert('MICRÓFONO BLOQUEADO 🔒\\n\\nTu navegador ha bloqueado el acceso al micrófono. Para activarlo:\\n\\n1. Ve a la parte superior, a la barra de direcciones de la web.\\n2. Haz clic en el icono del candado 🔒 o en el icono de información.\\n3. Activa el interruptor de "Micrófono" o ponlo en "Permitir".\\n4. Recarga la página (F5) temporalmente y vuelve a pulsar el dictado.');
+                    setPermissionState('denied');
+                    setShowGuidance(true);
                 } else if (err.name === 'NotFoundError') {
-                    setError('No se encontró micrófono.');
-                    alert('No hemos detectado ningún micrófono conectado a tu PC/móvil. Asegúrate de tener un micrófono y vuelve a cargar.');
+                    setError('Sin micrófono.');
+                    alert('No se detectó ningún micrófono.');
                 } else {
-                    setError('Error al acceder al micrófono.');
+                    setError('Error de acceso.');
                 }
-                setTimeout(() => setError(''), 8000);
             }
         }
     };
 
-    // If browser doesn't support Web Speech API, render nothing.
     if (!isSupported) return null;
 
     return (
-        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <button
-                type="button"
-                onClick={toggleRecording}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: isRecording ? '6px' : '0px',
-                    background: isRecording ? 'rgba(255, 77, 77, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                    border: isRecording ? '1px solid #FF4D4D' : '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: isRecording ? '20px' : '8px',
-                    padding: isRecording ? '6px 12px' : '6px',
-                    cursor: 'pointer',
-                    color: isRecording ? '#FF4D4D' : 'var(--text-muted)',
-                    transition: 'all 0.2s ease',
-                }}
-                title={isRecording ? "Grabando... pulsa para parar" : "Dictar por voz"}
-            >
-                {isRecording ? (
-                    <>
-                        <span className="mic-pulse-animation"></span>
-                        <Square size={size - 4} fill="#FF4D4D" color="#FF4D4D" />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#FF4D4D', whiteSpace: 'nowrap' }}>
-                            Escuchando...
-                        </span>
-                    </>
-                ) : (
-                    <Mic size={size} />
+        <>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <button
+                    type="button"
+                    onClick={toggleRecording}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: isRecording ? '8px' : '0px',
+                        background: isRecording ? 'rgba(255, 77, 77, 0.15)' :
+                            permissionState === 'denied' ? 'rgba(255, 77, 77, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+                        border: isRecording ? '1px solid #FF4D4D' :
+                            permissionState === 'denied' ? '1px solid rgba(255, 77, 77, 0.3)' : '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: isRecording ? '20px' : '8px',
+                        padding: isRecording ? '6px 14px' : '6px',
+                        cursor: 'pointer',
+                        color: isRecording ? '#FF4D4D' :
+                            permissionState === 'denied' ? '#FF4D4D' : 'var(--text-muted)',
+                        transition: 'all 0.2s ease',
+                    }}
+                    title={permissionState === 'denied' ? "Micrófono bloqueado - Pulsa para ver cómo arreglarlo" : (isRecording ? "Detener" : "Dictar por voz")}
+                >
+                    {isRecording ? (
+                        <>
+                            <span className="mic-pulse-animation"></span>
+                            <Square size={size - 4} fill="#FF4D4D" color="#FF4D4D" />
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>Escuchando...</span>
+                        </>
+                    ) : (
+                        <Mic size={size} style={{ opacity: permissionState === 'denied' ? 0.5 : 1 }} />
+                    )}
+                </button>
+
+                {error && !showGuidance && (
+                    <div style={{
+                        position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+                        backgroundColor: '#FF4D4D', color: 'white', fontSize: '0.65rem',
+                        padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap', zIndex: 10
+                    }}>
+                        {error}
+                    </div>
                 )}
-            </button>
-            {error && (
+            </div>
+
+            {/* GUIDANCE MODAL */}
+            {showGuidance && (
                 <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: '4px',
-                    backgroundColor: '#FF4D4D',
-                    color: 'white',
-                    fontSize: '0.65rem',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    whiteSpace: 'nowrap',
-                    zIndex: 10
+                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000,
+                    backdropFilter: 'blur(8px)', padding: '20px'
                 }}>
-                    {error}
+                    <div style={{
+                        background: '#151515', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '24px', maxWidth: '450px', width: '100%',
+                        padding: '32px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+                    }}>
+                        <button
+                            onClick={() => setShowGuidance(false)}
+                            style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{
+                                width: '64px', height: '64px', background: 'rgba(255, 77, 77, 0.1)',
+                                borderRadius: '50%', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', margin: '0 auto 16px'
+                            }}>
+                                <AlertCircle size={32} color="#FF4D4D" />
+                            </div>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '8px' }}>Micrófono Bloqueado</h2>
+                            <p style={{ color: '#aaa', fontSize: '0.95rem' }}>Tu navegador ha restringido el acceso. Sigue estos pasos para activarlo:</p>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>1</div>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Haz clic en el icono del <b>candado 🔒</b> junto a la dirección web (URL).</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Busca <b>Micrófono</b> y cámbialo a <b>"Permitir"</b>.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                                <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>3</div>
+                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Pulsa el botón de abajo para <b>Recargar</b> y guardar cambios.</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => window.location.reload()}
+                            style={{
+                                width: '100%', height: '56px', background: 'var(--accent-gradient)',
+                                color: 'black', border: 'none', borderRadius: '16px',
+                                fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                            }}
+                        >
+                            <RefreshCw size={20} /> RECARGAR AHORA
+                        </button>
+                    </div>
                 </div>
             )}
+
             <style jsx>{`
                 .mic-pulse-animation {
-                    width: 6px;
-                    height: 6px;
-                    border-radius: 50%;
-                    background-color: #FF4D4D;
-                    animation: pulse 1.5s infinite;
+                    width: 8px; height: 8px; border-radius: 50%;
+                    background-color: #FF4D4D; animation: pulse 1.5s infinite;
                 }
                 @keyframes pulse {
                     0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); }
-                    70% { box-shadow: 0 0 0 6px rgba(255, 77, 77, 0); }
+                    70% { box-shadow: 0 0 0 8px rgba(255, 77, 77, 0); }
                     100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
                 }
             `}</style>
-        </div>
+        </>
     );
 }
+
