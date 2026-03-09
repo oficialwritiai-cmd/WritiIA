@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mic, Square, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Mic, Square, X, AlertCircle, RefreshCw, ShieldAlert, Copy, Settings } from 'lucide-react';
 
 export default function VoiceDictation({
     onResult,
@@ -12,22 +12,24 @@ export default function VoiceDictation({
     const [isSupported, setIsSupported] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [error, setError] = useState('');
+    const [rawError, setRawError] = useState('');
     const [showGuidance, setShowGuidance] = useState(false);
-    const [permissionState, setPermissionState] = useState('unknown'); // 'granted', 'denied', 'prompt'
+    const [isSecure, setIsSecure] = useState(true);
+    const [permissionState, setPermissionState] = useState('unknown');
     const recognitionRef = useRef(null);
 
     useEffect(() => {
-        // Check permission status if API is available
-        if (typeof window !== 'undefined' && navigator.permissions && navigator.permissions.query) {
-            navigator.permissions.query({ name: 'microphone' }).then(result => {
-                setPermissionState(result.state);
-                result.onchange = () => setPermissionState(result.state);
-            });
-        }
-
         if (typeof window !== 'undefined') {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            setIsSecure(window.isSecureContext);
 
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'microphone' }).then(result => {
+                    setPermissionState(result.state);
+                    result.onchange = () => setPermissionState(result.state);
+                }).catch(() => { });
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 setIsSupported(true);
                 const recognition = new SpeechRecognition();
@@ -42,7 +44,8 @@ export default function VoiceDictation({
                 };
 
                 recognition.onerror = (event) => {
-                    console.error("Speech recognition error", event.error);
+                    console.error("Speech error:", event.error);
+                    setRawError(event.error);
                     if (event.error === 'not-allowed') {
                         setError('Permiso bloqueado.');
                         setShowGuidance(true);
@@ -52,47 +55,52 @@ export default function VoiceDictation({
                         setError('Error: ' + event.error);
                     }
                     setIsRecording(false);
-                    setTimeout(() => setError(''), 5000);
                 };
 
-                recognition.onend = () => {
-                    setIsRecording(false);
-                };
-
+                recognition.onend = () => setIsRecording(false);
                 recognitionRef.current = recognition;
             }
         }
     }, [onResult]);
 
     const toggleRecording = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
 
         if (isRecording) {
             recognitionRef.current?.stop();
             setIsRecording(false);
-        } else {
-            setError('');
-            try {
-                // Try to get stream to trigger browser prompt
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                // If successful, stop the stream immediately
-                stream.getTracks().forEach(track => track.stop());
+            return;
+        }
 
-                recognitionRef.current?.start();
-                setIsRecording(true);
-                setPermissionState('granted');
-            } catch (err) {
-                console.error("Microphone permission error:", err);
-                if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-                    setPermissionState('denied');
-                    setShowGuidance(true);
-                } else if (err.name === 'NotFoundError') {
-                    setError('Sin micrófono.');
-                    alert('No se detectó ningún micrófono.');
-                } else {
-                    setError('Error de acceso.');
-                }
+        if (!isSecure) {
+            setRawError('NOT_SECURE_CONTEXT');
+            setShowGuidance(true);
+            return;
+        }
+
+        setError('');
+        setRawError('');
+        try {
+            // Trigger browser prompt
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+
+            recognitionRef.current?.start();
+            setIsRecording(true);
+            setPermissionState('granted');
+        } catch (err) {
+            console.error("Mic Error:", err);
+            const errName = err.name || err.message || 'UnknownError';
+            setRawError(errName);
+            if (errName === 'NotAllowedError' || errName === 'SecurityError') {
+                setPermissionState('denied');
+                setShowGuidance(true);
+            } else if (errName === 'NotFoundError') {
+                setError('Sin micro.');
+                alert('No se detectó micrófono físico.');
+            } else {
+                setError('Error acceso.');
             }
         }
     };
@@ -106,9 +114,7 @@ export default function VoiceDictation({
                     type="button"
                     onClick={toggleRecording}
                     style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                         gap: isRecording ? '8px' : '0px',
                         background: isRecording ? 'rgba(255, 77, 77, 0.15)' :
                             permissionState === 'denied' ? 'rgba(255, 77, 77, 0.05)' : 'rgba(255, 255, 255, 0.05)',
@@ -121,7 +127,6 @@ export default function VoiceDictation({
                             permissionState === 'denied' ? '#FF4D4D' : 'var(--text-muted)',
                         transition: 'all 0.2s ease',
                     }}
-                    title={permissionState === 'denied' ? "Micrófono bloqueado - Pulsa para ver cómo arreglarlo" : (isRecording ? "Detener" : "Dictar por voz")}
                 >
                     {isRecording ? (
                         <>
@@ -145,70 +150,78 @@ export default function VoiceDictation({
                 )}
             </div>
 
-            {/* GUIDANCE MODAL */}
+            {/* MODAL DE EMERGENCIA - GUÍA DEFINITIVA */}
             {showGuidance && (
                 <div style={{
-                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)',
+                    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000,
-                    backdropFilter: 'blur(8px)', padding: '20px'
+                    backdropFilter: 'blur(10px)', padding: '20px'
                 }}>
                     <div style={{
-                        background: '#151515', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '24px', maxWidth: '450px', width: '100%',
-                        padding: '32px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+                        background: '#111', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '32px', maxWidth: '480px', width: '100%',
+                        padding: '40px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
                     }}>
                         <button
                             onClick={() => setShowGuidance(false)}
-                            style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}
+                            style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}
                         >
                             <X size={24} />
                         </button>
 
-                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                             <div style={{
                                 width: '64px', height: '64px', background: 'rgba(255, 77, 77, 0.1)',
                                 borderRadius: '50%', display: 'flex', alignItems: 'center',
                                 justifyContent: 'center', margin: '0 auto 16px'
                             }}>
-                                <AlertCircle size={32} color="#FF4D4D" />
+                                <ShieldAlert size={32} color="#FF4D4D" />
                             </div>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '8px' }}>Micrófono Bloqueado</h2>
-                            <p style={{ color: '#aaa', fontSize: '0.95rem' }}>El navegador no volverá a preguntarte hasta que lo desbloquees manualmente:</p>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '8px' }}>Micrófono Bloqueado</h2>
+                            <p style={{ color: '#aaa', fontSize: '0.9rem' }}>El navegador ha bloqueado el acceso. No volverá a preguntarte hasta que hagas esto:</p>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                        {!isSecure && (
+                            <div style={{ background: 'rgba(255,165,0,0.1)', padding: '15px', borderRadius: '15px', border: '1px solid orange', color: 'orange', fontSize: '0.8rem', marginBottom: '20px' }}>
+                                ⚠️ <b>ERROR DE SEGURIDAD:</b> No estás en una conexión segura (HTTPS). Entra en <code>https://writi.ai</code> para usar el micro.
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>1</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Busca en la barra de arriba (URL) un icono de <b>cámara/micro con una X roja</b> o el icono del <b>candado 🔒</b>.</p>
+                                <div>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Pulsa el Candado 🔒 o Micro 🎥</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>En la barra de direcciones (donde escribes la web).</span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,77,77,0.3)' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>2</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Haz clic en él y selecciona <b>"Permitir siempre"</b> o <b>"Permitir"</b>.</p>
+                                <div>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Elige "Configuración de sitios"</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Busca **Micrófono** y cámbialo a **PERMITIR**.</span>
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px' }}>
                                 <div style={{ background: '#FF4D4D', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.8rem', fontWeight: 900 }}>3</div>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>Pulsa el botón <b>Recargar</b> para activar el cambio.</p>
+                                <div>
+                                    <p style={{ fontSize: '0.9rem', margin: 0, fontWeight: 700 }}>Pulsa Recargar Ahora</p>
+                                    <span style={{ fontSize: '0.8rem', color: '#888' }}>Para aplicar los cambios del navegador.</span>
+                                </div>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button
-                                onClick={() => {
-                                    setShowGuidance(false);
-                                    setTimeout(() => toggleRecording({ preventDefault: () => { }, stopPropagation: () => { } }), 300);
-                                }}
-                                style={{
-                                    flex: 1, height: '56px', background: 'rgba(255,255,255,0.05)',
-                                    color: 'white', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px',
-                                    fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer'
-                                }}
+                                onClick={() => { setShowGuidance(false); toggleRecording(); }}
+                                style={{ flex: 1, padding: '16px', background: 'rgba(255,255,255,0.05)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 700, cursor: 'pointer' }}
                             >
                                 REINTENTAR
                             </button>
                             <button
                                 onClick={() => window.location.reload()}
                                 style={{
-                                    flex: 2, height: '56px', background: 'var(--accent-gradient)',
+                                    flex: 2, padding: '16px', background: 'var(--accent-gradient)',
                                     color: 'black', border: 'none', borderRadius: '16px',
                                     fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
@@ -217,6 +230,15 @@ export default function VoiceDictation({
                                 <RefreshCw size={20} /> RECARGAR AHORA
                             </button>
                         </div>
+
+                        {rawError && (
+                            <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.7rem', color: '#444' }}>
+                                Error: <code>{rawError}</code>
+                                <button onClick={() => { navigator.clipboard.writeText(rawError); alert('Error copiado!'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', marginLeft: '5px' }}>
+                                    <Copy size={12} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -235,4 +257,3 @@ export default function VoiceDictation({
         </>
     );
 }
-
