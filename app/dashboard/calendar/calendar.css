@@ -402,6 +402,55 @@
     color: white;
 }
 
+/* Extra Refinements */
+.cal-cell-plus {
+    opacity: 0;
+    color: #333;
+    transition: 0.2s;
+}
+
+.cal-day-cell:hover .cal-cell-plus {
+    opacity: 1;
+}
+
+.spinner-mini {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(157, 0, 255, 0.1);
+    border-top: 2px solid #9D00FF;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.script-block-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.block-label-mini {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #555;
+    letter-spacing: 0.05em;
+}
+
+.block-text-mini {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #eee;
+}
+
 .cal-ctx-item.danger {
     color: #FF4D4D;
 }

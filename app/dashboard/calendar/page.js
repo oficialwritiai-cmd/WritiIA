@@ -32,6 +32,8 @@ export default function CalendarPage() {
     const [filterPlatform, setFilterPlatform] = useState('All');
     const [filterStatus, setFilterStatus] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [linkedScript, setLinkedScript] = useState(null);
+    const [loadingScript, setLoadingScript] = useState(false);
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, eventId }
@@ -101,7 +103,7 @@ export default function CalendarPage() {
         setIsPanelOpen(true);
     };
 
-    const handleEventClick = (e, event) => {
+    const handleEventClick = async (e, event) => {
         e.stopPropagation();
         setSelectedEvent(event);
         setSelectedDate(event.event_date);
@@ -111,6 +113,29 @@ export default function CalendarPage() {
         setTempNotes(event.notes || '');
         setTempColor(event.type || '');
         setIsPanelOpen(true);
+
+        // Fetch linked script if exists
+        if (event.reference_id && event.has_script) {
+            setLoadingScript(true);
+            setLinkedScript(null);
+            try {
+                const { data, error } = await supabase
+                    .from('library')
+                    .select('*')
+                    .eq('id', event.reference_id)
+                    .single();
+
+                if (data && !error) {
+                    setLinkedScript(data);
+                }
+            } catch (err) {
+                console.error("Error fetching linked script:", err);
+            } finally {
+                setLoadingScript(false);
+            }
+        } else {
+            setLinkedScript(null);
+        }
     };
 
     const handleSavePanel = async () => {
@@ -414,7 +439,7 @@ export default function CalendarPage() {
                         </div>
                         <input
                             className="cal-input-minimal"
-                            style={{ fontSize: '2.5rem', fontWeight: 950, marginTop: '20px' }}
+                            style={{ fontSize: '1.5rem', fontWeight: 950, marginTop: '20px' }}
                             placeholder="Título de la publicación..."
                             value={tempTitle}
                             onChange={e => setTempTitle(e.target.value)}
@@ -461,7 +486,10 @@ export default function CalendarPage() {
                                                 key={color.id}
                                                 className={`color-swatch ${tempColor === color.id ? 'active' : ''}`}
                                                 style={{ background: color.hex }}
-                                                onClick={() => setTempColor(color.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setTempColor(color.id);
+                                                }}
                                                 title={color.name}
                                             />
                                         ))}
@@ -479,7 +507,57 @@ export default function CalendarPage() {
                             />
                         </div>
 
-                        {selectedEvent && (
+                        {loadingScript ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>
+                                <div className="spinner-mini" style={{ margin: '0 auto 10px' }}></div>
+                                Cargando guion vinculado...
+                            </div>
+                        ) : linkedScript ? (
+                            <div className="linked-script-preview" style={{
+                                background: 'rgba(255,255,255,0.02)',
+                                borderRadius: '16px',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <BookOpen size={16} color="#9D00FF" />
+                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Guion Vinculado</span>
+                                </div>
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div className="script-block-mini">
+                                        <div className="block-label-mini">GANCHO</div>
+                                        <p className="block-text-mini">{linkedScript.gancho}</p>
+                                    </div>
+                                    <div className="script-block-mini">
+                                        <div className="block-label-mini">DESARROLLO</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {(linkedScript.desarrollo || []).map((p, i) => (
+                                                <div key={i} style={{ display: 'flex', gap: '10px' }}>
+                                                    <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
+                                                    <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="script-block-mini">
+                                        <div className="block-label-mini">CTA</div>
+                                        <p className="block-text-mini">{linkedScript.cta}</p>
+                                    </div>
+
+                                    {linkedScript.copy_post && (
+                                        <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <div className="block-label-mini">COPY & HASHTAGS</div>
+                                            <p className="block-text-mini" style={{ fontStyle: 'italic', color: '#aaa' }}>{linkedScript.copy_post.descripcion_larga || linkedScript.copy_post.caption}</p>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                                                {(linkedScript.copy_post.hashtags || []).map(tag => (
+                                                    <span key={tag} style={{ color: '#9D00FF', fontSize: '0.75rem', fontWeight: 600 }}>{tag}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : selectedEvent && (
                             <div className="cal-ai-section" style={{ padding: '24px', background: 'rgba(157, 0, 255, 0.05)', borderRadius: '20px', border: '1px solid rgba(157, 0, 255, 0.1)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#9D00FF', marginBottom: '12px' }}>
                                     <Sparkles size={18} />

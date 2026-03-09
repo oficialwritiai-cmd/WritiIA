@@ -37,20 +37,44 @@ function countScriptWords(script) {
 function extractRequestedCount(topic, details) {
     const combined = `${topic} ${details}`.toLowerCase();
 
-    // Pattern: "5 herramientas", "las 5 mejores", "top 10", "3 pasos"
-    // Use a more relaxed match: looking for a number followed by relevant keywords or preceding them
-    const match = combined.match(/(?:top|las|los|mejores|las\s+(\d+)\s+mejores)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips|ideas|claves|puntos|cosas|herramienta|secreto|paso|truco)/i);
-    if (match) {
-        return parseInt(match[2] || match[1]);
+    // Map textual Spanish numbers to digits
+    const numMap = {
+        'un': 1, 'uno': 1, 'una': 1,
+        'dos': 2,
+        'tres': 3,
+        'cuatro': 4,
+        'cinco': 5,
+        'seis': 6,
+        'siete': 7,
+        'ocho': 8,
+        'nueve': 9,
+        'diez': 10
+    };
+
+    // 1. Look for numeric digits: "5 mejores", "top 10", etc.
+    // Enhanced regex to catch more variations and keywords
+    const keywords = "(?:herramientas|ia|inteligencias artificiales|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips|ideas|claves|puntos|cosas|herramienta|secreto|paso|truco|guías|guias|sitios|plataformas)";
+
+    const digitMatch = combined.match(new RegExp(`(?:top|las|los|mejores|las\\s+(\\d+)\\s+mejores)?\\s*(\\d{1,2})\\s*${keywords}`, 'i'));
+    if (digitMatch) {
+        const val = parseInt(digitMatch[2] || digitMatch[1]);
+        if (val > 0) return val;
     }
 
-    // Pattern: 1) Tool 2) Tool ...
+    // 2. Look for textual numbers: "cinco mejores", "tres pasos"
+    const textNumPattern = Object.keys(numMap).join('|');
+    const textMatch = combined.match(new RegExp(`(?:las|los|mejores|top)?\\s*(${textNumPattern})\\s*${keywords}`, 'i'));
+    if (textMatch) {
+        return numMap[textMatch[1]];
+    }
+
+    // 3. Pattern: 1) Tool 2) Tool ... (Sequential listing)
     const listMatches = combined.match(/\d\s*[\)\.]\s*[A-Za-z]/g);
     if (listMatches && listMatches.length > 1) return listMatches.length;
 
-    // Fallback: Just any number near "mejores" or in title
-    const simpleMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas|herramientas|ia)/i);
-    if (simpleMatch) return parseInt(simpleMatch[1]);
+    // 4. Fallback: Just any number near "mejores" or in title if it looks like a list
+    const fallbackMatch = combined.match(/(\d{1,2})\s+(?:mejores|items|puntos|cosas|herramientas|ia|inteligencias artificiales)/i);
+    if (fallbackMatch) return parseInt(fallbackMatch[1]);
 
     return null;
 }
