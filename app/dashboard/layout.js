@@ -4,9 +4,61 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
+import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
+
+function ProjectSelector() {
+    const { projects, activeProject, setActiveProject } = useProject();
+    const [selectorOpen, setSelectorOpen] = useState(false);
+    if (!activeProject || projects.length === 0) return null;
+    return (
+        <div style={{ position: 'relative' }}>
+            <button
+                onClick={() => setSelectorOpen(!selectorOpen)}
+                style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'rgba(126,206,202,0.08)',
+                    border: '1px solid rgba(126,206,202,0.15)',
+                    borderRadius: '12px', padding: '6px 14px',
+                    color: '#7ECECA', cursor: 'pointer', fontSize: '0.8rem',
+                    fontWeight: 700, whiteSpace: 'nowrap', transition: '0.2s',
+                }}
+            >
+                <FolderOpen size={14} />
+                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeProject.name}</span>
+                <ChevronDown size={14} style={{ transform: selectorOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+            </button>
+            {selectorOpen && (
+                <div style={{
+                    position: 'absolute', top: '110%', left: 0, minWidth: '200px',
+                    background: '#111', border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '14px', boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                    zIndex: 1000, overflow: 'hidden',
+                }}>
+                    {projects.map(p => (
+                        <button
+                            key={p.id}
+                            onClick={() => { setActiveProject(p.id); setSelectorOpen(false); }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                width: '100%', padding: '12px 16px',
+                                background: p.id === activeProject.id ? 'rgba(126,206,202,0.1)' : 'transparent',
+                                border: 'none', color: p.id === activeProject.id ? '#7ECECA' : '#aaa',
+                                cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                                textAlign: 'left', transition: '0.15s',
+                            }}
+                        >
+                            <FolderOpen size={14} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -276,421 +328,424 @@ export default function DashboardLayout({ children }) {
     ];
 
     return (
-        <div className="app-layout" style={{ background: '#050505' }}>
-            {/* Sidebar Lucide (Icons Only) */}
-            <aside className="sidebar">
-                <div style={{ marginBottom: '40px' }}>
-                    <Link href="/" style={{ textDecoration: 'none' }}>
-                        <Logo mobile={true} />
-                    </Link>
-                </div>
-
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
-                    {navItems.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onMouseEnter={() => setHoveredItem(item.label)}
-                                onMouseLeave={() => setHoveredItem(null)}
-                                style={{
-                                    position: 'relative',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: '12px',
-                                    background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
-                                    color: isActive ? '#7ECECA' : '#888888',
-                                    transition: 'all 0.2s ease',
-                                    textDecoration: 'none'
-                                }}
-                            >
-                                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-
-                                {/* Tooltip */}
-                                {hoveredItem === item.label && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: '60px',
-                                        background: '#1A1A1A',
-                                        color: 'white',
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        whiteSpace: 'nowrap',
-                                        zIndex: 100,
-                                        pointerEvents: 'none',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    }}>
-                                        {item.label}
-                                    </div>
-                                )}
-                            </Link>
-                        );
-                    })}
-                </nav>
-
-                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '24px' }}>
-                    <button
-                        onClick={handleLogout}
-                        onMouseEnter={() => setHoveredItem('Cerrar sesión')}
-                        onMouseLeave={() => setHoveredItem(null)}
-                        style={{
-                            position: 'relative',
-                            background: 'none',
-                            border: 'none',
-                            color: '#888888',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '48px',
-                            height: '48px',
-                            transition: '0.2s'
-                        }}
-                    >
-                        <LogOut size={22} />
-                        {hoveredItem === 'Cerrar sesión' && (
-                            <div style={{
-                                position: 'absolute',
-                                left: '60px',
-                                background: '#1A1A1A',
-                                color: 'white',
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                                zIndex: 100,
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}>
-                                Salir
-                            </div>
-                        )}
-                    </button>
-                    <div style={{
-                        fontSize: '0.75rem',
-                        color: '#7ECECA',
-                        textAlign: 'center',
-                        fontWeight: 900,
-                        marginTop: '10px',
-                        letterSpacing: '0.05em'
-                    }}>
-                        v2.0.0
-                    </div>
-                </div>
-            </aside>
-
-            <div className="main-wrapper">
-                {/* Mobile menu button */}
-                <button
-                    className="mobile-menu-btn"
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    style={{
-                        display: 'none',
-                        position: 'fixed',
-                        bottom: 20,
-                        left: 20,
-                        zIndex: 1000,
-                        width: 56,
-                        height: 56,
-                        borderRadius: '50%',
-                        background: 'var(--accent-gradient)',
-                        border: 'none',
-                        color: 'white',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 20px rgba(157, 0, 255, 0.5)',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                >
-                    <Menu size={24} />
-                </button>
-
-                {/* Mobile Sidebar Overlay */}
-                {sidebarOpen && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            background: 'rgba(0,0,0,0.8)',
-                            zIndex: 999,
-                            display: 'flex'
-                        }}
-                        onClick={() => setSidebarOpen(false)}
-                    >
-                        <aside style={{
-                            width: '260px',
-                            background: 'var(--bg-sidebar)',
-                            padding: 24,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 20
-                        }}>
-                            <div style={{ marginBottom: 20 }}>
-                                <Link href="/" style={{ textDecoration: 'none' }}>
-                                    <Logo mobile={true} />
-                                </Link>
-                            </div>
-                            <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {navItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const isActive = pathname === item.href;
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            onClick={() => setSidebarOpen(false)}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 12,
-                                                padding: '14px 16px',
-                                                borderRadius: 12,
-                                                background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
-                                                color: isActive ? '#7ECECA' : '#888888',
-                                                textDecoration: 'none',
-                                                fontSize: '0.95rem',
-                                                fontWeight: 500
-                                            }}
-                                        >
-                                            <Icon size={20} />
-                                            {item.label}
-                                        </Link>
-                                    );
-                                })}
-                            </nav>
-                            <button
-                                onClick={() => { handleLogout(); setSidebarOpen(false); }}
-                                style={{
-                                    marginTop: 'auto',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#888888',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 12,
-                                    padding: '14px 16px',
-                                    fontSize: '0.95rem',
-                                    fontWeight: 500
-                                }}
-                            >
-                                <LogOut size={20} />
-                                Cerrar sesión
-                            </button>
-                        </aside>
-                    </div>
-                )}
-                {/* Topbar refined */}
-                <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, overflow: 'hidden', minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
-                        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                            <Logo />
+        <ProjectProvider>
+            <div className="app-layout" style={{ background: '#050505' }}>
+                {/* Sidebar Lucide (Icons Only) */}
+                <aside className="sidebar">
+                    <div style={{ marginBottom: '40px' }}>
+                        <Link href="/" style={{ textDecoration: 'none' }}>
+                            <Logo mobile={true} />
                         </Link>
-                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.0.0</span>
-                                <p style={{
-                                    fontWeight: 600,
-                                    fontSize: '0.85rem',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '120px',
-                                    margin: 0
-                                }} title={user?.email}>
-                                    {user?.email?.split('@')[0] || 'User'}
-                                </p>
-                                <span className="badge" style={{
-                                    fontSize: '0.6rem',
-                                    padding: '2px 8px',
-                                    background: profile?.trial_active ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                    color: profile?.trial_active || profile?.plan === 'pro' ? 'white' : 'white',
-                                    fontWeight: 800,
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    marginLeft: '4px'
-                                }}>
-                                    {profile?.trial_active ? `TRIAL ${trialDaysRemaining}d` : profile?.plan?.toUpperCase() || 'FREE'}
-                                </span>
-                            </div>
-                        </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                            <button
-                                onClick={() => setIsCreditsModalOpen(true)}
-                                className="btn-primary"
-                                style={{
-                                    padding: '8px 16px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 900,
-                                    background: 'rgba(255,255,255,0.05)',
+                    <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                        {navItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onMouseEnter={() => setHoveredItem(item.label)}
+                                    onMouseLeave={() => setHoveredItem(null)}
+                                    style={{
+                                        position: 'relative',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '12px',
+                                        background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
+                                        color: isActive ? '#7ECECA' : '#888888',
+                                        transition: 'all 0.2s ease',
+                                        textDecoration: 'none'
+                                    }}
+                                >
+                                    <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+
+                                    {/* Tooltip */}
+                                    {hoveredItem === item.label && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '60px',
+                                            background: '#1A1A1A',
+                                            color: 'white',
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap',
+                                            zIndex: 100,
+                                            pointerEvents: 'none',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            {item.label}
+                                        </div>
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '24px' }}>
+                        <button
+                            onClick={handleLogout}
+                            onMouseEnter={() => setHoveredItem('Cerrar sesión')}
+                            onMouseLeave={() => setHoveredItem(null)}
+                            style={{
+                                position: 'relative',
+                                background: 'none',
+                                border: 'none',
+                                color: '#888888',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '48px',
+                                height: '48px',
+                                transition: '0.2s'
+                            }}
+                        >
+                            <LogOut size={22} />
+                            {hoveredItem === 'Cerrar sesión' && (
+                                <div style={{
+                                    position: 'absolute',
+                                    left: '60px',
+                                    background: '#1A1A1A',
                                     color: 'white',
-                                    borderRadius: '100px',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    cursor: 'pointer',
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
                                     whiteSpace: 'nowrap',
-                                    flexShrink: 0
-                                }}
-                            >
-                                🪙 COMPRAR CRÉDITOS
-                            </button>
-                            <button
-                                onClick={handleCheckoutPlan}
-                                disabled={planCheckoutLoading}
-                                className="btn-primary"
-                                style={{
-                                    padding: '8px 16px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 900,
-                                    background: profile?.plan === 'pro' ? 'rgba(126, 206, 202, 0.2)' : 'var(--accent-gradient)',
-                                    color: profile?.plan === 'pro' ? '#7ECECA' : 'black',
-                                    borderRadius: '100px',
-                                    boxShadow: profile?.plan === 'pro' ? 'none' : '0 0 15px rgba(126, 206, 202, 0.4)',
-                                    border: profile?.plan === 'pro' ? '1px solid rgba(126, 206, 202, 0.3)' : 'none',
-                                    cursor: 'pointer',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? '✅ PRO' : '🚀 PLAN PRO'}
-                            </button>
-                        </div>
-                        <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: (profile?.credits_balance || 0) > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.1)',
-                            borderRadius: '100px',
-                            padding: '6px 14px',
-                            cursor: 'pointer',
-                            transition: '0.2s',
-                            border: (profile?.credits_balance || 0) > 0 ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(239, 68, 68, 0.3)',
-                            flexShrink: 0
-                        }}>
-                            <span style={{ fontSize: '1rem' }}>🪙</span>
-                            <span style={{
-                                fontSize: '0.85rem',
-                                fontWeight: 800,
-                                color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5'
-                            }}>
-                                {(profile?.credits_balance || 0) > 0
-                                    ? `${profile.credits_balance} créditos`
-                                    : 'Sin créditos'}
-                            </span>
-                            {profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' ? (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setIsCreditsModalOpen(true); }}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 900,
-                                        cursor: 'pointer',
-                                        padding: '2px 4px',
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                >
-                                    + DEPOSITAR
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); router.push('/dashboard/settings'); }}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#9D00FF',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 900,
-                                        cursor: 'pointer',
-                                        padding: '2px 4px',
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                >
-                                    + PLAN
-                                </button>
+                                    zIndex: 100,
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    Salir
+                                </div>
                             )}
-                        </div>
-
-                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
-
-                        <div style={{ display: 'flex', gap: '14px', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                            <span style={{ cursor: 'pointer' }}>🔔</span>
-                            <span style={{ cursor: 'pointer' }}>🔍</span>
-                            <Link href="/dashboard/settings" style={{ textDecoration: 'none', color: 'inherit' }}>⚙️</Link>
+                        </button>
+                        <div style={{
+                            fontSize: '0.75rem',
+                            color: '#7ECECA',
+                            textAlign: 'center',
+                            fontWeight: 900,
+                            marginTop: '10px',
+                            letterSpacing: '0.05em'
+                        }}>
+                            v2.0.0
                         </div>
                     </div>
-                </header>
+                </aside>
 
-                <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
-                    {children}
-                </main>
+                <div className="main-wrapper">
+                    {/* Mobile menu button */}
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        style={{
+                            display: 'none',
+                            position: 'fixed',
+                            bottom: 20,
+                            left: 20,
+                            zIndex: 1000,
+                            width: 56,
+                            height: 56,
+                            borderRadius: '50%',
+                            background: 'var(--accent-gradient)',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 20px rgba(157, 0, 255, 0.5)',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <Menu size={24} />
+                    </button>
 
-                <CreditsModal
-                    isOpen={isCreditsModalOpen}
-                    onClose={() => setIsCreditsModalOpen(false)}
-                    balance={profile?.credits_balance || 0}
-                    user={user}
-                />
-
-                {showNoCreditsModal && (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
-                    }} onClick={() => setShowNoCreditsModal(false)}>
-                        <div style={{
-                            background: '#1a1a1a', borderRadius: '24px', padding: '40px', maxWidth: '480px', width: '90%',
-                            border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center'
-                        }} onClick={e => e.stopPropagation()}>
-                            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🔒</div>
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px', color: 'white' }}>
-                                Activa WRITI
-                            </h2>
-                            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
-                                Necesitas créditos o un plan activo para usar las funciones de IA.
-                                {profile?.trial_active && trialDaysRemaining > 0 && (
-                                    <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {trialDaysRemaining} días de prueba gratis!</span></>
-                                )}
-                            </p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Mobile Sidebar Overlay */}
+                    {sidebarOpen && (
+                        <div
+                            style={{
+                                position: 'fixed',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.8)',
+                                zIndex: 999,
+                                display: 'flex'
+                            }}
+                            onClick={() => setSidebarOpen(false)}
+                        >
+                            <aside style={{
+                                width: '260px',
+                                background: 'var(--bg-sidebar)',
+                                padding: 24,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 20
+                            }}>
+                                <div style={{ marginBottom: 20 }}>
+                                    <Link href="/" style={{ textDecoration: 'none' }}>
+                                        <Logo mobile={true} />
+                                    </Link>
+                                </div>
+                                <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {navItems.map((item) => {
+                                        const Icon = item.icon;
+                                        const isActive = pathname === item.href;
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setSidebarOpen(false)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 12,
+                                                    padding: '14px 16px',
+                                                    borderRadius: 12,
+                                                    background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
+                                                    color: isActive ? '#7ECECA' : '#888888',
+                                                    textDecoration: 'none',
+                                                    fontSize: '0.95rem',
+                                                    fontWeight: 500
+                                                }}
+                                            >
+                                                <Icon size={20} />
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    })}
+                                </nav>
                                 <button
-                                    onClick={() => { setShowNoCreditsModal(false); handleCheckoutPlan(); }}
-                                    className="btn-primary"
-                                    style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
+                                    onClick={() => { handleLogout(); setSidebarOpen(false); }}
+                                    style={{
+                                        marginTop: 'auto',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#888888',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 12,
+                                        padding: '14px 16px',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 500
+                                    }}
                                 >
-                                    🎯 Elegir Plan Pro
+                                    <LogOut size={20} />
+                                    Cerrar sesión
+                                </button>
+                            </aside>
+                        </div>
+                    )}
+                    {/* Topbar refined */}
+                    <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, overflow: 'hidden', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                            <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+                                <Logo />
+                            </Link>
+                            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                            <ProjectSelector />
+                            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span style={{ fontSize: '0.9rem' }}>👤</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.1.0</span>
+                                    <p style={{
+                                        fontWeight: 600,
+                                        fontSize: '0.85rem',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        maxWidth: '120px',
+                                        margin: 0
+                                    }} title={user?.email}>
+                                        {user?.email?.split('@')[0] || 'User'}
+                                    </p>
+                                    <span className="badge" style={{
+                                        fontSize: '0.6rem',
+                                        padding: '2px 8px',
+                                        background: profile?.trial_active ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                        color: profile?.trial_active || profile?.plan === 'pro' ? 'white' : 'white',
+                                        fontWeight: 800,
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
+                                        marginLeft: '4px'
+                                    }}>
+                                        {profile?.trial_active ? `TRIAL ${trialDaysRemaining}d` : profile?.plan?.toUpperCase() || 'FREE'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                <button
+                                    onClick={() => setIsCreditsModalOpen(true)}
+                                    className="btn-primary"
+                                    style={{
+                                        padding: '8px 16px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 900,
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        borderRadius: '100px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    🪙 COMPRAR CRÉDITOS
                                 </button>
                                 <button
-                                    onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}
-                                    className="btn-secondary"
-                                    style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                                    onClick={handleCheckoutPlan}
+                                    disabled={planCheckoutLoading}
+                                    className="btn-primary"
+                                    style={{
+                                        padding: '8px 16px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 900,
+                                        background: profile?.plan === 'pro' ? 'rgba(126, 206, 202, 0.2)' : 'var(--accent-gradient)',
+                                        color: profile?.plan === 'pro' ? '#7ECECA' : 'black',
+                                        borderRadius: '100px',
+                                        boxShadow: profile?.plan === 'pro' ? 'none' : '0 0 15px rgba(126, 206, 202, 0.4)',
+                                        border: profile?.plan === 'pro' ? '1px solid rgba(126, 206, 202, 0.3)' : 'none',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
                                 >
-                                    🪙 Depositar Créditos
+                                    {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? '✅ PRO' : '🚀 PLAN PRO'}
                                 </button>
                             </div>
-                            <button
-                                onClick={() => setShowNoCreditsModal(false)}
-                                style={{ marginTop: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
-                            >
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+                            <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: (profile?.credits_balance || 0) > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.1)',
+                                borderRadius: '100px',
+                                padding: '6px 14px',
+                                cursor: 'pointer',
+                                transition: '0.2s',
+                                border: (profile?.credits_balance || 0) > 0 ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(239, 68, 68, 0.3)',
+                                flexShrink: 0
+                            }}>
+                                <span style={{ fontSize: '1rem' }}>🪙</span>
+                                <span style={{
+                                    fontSize: '0.85rem',
+                                    fontWeight: 800,
+                                    color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5'
+                                }}>
+                                    {(profile?.credits_balance || 0) > 0
+                                        ? `${profile.credits_balance} créditos`
+                                        : 'Sin créditos'}
+                                </span>
+                                {profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' ? (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setIsCreditsModalOpen(true); }}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            padding: '2px 4px',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        + DEPOSITAR
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); router.push('/dashboard/settings'); }}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#9D00FF',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 900,
+                                            cursor: 'pointer',
+                                            padding: '2px 4px',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        + PLAN
+                                    </button>
+                                )}
+                            </div>
 
-            <style jsx>{`
+                            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
+
+                            <div style={{ display: 'flex', gap: '14px', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                                <span style={{ cursor: 'pointer' }}>🔔</span>
+                                <span style={{ cursor: 'pointer' }}>🔍</span>
+                                <Link href="/dashboard/settings" style={{ textDecoration: 'none', color: 'inherit' }}>⚙️</Link>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
+                        {children}
+                    </main>
+
+                    <CreditsModal
+                        isOpen={isCreditsModalOpen}
+                        onClose={() => setIsCreditsModalOpen(false)}
+                        balance={profile?.credits_balance || 0}
+                        user={user}
+                    />
+
+                    {showNoCreditsModal && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
+                        }} onClick={() => setShowNoCreditsModal(false)}>
+                            <div style={{
+                                background: '#1a1a1a', borderRadius: '24px', padding: '40px', maxWidth: '480px', width: '90%',
+                                border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center'
+                            }} onClick={e => e.stopPropagation()}>
+                                <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🔒</div>
+                                <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px', color: 'white' }}>
+                                    Activa WRITI
+                                </h2>
+                                <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
+                                    Necesitas créditos o un plan activo para usar las funciones de IA.
+                                    {profile?.trial_active && trialDaysRemaining > 0 && (
+                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {trialDaysRemaining} días de prueba gratis!</span></>
+                                    )}
+                                </p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <button
+                                        onClick={() => { setShowNoCreditsModal(false); handleCheckoutPlan(); }}
+                                        className="btn-primary"
+                                        style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
+                                    >
+                                        🎯 Elegir Plan Pro
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}
+                                        className="btn-secondary"
+                                        style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                                    >
+                                        🪙 Depositar Créditos
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setShowNoCreditsModal(false)}
+                                    style={{ marginTop: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem' }}
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <style jsx>{`
                 .app-layout { display: flex; height: 100vh; overflow: hidden; }
                 .sidebar { width: 72px; padding: 16px 12px; display: flex; flex-direction: column; align-items: center; background: var(--bg-sidebar); flex-shrink: 0; }
                 .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -724,6 +779,7 @@ export default function DashboardLayout({ children }) {
                     100% { transform: rotate(360deg); }
                 }
             `}</style>
-        </div>
+            </div>
+        </ProjectProvider>
     );
 }

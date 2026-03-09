@@ -40,7 +40,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { objective, launch, objection, story, types, platforms, userId } = validation.data;
+        const { objective, launch, objection, story, types, platforms, userId, projectId } = validation.data;
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -53,8 +53,16 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        // 4. Fetch Brand Brain
-        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        // 4. Fetch Brand Brain: project-scoped first, fallback to global
+        let brandBrain = null;
+        if (projectId) {
+            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
+            brandBrain = data;
+        }
+        if (!brandBrain) {
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            brandBrain = data;
+        }
 
         let brandContextString = '';
         if (brandBrain) {

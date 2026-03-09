@@ -9,6 +9,7 @@ import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
+import { useProject } from '@/app/components/ProjectContext';
 
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
@@ -76,28 +77,48 @@ export default function DashboardPage() {
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
 
-    const [loadingPhase, setLoadingPhase] = useState(0);
-    const [error, setError] = useState('');
-    const [profile, setProfile] = useState(null);
-    const [aiCredits, setAiCredits] = useState({ total: 200, used: 0 });
-    const [hasBrain, setHasBrain] = useState(false);
-    const [improvementCounts, setImprovementCounts] = useState({});
-    const [refiningBlock, setRefiningBlock] = useState(null);
-    const [previousScripts, setPreviousScripts] = useState(null);
-    const [selectedHook, setSelectedHook] = useState({});
-    const [savedScriptsIds, setSavedScriptsIds] = useState(new Set());
-    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-    const [successModalData, setSuccessModalData] = useState({ title: '', message: '', actionLabel: '', actionRedirect: '' });
-    const [calendarDate, setCalendarDate] = useState(null);
-    const [brainName, setBrainName] = useState('');
+    const { activeProject, projectBrain, refreshBrain } = useProject();
 
-    // Planning Feature States
-    const [isPlannerModalOpen, setIsPlannerModalOpen] = useState(false);
-    const [planningScript, setPlanningScript] = useState(null);
-    const [plannedDate, setPlannedDate] = useState('');
-    const [plannedTime, setPlannedTime] = useState('18:00');
-    const [isPlanningLoading, setIsPlanningLoading] = useState(false);
-    const [events, setEvents] = useState([]);
+    useEffect(() => {
+        loadData();
+    }, [activeProject]);
+
+    async function loadData() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push('/login'); return; }
+        setProfile(user);
+
+        // Credits
+        const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+        if (creds) setAiCredits(creds);
+
+        // Library Ideas - FILTERED BY PROJECT
+        let query = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea');
+        if (activeProject) {
+            query = query.eq('project_id', activeProject.id);
+        } else {
+            query = query.is('project_id', null);
+        }
+        const { data: ideasData } = await query.order('created_at', { ascending: false });
+        setLibIdeas(ideasData || []);
+    }
+
+    // Brain Setup (Project Scoped)
+    useEffect(() => {
+        if (projectBrain) {
+            setBrainProfile(projectBrain);
+            setHasBrain(true);
+            setBrainForm({
+                biography: projectBrain.biography || '',
+                sells: projectBrain.products_services || '',
+                helps: projectBrain.audience || '',
+                style_words: projectBrain.style_words || ''
+            });
+        } else {
+            setBrainProfile(null);
+            setHasBrain(false);
+        }
+    }, [projectBrain]);
     const [isSuggestingAI, setIsSuggestingAI] = useState(false);
     const [suggestedReasoning, setSuggestedReasoning] = useState('');
 
@@ -291,7 +312,8 @@ export default function DashboardPage() {
                 specificDetails: specificDetails || '',
                 ctaIdea: ctaIdea || '',
                 sourceType: params.get('source_type') || null,
-                sourceReferenceId: params.get('source_reference_id') || null
+                sourceReferenceId: params.get('source_reference_id') || null,
+                projectId: activeProject?.id
             };
             console.log('[Dashboard] Sending request:', requestBody);
 
@@ -398,7 +420,8 @@ export default function DashboardPage() {
                     type: blockType.includes('punto') ? 'desarrollo' : blockType,
                     instruction: instruction || '',
                     context: `Guion sobre ${topic} para ${platform}. Ángulo: ${script.titulo_angulo || script.titulo_guion}`,
-                    userId: profile.id
+                    userId: profile.id,
+                    projectId: activeProject?.id
                 }),
             });
 
@@ -507,7 +530,8 @@ export default function DashboardPage() {
                         }
                         const idea = libIdeas.find(li => li.id === id);
                         return idea ? `${idea.titulo}: ${idea.content?.descripcion || ''}` : null;
-                    }).filter(Boolean)
+                    }).filter(Boolean),
+                    projectId: activeProject?.id
                 }),
             });
             const data = await res.json();
@@ -578,9 +602,23 @@ export default function DashboardPage() {
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
 
-            const { count: gen } = await supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
-            const { count: sav } = await supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
-            const { count: mon } = await supabase.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId).in('action', ['generate_scripts', 'generate_plan']).gte('created_at', startOfMonth.toISOString());
+            let genQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+            let savQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
+            let monQuery = supabase.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId).in('action', ['generate_scripts', 'generate_plan']).gte('created_at', startOfMonth.toISOString());
+
+            if (activeProject) {
+                genQuery = genQuery.eq('project_id', activeProject.id);
+                savQuery = savQuery.eq('project_id', activeProject.id);
+                monQuery = monQuery.eq('project_id', activeProject.id);
+            } else {
+                genQuery = genQuery.is('project_id', null);
+                savQuery = savQuery.is('project_id', null);
+                monQuery = monQuery.is('project_id', null);
+            }
+
+            const { count: gen } = await genQuery;
+            const { count: sav } = await savQuery;
+            const { count: mon } = await monQuery;
 
             setStats({ generated: gen || 0, saved: sav || 0, monthGenerations: mon || 0 });
         };
@@ -620,7 +658,8 @@ export default function DashboardPage() {
                     cta: script.cta || '',
                     copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
-                tags: ['guion', script.platform || platform, script.goal || goal].filter(Boolean)
+                tags: ['guion', script.platform || platform, script.goal || goal].filter(Boolean),
+                projectId: activeProject?.id
             });
 
             if (!silent) alert('Guardado en biblioteca ✓');
@@ -686,7 +725,8 @@ export default function DashboardPage() {
                     topic: planningScript.titulo_guion || planningScript.titulo_angulo || topic,
                     platform: planningScript.platform || platform || 'General',
                     brainProfile,
-                    existingEvents: events.map(e => e.event_date)
+                    existingEvents: events.map(e => e.event_date),
+                    projectId: activeProject?.id
                 })
             });
             const data = await res.json();
@@ -725,7 +765,8 @@ export default function DashboardPage() {
                     cta: planningScript.cta || '',
                     copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
-                tags: ['guion', planningScript.platform || platform, 'planificado'].filter(Boolean)
+                tags: ['guion', planningScript.platform || platform, 'planificado'].filter(Boolean),
+                projectId: activeProject?.id
             });
             scriptId = savedItem.id;
 
@@ -747,7 +788,8 @@ export default function DashboardPage() {
                     cierre: planningScript.cierre || '',
                     cta: planningScript.cta || '',
                     copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
-                }
+                },
+                project_id: activeProject?.id
             });
 
             if (calErr) throw calErr;
@@ -791,7 +833,8 @@ export default function DashboardPage() {
                     count: 1,
                     videoDuration: videoDuration || '60 seg',
                     ideas: `Enfoque: ${slot.content_type}`,
-                    userId: profile?.id
+                    userId: profile?.id,
+                    projectId: activeProject?.id
                 }),
             });
 
@@ -823,7 +866,8 @@ export default function DashboardPage() {
                 platform: slot.platform,
                 topic: slot.idea_title,
                 tone: toneBrand || 'Profesional',
-                is_saved: true
+                is_saved: true,
+                project_id: activeProject?.id
             };
 
             if (slot.scheduled_date) {
@@ -911,6 +955,7 @@ export default function DashboardPage() {
                     .from('content_plans')
                     .insert({
                         user_id: user.id,
+                        project_id: activeProject?.id,
                         month: currentMonth,
                         year: currentYear,
                         frequency: `${slots.length} publicaciones`,
@@ -943,6 +988,7 @@ export default function DashboardPage() {
                 if (!refId) {
                     const { data: savedIdea } = await supabase.from('library').insert({
                         user_id: user.id,
+                        project_id: activeProject?.id,
                         type: 'idea',
                         platform: slot.platform,
                         goal: slot.goal,
@@ -959,6 +1005,7 @@ export default function DashboardPage() {
 
                 eventsToInsert.push({
                     user_id: user.id,
+                    project_id: activeProject?.id,
                     title: slot.idea_title,
                     description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                     event_date: targetDate,
@@ -2176,7 +2223,8 @@ export default function DashboardPage() {
                                                     productTicket: extraIdeasModal.form.productTicket,
                                                     objections: extraIdeasModal.form.objections,
                                                     examples: extraIdeasModal.form.examples,
-                                                    userId: user?.id
+                                                    userId: user?.id,
+                                                    projectId: activeProject?.id
                                                 })
                                             });
 

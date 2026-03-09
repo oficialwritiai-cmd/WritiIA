@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
 import { BarChart2, Zap, Save, Activity } from 'lucide-react';
+import { useProject } from '@/app/components/ProjectContext';
 
 export default function StatsPage() {
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0, totalTokens: 0 });
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState(null);
     const supabase = createSupabaseClient();
+    const { activeProject } = useProject();
 
     useEffect(() => {
         async function loadUser() {
@@ -30,12 +32,28 @@ export default function StatsPage() {
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
 
-            // Obtener datos globales vs mensuales
-            const { count: gen } = await supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
-            const { count: sav } = await supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
-            const { count: mon } = await supabase.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('action', 'generate_scripts').gte('created_at', startOfMonth.toISOString());
+            // Build Queries
+            let scriptsQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+            let savedQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
+            let monthLogQuery = supabase.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('action', 'generate_scripts').gte('created_at', startOfMonth.toISOString());
+            let usageQuery = supabase.from('usage_logs').select('cost_eur, tokens_used').eq('user_id', userId).gte('created_at', startOfMonth.toISOString());
 
-            const { data: usage } = await supabase.from('usage_logs').select('cost_eur, tokens_used').eq('user_id', userId).gte('created_at', startOfMonth.toISOString());
+            if (activeProject) {
+                scriptsQuery = scriptsQuery.eq('project_id', activeProject.id);
+                savedQuery = savedQuery.eq('project_id', activeProject.id);
+                monthLogQuery = monthLogQuery.eq('project_id', activeProject.id);
+                usageQuery = usageQuery.eq('project_id', activeProject.id);
+            } else {
+                scriptsQuery = scriptsQuery.is('project_id', null);
+                savedQuery = savedQuery.is('project_id', null);
+                monthLogQuery = monthLogQuery.is('project_id', null);
+                usageQuery = usageQuery.is('project_id', null);
+            }
+
+            const { count: gen } = await scriptsQuery;
+            const { count: sav } = await savedQuery;
+            const { count: mon } = await monthLogQuery;
+            const { data: usage } = await usageQuery;
 
             const tokens = usage?.reduce((acc, curr) => acc + (Number(curr.tokens_used) || 0), 0) || 0;
 
@@ -57,7 +75,7 @@ export default function StatsPage() {
             .subscribe();
 
         return () => supabase.removeChannel(chan);
-    }, [userId]);
+    }, [userId, activeProject]);
 
     if (loading) {
         return (
@@ -73,7 +91,7 @@ export default function StatsPage() {
             <div>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <BarChart2 size={36} color="var(--accent)" />
-                    Métricas de Uso
+                    Métricas de Uso {activeProject ? `(${activeProject.name})` : ''}
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Sigue el crecimiento y coste de tu contenido generado por IA esta mensualidad.</p>
             </div>

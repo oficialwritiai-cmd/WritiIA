@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import './calendar.css';
+import { useProject } from '@/app/components/ProjectContext';
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -56,10 +57,12 @@ export default function CalendarPage() {
         { id: 'gray', hex: '#6B7280', name: 'Gris' }
     ];
 
+    const { activeProject } = useProject();
+
     // -- Lifecycle --
     useEffect(() => {
         loadData();
-    }, [currentDate]);
+    }, [currentDate, activeProject]);
 
     async function loadData() {
         setLoading(true);
@@ -69,20 +72,35 @@ export default function CalendarPage() {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
             const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
-            const { data: eventData } = await supabase
+            let eventQuery = supabase
                 .from('calendar_events')
                 .select('*')
                 .eq('user_id', user.id)
                 .gte('event_date', firstDay)
                 .lte('event_date', lastDay);
 
+            if (activeProject) {
+                eventQuery = eventQuery.eq('project_id', activeProject.id);
+            } else {
+                eventQuery = eventQuery.is('project_id', null);
+            }
+
+            const { data: eventData } = await eventQuery;
             setEvents(eventData || []);
 
             // Also load library items for the import dropdown or list
-            const { data: libData } = await supabase
+            let libQuery = supabase
                 .from('library')
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', user.id);
+
+            if (activeProject) {
+                libQuery = libQuery.eq('project_id', activeProject.id);
+            } else {
+                libQuery = libQuery.is('project_id', null);
+            }
+
+            const { data: libData } = await libQuery
                 .order('created_at', { ascending: false })
                 .limit(50);
 
@@ -153,6 +171,7 @@ export default function CalendarPage() {
 
         const payload = {
             user_id: user.id,
+            project_id: activeProject?.id,
             title: tempTitle || 'Sin título',
             status: tempStatus,
             platform: tempPlatform,
@@ -196,6 +215,7 @@ export default function CalendarPage() {
 
         const payload = {
             user_id: user.id,
+            project_id: activeProject?.id,
             title: `${eventToDup.title} (Copia)`,
             status: eventToDup.status,
             platform: eventToDup.platform,

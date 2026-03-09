@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Plus, FolderOpen, Calendar, X, Loader2, Trash2, Sparkles, ArrowRight } from 'lucide-react';
+import { useProject } from '@/app/components/ProjectContext';
 
 export default function DashboardHomePage() {
     const [profile, setProfile] = useState(null);
@@ -16,6 +17,7 @@ export default function DashboardHomePage() {
     const [deletingId, setDeletingId] = useState(null);
     const supabase = createSupabaseClient();
     const router = useRouter();
+    const { refreshProjects, setActiveProject } = useProject();
 
     useEffect(() => {
         loadData();
@@ -56,18 +58,25 @@ export default function DashboardHomePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setCreating(false); return; }
 
-        const { error } = await supabase.from('projects').insert({
+        const { data: projectData, error } = await supabase.from('projects').insert({
             user_id: user.id,
             name: newName.trim(),
             description: newDesc.trim() || null,
             metadata: {}
-        });
+        }).select().single();
 
-        if (!error) {
+        if (!error && projectData) {
+            // Auto-create empty project brain
+            await supabase.from('project_brains').insert({
+                project_id: projectData.id
+            });
             setNewName('');
             setNewDesc('');
             setShowModal(false);
             await loadData();
+            await refreshProjects();
+            // Auto-select the new project
+            await setActiveProject(projectData.id);
         }
         setCreating(false);
     }

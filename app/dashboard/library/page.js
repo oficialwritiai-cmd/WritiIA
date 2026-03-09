@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Search, Filter, Star, Calendar, Trash2, Edit3, Loader2, Copy, RefreshCw, Zap, Sparkles } from 'lucide-react';
+import { useProject } from '@/app/components/ProjectContext';
 
 const PLATFORMS = ['Todas', 'Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X'];
 const CONTENT_TYPES = ['Todos', 'guion', 'idea', 'mensual'];
@@ -30,9 +31,11 @@ export default function LibraryPage() {
     const supabase = createSupabaseClient();
     const router = useRouter();
 
+    const { activeProject } = useProject();
+
     useEffect(() => {
         loadScripts();
-    }, []);
+    }, [activeProject]);
 
     async function loadScripts() {
         setLoading(true);
@@ -40,11 +43,19 @@ export default function LibraryPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const { data, error: fetchError } = await supabase
+            let query = supabase
                 .from('library')
                 .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+                .eq('user_id', user.id);
+
+            if (activeProject) {
+                // Return items for THIS project OR global items (for backward compat/shared assets)
+                query = query.or(`project_id.eq.${activeProject.id},project_id.is.null`);
+            } else {
+                query = query.is('project_id', null);
+            }
+
+            const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
             if (fetchError) throw fetchError;
             setScripts(data || []);
@@ -68,6 +79,7 @@ export default function LibraryPage() {
 
             const { error } = await supabase.from('library').insert({
                 user_id: user.id,
+                project_id: activeProject?.id,
                 type: currentContent.type || 'guion',
                 platform: currentContent.platform,
                 goal: currentContent.goal,

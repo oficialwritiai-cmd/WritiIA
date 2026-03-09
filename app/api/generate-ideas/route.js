@@ -35,7 +35,7 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, platforms, useSEO, useTikTok, goal, count, userId } = validation.data;
+        const { context, platforms, useSEO, useTikTok, goal, count, userId, projectId } = validation.data;
 
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -45,10 +45,18 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        // Fetch Brand Brain
-        let brandContextString = '';
-        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        // Fetch Brand Brain: project-scoped first, fallback to global
+        let brandBrain = null;
+        if (projectId) {
+            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
+            brandBrain = data;
+        }
+        if (!brandBrain) {
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            brandBrain = data;
+        }
 
+        let brandContextString = '';
         if (brandBrain) {
             brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
         } else {

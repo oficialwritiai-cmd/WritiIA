@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
+import { useProject } from '@/app/components/ProjectContext';
 
 export default function KnowledgePage() {
     const [loading, setLoading] = useState(true);
@@ -13,58 +14,72 @@ export default function KnowledgePage() {
         audience: '',
         values_tone: '',
         niche_topics: '',
-        knowledge_raw: ''
+        knowledge_raw: '',
+        products_services: '',
+        style_words: ''
     });
 
     const supabase = createSupabaseClient();
     const fileInputRef = useRef(null);
+    const { activeProject, refreshBrain } = useProject();
 
     useEffect(() => {
-        async function loadBrain() {
-            setLoading(true);
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    const { data, error } = await supabase
-                        .from('brand_brain')
-                        .select('*')
-                        .eq('user_id', user.id);
+        if (activeProject) loadBrain();
+    }, [activeProject]);
 
-                    if (data && data.length > 0) {
-                        setBrain(data[0]);
-                    }
-                }
-            } catch (err) {
-                console.error('Error loading brand brain:', err);
-            } finally {
-                setLoading(false);
+    async function loadBrain() {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('project_brains')
+                .select('*')
+                .eq('project_id', activeProject.id)
+                .single();
+
+            if (data) {
+                setBrain({
+                    biography: data.biography || '',
+                    audience: data.audience || '',
+                    values_tone: data.values_tone || '',
+                    niche_topics: data.niche_topics || '',
+                    knowledge_raw: data.knowledge_raw || '',
+                    products_services: data.products_services || '',
+                    style_words: data.style_words || ''
+                });
             }
+        } catch (err) {
+            console.error('Error loading project brain:', err);
+        } finally {
+            setLoading(false);
         }
-        loadBrain();
-    }, []);
+    }
 
     const handleSave = async () => {
+        if (!activeProject) {
+            showToast('Selecciona un proyecto primero.', 'error');
+            return;
+        }
         setSaving(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No user session found');
-
-            const { error } = await supabase.from('brand_brain').upsert({
-                user_id: user.id,
+            const { error } = await supabase.from('project_brains').upsert({
+                project_id: activeProject.id,
                 biography: brain.biography,
                 audience: brain.audience,
                 values_tone: brain.values_tone,
                 niche_topics: brain.niche_topics,
                 knowledge_raw: brain.knowledge_raw,
+                products_services: brain.products_services,
+                style_words: brain.style_words,
                 updated_at: new Date().toISOString()
             }, {
-                onConflict: 'user_id'
+                onConflict: 'project_id'
             });
 
             if (error) throw error;
-            showToast('Cerebro IA guardado ✓', 'success');
+            showToast('Cerebro IA del proyecto guardado ✓', 'success');
+            await refreshBrain();
         } catch (err) {
-            console.error('Error saving brand brain:', err);
+            console.error('Error saving project brain:', err);
             showToast('No se pudieron guardar los cambios. Intenta de nuevo.', 'error');
         } finally {
             setSaving(false);
@@ -89,8 +104,13 @@ export default function KnowledgePage() {
             return;
         }
         showToast('Extrayendo texto del PDF... (Simulado)', 'success');
-        // Final implementation would involve a server action or API call
     };
+
+    if (!activeProject) return (
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '60vh', gap: '16px' }}>
+            <p style={{ color: '#888', fontSize: '1rem' }}>Selecciona o crea un proyecto para configurar su Cerebro IA.</p>
+        </div>
+    );
 
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -105,7 +125,7 @@ export default function KnowledgePage() {
                 <div>
                     <h1 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🧠 Cerebro IA</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-                        Entrena a la IA con tu historia y documentos para que genere contenido con tu voz única.
+                        Proyecto: <strong style={{ color: '#7ECECA' }}>{activeProject.name}</strong> — Entrena a la IA con la identidad de este proyecto.
                     </p>
                 </div>
                 <button
@@ -119,12 +139,13 @@ export default function KnowledgePage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-                {/* Information Grid */}
                 {[
                     { key: 'biography', label: 'Biografía / Historia', icon: '👤', placeholder: '¿Quién eres? Cuéntanos tu trayectoria...' },
                     { key: 'audience', label: 'Público Objetivo', icon: '👥', placeholder: '¿Para quién escribes? ¿Qué necesitan?' },
                     { key: 'values_tone', label: 'Valores y Tono', icon: '✨', placeholder: '¿Qué tono usas? (Ej: Cercano, Rebelde...)' },
                     { key: 'niche_topics', label: 'Nicho y Temas', icon: '🎯', placeholder: 'Marketing, Fitness, IA... ¿Cuáles son tus temas?' },
+                    { key: 'products_services', label: 'Productos / Servicios', icon: '💼', placeholder: '¿Qué vendes o qué servicios ofreces?' },
+                    { key: 'style_words', label: 'Palabras de Estilo', icon: '🎨', placeholder: 'Palabras que definen tu marca: directo, inspirador...' },
                 ].map((sec) => (
                     <div key={sec.key} className="premium-card" style={{ padding: '24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>

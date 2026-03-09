@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { ArrowLeft, Save, Trash2, Loader2, FolderOpen, Calendar, CheckCircle2 } from 'lucide-react';
+import { useProject } from '@/app/components/ProjectContext';
 
 export default function ProjectDetailPage() {
     const { id } = useParams();
@@ -12,6 +13,7 @@ export default function ProjectDetailPage() {
 
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { setActiveProject, refreshProjects } = useProject();
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [name, setName] = useState('');
@@ -37,6 +39,7 @@ export default function ProjectDetailPage() {
             setProject(data);
             setName(data.name);
             setDescription(data.description || '');
+            setActiveProject(data);
         }
         setLoading(false);
     }
@@ -56,7 +59,10 @@ export default function ProjectDetailPage() {
         if (!error) {
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
-            setProject(prev => ({ ...prev, name: name.trim(), description: description.trim() || null }));
+            const updatedProject = { ...project, name: name.trim(), description: description.trim() || null };
+            setProject(updatedProject);
+            setActiveProject(updatedProject);
+            refreshProjects();
         }
         setSaving(false);
     }

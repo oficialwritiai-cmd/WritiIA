@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search, ExternalLink } from 'lucide-react';
+import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search, ExternalLink, Download } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
+import { useProject } from '@/app/components/ProjectContext';
 
 const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'Blog / SEO'];
 const GOALS = ['Ganar seguidores', 'Generar leads/ventas', 'Viralidad pura', 'Autoridad'];
@@ -30,6 +31,7 @@ export default function IdeasViralesPage() {
 
     const supabase = createSupabaseClient();
     const router = useRouter();
+    const { activeProject } = useProject();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -79,7 +81,8 @@ export default function IdeasViralesPage() {
                     useTikTok: useTikTokTrends,
                     goal,
                     count: quantity,
-                    userId: profile?.id
+                    userId: profile?.id,
+                    projectId: activeProject?.id
                 })
             });
 
@@ -117,6 +120,7 @@ export default function IdeasViralesPage() {
         try {
             await saveToLibrary({
                 userId: profile.id,
+                projectId: activeProject?.id,
                 type: 'idea',
                 platform: selectedPlatforms[0] || 'General',
                 goal: goal,
@@ -153,11 +157,6 @@ export default function IdeasViralesPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ids: ideas.map((_, idx) => idx), // In this page, ideas don't have IDs yet as they are fresh. 
-                    // WAIT: The API expects IDs from the library.
-                    // If they are not saved, I should probably send the raw data or save them first.
-                    // The user said: "Si hay ideas seleccionadas, exporta solo esas".
-                    // Let's modify the API to accept raw items too if IDs are not provided.
                     items: ideas,
                     userId: user.id
                 })
@@ -185,8 +184,8 @@ export default function IdeasViralesPage() {
         const params = new URLSearchParams();
         params.set('mode', 'single');
         params.set('topic', `${idea.titulo || idea.titulo_idea}\n${idea.descripcion}`);
-        params.set('platform', idea.plataforma.includes('TikTok') ? 'TikTok' : 'Reels');
-        params.set('goal', idea.objetivo);
+        params.set('platform', (idea.plataforma || '').includes('TikTok') ? 'TikTok' : 'Reels');
+        params.set('goal', idea.objetivo || goal);
         params.set('source_type', 'ideas');
         router.push(`/dashboard?${params.toString()}`);
     };
@@ -333,11 +332,11 @@ export default function IdeasViralesPage() {
                                     </button>
                                     <button
                                         onClick={() => handleSaveIdea(idea, idx)}
-                                        disabled={savedIdeasIds.has(idx)}
+                                        disabled={savedIdeasIds.has(idea.titulo_idea || idea.titulo_gancho)}
                                         className="btn-secondary"
-                                        style={{ background: savedIdeasIds.has(idx) ? 'rgba(126, 206, 202, 0.15)' : '', color: savedIdeasIds.has(idx) ? '#7ECECA' : '' }}
+                                        style={{ background: savedIdeasIds.has(idea.titulo_idea || idea.titulo_gancho) ? 'rgba(126, 206, 202, 0.15)' : '', color: savedIdeasIds.has(idea.titulo_idea || idea.titulo_gancho) ? '#7ECECA' : '' }}
                                     >
-                                        {savedIdeasIds.has(idx) ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                                        {savedIdeasIds.has(idea.titulo_idea || idea.titulo_gancho) ? <CheckCircle2 size={14} /> : <Save size={14} />}
                                     </button>
                                 </div>
                             </div>

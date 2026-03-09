@@ -220,7 +220,7 @@ export async function POST(request) {
 
         const {
             topic, platform, tone, userId, hookType, intensity,
-            count, videoDuration, specificDetails, victory, opinion, story, awareness, ctaIdea
+            count, videoDuration, specificDetails, victory, opinion, story, awareness, ctaIdea, projectId
         } = validation.data;
 
         const supabase = createClient(
@@ -235,8 +235,16 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        // Fetch Brand Brain
-        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        // Fetch Brand Brain: project-scoped first, fallback to global
+        let brandBrain = null;
+        if (projectId) {
+            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
+            brandBrain = data;
+        }
+        if (!brandBrain) {
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            brandBrain = data;
+        }
 
         if (!brandBrain) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });

@@ -10,6 +10,7 @@ import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { useProject } from '@/app/components/ProjectContext';
 
 // Simple stepper component
 function Stepper({ current }) {
@@ -91,38 +92,45 @@ export default function EstrategiaPage() {
 
     const supabase = createSupabaseClient();
 
+    const { activeProject, projectBrain } = useProject();
+
+    useEffect(() => {
+        if (projectBrain) {
+            setBrainActive(true);
+        } else {
+            setBrainActive(false);
+        }
+    }, [projectBrain]);
+
     useEffect(() => {
         async function loadInitialData() {
-            // Use getSession for faster non-blocking load
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                // background load
                 const userId = session.user.id;
 
-                // Fetch profile
                 supabase.from('users_profiles').select('*').eq('id', userId).single()
                     .then(({ data: prof }) => { if (prof) setProfile(prof); });
 
-                // Fetch brain status
-                supabase.from('brand_brain').select('id').eq('user_id', userId).single()
-                    .then(({ data: brain }) => setBrainActive(!!brain));
-
-                // Fetch Presets
+                // Presets are project-specific now
                 fetchPresets(userId);
             }
         }
         loadInitialData();
-    }, []);
+    }, [activeProject]);
 
     const fetchPresets = async (userId) => {
         if (!userId) return;
         setLoadingPresets(true);
         try {
-            const { data, error } = await supabase
-                .from('strategy_presets')
-                .select('*')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
+            let query = supabase.from('strategy_presets').select('*').eq('user_id', userId);
+
+            if (activeProject) {
+                query = query.eq('project_id', activeProject.id);
+            } else {
+                query = query.is('project_id', null);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false });
 
             if (error) throw error;
             setPresets(data || []);
@@ -148,6 +156,7 @@ export default function EstrategiaPage() {
                 .from('strategy_presets')
                 .insert({
                     user_id: user.id,
+                    project_id: activeProject?.id,
                     nombre_preset: newPresetName.trim(),
                     data: form
                 });
@@ -243,7 +252,8 @@ export default function EstrategiaPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...form,
-                    userId: profile?.id
+                    userId: profile?.id,
+                    projectId: activeProject?.id
                 })
             });
 
@@ -400,7 +410,8 @@ export default function EstrategiaPage() {
                         por_que_funciona: idea.por_que_funciona || '',
                         cta: idea.cta || ''
                     },
-                    tags: ['idea', idea.plataforma || 'General', idea.objetivo || 'Viralidad'].filter(Boolean)
+                    tags: ['idea', idea.plataforma || 'General', idea.objetivo || 'Viralidad'].filter(Boolean),
+                    projectId: activeProject?.id
                 });
             }
 
@@ -512,7 +523,8 @@ export default function EstrategiaPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     items: selectedIdeasForPlan,
-                    userId: user.id
+                    userId: user.id,
+                    projectId: activeProject?.id
                 })
             });
             const { schedule } = await scheduleRes.json();
@@ -527,7 +539,8 @@ export default function EstrategiaPage() {
                     year: new Date().getFullYear(),
                     frequency: `${selectedIdeasForPlan.length} publicaciones`,
                     platforms: [...new Set(selectedIdeasForPlan.map(i => i.plataforma))],
-                    focus: 'plan_mensual'
+                    focus: 'plan_mensual',
+                    project_id: activeProject?.id
                 })
                 .select()
                 .single();
@@ -556,7 +569,8 @@ export default function EstrategiaPage() {
                             titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
                             content: idea,
                             tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean),
-                            status: 'borrador'
+                            status: 'borrador',
+                            project_id: activeProject?.id
                         }).select().single();
 
                         if (savedData.data && savedData.data.id) {
@@ -584,7 +598,8 @@ export default function EstrategiaPage() {
                     event_date: targetDate,
                     type: idea.tipo || idea.tipo_contenido || 'idea',
                     platform: idea.plataforma || 'General',
-                    reference_id: validRefId
+                    reference_id: validRefId,
+                    project_id: activeProject?.id
                 });
             }
 
@@ -708,7 +723,7 @@ export default function EstrategiaPage() {
                 <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Target size={32} color="var(--accent)" />
                     Sesión de Descubrimiento
-                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v2.0.0</span>
+                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v2.1.0</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '1.1rem' }}>
                     Diseñaremos tu estrategia basándonos en tus objetivos reales para los próximos 30 días.

@@ -4,7 +4,7 @@ import { generateIdeasWithHaiku } from '@/lib/anthropic';
 
 export async function POST(request) {
     try {
-        const { items, userId } = await request.json();
+        const { items, userId, projectId } = await request.json();
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return NextResponse.json({ error: 'No se seleccionaron ítems para planificar.' }, { status: 400 });
@@ -14,7 +14,16 @@ export async function POST(request) {
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        const { data: brandBrain } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+        // Fetch Brand Brain: project-scoped first, fallback to global
+        let brandBrain = null;
+        if (projectId) {
+            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
+            brandBrain = data;
+        }
+        if (!brandBrain) {
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            brandBrain = data;
+        }
 
         const systemPrompt = `Eres un experto en estrategia de contenido y calendarización.
 Tengo una lista de ideas/guiones que quiero agendar en mi calendario de contenidos.
