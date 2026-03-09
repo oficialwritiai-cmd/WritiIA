@@ -46,8 +46,8 @@ export default function DashboardPage() {
     const [story, setStory] = useState('');
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [intensity, setIntensity] = useState(3);
-    const [videoDuration, setVideoDuration] = useState('60 seg');
     const [specificDetails, setSpecificDetails] = useState('');
+    const [ctaIdea, setCtaIdea] = useState('');
     // Mini-chat state per script: { [scriptIndex]: { text, loading, error } }
     const [scriptChats, setScriptChats] = useState({});
     const [activeBlockChat, setActiveBlockChat] = useState(null); // 'i-blockType'
@@ -234,6 +234,11 @@ export default function DashboardPage() {
             return;
         }
 
+        if (wizardStep === 3 && generationMode === 'single' && !ctaIdea.trim()) {
+            setError('Por favor, indica una idea para el CTA.');
+            return;
+        }
+
         if (!hasBrain && wizardStep < 2) {
             setError('Por favor, completa el Paso 1 (Marca Personal) antes de generar.');
             return;
@@ -264,6 +269,7 @@ export default function DashboardPage() {
                 intensity: intensity || 3,
                 videoDuration: videoDuration || '60 seg',
                 specificDetails: specificDetails || '',
+                ctaIdea: ctaIdea || '',
                 sourceType: params.get('source_type') || null,
                 sourceReferenceId: params.get('source_reference_id') || null
             };
@@ -690,12 +696,12 @@ export default function DashboardPage() {
                         cta: planningScript.cta || '',
                         copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                     },
-                    tags: ['guion', planningScript.platform || platform, planningScript.goal || goal].filter(Boolean)
+                    tags: ['guion', planningScript.platform || platform, scriptId ? 'revisado' : 'nuevo'].filter(Boolean)
                 });
                 scriptId = savedItem.id;
             }
 
-            // 2. Insert into calendar_events
+            // 2. Insert into calendar_events with 'En preparación' status
             const { error: calErr } = await supabase.from('calendar_events').insert({
                 user_id: profile.id,
                 event_date: plannedDate,
@@ -704,21 +710,20 @@ export default function DashboardPage() {
                 type: 'guion',
                 reference_id: scriptId,
                 has_script: true,
+                status: 'En preparación',
                 description: `Planificado para las ${plannedTime}`
             });
 
             if (calErr) throw calErr;
 
             setSuccessModalData({
-                title: '¡Planificado!',
-                message: `Tu guion ha sido agendado para el ${plannedDate} a las ${plannedTime}.`,
-                actionLabel: 'Ver en Calendario',
+                title: '¡Añadido al Calendario!',
+                message: `Tu contenido ha sido agendado correctamente para el ${plannedDate} a las ${plannedTime}.`,
+                actionLabel: 'Ver Calendario',
                 actionRedirect: '/dashboard/calendar'
             });
             setIsPlannerModalOpen(false);
             setIsSuccessModalOpen(true);
-
-            // Deduct credits or just log it if we want, but "Planificar" itself is free for now (it uses a saved script)
         } catch (err) {
             console.error('Error planning script:', err);
             alert('Error al planificar: ' + err.message);
@@ -1190,6 +1195,18 @@ export default function DashboardPage() {
                                 <div>
                                     <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación</p>
                                     <input className="input-field" placeholder="Cliente o situación real" value={story} onChange={(e) => setStory(e.target.value)} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Idea para el CTA <span style={{ color: '#FF4D4D' }}>*</span></p>
+                                    <input
+                                        className="input-field"
+                                        placeholder="Ej: Que comenten la palabra 'IA', que vayan al link de mi bio, que me pidan una demo..."
+                                        value={ctaIdea}
+                                        onChange={(e) => setCtaIdea(e.target.value)}
+                                        style={{ width: '100%', boxSizing: 'border-box' }}
+                                    />
                                 </div>
                             </div>
                             <div>
@@ -1841,32 +1858,39 @@ export default function DashboardPage() {
                                         gap: '12px'
                                     }}>
                                         {[
-                                            { icon: <Copy size={16} />, label: 'Copiar', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
+                                            { id: `copy-${i}`, icon: <Copy size={16} />, label: 'Copiar Todo', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
                                             {
+                                                id: `save-${i}`,
                                                 icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle2 size={16} color="#7ECECA" /> : <Bookmark size={16} />,
-                                                label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar',
+                                                label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar en Biblioteca',
                                                 action: () => handleSaveScript(s)
                                             },
                                             {
+                                                id: `plan-${i}`,
                                                 icon: <Calendar size={16} />,
-                                                label: 'Planificar',
-                                                action: () => handleOpenPlanner(s)
+                                                label: 'Planificar Content',
+                                                action: () => handleOpenPlanner(s),
+                                                premium: true
                                             },
-                                            { icon: <TrendingUp size={16} />, label: 'Descargar', action: () => handleDownload(s) },
                                         ].map((btn, bidx) => (
                                             <button
                                                 key={bidx}
+                                                id={btn.id}
                                                 onClick={btn.action}
-                                                className="btn-secondary"
+                                                className={`btn-action-glass ${btn.premium ? 'btn-premium-glow' : ''}`}
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: '8px',
                                                     fontSize: '0.75rem',
-                                                    padding: '8px 14px',
-                                                    background: btn.label === 'Guardado' ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
-                                                    border: '1px solid #2A2A2A',
-                                                    color: btn.label === 'Guardado' ? '#7ECECA' : 'rgba(255,255,255,0.6)'
+                                                    padding: '10px 16px',
+                                                    background: btn.label === 'Guardado' ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.03)',
+                                                    border: btn.premium ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
+                                                    color: (btn.label === 'Guardado' || btn.premium) ? '#7ECECA' : 'rgba(255,255,255,0.8)',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    borderRadius: '12px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 700
                                                 }}
                                             >
                                                 {btn.icon} {btn.label}

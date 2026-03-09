@@ -90,26 +90,72 @@ function extractJSONArray(text) {
     }
 }
 
-function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount }) {
+function parseUserItemList(specificDetails) {
+    if (!specificDetails) return [];
+    // Detect numbered list: "1) ...", "1. ...", "1: ..."
+    const lines = specificDetails.split(/[\n;]+/).map(l => l.trim()).filter(Boolean);
+    const items = [];
+    for (const line of lines) {
+        const match = line.match(/^(\d+)\s*[\.\)\:]\s*(.+)/);
+        if (match) {
+            items.push({ num: parseInt(match[1]), text: match[2].trim() });
+        }
+    }
+    if (items.length >= 2) return items.map(i => i.text);
+    // Fallback: any non-empty line that looks like a tool/step name
+    return lines.filter(l => l.length > 3 && !/^[\d\s\-\.\)\#]+$/.test(l)).slice(0, 10);
+}
+
+function buildListConstraints(parsedItems, requestedCount) {
+    if (!parsedItems || parsedItems.length === 0) return '';
+    const total = requestedCount || parsedItems.length;
+    const itemsBlock = parsedItems.slice(0, total).map((item, i) => `  ${i + 1}. ${item}`).join('\n');
+    return `
+╔══════════════════════════════════════════════════════════╗
+║           ⚠️  LISTA OBLIGATORIA - LEE CON ATENCIÓN  ⚠️          ║
+╠══════════════════════════════════════════════════════════╣
+║ El usuario ha proporcionado una lista EXACTA de ${total} puntos. ║
+║ DEBES generar EXACTAMENTE ${total} bloques de desarrollo.         ║
+║ REGLAS INVIOLABLES:                                      ║
+║ • Usa EXACTAMENTE los puntos en el MISMO ORDEN abajo.    ║
+║ • NO inventes puntos nuevos.                             ║
+║ • NO omitas ninguno de la lista.                         ║
+║ • NO repitas ningún punto.                               ║
+║ • Cada bloque habla de UNO solo de estos items.          ║
+╚══════════════════════════════════════════════════════════╝
+
+LISTA DEL USUARIO (respetar orden exacto):
+${itemsBlock}
+
+Para CADA item de la lista, escribe un bloque de desarrollo que:
+- Empiece con el nombre exacto del item (ej: "WRITI IA:", "Claude:")
+- Explique brevemente qué hace y cómo ayuda al emprendedor
+- Use un ejemplo o dato concreto
+`;
+}
+
+function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea }) {
+    const parsedItems = parseUserItemList(specificDetails);
+    const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
+
     // Structure rules vary by duration
     const duracionRules = videoDuration === '30 seg' || videoDuration === '60 seg'
-        ? `- DURACIÓN: ${videoDuration} → UN solo gancho potente, ${requestedCount || 3} frases de desarrollo detalladas, CTA rápido. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
+        ? `- DURACIÓN: ${videoDuration} → UN gancho potente, ${totalItems || 3} puntos de desarrollo (1-2 frases cada uno), CTA rápido. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
         : videoDuration === '90 seg' || videoDuration === '2 min'
-            ? `- DURACIÓN: ${videoDuration} → Gancho, desarrollo ${requestedCount || '4-5'} bloques (cada uno con 2-3 frases), cierre emocional, CTA. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
-            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${requestedCount || '5-7'} bloques de desarrollo extensos (cada uno con ejemplos reales), Conclusión, CTA. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras.`;
+            ? `- DURACIÓN: ${videoDuration} → Gancho, ${totalItems || 5} bloques de desarrollo (2-3 frases c/u), cierre emocional, CTA. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
+            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras.`;
 
-    // Force WRITI IA if mentioned
-    let mandatoryTools = "";
-    if (specificDetails?.toLowerCase().includes("writi ia")) {
-        mandatoryTools = `\n[MANDATO DE MARCA]: "WRITI IA" DEBE ser la herramienta #1. Descríbela como "la mejor del momento para crear contenido viral, guiones y calendario en segundos".`;
-    }
+    const listConstraints = buildListConstraints(parsedItems, totalItems);
 
-    const specificDetailsBlock = specificDetails && specificDetails.trim()
-        ? `\nDETALLES ESPECÍFICOS (OBLIGATORIO - PRIORIDAD CRÍTICA):\n${specificDetails.trim()}\n${mandatoryTools}\n` +
-        `- Si el usuario listó herramientas o puntos concretos, DEBES incluirlos TODOS en el mismo orden.\n` +
-        `- No inventes herramientas ajenas si el usuario ya dio una lista.\n` +
-        `- Si el usuario pidió un número específico (${requestedCount || 'N/A'}), genera EXACTAMENTE esa cantidad de ítems de desarrollo.`
-        : '';
+    // Hook instruction
+    const hookInstruction = topic && topic.length > 60
+        ? `GANCHO - INSTRUCCIÓN CRÍTICA: El usuario ya escribió un hook/idea larga. DEBES USARLO COMO BASE directa y mejorarlo. NO lo reemplaces con uno genérico. Su texto de partida es: "${topic.substring(0, 200)}"`
+        : `GANCHO: Crea un hook visual, impactante (mínimo 12 palabras) que prometa la transformación del video.`;
+
+    // CTA instruction
+    const ctaInstruction = ctaIdea && ctaIdea.trim().length > 3
+        ? `CTA - INSTRUCCIÓN CRÍTICA: El usuario quiere un CTA que haga: "${ctaIdea}". Redacta el CTA siguiendo EXACTAMENTE esta idea del usuario. NO inventes un CTA diferente.`
+        : `CTA: Debe ser específico y accionable. Ej: comentar una palabra, guardar, enviar DM, visitar link. NUNCA "sígueme" a secas.`;
 
     return `Eres un estratega de contenido viral Pro. Creas guiones profundos, auténticos y extensos.
 ${brandContextString}
@@ -117,30 +163,32 @@ ${brandContextString}
 REGLAS DE DURACIÓN Y ESTRUCTURA:
 ${duracionRules}
 
-${specificDetailsBlock}
+${listConstraints}
 
-REGLAS GLOBALES:
-1. El GANCHO (primeras palabras) debe ser visual, impactante y prometer una transformación o revelar algo sorprendente. Mínimo 12 palabras.
+REGLAS GLOBALES DE ESCRITURA:
+1. ${hookInstruction}
 2. El DESARROLLO debe tener ejemplos concretos, microhistorias o datos reales. Sin consejos vagos.
 3. El CIERRE conecta el tema con la identidad del seguidor (emoción o aprendizaje).
-4. El CTA SIEMPRE debe ser específico: comentar una palabra, guardar, enviar DM, visitar link, descargar, etc. NUNCA uses "sígueme" a secas.
+4. ${ctaInstruction}
 5. Intensidad del hook: ${intensity}/5.
 
 GENERA EXACTAMENTE ${count} GUION${count > 1 ? 'ES' : ''} DISTINTOS para ${platform} con tono ${tone}.
+${totalItems ? `NÚMERO OBLIGATORIO DE PUNTOS EN DESARROLLO: ${totalItems}` : ''}
 
 RESPONDE ÚNICAMENTE con un JSON array válido. Formato exacto:
 [
   {
     "titulo_guion": "Título del guion",
     "video_duration": "${videoDuration}",
-    "gancho": "Hook impactante de mínimo 12 palabras",
+    "gancho": "Hook basado en el texto del usuario, mínimo 12 palabras",
     "desarrollo": [
-      "Punto 1 detallado con ejemplo concreto",
-      "Punto 2 detallado con dato o historia",
-      "Punto 3 detallado (añadir más bloques si la duración lo requiere)"
+      ${parsedItems.length > 0
+            ? parsedItems.slice(0, totalItems).map((item, i) => `"${i + 1}. ${item.split(' ')[0]}: [Explicación completa de ${item}]"`).join(',\n      ')
+            : `"Punto 1 detallado con ejemplo concreto",\n      "Punto 2 detallado con dato o historia"`
+        }
     ],
     "cierre": "Cierre emocional que conecta con la identidad del seguidor",
-    "cta": "CTA específico y accionable (no genérico)",
+    "cta": "${ctaIdea ? 'CTA que siga la idea: ' + ctaIdea : 'CTA específico y accionable (no genérico)'}",
     "copy_post": {
       "titulo": "Título del post/reel",
       "descripcion_larga": "Texto persuasivo para pie de foto",
@@ -172,7 +220,7 @@ export async function POST(request) {
 
         const {
             topic, platform, tone, userId, hookType, intensity,
-            count, videoDuration, specificDetails, victory, opinion, story, awareness
+            count, videoDuration, specificDetails, victory, opinion, story, awareness, ctaIdea
         } = validation.data;
 
         const supabase = createClient(
@@ -217,7 +265,7 @@ export async function POST(request) {
 
         const systemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-            count: finalCount, specificDetails, requestedCount
+            count: finalCount, specificDetails, requestedCount, topic, ctaIdea
         });
 
         const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;

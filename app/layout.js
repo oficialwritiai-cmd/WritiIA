@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v25 - Calendar Sync & UI Refinement (v1.12.5)
-// v1.12.5 - FORCE_REPLOY_2026_03_09_05
+// Build Version: 2026-03-09-v26 - Script & Calendar Overhaul v1.13.0
+// v1.13.0 - FORCE_REPLOY_2026_03_09_06
 import './globals.css';
 
 export const metadata = {
