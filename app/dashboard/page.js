@@ -47,6 +47,9 @@ export default function DashboardPage() {
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [intensity, setIntensity] = useState(3);
     const [videoDuration, setVideoDuration] = useState('60 seg');
+    const [specificDetails, setSpecificDetails] = useState('');
+    // Mini-chat state per script: { [scriptIndex]: { text, loading, error } }
+    const [scriptChats, setScriptChats] = useState({});
 
     // Brain profile
     const [brainProfile, setBrainProfile] = useState(null);
@@ -251,6 +254,7 @@ export default function DashboardPage() {
                 hookType: hookType || 'question',
                 intensity: intensity || 3,
                 videoDuration: videoDuration || '60 seg',
+                specificDetails: specificDetails || '',
                 sourceType: params.get('source_type') || null,
                 sourceReferenceId: params.get('source_reference_id') || null
             };
@@ -389,6 +393,77 @@ export default function DashboardPage() {
         if (previousScripts) {
             setScripts(previousScripts);
             setPreviousScripts(null);
+        }
+    }
+
+    async function handleImproveScript(scriptIndex) {
+        const chatState = scriptChats[scriptIndex] || { text: '', loading: false };
+        if (chatState.loading) return;
+
+        const script = scripts[scriptIndex];
+        if (!script) return;
+
+        // Show loading state for this specific script
+        setScriptChats(prev => ({
+            ...prev,
+            [scriptIndex]: { ...chatState, loading: true, error: '' }
+        }));
+
+        // Save current state for undo
+        setPreviousScripts(JSON.parse(JSON.stringify(scripts)));
+
+        try {
+            const res = await fetch('/api/improve-script', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    script: {
+                        gancho: script.gancho || '',
+                        desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                        cierre: script.cierre || '',
+                        cta: script.cta || '',
+                        titulo_guion: script.titulo_guion || '',
+                        video_duration: script.video_duration || videoDuration,
+                    },
+                    instruction: chatState.text || '',
+                    topic: topic || '',
+                    platform: platform || 'Reels',
+                    videoDuration: videoDuration || '60 seg',
+                    userId: profile?.id,
+                }),
+            });
+
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                setScriptChats(prev => ({ ...prev, [scriptIndex]: { ...chatState, loading: false } }));
+                return;
+            }
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'No se pudo mejorar el guion.');
+
+            // Replace the script with the improved version
+            const updatedScripts = [...scripts];
+            updatedScripts[scriptIndex] = {
+                ...scripts[scriptIndex],
+                ...data.script,
+                video_duration: data.script.video_duration || videoDuration,
+            };
+            setScripts(updatedScripts);
+
+            // Clear the chat text after successful improvement
+            setScriptChats(prev => ({ ...prev, [scriptIndex]: { text: '', loading: false, error: '' } }));
+
+            // Refresh credits
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
+            if (profile?.id) fetchCredits(profile.id);
+
+        } catch (err) {
+            console.error('[handleImproveScript]', err.message);
+            setScriptChats(prev => ({
+                ...prev,
+                [scriptIndex]: { ...chatState, loading: false, error: err.message }
+            }));
         }
     }
 
@@ -1092,6 +1167,18 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Temas o detalles específicos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Ej: "Lista las 5 mejores IA para crear contenido: Notion AI, Jasper, Copy.ai, ChatGPT, Claude" · "Habla del error de publicar sin estrategia" · "Añade la técnica del loop abierto"</p>
+                                <textarea
+                                    className="textarea-field"
+                                    placeholder="Escribe aquí los temas, herramientas, listas o puntos clave que quieres que cubra el guion…"
+                                    value={specificDetails}
+                                    onChange={(e) => setSpecificDetails(e.target.value)}
+                                    rows={3}
+                                    style={{ width: '100%', boxSizing: 'border-box', fontSize: '0.85rem' }}
+                                />
+                            </div>
+                            <div>
                                 <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de guiones</p>
                                 <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#7ECECA' }} />
                                 <p style={{ textAlign: 'center', marginTop: '8px', fontWeight: 700, color: '#7ECECA' }}>{quantity} guiones</p>
@@ -1648,8 +1735,86 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
 
+                                    {/* ── MINI CHAT: AI EDIT PANEL ── */}
+                                    <div style={{
+                                        margin: '0 32px 24px 32px',
+                                        padding: '20px',
+                                        background: 'rgba(157, 0, 255, 0.04)',
+                                        border: '1px solid rgba(157, 0, 255, 0.15)',
+                                        borderRadius: '12px',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                            <Sparkles size={14} style={{ color: '#9D00FF' }} />
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.08em' }}>
+                                                MEJORAR GUION CON IA
+                                            </span>
+                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>
+                                                1 crédito
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                            <textarea
+                                                placeholder={'Escribe cómo quieres mejorar este guion… o déjalo vacío para mejora automática.\nEj: "Haz el CTA más cercano y que invite a comentar la palabra IA" · "Acórtalo a máximo 45 seg" · "Añade datos reales en el desarrollo"'}
+                                                value={(scriptChats[i] || {}).text || ''}
+                                                onChange={(e) => setScriptChats(prev => ({
+                                                    ...prev,
+                                                    [i]: { ...(prev[i] || {}), text: e.target.value }
+                                                }))}
+                                                disabled={(scriptChats[i] || {}).loading}
+                                                style={{
+                                                    flex: 1,
+                                                    background: '#080808',
+                                                    border: '1px solid #2A2A2A',
+                                                    borderRadius: '8px',
+                                                    color: 'rgba(255,255,255,0.85)',
+                                                    fontSize: '0.82rem',
+                                                    padding: '10px 14px',
+                                                    resize: 'none',
+                                                    minHeight: '72px',
+                                                    outline: 'none',
+                                                    lineHeight: 1.5,
+                                                    fontFamily: 'inherit',
+                                                }}
+                                                rows={3}
+                                            />
+                                            <button
+                                                onClick={() => handleImproveScript(i)}
+                                                disabled={(scriptChats[i] || {}).loading}
+                                                style={{
+                                                    background: (scriptChats[i] || {}).loading ? 'rgba(157,0,255,0.2)' : 'linear-gradient(135deg, #9D00FF 0%, #7B00CC 100%)',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    color: '#fff',
+                                                    cursor: (scriptChats[i] || {}).loading ? 'not-allowed' : 'pointer',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.8rem',
+                                                    padding: '10px 16px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '7px',
+                                                    whiteSpace: 'nowrap',
+                                                    minWidth: '120px',
+                                                    justifyContent: 'center',
+                                                    transition: 'opacity 0.2s',
+                                                    opacity: (scriptChats[i] || {}).loading ? 0.7 : 1,
+                                                }}
+                                            >
+                                                {(scriptChats[i] || {}).loading
+                                                    ? <><Loader2 size={15} className="animate-spin" /> Mejorando…</>
+                                                    : <><Sparkles size={15} /> Mejorar con IA</>
+                                                }
+                                            </button>
+                                        </div>
+                                        {(scriptChats[i] || {}).error && (
+                                            <p style={{ color: '#FF4D4D', fontSize: '0.78rem', marginTop: '8px' }}>
+                                                ⚠ {(scriptChats[i] || {}).error}
+                                            </p>
+                                        )}
+                                    </div>
+
                                     {/* Card Footer */}
                                     <div style={{
+
                                         padding: '20px 32px',
                                         background: 'rgba(255,255,255,0.01)',
                                         borderTop: '1px solid #1E1E1E',
