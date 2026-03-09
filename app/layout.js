@@ -1,5 +1,5 @@
-// Build Version: 2026-03-09-v31 - Forced Sync & Scroll Fix v1.13.5
-// v1.13.5 - FORCE_REPLOY_2026_03_09_11
+// Build Version: 2026-03-09-v35 - Aggressive Refresh & Planner Scroll Fix v1.14.0
+// v1.14.0 - FORCE_TOTAL_SYNC_2026_03_09_15
 import './globals.css';
 
 export const metadata = {
