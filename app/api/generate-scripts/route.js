@@ -230,7 +230,7 @@ export async function POST(request) {
 
         // Credit Check & Charge (Dynamic Cost)
         const totalCost = getScriptCost(videoDuration, count || 1);
-        const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts');
+        const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

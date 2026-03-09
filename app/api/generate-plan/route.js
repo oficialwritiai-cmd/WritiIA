@@ -39,7 +39,7 @@ export async function POST(request) {
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Credit Check & Charge (3 credits)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_PLAN, 'generate_plan');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_PLAN, 'generate_plan', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

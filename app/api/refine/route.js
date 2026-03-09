@@ -35,11 +35,11 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, type, context, instruction, userId } = validation.data;
+        const { text, type, context, instruction, userId, projectId } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

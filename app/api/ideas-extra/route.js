@@ -38,7 +38,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, experienceLevel, productTicket, objections, examples, userId } = validation.data;
+        const { context, experienceLevel, productTicket, objections, examples, userId, projectId } = validation.data;
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -46,7 +46,7 @@ export async function POST(request) {
         );
 
         // Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IDEAS_EXTRA, 'ideas_extra');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IDEAS_EXTRA, 'ideas_extra', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

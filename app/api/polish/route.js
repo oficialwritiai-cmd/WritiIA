@@ -32,7 +32,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, userId } = validation.data;
+        const { text, userId, projectId } = validation.data;
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -40,7 +40,7 @@ export async function POST(request) {
         );
 
         // 3. Charge Credits (1 credit) - blocks unauthenticated users too via userId UUID check
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'polish_text');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'polish_text', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

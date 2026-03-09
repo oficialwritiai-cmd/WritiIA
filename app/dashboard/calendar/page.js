@@ -13,6 +13,8 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
+// Calendar Page v2.3.0
+
 export default function CalendarPage() {
     const router = useRouter();
     const supabase = createSupabaseClient();
@@ -178,10 +180,10 @@ export default function CalendarPage() {
             notes: tempNotes,
             event_date: selectedDate,
             type: tempColor,
-            // Preserve linked script fields if they exist
+            // Preserve linked script fields if they exist, but update content from editor
             reference_id: selectedEvent?.reference_id || null,
-            has_script: selectedEvent?.has_script || false,
-            content: selectedEvent?.content || null
+            has_script: selectedEvent?.has_script || !!linkedScript,
+            content: linkedScript?.content || selectedEvent?.content || null
         };
 
         try {
@@ -568,48 +570,133 @@ export default function CalendarPage() {
                                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">GANCHO</div>
-                                        <p className="block-text-mini">{linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || 'Sin gancho'}</p>
+                                        <textarea
+                                            className="cal-textarea-minimal"
+                                            style={{ minHeight: '60px', padding: '8px', fontSize: '0.85rem' }}
+                                            value={linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || ''}
+                                            onChange={e => {
+                                                const newContent = { ...(linkedScript.content || {}) };
+                                                if (newContent.gancho) newContent.gancho = e.target.value;
+                                                newContent.hook = e.target.value;
+                                                setLinkedScript({ ...linkedScript, content: newContent });
+                                            }}
+                                            placeholder="Escribe el gancho..."
+                                        />
                                     </div>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">DESARROLLO</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {(Array.isArray(linkedScript.content?.desarrollo) ? linkedScript.content.desarrollo :
-                                                (Array.isArray(linkedScript.desarrollo) ? linkedScript.desarrollo : [])).map((p, i) => (
+                                            {(() => {
+                                                const des = linkedScript.content?.desarrollo || linkedScript.desarrollo || linkedScript.content?.puntos || linkedScript.puntos;
+                                                const desArray = Array.isArray(des) ? des : (typeof des === 'string' ? des.split('\n').filter(Boolean) : ['', '', '']);
+
+                                                return desArray.map((p, i) => (
                                                     <div key={i} style={{ display: 'flex', gap: '10px' }}>
-                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
-                                                        <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
+                                                        <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem', marginTop: '10px' }}>{i + 1}.</span>
+                                                        <textarea
+                                                            className="cal-textarea-minimal"
+                                                            style={{ minHeight: '50px', padding: '8px', fontSize: '0.85rem' }}
+                                                            value={p}
+                                                            onChange={e => {
+                                                                const newDes = [...desArray];
+                                                                newDes[i] = e.target.value;
+                                                                const newContent = { ...(linkedScript.content || {}) };
+                                                                newContent.desarrollo = newDes;
+                                                                setLinkedScript({ ...linkedScript, content: newContent });
+                                                            }}
+                                                        />
                                                     </div>
-                                                ))}
-                                            {(Array.isArray(linkedScript.content?.puntos) ? linkedScript.content.puntos : []).map((p, i) => (
-                                                <div key={`p-${i}`} style={{ display: 'flex', gap: '10px' }}>
-                                                    <span style={{ color: '#9D00FF', fontWeight: 900, fontSize: '0.8rem' }}>{i + 1}.</span>
-                                                    <p className="block-text-mini" style={{ margin: 0 }}>{p}</p>
-                                                </div>
-                                            ))}
+                                                ));
+                                            })()}
                                         </div>
                                     </div>
                                     <div className="script-block-mini">
                                         <div className="block-label-mini">CTA</div>
-                                        <p className="block-text-mini">{linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || 'Sin CTA'}</p>
+                                        <textarea
+                                            className="cal-textarea-minimal"
+                                            style={{ minHeight: '50px', padding: '8px', fontSize: '0.85rem' }}
+                                            value={linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || ''}
+                                            onChange={e => {
+                                                const newContent = { ...(linkedScript.content || {}) };
+                                                if (newContent.cierre) newContent.cierre = e.target.value;
+                                                newContent.cta = e.target.value;
+                                                setLinkedScript({ ...linkedScript, content: newContent });
+                                            }}
+                                            placeholder="Escribe el CTA..."
+                                        />
                                     </div>
 
-                                    {(linkedScript.content?.copy_post || linkedScript.copy_post) && (
-                                        <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div className="block-label-mini">COPY & HASHTAGS</div>
-                                            <div className="block-text-mini" style={{ fontStyle: 'italic', color: '#aaa', whiteSpace: 'pre-wrap' }}>
-                                                {linkedScript.content?.copy_post?.descripcion_larga ||
-                                                    linkedScript.content?.copy_post?.caption ||
-                                                    linkedScript.copy_post?.descripcion_larga ||
-                                                    linkedScript.copy_post?.caption ||
-                                                    linkedScript.content?.copy_post?.texto}
+                                    {(() => {
+                                        const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
+                                        if (!copy) return null;
+
+                                        const caption = copy.descripcion_larga || copy.caption || copy.texto || '';
+                                        const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags : [];
+
+                                        return (
+                                            <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <div className="block-label-mini">COPY & HASHTAGS</div>
+                                                <textarea
+                                                    className="cal-textarea-minimal"
+                                                    style={{ minHeight: '80px', padding: '10px', fontSize: '0.85rem', fontStyle: 'italic', color: '#ccc' }}
+                                                    value={caption}
+                                                    onChange={e => {
+                                                        const newContent = { ...(linkedScript.content || {}) };
+                                                        const newCopy = { ...(newContent.copy_post || {}) };
+                                                        newCopy.descripcion_larga = e.target.value;
+                                                        newContent.copy_post = newCopy;
+                                                        setLinkedScript({ ...linkedScript, content: newContent });
+                                                    }}
+                                                    placeholder="Escribe el copy de la publicación..."
+                                                />
+                                                <div style={{ marginTop: '12px' }}>
+                                                    <input
+                                                        type="text"
+                                                        className="cal-input-minimal"
+                                                        style={{ fontSize: '0.75rem', width: '100%', marginBottom: '8px' }}
+                                                        placeholder="Añadir hashtags (separados por coma)..."
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') {
+                                                                const tags = e.target.value.split(',').map(t => t.trim().replace('#', '')).filter(Boolean);
+                                                                const newContent = { ...(linkedScript.content || {}) };
+                                                                const newCopy = { ...(newContent.copy_post || {}) };
+                                                                newCopy.hashtags = [...new Set([...hashtags, ...tags])];
+                                                                newContent.copy_post = newCopy;
+                                                                setLinkedScript({ ...linkedScript, content: newContent });
+                                                                e.target.value = '';
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                        {hashtags.map((tag, idx) => (
+                                                            <span
+                                                                key={idx}
+                                                                style={{
+                                                                    color: '#9D00FF',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 700,
+                                                                    background: 'rgba(157, 0, 255, 0.1)',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                onClick={() => {
+                                                                    const newContent = { ...(linkedScript.content || {}) };
+                                                                    const newCopy = { ...(newContent.copy_post || {}) };
+                                                                    newCopy.hashtags = hashtags.filter((_, i) => i !== idx);
+                                                                    newContent.copy_post = newCopy;
+                                                                    setLinkedScript({ ...linkedScript, content: newContent });
+                                                                }}
+                                                                title="Click para eliminar"
+                                                            >
+                                                                #{tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '12px' }}>
-                                                {(linkedScript.content?.copy_post?.hashtags || linkedScript.copy_post?.hashtags || []).map(tag => (
-                                                    <span key={tag} style={{ color: '#9D00FF', fontSize: '0.8rem', fontWeight: 700 }}>{tag.startsWith('#') ? tag : `#${tag}`}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
                                         <button

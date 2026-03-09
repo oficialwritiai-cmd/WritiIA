@@ -48,7 +48,7 @@ export async function POST(request) {
         );
 
         // 3. Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_IDEAS, 'strategy_ideas');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_IDEAS, 'strategy_ideas', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }

@@ -572,11 +572,16 @@ export default function DashboardPage() {
                 setGenerationProgress({ current: i + 1, total: slotsWithDates.length, status: `Generando guion ${i + 1} de ${slotsWithDates.length}: ${slot.idea_title}` });
 
                 try {
-                    const script = await handleGenerateSlotScript(slot, true);
-                    slotsWithScripts.push({ ...slot, has_script: !!script, script_id: script?.id || null });
+                    const result = await handleGenerateSlotScript(slot, true);
+                    slotsWithScripts.push({
+                        ...slot,
+                        has_script: !!result,
+                        script_id: result?.script?.id || null,
+                        script_data: result?.script_data || null
+                    });
                 } catch (e) {
                     console.error(`Error generating script for slot ${slot.id}:`, e);
-                    slotsWithScripts.push({ ...slot, has_script: false, script_id: null });
+                    slotsWithScripts.push({ ...slot, has_script: false, script_id: null, script_data: null });
                 }
             }
 
@@ -889,22 +894,24 @@ export default function DashboardPage() {
 
             if (slotErr) throw slotErr;
 
+            const slotScriptData = {
+                hook: generatedScript.gancho || '',
+                desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
+                cta: generatedScript.cta || generatedScript.cierre || '',
+                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+            };
+
             setPlanSlots(planSlots.map(s => {
                 if (s.id === slot.id) return {
                     ...s,
                     has_script: true,
                     script_id: insertedScript.id,
-                    script_data: {
-                        hook: generatedScript.gancho || '',
-                        desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
-                        cta: generatedScript.cta || generatedScript.cierre || '',
-                        copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
-                    }
+                    script_data: slotScriptData
                 };
                 return s;
             }));
 
-            return insertedScript;
+            return { script: insertedScript, script_data: slotScriptData };
 
         } catch (err) {
             if (!silent) alert(err.message);

@@ -21,6 +21,7 @@ const ImproveScriptSchema = z.object({
     platform: z.string().max(50).optional().default('Reels'),
     videoDuration: z.string().max(20).optional().default('60 seg'),
     userId: z.string().uuid('ID de usuario inválido'),
+    projectId: z.string().uuid().optional().nullable(),
 });
 
 export async function POST(request) {
@@ -51,7 +52,7 @@ export async function POST(request) {
         );
 
         // Charge 1 credit per improvement
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IMPROVE_SCRIPT, 'improve_script');
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IMPROVE_SCRIPT, 'improve_script', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
