@@ -12,6 +12,28 @@ const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 });
 // that the AI actually produced enough content.
 // (150 words/min speaking pace, slightly faster for short formats)
 // ─────────────────────────────────────────────
+const WORDS_PER_DURATION = {
+    '30 seg': 70,
+    '60 seg': 140,
+    '90 seg': 200,
+    '2 min': 280,
+    '3 min': 420,
+    '5 min': 700,
+};
+
+// Minimum acceptable ratio before we trigger an expansion call
+const MIN_WORD_RATIO = 0.55;
+
+function countScriptWords(script) {
+    const parts = [
+        script.gancho || '',
+        ...(Array.isArray(script.desarrollo) ? script.desarrollo : []),
+        script.cierre || '',
+        script.cta || '',
+    ];
+    return parts.join(' ').split(/\s+/).filter(Boolean).length;
+}
+
 function extractRequestedCount(topic, details) {
     const combined = `${topic} ${details}`.toLowerCase();
     const match = combined.match(/(?:top|mejores|las|los)?\s*(\d{1,2})\s*(?:herramientas|ia|pasos|errores|formas|maneras|estrategias|ejemplos|consejos|tips)/);
