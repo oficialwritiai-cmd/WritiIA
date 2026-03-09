@@ -1027,7 +1027,7 @@ export default function DashboardPage() {
                 eventsToInsert.push({
                     user_id: user.id,
                     project_id: activeProject?.id,
-                    title: slot.idea_title,
+                    title: slot.idea_title || 'Idea Sin Título',
                     description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                     event_date: targetDate,
                     type: slot.content_type || 'idea',

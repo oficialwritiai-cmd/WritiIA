@@ -64,7 +64,16 @@ export async function POST(request) {
 
         const systemPrompt = `Eres un estratega de contenido premium.
 ${brandContextString}
-Diseña un PLAN DE CONTENIDO para 30 días. Responde ÚNICAMENTE en JSON array.`;
+Diseña un PLAN DE CONTENIDO para 30 días. Responde ÚNICAMENTE en formato JSON (un array de objetos).
+
+CADA OBJETO DEBE TENER ESTAS CLAVES EXACTAS:
+- "dia": número del 1 al 30.
+- "plataforma": string (TikTok, Reels, LinkedIn, etc).
+- "tipo_contenido": string (educativo, venta, personal, etc).
+- "titulo_idea": un título corto y gancho para el post (OBLIGATORIO).
+- "objetivo": el objetivo del post.
+
+Ejemplo: [{"dia": 1, "plataforma": "Reels", "tipo_contenido": "Venta", "titulo_idea": "3 trucos para escalar", "objetivo": "conversión"}]`;
 
         const userMessage = `Descripción: ${description}. Frecuencia: ${frequency}.`;
 
@@ -82,8 +91,13 @@ Diseña un PLAN DE CONTENIDO para 30 días. Responde ÚNICAMENTE en JSON array.`
         if (planErr) throw planErr;
 
         const slotsToInsert = results.map(r => ({
-            plan_id: planData.id, user_id: userId, day_number: Number(r.dia) || 1,
-            platform: r.plataforma, content_type: r.tipo_contenido, idea_title: r.titulo_idea, goal: r.objetivo
+            plan_id: planData.id,
+            user_id: userId,
+            day_number: Number(r.dia) || 1,
+            platform: r.plataforma || 'General',
+            content_type: r.tipo_contenido || 'educativo',
+            idea_title: r.titulo_idea || 'Idea sin título',
+            goal: r.objetivo || 'engagement'
         }));
 
         await supabase.from('content_slots').insert(slotsToInsert);

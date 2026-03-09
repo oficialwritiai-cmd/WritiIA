@@ -385,7 +385,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.0.0
+                            v2.4.2
                         </div>
                     </div>
                 </aside>
@@ -428,7 +428,7 @@ export default function DashboardLayout({ children }) {
                             }}
                             onClick={() => setSidebarOpen(false)}
                         >
-                            <aside style={{
+                            <aside onClick={(e) => e.stopPropagation()} style={{
                                 width: '260px',
                                 background: 'var(--bg-sidebar)',
                                 padding: 24,
@@ -510,7 +510,7 @@ export default function DashboardLayout({ children }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.4.1</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.4.2</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -719,8 +719,9 @@ export default function DashboardLayout({ children }) {
                     .desktop-only { display: none !important; }
                 }
 
-                @media (max-width: 900px) {
-                    .credit-badge { display: none !important; }
+                 @media (max-width: 900px) {
+                    .credit-badge { padding: 4px 10px !important; }
+                    .credit-badge span:last-child { display: none; }
                 }
 
                 .loading-spinner {

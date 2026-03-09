@@ -12,7 +12,10 @@ export default function ProjectSelector({ mobile = false }) {
 
     if (mobile) {
         return (
-            <div style={{ width: '100%', marginBottom: '10px' }}>
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: '100%', marginBottom: '10px' }}
+            >
                 <div style={{
                     fontSize: '0.65rem',
                     fontWeight: 800,
@@ -79,7 +82,10 @@ export default function ProjectSelector({ mobile = false }) {
 
     // Default Desktop View
     return (
-        <div style={{ position: 'relative' }}>
+        <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative' }}
+        >
             <button
                 onClick={() => setSelectorOpen(!selectorOpen)}
                 style={{
