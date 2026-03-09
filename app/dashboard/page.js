@@ -1533,9 +1533,17 @@ export default function DashboardPage() {
                                                             {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
                                                         </div>
                                                     </div>
-                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>{idea.titulo || idea.content?.titulo_idea || idea.content?.hook?.substring(0, 40) || 'Idea sin título'}</h4>
+                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>
+                                                        {(() => {
+                                                            let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
+                                                            return idea.titulo || c.titulo_idea || c.hook?.substring(0, 40) || c.titulo || 'Idea sin título';
+                                                        })()}
+                                                    </h4>
                                                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                        {idea.content?.descripcion || idea.content?.hook || idea.descripcion || (idea.content?.desarrollo ? idea.content?.desarrollo[0] : 'Sin descripción disponible')}
+                                                        {(() => {
+                                                            let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
+                                                            return c.descripcion || c.hook || idea.descripcion || (c.desarrollo ? c.desarrollo[0] : 'Sin descripción disponible');
+                                                        })()}
                                                     </p>
                                                 </div>
                                             ))}
