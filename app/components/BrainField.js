@@ -58,7 +58,9 @@ export default function BrainField({
                 rec.onerror = (event) => {
                     console.error('Speech recognition error', event.error);
                     setIsRecording(false);
-                    if (event.error !== 'no-speech') {
+                    if (event.error === 'not-allowed') {
+                        showToast('Permiso denegado. Activa el micrófono en tu navegador.', 'error');
+                    } else if (event.error !== 'no-speech') {
                         showToast('Error en el micrófono: ' + event.error, 'error');
                     }
                 };

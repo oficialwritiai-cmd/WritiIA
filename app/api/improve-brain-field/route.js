@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { improveBlockWithHaiku } from '@/lib/anthropic';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 export const maxDuration = 60; // Allow more time for AI generation
 
@@ -21,20 +23,10 @@ export async function POST(req) {
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
-        // 2. Charge credits (assuming 1 credit for an improvement)
-        const { data: profile, error: profileError } = await supabase
-            .from('users_profiles')
-            .select('credits_balance, plan, trial_active')
-            .eq('id', userId)
-            .single();
-
-        if (profileError || !profile) {
-            return NextResponse.json({ error: 'Error obteniendo perfil.' }, { status: 500 });
-        }
-
-        const isPro = profile.plan === 'pro' || profile.trial_active;
-        if (!isPro && profile.credits_balance < 1) {
-            return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+        // 2. Charge credits
+        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'improve_brain_field');
+        if (!creditResult.success) {
+            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
         // 3. Build the prompt customized for the field type
@@ -84,40 +76,14 @@ ${JSON.stringify(brainContext, null, 2)}
 
         const userMessage = `TEXTO ACTUAL A MEJORAR:\n${currentText}`;
 
-        // 4. Call OpenAI API
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        const oaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                    { role: 'system', content: systemMessage },
-                    { role: 'user', content: userMessage }
-                ],
-                temperature: 0.5,
-            }),
+        // 4. Call Anthropic API
+        const { content: improvedText } = await improveBlockWithHaiku({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            systemPrompt: systemMessage,
+            userMessage: userMessage,
         });
 
-        if (!oaiRes.ok) {
-            const errBody = await oaiRes.text();
-            console.error("OpenAI error body:", errBody);
-            throw new Error(`Error llamando a OpenAI: ${oaiRes.status}`);
-        }
-
-        const oaiData = await oaiRes.json();
-        const improvedText = oaiData.choices[0].message.content.trim();
-
-        // 5. Deduct credit if not Pro
-        if (!isPro) {
-            const { error: deductError } = await supabase.rpc('deduct_credit', { user_id: userId, amount: 1 });
-            if (deductError) console.error("Error deducting credit:", deductError);
-        }
-
-        return NextResponse.json({ improvedText });
+        return NextResponse.json({ improvedText: improvedText.trim() });
 
     } catch (error) {
         console.error('Error in improve-brain-field:', error);
