@@ -1,5 +1,5 @@
 /*
-  Writi.ai - Core Layout v2.5.2
+  Writi.ai - Core Layout v2.5.4
   Build: 2026-03-10
 */
 import './globals.css';

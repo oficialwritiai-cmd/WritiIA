@@ -28,7 +28,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
-    const VERSION = 'v2.5.2';
+    const VERSION = 'v2.5.4';
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
@@ -1291,6 +1291,27 @@ export default function DashboardPage() {
 
     return (
         <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* NUCLEAR CACHE BUSTING BANNER v2.5.4 */}
+            <div style={{
+                padding: '12px 24px',
+                background: 'linear-gradient(90deg, #ff007a, #9D00FF)',
+                color: 'white',
+                textAlign: 'center',
+                fontWeight: 900,
+                fontSize: '0.9rem',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                borderRadius: '16px',
+                marginTop: '10px',
+                boxShadow: '0 0 30px rgba(255, 0, 122, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '15px',
+                border: '2px solid white'
+            }}>
+                <Sparkles size={20} /> ¡DESPLIEGUE FORZADO EXITOSO! - v2.5.4 ACTIVADA <Sparkles size={20} />
+            </div>
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1944,7 +1965,28 @@ export default function DashboardPage() {
                                             </button>
                                         </div>
                                     )}
-                                    {/* Card Header */}
+                                    {/* BANNER DE CONFIRMACIÓN DE DESPLIEGUE v2.5.3 */}
+                                    <div style={{
+                                        padding: '8px 24px',
+                                        background: 'linear-gradient(90deg, #7ECECA, #22c55e)',
+                                        color: '#000',
+                                        textAlign: 'center',
+                                        fontWeight: 900,
+                                        fontSize: '0.8rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '2px',
+                                        borderRadius: '0 0 12px 12px',
+                                        marginBottom: '20px',
+                                        boxShadow: '0 4px 15px rgba(126, 206, 202, 0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px'
+                                    }}>
+                                        <Sparkles size={16} /> MODO PROFESIONAL ACTIVADO — v2.5.3 <Sparkles size={16} />
+                                    </div>
+
+                                    {/* Wizard Header */}
                                     <div style={{
                                         padding: '20px 32px',
                                         borderBottom: '1px solid #1E1E1E',
@@ -2316,7 +2358,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.2</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.4</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y sincroniza con tu calendario.</p>
                             </div>
