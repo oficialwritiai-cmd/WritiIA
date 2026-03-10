@@ -29,22 +29,28 @@ export async function POST(req) {
 Eres un Experto Estratega de Marketing y Copywriter de respuesta directa.
 Tu tarea es tomar las respuestas de un usuario sobre su negocio y construir el "Cerebro IA" ("Knowledge Base") completo de su proyecto.
 
-DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO CON LAS SIGUIENTES 7 CLAVES EXACTAS:
+¡REGLA CRÍTICA DE FORMATO!
+DEBES DEVOLVER ESTRICTAMENTE UN OBJETO JSON VÁLIDO.
+¡ESTÁ TOTALMENTE PROHIBIDO USAR SALTOS DE LÍNEA LITERALES DENTRO DE LOS VALORES!
+Si necesitas separar párrafos en un texto largo, usa explícitamente los caracteres "\\\\n".
+TODO el texto de cada valor debe estar en una sola línea dentro de sus comillas.
+
+ESTRUCTURA EXACTA (usa estas 7 claves):
 {
-  "biography": "Su historia, quién es y qué hace, reescrito de forma atractiva y profesional.",
+  "biography": "Su historia, quién es y qué hace, reescrito de forma atractiva y profesional. Usa \\\\n para párrafos.",
   "audience": "Descripción clara de su cliente ideal, sus problemas y deseos.",
   "products_services": "Lista clara de qué vende y qué resultados da.",
   "niche_topics": "Nicho principal y pilares de contenido (temas de los que hablará).",
   "values_tone": "El tono de voz de su marca y los valores que transmite.",
   "style_words": "Lista de palabras o frases clave que definen su estilo, separadas por comas.",
-  "knowledge_raw": "Base de conocimiento. IMPORTANTE: Aquí DEBES incluir explícitamente 1 a 3 'Ofertas Irresistibles' usando la fórmula: [Ayudo a X] a conseguir [Resultado] en [Tiempo] sin [Dolor]. Además, incluye ejemplos de mensajes o ángulos útiles para ventas."
+  "knowledge_raw": "Base de conocimiento. INCLUYE de 1 a 3 'Ofertas Irresistibles' usando: [Ayudo a X] a conseguir [Resultado] en [Tiempo] sin [Dolor]. Incluye ejemplos de mensajes o ángulos útiles para ventas. Usa \\\\n para separar."
 }
 
 REGLAS:
-1. NO inventes cosas que no tengan relación con sus respuestas. Amplía y mejora profesionalmente su texto basándote en lo que han dicho.
-2. Escribe en segunda o tercera persona según encaje mejor, pero mantén consistencia. (Ej: "Ayudo a..." o "La marca ayuda a..."). Mejor redactar como si el propio Cerebro estuviera configurado en primera persona para que la IA actúe como ellos.
-3. Si alguna respuesta falta, infiere lo más lógico para su nicho o deja el campo genérico pero útil.
-4. DEVUELVE ÚNICAMENTE EL JSON. Nada de texto antes ni después.
+1. NO inventes cosas que no tengan relación con sus respuestas. Amplía profesionalmente.
+2. Escribe en segunda o tercera persona según encaje mejor.
+3. Si alguna respuesta falta, infiere lo más lógico para su nicho.
+4. DEVUELVE ÚNICAMENTE EL BLOQUE {...}. Nada de texto antes ni después.
         `;
 
         const userMessage = `
@@ -68,12 +74,24 @@ RESPUESTAS DEL USUARIO:
         let generatedBrain = {};
 
         try {
-            const startIdx = content.indexOf('{');
-            const endIdx = content.lastIndexOf('}');
+            let startIdx = content.indexOf('{');
+            let endIdx = content.lastIndexOf('}');
 
             if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
-                const jsonStr = content.substring(startIdx, endIdx + 1);
-                generatedBrain = JSON.parse(jsonStr);
+                // Remove possible control characters outside of JSON structure, and try to parse
+                let jsonStr = content.substring(startIdx, endIdx + 1);
+
+                // Extra safety: some LLMs still output unescaped newlines inside strings.
+                // Replace them efficiently: we can't easily regex inside quotes reliably, but we can try normal parse first.
+                try {
+                    generatedBrain = JSON.parse(jsonStr);
+                } catch (firstErr) {
+                    console.warn("First JSON parse failed, attempting strict newline sanitization...", firstErr.message);
+                    // Fallback to strict newline removal
+                    let sanitized = jsonStr.replace(/[\n\r\t]/g, " ");
+                    generatedBrain = JSON.parse(sanitized);
+                }
+
             } else {
                 console.error("No JSON object found in Claude's response:", content);
                 throw new Error("Formato de respuesta inválido.");
