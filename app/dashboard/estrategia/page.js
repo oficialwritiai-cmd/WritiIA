@@ -1300,31 +1300,41 @@ export default function EstrategiaPage() {
                         <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handleDownloadPDF}>
                             <Save size={16} /> Descargar ideas (.pdf)
                         </button>
-                        <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
-                            Crear plan con ({selectedIdeaIds.size}) seleccionadas →
-                        </button>
-                        <button
-                            className="btn-primary"
-                            style={{
-                                padding: '12px 24px',
-                                background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
-                                border: 'none'
-                            }}
-                            onClick={handleAnalyzeAndPlan}
-                            disabled={selectedIdeaIds.size === 0 || isAnalyzingPlan}
-                        >
-                            {isAnalyzingPlan ? (
-                                <>
-                                    <Loader2 size={18} className="animate-spin" style={{ marginRight: '8px' }} />
-                                    Analizando y planificando...
-                                </>
-                            ) : (
-                                <>
-                                    <Rocket size={18} style={{ marginRight: '8px' }} />
-                                    Analizar y Planificar Automático
-                                </>
-                            )}
-                        </button>
+                        
+                        <div style={{ display: 'flex', gap: '12px', marginLeft: 'auto' }}>
+                            <button
+                                className="btn-primary"
+                                style={{
+                                    padding: '14px 28px',
+                                    fontSize: '1rem',
+                                    background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                    border: 'none',
+                                    boxShadow: '0 4px 20px rgba(183, 77, 255, 0.4)'
+                                }}
+                                onClick={handleAnalyzeAndPlan}
+                                disabled={selectedIdeaIds.size === 0 || isAnalyzingPlan}
+                            >
+                                {isAnalyzingPlan ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" style={{ marginRight: '10px' }} />
+                                        Analizando y planificando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Rocket size={20} style={{ marginRight: '10px' }} />
+                                        Analizar y Planificar Automático
+                                    </>
+                                )}
+                            </button>
+                            <button 
+                                className="btn-secondary" 
+                                style={{ padding: '12px 24px', opacity: 0.6 }} 
+                                onClick={handleGoToPlan} 
+                                disabled={selectedIdeaIds.size === 0}
+                            >
+                                Crear plan simple →
+                            </button>
+                        </div>
                     </div>
                 </div>
 
