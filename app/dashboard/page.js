@@ -30,7 +30,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
-    const VERSION = 'v2.5.5';
+    const VERSION = 'v2.5.6';
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
@@ -99,6 +99,7 @@ export default function DashboardPage() {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
     const [isPlanningLoading, setIsPlanningLoading] = useState(false);
+
 
     // Additional missing states
     const [improvementCounts, setImprovementCounts] = useState({});
@@ -1312,7 +1313,7 @@ export default function DashboardPage() {
                 gap: '15px',
                 border: '2px solid white'
             }}>
-                <Sparkles size={20} /> ¡DASHBOARD RESTAURADO! - v2.5.5 ACTIVADA <Sparkles size={20} />
+                <Sparkles size={20} /> ¡DASHBOARD RECUPERADO! - v2.5.6 ACTIVADA <Sparkles size={20} />
             </div>
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
