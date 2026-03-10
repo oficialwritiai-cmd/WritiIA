@@ -64,18 +64,26 @@ export async function POST(request) {
 
         const systemPrompt = `Eres un estratega de contenido premium.
 ${brandContextString}
-Diseña un PLAN DE CONTENIDO para 30 días. Responde ÚNICAMENTE en formato JSON (un array de objetos).
+Diseña un PLAN DE CONTENIDO para ${postCount || 30} publicaciones. Responde ÚNICAMENTE en formato JSON (un array de objetos).
 
 CADA OBJETO DEBE TENER ESTAS CLAVES EXACTAS:
-- "dia": número del 1 al 30.
-- "plataforma": string (TikTok, Reels, LinkedIn, etc).
-- "tipo_contenido": string (educativo, venta, personal, etc).
-- "titulo_idea": un título corto y gancho para el post (OBLIGATORIO).
-- "objetivo": el objetivo del post.
+- "day_number": número del 1 al 30.
+- "platform": string (TikTok, Reels, LinkedIn, etc).
+- "content_type": string (educativo, venta, personal, etc).
+- "idea_title": un título corto y gancho para el post (OBLIGATORIO).
+- "goal": el objetivo del post.
 
-Ejemplo: [{"dia": 1, "plataforma": "Reels", "tipo_contenido": "Venta", "titulo_idea": "3 trucos para escalar", "objetivo": "conversión"}]`;
+Ejemplo: [{"day_number": 1, "platform": "Reels", "content_type": "Venta", "idea_title": "3 trucos para escalar", "goal": "conversión"}]`;
 
-        const userMessage = `Descripción: ${description}. Frecuencia: ${frequency}.`;
+        const userMessage = `
+DESCRIPCIÓN DE LA MARCA/PRODUCTO: ${description}
+OBJETIVO/ENFOQUE DEL MES: ${focus}
+PLATAFORMAS SELECCIONADAS: ${platforms.join(', ')}
+FRECUENCIA: ${frequency}
+${selectedIdeas && selectedIdeas.length > 0 ? `IDEAS PREFERIDAS (Usa estas como base para el contenido): \n- ${selectedIdeas.join('\n- ')}` : ''}
+
+IMPORTANTE: El plan debe cubrir 30 días. Si hay menos ideas preferidas que días, genera ideas complementarias siguiendo el mismo estilo y objetivo.
+`;
 
         const { parsed: results } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
@@ -84,25 +92,42 @@ Ejemplo: [{"dia": 1, "plataforma": "Reels", "tipo_contenido": "Venta", "titulo_i
         });
 
         const { data: planData, error: planErr } = await supabase.from('content_plans').insert({
-            user_id: userId, month: new Date().getMonth() + 1, year: new Date().getFullYear(),
-            frequency, platforms, focus
+            user_id: userId,
+            month: new Date().getMonth() + 1,
+            year: new Date().getFullYear(),
+            frequency,
+            platforms,
+            focus
         }).select().single();
 
         if (planErr) throw planErr;
 
-        const slotsToInsert = results.map(r => ({
-            plan_id: planData.id,
-            user_id: userId,
-            day_number: Number(r.dia) || 1,
-            platform: r.plataforma || 'General',
-            content_type: r.tipo_contenido || 'educativo',
-            idea_title: r.titulo_idea || 'Idea sin título',
-            goal: r.objetivo || 'engagement'
-        }));
+        const slotsToInsert = results.map((r, index) => {
+            // Robust mapping: try all common key variations the AI might produce
+            const day = Number(r.day_number || r.dia || r.day || (index + 1));
+            const type = r.content_type || r.tipo_contenido || r.type || 'educativo';
+            const platform = r.platform || r.plataforma || platforms[0] || 'General';
+            const goalStr = r.goal || r.objetivo || focus || 'engagement';
 
-        await supabase.from('content_slots').insert(slotsToInsert);
+            // Extreme title fallback if AI fails
+            const title = r.idea_title || r.titulo_idea || r.titulo || r.title || r.titulo_angulo ||
+                `${type.charAt(0).toUpperCase() + type.slice(1)} para ${platform} (${goalStr})`;
 
-        return NextResponse.json({ plan: planData, slots: results });
+            return {
+                plan_id: planData.id,
+                user_id: userId,
+                day_number: day,
+                platform: platform,
+                content_type: type,
+                idea_title: title,
+                goal: goalStr
+            };
+        });
+
+        const { data: slotData, error: slotErr } = await supabase.from('content_slots').insert(slotsToInsert).select();
+        if (slotErr) throw slotErr;
+
+        return NextResponse.json({ plan: planData, slots: slotData });
 
     } catch (err) {
         console.error('[generate-plan] Error:', err?.message);

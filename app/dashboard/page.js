@@ -28,6 +28,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
+    const VERSION = 'v2.5.1';
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
@@ -69,6 +70,7 @@ export default function DashboardPage() {
     const [planExcludeTopics, setPlanExcludeTopics] = useState('');
     const [planCampaigns, setPlanCampaigns] = useState('');
     const [planSlots, setPlanSlots] = useState([]);
+    const [selectedSlots, setSelectedSlots] = useState(new Set());
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
     const [libIdeas, setLibIdeas] = useState([]);
     const [selectedPlanIdeas, setSelectedPlanIdeas] = useState([]);
@@ -76,6 +78,8 @@ export default function DashboardPage() {
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
+    const [recommendedIdeas, setRecommendedIdeas] = useState([]);
+    const [loadingRecommended, setLoadingRecommended] = useState(false);
 
     // Missing states restored
     const [profile, setProfile] = useState(null);
@@ -106,6 +110,49 @@ export default function DashboardPage() {
     const [newPresetName, setNewPresetName] = useState('');
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
+
+    const handleToggleSlotSelection = (slotId) => {
+        const next = new Set(selectedSlots);
+        if (next.has(slotId)) next.delete(slotId);
+        else next.add(slotId);
+        setSelectedSlots(next);
+    };
+
+    const handleToggleSelectAll = () => {
+        if (selectedSlots.size === planSlots.length) {
+            setSelectedSlots(new Set());
+        } else {
+            setSelectedSlots(new Set(planSlots.map(s => s.id)));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedSlots.size === 0) return;
+        if (!confirm(`¿Estás seguro de eliminar ${selectedSlots.size} ideas?`)) return;
+
+        try {
+            const idsToDelete = Array.from(selectedSlots);
+            const { error } = await supabase.from('content_slots').delete().in('id', idsToDelete);
+            if (error) throw error;
+
+            setPlanSlots(prev => prev.filter(s => !selectedSlots.has(s.id)));
+            setSelectedSlots(new Set());
+        } catch (err) {
+            console.error('Error in handleBulkDelete:', err);
+            alert('Error al eliminar las ideas');
+        }
+    };
+
+    const handleConfirmAndSync = async () => {
+        const slotsToSync = planSlots.filter(s => selectedSlots.has(s.id));
+        if (slotsToSync.length === 0) {
+            alert('Selecciona al menos una idea para sincronizar');
+            return;
+        }
+        await handleSendPlanToCalendar(slotsToSync);
+        alert('¡Calendario sincronizado con éxito! ✓');
+        // Optionally move to calendar or stay
+    };
 
     useEffect(() => {
         // Clear generation results when switching project to avoid confusion
@@ -277,8 +324,36 @@ export default function DashboardPage() {
     useEffect(() => {
         if (generationMode === 'plan' && planWizardStep === 1) {
             fetchLibraryIdeas();
+            if (activeProject && recommendedIdeas.length === 0) {
+                fetchProactiveIdeas();
+            }
         }
-    }, [generationMode, planWizardStep]);
+    }, [generationMode, planWizardStep, activeProject]);
+
+    const fetchProactiveIdeas = async () => {
+        if (!profile?.id || !activeProject) return;
+        setLoadingRecommended(true);
+        try {
+            const res = await fetch('/api/ideas-extra', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: profile.id,
+                    projectId: activeProject.id,
+                    proactive: true,
+                    context: 'Generación proactiva basada en cerebro' // Dummy context for validation
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setRecommendedIdeas(data.ideas || []);
+            }
+        } catch (err) {
+            console.error('Error fetching proactive ideas:', err);
+        } finally {
+            setLoadingRecommended(false);
+        }
+    };
 
     const fetchLibraryIdeas = async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -591,12 +666,18 @@ export default function DashboardPage() {
                     focus: planFocus,
                     tone: toneBrand || 'Profesional',
                     videoDuration: videoDuration || '60 seg',
+                    postCount: postCount,
                     userId: profile?.id,
                     selectedIdeas: selectedPlanIdeas.map(id => {
                         if (id.startsWith('extra-')) {
                             const idx = parseInt(id.replace('extra-', ''));
                             const extraIdea = extraIdeasModal.ideas[idx];
                             return extraIdea ? `${extraIdea.titulo_idea}: ${extraIdea.descripcion || ''}` : null;
+                        }
+                        if (id.startsWith('rec-')) {
+                            const idx = parseInt(id.replace('rec-', ''));
+                            const recIdea = recommendedIdeas[idx];
+                            return recIdea ? `${recIdea.titulo_idea}: ${recIdea.descripcion || ''}` : null;
                         }
                         const idea = libIdeas.find(li => li.id === id);
                         return idea ? `${idea.titulo}: ${idea.content?.descripcion || ''}` : null;
@@ -652,12 +733,10 @@ export default function DashboardPage() {
             }
 
             setPlanSlots(slotsWithScripts);
+            // Initially select all slots
+            setSelectedSlots(new Set(slotsWithScripts.map(s => s.id)));
             setIsGeneratingMassive(false);
-            setGenerationProgress({ current: slotsWithScripts.length, total: slotsWithScripts.length, status: '¡Plan completo! Enviando al calendario...' });
-
-            setTimeout(async () => {
-                await handleSendPlanToCalendar(slotsWithScripts);
-            }, 1500);
+            setGenerationProgress({ current: slotsWithScripts.length, total: slotsWithScripts.length, status: '¡Plan generado! Revisa y confirma para sincronizar.' });
 
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
@@ -1470,9 +1549,71 @@ export default function DashboardPage() {
                                     Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
                                 </p>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', maxHeight: '400px', overflowY: 'auto', padding: '10px' }}>
-                                    {libIdeas.length > 0 || extraIdeasModal.ideas.length > 0 ? (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', maxHeight: '500px', overflowY: 'auto', paddingRight: '10px' }}>
+                                    {loadingRecommended && (
+                                        <div style={{ gridColumn: '1 / -1', padding: '20px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px dashed rgba(126, 206, 202, 0.2)', textAlign: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                                                <Loader2 size={16} className="animate-spin" color="#7ECECA" />
+                                                <span style={{ fontSize: '0.9rem', color: '#7ECECA' }}>IA analizando tu perfil para sugerir ideas virales...</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(libIdeas.length > 0 || recommendedIdeas.length > 0 || extraIdeasModal.ideas.length > 0) ? (
                                         <>
+                                            {/* Recommended Ideas (Proactive) */}
+                                            {recommendedIdeas.length > 0 && (
+                                                <div style={{ gridColumn: '1 / -1', marginBottom: '10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <Sparkles size={16} color="#7ECECA" />
+                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sugerencias para tu Estrategia (IA)</h5>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {recommendedIdeas.map((idea, idx) => {
+                                                const ideaId = `rec-${idx}`;
+                                                return (
+                                                    <div
+                                                        key={ideaId}
+                                                        onClick={() => {
+                                                            if (selectedPlanIdeas.includes(ideaId)) {
+                                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
+                                                            } else {
+                                                                setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '20px',
+                                                            background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
+                                                            borderRadius: '16px',
+                                                            border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
+                                                            cursor: 'pointer',
+                                                            transition: '0.2s',
+                                                            position: 'relative'
+                                                        }}
+                                                    >
+                                                        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                            {idea.categoria && <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>{idea.categoria}</span>}
+                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
+                                                            </div>
+                                                        </div>
+                                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
+                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                            {idea.descripcion}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* Extra Ideas (Manual Search) */}
+                                            {extraIdeasModal.ideas.length > 0 && (
+                                                <div style={{ gridColumn: '1 / -1', margin: '20px 0 10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <Search size={16} color="var(--text-secondary)" />
+                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nuevas Ideas Encontradas</h5>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {extraIdeasModal.ideas.map((idea, idx) => {
                                                 const ideaId = `extra-${idx}`;
                                                 return (
@@ -1508,6 +1649,15 @@ export default function DashboardPage() {
                                                     </div>
                                                 );
                                             })}
+                                            {/* Idea Bank */}
+                                            {libIdeas.length > 0 && (
+                                                <div style={{ gridColumn: '1 / -1', margin: '20px 0 10px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <Bookmark size={16} color="var(--text-secondary)" />
+                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ideas de tu Banco</h5>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {libIdeas.map(idea => (
                                                 <div
                                                     key={idea.id}
@@ -2110,28 +2260,43 @@ export default function DashboardPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '20px' }}>
                             <div style={{ flex: 1 }}>
-                                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>Plan de contenido a 30 días</h2>
-                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Tu planificación mensual estratégica está lista y vinculada al calendario.</p>
+                                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    Plan de contenido a 30 días
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.1</span>
+                                </h2>
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y sincroniza con tu calendario.</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                {selectedSlots.size > 0 && (
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="btn-secondary"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,0,0,0.3)', color: '#ff4d4d' }}
+                                    >
+                                        <X size={16} /> Eliminar ({selectedSlots.size})
+                                    </button>
+                                )}
                                 <button
-                                    onClick={async () => {
-                                        const hasSentSlots = planSlots.some(s => s.sent_to_calendar);
-                                        if (!hasSentSlots && !sendingToCalendar) {
-                                            await handleSendPlanToCalendar();
-                                        } else {
-                                            router.push('/dashboard/calendar');
-                                        }
-                                    }}
-                                    disabled={sendingToCalendar}
+                                    onClick={handleConfirmAndSync}
+                                    disabled={sendingToCalendar || selectedSlots.size === 0}
                                     className="btn-primary"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: sendingToCalendar ? 0.7 : 1 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
                                 >
-                                    {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />}
-                                    {sendingToCalendar ? 'Enviando...' : 'Ver Calendario'}
+                                    {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                    {sendingToCalendar ? 'Sincronizando...' : `Confirmar y Sincronizar (${selectedSlots.size})`}
                                 </button>
-                                <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Crear Otro Plan</button>
+                                <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
                             </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
+                            <input
+                                type="checkbox"
+                                checked={planSlots.length > 0 && selectedSlots.size === planSlots.length}
+                                onChange={handleToggleSelectAll}
+                                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#7ECECA' }}
+                            />
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Seleccionar Todo el Plan</span>
                         </div>
 
                         {isGeneratingMassive && (
@@ -2152,8 +2317,22 @@ export default function DashboardPage() {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {Array.isArray(planSlots) && planSlots.map((slot, i) => (
-                                <div key={slot.id} className="premium-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: slot.has_script ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)' }}>
+                                <div key={slot.id} className="premium-card" style={{
+                                    padding: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    border: selectedSlots.has(slot.id) ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
+                                    opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
+                                    transition: '0.2s'
+                                }}>
                                     <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedSlots.has(slot.id)}
+                                            onChange={() => handleToggleSlotSelection(slot.id)}
+                                            style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#7ECECA' }}
+                                        />
 
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', minWidth: '60px', height: '60px' }}>
                                             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase' }}>DÍA</span>

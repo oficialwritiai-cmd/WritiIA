@@ -38,12 +38,26 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, experienceLevel, productTicket, objections, examples, userId, projectId } = validation.data;
+        const { context, experienceLevel, productTicket, objections, examples, userId, projectId, proactive } = validation.data;
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
+
+        // Fetch project brain if proactive or if metadata is missing
+        let brainContext = '';
+        if (projectId) {
+            const { data: brain } = await supabase
+                .from('project_brains')
+                .select('*')
+                .eq('project_id', projectId)
+                .single();
+
+            if (brain) {
+                brainContext = `BIO: ${brain.biography || ''}. PRODUCTOS: ${brain.products_services || ''}. AUDIENCIA: ${brain.audience || ''}. ESTILO: ${brain.style_words || ''}.`;
+            }
+        }
 
         // Charge Credits (1 credit)
         const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IDEAS_EXTRA, 'ideas_extra', projectId);
@@ -51,16 +65,24 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        const systemPrompt = `Eres un generador de ideas de contenido viral para redes sociales.
-Tu tarea es crear ideas originales, específicas y accionables basadas en la descripción del usuario.
-Responde ÚNICAMENTE con un array JSON válido.`;
+        const systemPrompt = `Eres el mejor estratega de contenido viral del mundo.
+Tu tarea es generar ideas de contenido altamente específicas, disruptivas y con alto potencial viral.
+Debes basarte profundamente en el perfil (BIO) y productos del usuario para que las ideas sean coherentes.
+Las ideas deben dividirse en 3 categorías: Autoridad (educar), Viral (entretenimiento/curiosidad) e Historia (conexión).
 
-        let userMessage = `CONTEXTO: ${context}.`;
-        if (experienceLevel) userMessage += ` NIVEL: ${experienceLevel}.`;
-        if (productTicket) userMessage += ` TICKET: ${productTicket}.`;
-        if (objections) userMessage += ` OBJECIONES: ${objections}.`;
-        if (examples) userMessage += ` EJEMPLOS: ${examples}.`;
-        userMessage += '\nGenera 6-10 ideas originales.';
+Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
+[{ "titulo_idea": "...", "descripcion": "...", "categoria": "..." }]`;
+
+        let userMessage = proactive ? `Genera una estrategia de 12-15 ideas virales basadas en este perfil:\n${brainContext}\n` : `CONTEXTO: ${context}.`;
+
+        if (!proactive) {
+            if (experienceLevel) userMessage += ` NIVEL: ${experienceLevel}.`;
+            if (productTicket) userMessage += ` TICKET: ${productTicket}.`;
+            if (objections) userMessage += ` OBJECIONES: ${objections}.`;
+            if (examples) userMessage += ` EJEMPLOS: ${examples}.`;
+            if (brainContext) userMessage += `\nUSA ESTE PERFIL COMO BASE: ${brainContext}`;
+            userMessage += '\nGenera 10-12 ideas originales y virales.';
+        }
 
         const { parsed: ideas } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
