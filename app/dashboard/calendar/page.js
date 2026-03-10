@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.5.2
+// Calendar Page v2.5.7
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -40,6 +40,11 @@ export default function CalendarPage() {
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, eventId }
+
+    // Multi-Selection & Drag Logic
+    const [selectedEvents, setSelectedEvents] = useState(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragMode, setDragMode] = useState(null); // 'select' | 'deselect'
 
     // Form States (for the panel)
     const [tempTitle, setTempTitle] = useState('');
@@ -89,6 +94,7 @@ export default function CalendarPage() {
 
             const { data: eventData } = await eventQuery;
             setEvents(eventData || []);
+            setSelectedEvents(new Set()); // Reset selection on change
 
             // Also load library items for the import dropdown or list
             let libQuery = supabase
@@ -256,10 +262,62 @@ export default function CalendarPage() {
         setContextMenu(null);
     };
 
+    // -- Multi-Selection Handlers --
+    const handleEventMouseDown = (e, id) => {
+        if (e.button !== 0) return; // Only left click
+        setIsDragging(true);
+        const isSelected = selectedEvents.has(id);
+        const newMode = isSelected ? 'deselect' : 'select';
+        setDragMode(newMode);
+
+        const next = new Set(selectedEvents);
+        if (newMode === 'select') next.add(id);
+        else next.delete(id);
+        setSelectedEvents(next);
+    };
+
+    const handleEventMouseEnter = (id) => {
+        if (!isDragging) return;
+        const next = new Set(selectedEvents);
+        if (dragMode === 'select') next.add(id);
+        else next.delete(id);
+        setSelectedEvents(next);
+    };
+
+    const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+        setDragMode(null);
+    };
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
+
+    const handleDeleteSelected = async () => {
+        const ids = Array.from(selectedEvents);
+        if (ids.length === 0) return;
+        if (!confirm(`¿Eliminar ${ids.length} publicaciones seleccionadas?`)) return;
+
+        try {
+            const { error: err } = await supabase.from('calendar_events').delete().in('id', ids);
+            if (err) throw err;
+            setEvents(events.filter(ev => !selectedEvents.has(ev.id)));
+            setSelectedEvents(new Set());
+            setIsPanelOpen(false);
+        } catch (e) {
+            alert('Error al eliminar: ' + e.message);
+        }
+    };
+
     // -- Context Menu Logic --
     const handleContextMenu = (e, eventId) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, eventId });
+        // If the right-clicked item is NOT in the selection, clear selection or select it
+        if (eventId && !selectedEvents.has(eventId)) {
+            setSelectedEvents(new Set([eventId]));
+        }
+        setContextMenu({ x: e.pageX, y: e.pageY, eventId });
     };
 
     useEffect(() => {
@@ -345,11 +403,13 @@ export default function CalendarPage() {
                         {dayEvents.map(ev => (
                             <div
                                 key={ev.id}
-                                draggable
+                                draggable={!isDragging}
                                 onDragStart={e => onDragStart(e, ev.id)}
+                                onMouseDown={e => { e.stopPropagation(); handleEventMouseDown(e, ev.id); }}
+                                onMouseEnter={() => handleEventMouseEnter(ev.id)}
                                 onClick={e => handleEventClick(e, ev)}
                                 onContextMenu={e => handleContextMenu(e, ev.id)}
-                                className={`cal-event-pill ${ev.type ? `theme-${ev.type}` : getStatusClass(ev.status)}`}
+                                className={`cal-event-pill ${ev.type ? `theme-${ev.type}` : getStatusClass(ev.status)} ${selectedEvents.has(ev.id) ? 'selected' : ''}`}
                             >
                                 <div className="pill-dot" style={{ display: ev.type ? 'none' : 'block' }} />
                                 <span className="pill-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -792,14 +852,24 @@ export default function CalendarPage() {
 
             {/* Context Menu */}
             {contextMenu && (
-                <div className="cal-ctx-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
-                    <div className="cal-ctx-item" onClick={() => {
-                        const ev = events.find(e => e.id === contextMenu.eventId);
-                        if (ev) handleEventClick({ stopPropagation: () => { } }, ev);
-                    }}><Edit3 size={16} /> Editar</div>
-                    <div className="cal-ctx-item" onClick={() => handleDuplicateEvent(contextMenu.eventId)}><Copy size={16} /> Duplicar</div>
-                    <div className="cal-ctx-item" onClick={() => handleMoveDate(contextMenu.eventId)}><ArrowRightLeft size={16} /> Mover fecha</div>
-                    <div className="cal-ctx-item danger" onClick={() => handleDeleteEvent(contextMenu.eventId)}><Trash2 size={16} /> Eliminar</div>
+                <div className="cal-ctx-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
+                    {selectedEvents.size > 1 ? (
+                        <>
+                            <div className="cal-ctx-header">{selectedEvents.size} elementos seleccionados</div>
+                            <div className="cal-ctx-item danger" onClick={handleDeleteSelected}><Trash2 size={16} /> Eliminar seleccionados</div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="cal-ctx-item" onClick={() => {
+                                const ev = events.find(e => e.id === contextMenu.eventId);
+                                if (ev) handleEventClick({ stopPropagation: () => { } }, ev);
+                                setContextMenu(null);
+                            }}><Edit3 size={16} /> Editar</div>
+                            <div className="cal-ctx-item" onClick={() => { handleDuplicateEvent(contextMenu.eventId); setContextMenu(null); }}><Copy size={16} /> Duplicar</div>
+                            <div className="cal-ctx-item" onClick={() => { handleMoveDate(contextMenu.eventId); setContextMenu(null); }}><ArrowRightLeft size={16} /> Mover fecha</div>
+                            <div className="cal-ctx-item danger" onClick={() => { handleDeleteEvent(contextMenu.eventId); setContextMenu(null); }}><Trash2 size={16} /> Eliminar</div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -823,7 +893,8 @@ export default function CalendarPage() {
                 .cal-promo-card { background: #111; padding: 20px; border-radius: 16px; border: 1px solid #222; }
                 .btn-delete { background: rgba(255, 77, 77, 0.1); color: #FF4D4D; border: 1px solid rgba(255, 77, 77, 0.1); padding: 0 16px; border-radius: 12px; cursor: pointer; }
                 
-                /* Extra Refinements */
+                .cal-event-pill.selected { border: 2px solid white; box-shadow: 0 0 15px rgba(255,255,255,0.3); z-index: 10; transform: scale(1.02); }
+                .cal-ctx-header { font-size: 0.7rem; font-weight: 800; color: #555; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid #222; margin-bottom: 4px; }
                 .cal-cell-plus { opacity: 0; color: #333; transition: 0.2s; }
                 .cal-day-cell:hover .cal-cell-plus { opacity: 1; }
             `}</style>
