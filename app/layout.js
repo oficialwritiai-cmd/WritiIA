@@ -20,6 +20,7 @@ export const viewport = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs'; // Ensure no edge-caching of the layout itself
 
 export default function RootLayout({ children }) {
     return (
