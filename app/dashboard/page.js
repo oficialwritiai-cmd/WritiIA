@@ -11,6 +11,12 @@ import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
 
+// EXTREME CACHE BUSTING FOR VERCEL
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
+
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
     { name: 'IA Generativa', icon: '🤖', grow: '+45.2%', color: '#00F3FF' },
