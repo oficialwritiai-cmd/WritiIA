@@ -64,16 +64,23 @@ RESPUESTAS DEL USUARIO:
         });
 
         // The response should be a JSON object, but our parser sometimes wraps in an array if it tries to fix it.
-        // Let's ensure we extract the object.
+        // Parse the raw content manually since anthropic.js tries to force an array of content ideas
         let generatedBrain = {};
 
-        if (Array.isArray(parsed) && parsed.length > 0) {
-            generatedBrain = parsed[0];
-        } else if (parsed && typeof parsed === 'object') {
-            generatedBrain = parsed;
-        } else {
-            console.error("AI did not return valid JSON for Brain mapping:", content);
-            throw new Error("El formato devuelto por la IA no es válido.");
+        try {
+            const startIdx = content.indexOf('{');
+            const endIdx = content.lastIndexOf('}');
+
+            if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+                const jsonStr = content.substring(startIdx, endIdx + 1);
+                generatedBrain = JSON.parse(jsonStr);
+            } else {
+                console.error("No JSON object found in Claude's response:", content);
+                throw new Error("Formato de respuesta inválido.");
+            }
+        } catch (e) {
+            console.error("Failed to parse JSON for Brain mapping:", e, content);
+            throw new Error("El formato devuelto por la IA no pudo ser leído.");
         }
 
         // Clean up formatting
