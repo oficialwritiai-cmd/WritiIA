@@ -1,26 +1,25 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 
 export const maxDuration = 60; // Allow more time for AI generation
 
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { fieldKey, currentText, instruction, brainContext } = body;
+        const { fieldKey, currentText, instruction, brainContext, userId } = body;
 
         if (!currentText) {
             return NextResponse.json({ error: 'Falta el texto actual.' }, { status: 400 });
         }
 
-        // 1. Validate session
-        const supabase = createSupabaseServerClient();
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError || !session) {
+        if (!userId) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
         }
 
-        const userId = session.user.id;
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
 
         // 2. Charge credits (assuming 1 credit for an improvement)
         const { data: profile, error: profileError } = await supabase

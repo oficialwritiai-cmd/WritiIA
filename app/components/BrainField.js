@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Loader2, Sparkles, Mic, MicOff, Undo2, X, Send } from 'lucide-react';
+import { createSupabaseClient } from '@/lib/supabase';
 
 export default function BrainField({
     label,
@@ -116,10 +117,14 @@ export default function BrainField({
         setIsPolishing(true);
         setShowMenu(false);
         try {
+            const supabase = createSupabaseClient();
+            const { data: { user } } = await supabase.auth.getUser();
+
             const res = await fetch('/api/improve-brain-field', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    userId: user?.id,
                     fieldKey,
                     currentText: value,
                     instruction,
