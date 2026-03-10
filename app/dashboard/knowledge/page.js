@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
-import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
+import BrainField from '@/app/components/BrainField';
 import { useProject } from '@/app/components/ProjectContext';
 
 export default function KnowledgePage() {
@@ -158,16 +158,16 @@ export default function KnowledgePage() {
                     { key: 'style_words', label: 'Palabras de Estilo', icon: '🎨', placeholder: 'Palabras que definen tu marca: directo, inspirador...' },
                 ].map((sec) => (
                     <div key={sec.key} className="premium-card" style={{ padding: '24px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                            <span style={{ fontSize: '1.4rem' }}>{sec.icon}</span>
-                            <h3 style={{ fontSize: '1.1rem' }}>{sec.label}</h3>
-                        </div>
-                        <AIPolishedTextarea
+                        <BrainField
+                            fieldKey={sec.key}
+                            label={sec.label}
+                            icon={sec.icon}
                             className="textarea-field"
                             rows={6}
                             placeholder={sec.placeholder}
                             value={brain[sec.key]}
                             onChange={(e) => setBrain({ ...brain, [sec.key]: e.target.value })}
+                            brainContext={brain}
                             style={{ background: 'var(--bg-dark)', border: '1px solid var(--border)', fontSize: '0.95rem' }}
                         />
                     </div>
@@ -187,12 +187,14 @@ export default function KnowledgePage() {
                     </div>
                 </div>
 
-                <textarea
+                <BrainField
+                    fieldKey="knowledge_raw"
                     className="textarea-field"
                     rows={12}
                     placeholder="Pega aquí contenido largo: páginas de venta, blogs, guiones antiguos..."
                     value={brain.knowledge_raw}
                     onChange={(e) => setBrain({ ...brain, knowledge_raw: e.target.value })}
+                    brainContext={brain}
                     style={{ background: 'var(--bg-dark)', border: '1px solid var(--border)', marginBottom: '24px', fontSize: '1rem', lineHeight: '1.6' }}
                 />
 
