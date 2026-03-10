@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createSupabaseClient } from '@/lib/supabase';
 import BrainField from '@/app/components/BrainField';
+import BrainWizardModal from '@/app/components/BrainWizardModal';
 import { useProject } from '@/app/components/ProjectContext';
 
 export default function KnowledgePage() {
@@ -18,6 +19,7 @@ export default function KnowledgePage() {
         products_services: '',
         style_words: ''
     });
+    const [showWizard, setShowWizard] = useState(false);
 
     const supabase = createSupabaseClient();
     const fileInputRef = useRef(null);
@@ -96,6 +98,21 @@ export default function KnowledgePage() {
         }
     };
 
+    const handleWizardComplete = async (generatedBrain) => {
+        // AI returns a JSON with the 7 exact keys. Merging them into current state.
+        setBrain(prev => ({
+            ...prev,
+            ...generatedBrain
+        }));
+
+        showToast('Cerebro IA generado! Registrando guardado...', 'success');
+
+        // Let React state update before saving, simple timeout pattern
+        setTimeout(() => {
+            document.getElementById('save-brain-btn')?.click();
+        }, 300);
+    };
+
     const showToast = (msg, type) => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 4000);
@@ -137,8 +154,22 @@ export default function KnowledgePage() {
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
                         Proyecto: <strong style={{ color: '#7ECECA' }}>{activeProject.name}</strong> — Entrena a la IA con la identidad de este proyecto.
                     </p>
+                    <button
+                        onClick={() => setShowWizard(true)}
+                        style={{
+                            marginTop: '12px',
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            color: 'white', border: 'none', padding: '10px 20px',
+                            borderRadius: '8px', fontSize: '0.95rem', fontWeight: 700,
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                        }}
+                    >
+                        ✨ Crear mi Cerebro con IA (Rápido)
+                    </button>
                 </div>
                 <button
+                    id="save-brain-btn"
                     className="btn-primary"
                     onClick={handleSave}
                     disabled={saving}
@@ -237,6 +268,13 @@ export default function KnowledgePage() {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
             `}</style>
+
+            <BrainWizardModal
+                isOpen={showWizard}
+                onClose={() => setShowWizard(false)}
+                onComplete={handleWizardComplete}
+                projectId={activeProject?.id}
+            />
         </div>
     );
 }
