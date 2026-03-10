@@ -29,8 +29,8 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 4) Bump to v2.5.14 to force Vercel to invalidate cache fully.
-export const VERSION = 'v2.5.14';
+// 4) Bump to v2.5.15 to force Vercel to invalidate cache fully.
+export const VERSION = 'v2.5.15';
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState('single');

@@ -816,6 +816,7 @@ export default function EstrategiaPage() {
                     {/* Preguntas de texto */}
                     <div>
                         <BrainField
+                            className="textarea-field"
                             label="¿Qué quieres conseguir con tu contenido en los próximos 30 días?"
                             placeholder="Ej: Ganar 500 seguidores y conseguir 5 clientes..."
                             value={form.objective}
@@ -829,6 +830,7 @@ export default function EstrategiaPage() {
 
                     <div>
                         <BrainField
+                            className="textarea-field"
                             label="¿Tienes algún lanzamiento u oferta próxima?"
                             placeholder="Ej: Lanzamiento de curso el día 20..."
                             value={form.launch}
@@ -842,6 +844,7 @@ export default function EstrategiaPage() {
 
                     <div>
                         <BrainField
+                            className="textarea-field"
                             label="¿Cuál es la mayor objeción de tus clientes?"
                             placeholder="Ej: Es muy caro, no tengo tiempo..."
                             value={form.objection}
