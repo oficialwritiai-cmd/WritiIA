@@ -1,5 +1,7 @@
-// Build Version: 2026-03-10-v59 - Force Sync Bulk Actions v2.5.1
-// v2.5.1 - FORCE_SYNC_2026_03_10_13
+/*
+  Writi.ai - Core Layout v2.5.2
+  Build: 2026-03-10
+*/
 import './globals.css';
 
 export const metadata = {

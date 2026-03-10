@@ -28,7 +28,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
-    const VERSION = 'v2.5.1';
+    const VERSION = 'v2.5.2';
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
@@ -71,6 +71,9 @@ export default function DashboardPage() {
     const [planCampaigns, setPlanCampaigns] = useState('');
     const [planSlots, setPlanSlots] = useState([]);
     const [selectedSlots, setSelectedSlots] = useState(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragMode, setDragMode] = useState(null); // 'select' or 'deselect'
+    const [contextMenu, setContextMenu] = useState(null); // { x, y }
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
     const [libIdeas, setLibIdeas] = useState([]);
     const [selectedPlanIdeas, setSelectedPlanIdeas] = useState([]);
@@ -111,11 +114,62 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
-    const handleToggleSlotSelection = (slotId) => {
-        const next = new Set(selectedSlots);
-        if (next.has(slotId)) next.delete(slotId);
-        else next.add(slotId);
-        setSelectedSlots(next);
+    // -- Drag Selection Logic --
+    const handleSlotMouseDown = (id) => {
+        setIsDragging(true);
+        const isSelected = selectedSlots.has(id);
+        const newMode = isSelected ? 'deselect' : 'select';
+        setDragMode(newMode);
+
+        const newSelected = new Set(selectedSlots);
+        if (newMode === 'select') newSelected.add(id);
+        else newSelected.delete(id);
+        setSelectedSlots(newSelected);
+    };
+
+    const handleSlotMouseEnter = (id) => {
+        if (!isDragging) return;
+        const newSelected = new Set(selectedSlots);
+        if (dragMode === 'select') newSelected.add(id);
+        else newSelected.delete(id);
+        setSelectedSlots(newSelected);
+    };
+
+    const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+        setDragMode(null);
+    };
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
+
+    // -- Context Menu Logic --
+    const handleContextMenu = (e, id) => {
+        e.preventDefault();
+        // If clicking on an unselected slot, select only that one
+        if (!selectedSlots.has(id)) {
+            setSelectedSlots(new Set([id]));
+        }
+        setContextMenu({ x: e.pageX, y: e.pageY });
+    };
+
+    const closeContextMenu = () => setContextMenu(null);
+
+    useEffect(() => {
+        window.addEventListener('click', closeContextMenu);
+        return () => window.removeEventListener('click', closeContextMenu);
+    }, []);
+
+    const handleToggleSlotSelection = (id) => {
+        const newSelected = new Set(selectedSlots);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedSlots(newSelected);
     };
 
     const handleToggleSelectAll = () => {
@@ -2262,7 +2316,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.1</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.2</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y sincroniza con tu calendario.</p>
                             </div>
@@ -2317,15 +2371,25 @@ export default function DashboardPage() {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {Array.isArray(planSlots) && planSlots.map((slot, i) => (
-                                <div key={slot.id} className="premium-card" style={{
-                                    padding: '24px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    border: selectedSlots.has(slot.id) ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
-                                    opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
-                                    transition: '0.2s'
-                                }}>
+                                <div
+                                    key={slot.id}
+                                    className="premium-card plan-slot-card"
+                                    onMouseDown={() => handleSlotMouseDown(slot.id)}
+                                    onMouseEnter={() => handleSlotMouseEnter(slot.id)}
+                                    onContextMenu={(e) => handleContextMenu(e, slot.id)}
+                                    style={{
+                                        padding: '24px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        border: selectedSlots.has(slot.id) ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
+                                        background: selectedSlots.has(slot.id) ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
+                                        opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
+                                        transition: '0.2s',
+                                        cursor: 'pointer',
+                                        userSelect: 'none'
+                                    }}
+                                >
                                     <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
                                         <input
                                             type="checkbox"
