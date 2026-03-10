@@ -11,6 +11,7 @@ import { saveToLibrary } from '@/lib/library';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { useProject } from '@/app/components/ProjectContext';
+import BrainField from '@/app/components/BrainField';
 
 // Simple stepper component
 function Stepper({ current }) {
@@ -814,38 +815,41 @@ export default function EstrategiaPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {/* Preguntas de texto */}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>¿Qué quieres conseguir con tu contenido en los próximos 30 días?</label>
-                        <textarea
-                            name="objective"
-                            className="textarea-field"
+                        <BrainField
+                            label="¿Qué quieres conseguir con tu contenido en los próximos 30 días?"
                             placeholder="Ej: Ganar 500 seguidores y conseguir 5 clientes..."
                             value={form.objective}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange({ target: { name: 'objective', value: e.target.value } })}
+                            fieldKey="objective"
+                            brainContext={projectBrain}
                             rows={3}
+                            apiEndpoint="/api/estrategia/improve-field"
                         />
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>¿Tienes algún lanzamiento u oferta próxima?</label>
-                        <textarea
-                            name="launch"
-                            className="textarea-field"
+                        <BrainField
+                            label="¿Tienes algún lanzamiento u oferta próxima?"
                             placeholder="Ej: Lanzamiento de curso el día 20..."
                             value={form.launch}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange({ target: { name: 'launch', value: e.target.value } })}
+                            fieldKey="launch"
+                            brainContext={projectBrain}
                             rows={2}
+                            apiEndpoint="/api/estrategia/improve-field"
                         />
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>¿Cuál es la mayor objeción de tus clientes?</label>
-                        <textarea
-                            name="objection"
-                            className="textarea-field"
+                        <BrainField
+                            label="¿Cuál es la mayor objeción de tus clientes?"
                             placeholder="Ej: Es muy caro, no tengo tiempo..."
                             value={form.objection}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange({ target: { name: 'objection', value: e.target.value } })}
+                            fieldKey="objection"
+                            brainContext={projectBrain}
                             rows={2}
+                            apiEndpoint="/api/estrategia/improve-field"
                         />
                     </div>
 

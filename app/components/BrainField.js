@@ -12,7 +12,8 @@ export default function BrainField({
     brainContext,
     rows = 6,
     className = "",
-    style = {}
+    style = {},
+    apiEndpoint = '/api/improve-brain-field'
 }) {
     const [isPolishing, setIsPolishing] = useState(false);
     const [originalText, setOriginalText] = useState(null);
@@ -122,7 +123,7 @@ export default function BrainField({
             const supabase = createSupabaseClient();
             const { data: { user } } = await supabase.auth.getUser();
 
-            const res = await fetch('/api/improve-brain-field', {
+            const res = await fetch(apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
