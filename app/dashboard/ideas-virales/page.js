@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search, ExternalLink, Download } from 'lucide-react';
+import { Sparkles, Save, PenLine, Loader2, CheckCircle2, TrendingUp, Search, ExternalLink, Download, Zap } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
 import { useProject } from '@/app/components/ProjectContext';
+import CreditsModal from '@/app/components/CreditsModal';
 
 const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'Blog / SEO'];
 const GOALS = ['Ganar seguidores', 'Generar leads/ventas', 'Viralidad pura', 'Autoridad'];
@@ -27,21 +28,40 @@ export default function IdeasViralesPage() {
     const [savedIdeasIds, setSavedIdeasIds] = useState(new Set());
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
-    const [profile, setProfile] = useState(null);
+const [profile, setProfile] = useState(null);
+    const [userCredits, setUserCredits] = useState({ total: 0, used: 0 });
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
 
     const supabase = createSupabaseClient();
     const router = useRouter();
     const { activeProject } = useProject();
 
-    useEffect(() => {
+useEffect(() => {
         const fetchProfile = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
                 setProfile(data);
+                
+                const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+                if (creds) {
+                    setUserCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+                }
             }
         };
         fetchProfile();
+
+        const handleCreditsUpdate = () => {
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    supabase.from('ai_credits').select('*').eq('user_id', user.id).single().then(({ data: creds }) => {
+                        if (creds) setUserCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+                    });
+                }
+            });
+        };
+        window.addEventListener('credits-updated', handleCreditsUpdate);
+        return () => window.removeEventListener('credits-updated', handleCreditsUpdate);
     }, []);
 
     const togglePlatform = (p) => {
@@ -88,6 +108,10 @@ export default function IdeasViralesPage() {
 
             const data = await res.json();
 
+            if (res.status === 402 || data.code === 'NO_CREDITS') {
+                setShowCreditsModal(true);
+                throw new Error(data.error || 'Créditos insuficientes.');
+            }
             if (!res.ok) throw new Error(data.error || 'Error al generar las ideas virales.');
             if (!data.ideas) throw new Error('La respuesta del servidor no contiene ideas.');
 
@@ -107,7 +131,13 @@ export default function IdeasViralesPage() {
                 }
             }
 
-            setIdeas(ideasData);
+setIdeas(ideasData);
+            
+            const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', profile.id).single();
+            if (creds) {
+                setUserCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+                window.dispatchEvent(new CustomEvent('credits-updated'));
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -193,10 +223,36 @@ export default function IdeasViralesPage() {
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px' }}>
             <div>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <Sparkles size={36} color="#B74DFF" />
-                    Ideas de contenido virales
-                </h1>
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <Sparkles size={36} color="#B74DFF" />
+                        Ideas de contenido virales
+</h1>
+            </div>
+                <div 
+                    onClick={() => setShowCreditsModal(true)}
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px',
+                        padding: '12px 20px',
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        transition: '0.2s'
+                    }}
+                >
+                    <Zap size={20} color="#FFD700" />
+                    <div>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>CRÉDITOS IA</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFD700' }}>
+                            {userCredits.total - userCredits.used} / {userCredits.total}
+                        </div>
+                    </div>
+                </div>
+            </div>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
                     Descubre ideas recientes y altamente virales basadas en tu nicho, tendencias actuales y lo que ya está funcionando.
                 </p>
@@ -344,13 +400,19 @@ export default function IdeasViralesPage() {
                     </div>
                 </div>
             )}
-            {/* Modal de éxito */}
+{/* Modal de éxito */}
             <SuccessModal
                 isOpen={isSuccessModalOpen}
                 onClose={() => setIsSuccessModalOpen(false)}
                 title={successModalData.title}
                 message={successModalData.message}
                 actionOnClick={() => router.push('/dashboard/library')}
+            />
+            
+            {/* Modal de Créditos */}
+            <CreditsModal 
+                isOpen={showCreditsModal} 
+                onClose={() => setShowCreditsModal(false)} 
             />
         </div>
     );
