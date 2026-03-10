@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft, Rocket, Edit3, X } from 'lucide-react';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
@@ -75,6 +75,12 @@ export default function EstrategiaPage() {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
     const [selectedPhase, setSelectedPhase] = useState('ideacion');
+    
+    // Nuevo flujo de planificación inteligente
+    const [isAnalyzingPlan, setIsAnalyzingPlan] = useState(false);
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [planResult, setPlanResult] = useState(null);
+    const [editablePlan, setEditablePlan] = useState(null);
     const [form, setForm] = useState({
         objective: '',
         launch: '',
@@ -464,6 +470,193 @@ export default function EstrategiaPage() {
 
         setSelectedIdeasForPlan(selectedIdeas);
         setStep(2);
+    };
+
+    const handleAnalyzeAndPlan = async () => {
+        if (selectedIdeaIds.size === 0) {
+            alert('Selecciona al menos una idea para analizar y planificar.');
+            return;
+        }
+
+        let ideasArray = ideas;
+        if (typeof ideas === 'string') {
+            try {
+                ideasArray = JSON.parse(ideas);
+                if (!Array.isArray(ideasArray)) ideasArray = [ideasArray];
+            } catch (e) {
+                ideasArray = [];
+            }
+        }
+
+        if (!Array.isArray(ideasArray)) ideasArray = [];
+
+        const selectedIdeas = ideasArray.filter(i => {
+            const id = i?.id || i?.titulo_idea || i?.titulo || String(ideasArray.indexOf(i));
+            return selectedIdeaIds.has(id);
+        });
+
+        if (selectedIdeas.length === 0) {
+            alert('Selecciona al menos una idea para analizar y planificar.');
+            return;
+        }
+
+        setIsAnalyzingPlan(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión');
+
+            const res = await fetch('/api/estrategia/analyze-and-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    selectedIdeas,
+                    userId: user.id,
+                    projectId: activeProject?.id
+                })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Error al analizar y planificar');
+            }
+
+            const data = await res.json();
+            console.log('[ANALYZE-PLAN] Resultado:', data);
+
+            setPlanResult(data);
+            setEditablePlan(data.plan || []);
+            setShowPlanModal(true);
+        } catch (err) {
+            console.error('[ANALYZE-PLAN] Error:', err);
+            alert('Error al analizar y planificar: ' + err.message);
+        } finally {
+            setIsAnalyzingPlan(false);
+        }
+    };
+
+    const handleApplyPlan = async () => {
+        if (!editablePlan || editablePlan.length === 0) {
+            alert('No hay plan para aplicar.');
+            return;
+        }
+
+        setSavingToCalendar(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No hay sesión');
+
+            const { data: planData, error: planError } = await supabase
+                .from('content_plans')
+                .insert({
+                    user_id: user.id,
+                    month: new Date().getMonth() + 1,
+                    year: new Date().getFullYear(),
+                    frequency: `${editablePlan.length} publicaciones`,
+                    platforms: [...new Set(editablePlan.map(i => i.suggestedPlatform || i.plataforma))],
+                    focus: 'plan_inteligente',
+                    project_id: activeProject?.id
+                })
+                .select()
+                .single();
+
+            if (planError) throw planError;
+
+            const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
+            const eventsToInsert = [];
+
+            for (const item of editablePlan) {
+                let validRefId = isValidUUID(item.id) ? item.id : null;
+
+                if (!validRefId) {
+                    try {
+                        const savedData = await supabase.from('library').insert({
+                            user_id: user.id,
+                            type: 'idea',
+                            platform: item.suggestedPlatform || item.plataforma || 'General',
+                            goal: item.objetivo || 'engagement',
+                            titulo: item.titulo_idea || item.titulo || 'Idea Estratégica',
+                            content: item,
+                            tags: [item.suggestedPlatform, item.tipo, item.objetivo, item.isNew ? 'Sugerida por IA' : null].filter(Boolean),
+                            status: 'borrador',
+                            project_id: activeProject?.id
+                        }).select().single();
+
+                        if (savedData.data && savedData.data.id) {
+                            validRefId = savedData.data.id;
+                        }
+                    } catch (saveErr) {
+                        console.error('Error auto-guardando idea:', saveErr);
+                    }
+                }
+
+                let descriptionStr = item.descripcion || item.description || '';
+                if (item.reason) {
+                    descriptionStr += `\n\n🎯 AI Tip: ${item.reason}`;
+                }
+                if (item.suggestedTime) {
+                    descriptionStr += `\n⏰ Hora Sugerida: ${item.suggestedTime}`;
+                }
+
+                eventsToInsert.push({
+                    user_id: user.id,
+                    title: item.titulo_idea || item.titulo || 'Sin título',
+                    description: descriptionStr,
+                    event_date: item.suggestedDate,
+                    type: item.tipo || item.categoria || 'idea',
+                    platform: item.suggestedPlatform || item.plataforma || 'General',
+                    reference_id: validRefId,
+                    project_id: activeProject?.id
+                });
+            }
+
+            const { error: eventError } = await supabase
+                .from('calendar_events')
+                .insert(eventsToInsert);
+
+            if (eventError) throw eventError;
+
+            const slotsToInsert = editablePlan.map((item, idx) => ({
+                plan_id: planData.id,
+                user_id: user.id,
+                day_number: item.suggestedDate ? parseInt(item.suggestedDate.split('-')[2]) : idx + 1,
+                platform: item.suggestedPlatform || item.plataforma || 'Reels',
+                content_type: item.tipo || item.categoria || 'viral',
+                idea_title: item.titulo_idea || item.titulo || 'Sin título',
+                goal: item.objetivo || 'engagement'
+            }));
+            await supabase.from('content_slots').insert(slotsToInsert);
+
+            const dates = eventsToInsert.map(e => new Date(e.event_date));
+            const minDate = new Date(Math.min(...dates)).toLocaleDateString();
+            const maxDate = new Date(Math.max(...dates)).toLocaleDateString();
+
+            setShowPlanModal(false);
+            setSuccessModalData({
+                title: '¡Plan Inteligente Aplicado!',
+                message: `Se han planificado ${editablePlan.length} ideas entre el ${minDate} y el ${maxDate} con optimización de fechas y plataformas.`,
+                redirectTo: '/dashboard/calendar',
+                actionLabel: 'Ver Calendario',
+                secondaryActionLabel: 'Ver en Biblioteca',
+                secondaryActionRedirect: '/dashboard/library'
+            });
+            setIsSuccessModalOpen(true);
+        } catch (err) {
+            console.error('[ApplyPlan] Error:', err);
+            alert('Error al aplicar el plan: ' + err.message);
+        } finally {
+            setSavingToCalendar(false);
+        }
+    };
+
+    const handleUpdatePlanDate = (index, newDate) => {
+        setEditablePlan(prev => {
+            const updated = [...prev];
+            if (updated[index]) {
+                updated[index] = { ...updated[index], suggestedDate: newDate };
+            }
+            return updated;
+        });
     };
 
     const handleExportExcel = async (specificIdeas = null) => {
@@ -1110,6 +1303,28 @@ export default function EstrategiaPage() {
                         <button className="btn-primary" style={{ padding: '12px 24px' }} onClick={handleGoToPlan} disabled={selectedIdeaIds.size === 0}>
                             Crear plan con ({selectedIdeaIds.size}) seleccionadas →
                         </button>
+                        <button
+                            className="btn-primary"
+                            style={{
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                border: 'none'
+                            }}
+                            onClick={handleAnalyzeAndPlan}
+                            disabled={selectedIdeaIds.size === 0 || isAnalyzingPlan}
+                        >
+                            {isAnalyzingPlan ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" style={{ marginRight: '8px' }} />
+                                    Analizando y planificando...
+                                </>
+                            ) : (
+                                <>
+                                    <Rocket size={18} style={{ marginRight: '8px' }} />
+                                    Analizar y Planificar Automático
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
 
@@ -1396,6 +1611,185 @@ export default function EstrategiaPage() {
                     }
                 }}
             />
+
+            {/* Modal de Plan Inteligente */}
+            {showPlanModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    backdropFilter: 'blur(8px)'
+                }}>
+                    <div className="premium-card" style={{ 
+                        padding: '32px', 
+                        maxWidth: '900px', 
+                        width: '95%',
+                        maxHeight: '90vh',
+                        overflow: 'auto'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Rocket size={28} color="#B74DFF" />
+                                    Plan Inteligente de Contenido
+                                </h2>
+                                {planResult?.summary && (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        {planResult.summary.totalIdeas} ideas planificadas ({planResult.summary.originalIdeas} originales + {planResult.summary.newIdeas} generadas por IA)
+                                    </p>
+                                )}
+                            </div>
+                            <button 
+                                onClick={() => setShowPlanModal(false)}
+                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
+                            marginBottom: '24px',
+                            flexWrap: 'wrap'
+                        }}>
+                            <div style={{ 
+                                padding: '12px 16px', 
+                                background: 'rgba(126, 206, 202, 0.1)', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(126, 206, 202, 0.2)'
+                            }}>
+                                <Calendar size={16} color="#7ECECA" />
+                                <span style={{ marginLeft: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                                    {planResult?.summary?.dateRange?.start} → {planResult?.summary?.dateRange?.end}
+                                </span>
+                            </div>
+                            <div style={{ 
+                                padding: '12px 16px', 
+                                background: 'rgba(183, 77, 255, 0.1)', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(183, 77, 255, 0.2)'
+                            }}>
+                                <Zap size={16} color="#B74DFF" />
+                                <span style={{ marginLeft: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                                    Optimizado por IA
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ 
+                            maxHeight: '400px', 
+                            overflow: 'auto',
+                            marginBottom: '24px',
+                            border: '1px solid #1E1E1E',
+                            borderRadius: '12px'
+                        }}>
+                            {editablePlan && editablePlan.map((item, idx) => (
+                                <div key={idx} style={{
+                                    padding: '16px 20px',
+                                    borderBottom: idx === editablePlan.length - 1 ? 'none' : '1px solid #1A1A1A',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '16px',
+                                    background: item.isNew ? 'rgba(183, 77, 255, 0.05)' : 'transparent'
+                                }}>
+                                    <div style={{ minWidth: '100px' }}>
+                                        <input
+                                            type="date"
+                                            value={item.suggestedDate || ''}
+                                            onChange={(e) => handleUpdatePlanDate(idx, e.target.value)}
+                                            style={{
+                                                background: '#1A1A1A',
+                                                border: '1px solid #2A2A2A',
+                                                color: '#FFF',
+                                                padding: '8px 12px',
+                                                borderRadius: '8px',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                            <span className="badge" style={{ 
+                                                background: 'rgba(126, 206, 202, 0.1)', 
+                                                color: '#7ECECA',
+                                                fontSize: '0.65rem'
+                                            }}>
+                                                {item.suggestedPlatform || item.plataforma}
+                                            </span>
+                                            {item.isNew && (
+                                                <span className="badge" style={{ 
+                                                    background: 'rgba(183, 77, 255, 0.15)', 
+                                                    color: '#B74DFF',
+                                                    fontSize: '0.65rem'
+                                                }}>
+                                                    Sugerida por IA
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                                            {item.titulo_idea || item.titulo || 'Sin título'}
+                                        </h4>
+                                        {item.reason && (
+                                            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>
+                                                {item.reason}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div style={{ 
+                                        padding: '6px 12px', 
+                                        background: item.suggestedTime ? 'rgba(255,215,0,0.1)' : 'transparent',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 600,
+                                        color: item.suggestedTime ? '#FFD700' : 'rgba(255,255,255,0.3)'
+                                    }}>
+                                        {item.suggestedTime || '--:--'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setShowPlanModal(false)}
+                                className="btn-secondary"
+                                style={{ padding: '12px 24px' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleApplyPlan}
+                                disabled={savingToCalendar}
+                                className="btn-primary"
+                                style={{ 
+                                    padding: '12px 32px',
+                                    background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+                                    border: 'none'
+                                }}
+                            >
+                                {savingToCalendar ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <>
+                                        <Calendar size={18} style={{ marginRight: '8px' }} />
+                                        Aplicar Plan al Calendario
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx global>{`
                 .premium-card {
