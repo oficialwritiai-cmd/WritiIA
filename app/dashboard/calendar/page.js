@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.5.7
+// Calendar Page v2.5.8
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -45,6 +45,11 @@ export default function CalendarPage() {
     const [selectedEvents, setSelectedEvents] = useState(new Set());
     const [isDragging, setIsDragging] = useState(false);
     const [dragMode, setDragMode] = useState(null); // 'select' | 'deselect'
+
+    // Explicit Selection Mode & Bulk Actions
+    const [isSelectMode, setIsSelectMode] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [bulkStatusChange, setBulkStatusChange] = useState('');
 
     // Form States (for the panel)
     const [tempTitle, setTempTitle] = useState('');
@@ -131,6 +136,19 @@ export default function CalendarPage() {
 
     const handleEventClick = async (e, event) => {
         e.stopPropagation();
+
+        // Handle Selection Mode or Ctrl/Cmd Click
+        if (isSelectMode || e.ctrlKey || e.metaKey) {
+            const next = new Set(selectedEvents);
+            if (next.has(event.id)) {
+                next.delete(event.id);
+            } else {
+                next.add(event.id);
+            }
+            setSelectedEvents(next);
+            return; // Don't open panel
+        }
+
         setSelectedEvent(event);
         setSelectedDate(event.event_date);
         setTempTitle(event.title || '');
@@ -294,10 +312,14 @@ export default function CalendarPage() {
         return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
     }, []);
 
-    const handleDeleteSelected = async () => {
+    const handleDeleteSelected = () => {
+        if (selectedEvents.size === 0) return;
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteSelected = async () => {
         const ids = Array.from(selectedEvents);
         if (ids.length === 0) return;
-        if (!confirm(`¿Eliminar ${ids.length} publicaciones seleccionadas?`)) return;
 
         try {
             const { error: err } = await supabase.from('calendar_events').delete().in('id', ids);
@@ -305,8 +327,35 @@ export default function CalendarPage() {
             setEvents(events.filter(ev => !selectedEvents.has(ev.id)));
             setSelectedEvents(new Set());
             setIsPanelOpen(false);
+            setShowDeleteConfirm(false);
         } catch (e) {
             alert('Error al eliminar: ' + e.message);
+        }
+    };
+
+    const handleBulkStatusChange = async (newStatus) => {
+        if (!newStatus || selectedEvents.size === 0) return;
+
+        try {
+            const ids = Array.from(selectedEvents);
+            const { error: err } = await supabase
+                .from('calendar_events')
+                .update({ status: newStatus })
+                .in('id', ids);
+
+            if (err) throw err;
+
+            // Update local state
+            setEvents(events.map(ev => {
+                if (selectedEvents.has(ev.id)) {
+                    return { ...ev, status: newStatus };
+                }
+                return ev;
+            }));
+
+            setBulkStatusChange('');
+        } catch (e) {
+            alert('Error al actualizar estado: ' + e.message);
         }
     };
 
@@ -518,6 +567,23 @@ export default function CalendarPage() {
                     </div>
 
                     <div className="cal-header-actions">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className={`cal-view-btn ${isSelectMode ? 'active' : ''}`}
+                                style={{
+                                    background: isSelectMode ? 'rgba(126, 206, 202, 0.2)' : 'transparent',
+                                    border: `1px solid ${isSelectMode ? '#7ECECA' : 'rgba(255,255,255,0.2)'}`,
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}
+                                onClick={() => {
+                                    setIsSelectMode(!isSelectMode);
+                                    if (isSelectMode) setSelectedEvents(new Set()); // Clear on exit
+                                }}
+                            >
+                                <CheckCircle2 size={16} /> {isSelectMode ? 'Cancelar selección' : 'Seleccionar'}
+                            </button>
+                        </div>
+                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 10px' }} />
                         <div className="cal-view-controls">
                             <button className={`cal-view-btn ${viewMode === 'month' ? 'active' : ''}`} onClick={() => setViewMode('month')}>Mes</button>
                             <button className={`cal-view-btn ${viewMode === 'week' ? 'active' : ''}`} onClick={() => setViewMode('week')}>Semana</button>
@@ -897,6 +963,100 @@ export default function CalendarPage() {
                 .cal-ctx-header { font-size: 0.7rem; font-weight: 800; color: #555; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid #222; margin-bottom: 4px; }
                 .cal-cell-plus { opacity: 0; color: #333; transition: 0.2s; }
                 .cal-day-cell:hover .cal-cell-plus { opacity: 1; }
+            `}</style>
+            {/* Floating Bulk Action Bar */}
+            {selectedEvents.size > 0 && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '40px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                    borderRadius: '50px',
+                    padding: '12px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '24px',
+                    zIndex: 2000,
+                    animation: 'slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)'
+                }}>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                        {selectedEvents.size} seleccionado{selectedEvents.size !== 1 ? 's' : ''}
+                    </span>
+
+                    <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <select
+                            className="cal-select"
+                            style={{ padding: '6px 12px', fontSize: '0.9rem', borderRadius: '8px' }}
+                            value={bulkStatusChange}
+                            onChange={(e) => handleBulkStatusChange(e.target.value)}
+                        >
+                            <option value="">Cambiar estado...</option>
+                            <option value="idea">Idea</option>
+                            <option value="prep">En preparación</option>
+                            <option value="rec">En grabación</option>
+                            <option value="pub">Publicado</option>
+                        </select>
+
+                        <button
+                            className="btn-secondary"
+                            onClick={handleDeleteSelected}
+                            style={{
+                                padding: '6px 12px',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                color: '#EF4444',
+                                background: 'transparent',
+                                display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <Trash2 size={16} /> Eliminar
+                        </button>
+
+                        <button
+                            className="cal-close-icon"
+                            onClick={() => setSelectedEvents(new Set())}
+                            style={{ marginLeft: '12px' }}
+                            title="Descartar selección"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Delete Confirm Modal */}
+            {showDeleteConfirm && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 2100
+                }}>
+                    <div className="premium-card" style={{ padding: '32px', maxWidth: '400px', textAlign: 'center' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <Trash2 size={32} />
+                        </div>
+                        <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>¿Eliminar eventos?</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>
+                            Estás a punto de eliminar de forma permanente <strong>{selectedEvents.size}</strong> eventos del calendario. Esta acción no se puede deshacer.
+                        </p>
+                        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                            <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)} style={{ flex: 1 }}>Cancelar</button>
+                            <button className="btn-primary" onClick={confirmDeleteSelected} style={{ flex: 1, background: '#EF4444', borderColor: '#EF4444', color: 'white' }}>Eliminar Definitivemente</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes slideUp {
+                    from { transform: translate(-50%, 50px); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
+                }
             `}</style>
         </div>
     );
