@@ -11,11 +11,7 @@ import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
 
-// EXTREME CACHE BUSTING FOR VERCEL
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
-export const runtime = 'nodejs';
+
 
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
@@ -34,7 +30,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 export default function DashboardPage() {
-    const VERSION = 'v2.5.4';
+    const VERSION = 'v2.5.5';
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
@@ -1316,7 +1312,7 @@ export default function DashboardPage() {
                 gap: '15px',
                 border: '2px solid white'
             }}>
-                <Sparkles size={20} /> ¡DESPLIEGUE FORZADO EXITOSO! - v2.5.4 ACTIVADA <Sparkles size={20} />
+                <Sparkles size={20} /> ¡DASHBOARD RESTAURADO! - v2.5.5 ACTIVADA <Sparkles size={20} />
             </div>
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
@@ -2364,7 +2360,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.4</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.5</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y sincroniza con tu calendario.</p>
                             </div>
