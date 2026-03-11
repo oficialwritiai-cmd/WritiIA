@@ -661,6 +661,7 @@ export default function DashboardLayout({ children }) {
 
                     <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
                         {children}
+                        <SupportWidget />
                     </main>
 
                     <CreditsModal
