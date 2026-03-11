@@ -192,13 +192,13 @@ export default function DashboardLayout({ children }) {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
-        const isTrialStillActive = profile.trial_active && trialDaysRemaining > 0;
+        const isTrialStillActive = profile.is_trial_active && (daysRemaining === null || daysRemaining > 0);
         const isPending = profile.plan === 'pending';
 
         if ((!hasActivePlan && !isTrialStillActive) || isPending) {
             router.replace('/dashboard/expired');
         }
-    }, [profile, trialDaysRemaining, pathname, loading, router]);
+    }, [profile, daysRemaining, pathname, loading, router]);
 
     async function handleCheckoutPlan() {
         if (profile?.plan === 'pro') {
@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.6.2.1)
+                    {loadingStatus} (v2.6.2.3)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -398,7 +398,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.6.2.1
+                            v2.6.2.3
                         </div>
                     </div>
                 </aside>
@@ -523,7 +523,7 @@ export default function DashboardLayout({ children }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.2.1</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.2.3</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -684,8 +684,8 @@ export default function DashboardLayout({ children }) {
                                 </h2>
                                 <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
                                     Necesitas créditos o un plan activo para usar las funciones de IA.
-                                    {profile?.trial_active && trialDaysRemaining > 0 && (
-                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {trialDaysRemaining} días de prueba gratis!</span></>
+                                    {profile?.is_trial_active && daysRemaining > 0 && (
+                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {daysRemaining} días de prueba gratis!</span></>
                                     )}
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
