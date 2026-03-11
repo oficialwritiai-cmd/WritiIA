@@ -202,11 +202,18 @@ async function handleCheckoutCompleted(session, supabase) {
                 .eq('id', userId);
         }
 
+        console.log('[Webhook] Adding credits via RPC deposit_credits:', { userId, amount });
         // Add credits via RPC (updates users_profiles.credits_balance)
-        const { error } = await supabase.rpc('deposit_credits', {
+        const { error: rpcError, data: rpcResult } = await supabase.rpc('deposit_credits', {
             u_id: userId,
             amount: amount,
         });
+
+        if (rpcError) {
+            console.error('[Webhook] RPC deposit_credits failed:', rpcError);
+        } else {
+            console.log('[Webhook] RPC deposit_credits success:', rpcResult);
+        }
 
         // FALLBACK: Also update ai_credits table if it exists to keep everything in sync
         try {
