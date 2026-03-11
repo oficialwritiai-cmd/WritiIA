@@ -241,7 +241,7 @@ export default function IdeasViralesPage() {
                         </h1>
                     </div>
                     <div
-                        onClick={() => setShowCreditsModal(true)}
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-credits'))}
                         style={{
                             display: 'flex',
                             alignItems: 'center',

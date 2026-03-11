@@ -235,9 +235,9 @@ export default function DashboardPage() {
         const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
         setProfile(profileData || user);
 
-        // Credits - prefer profile.credits_balance
-        if (profileData && profileData.credits_balance !== undefined) {
-            setAiCredits({ total: profileData.credits_balance || 0, used: 0 }); // 'used' is less relevant now with unified balance
+        // Credits - prefer profile.credits_balance, but fallback if NULL
+        if (profileData && profileData.credits_balance !== null && profileData.credits_balance !== undefined) {
+            setAiCredits({ total: profileData.credits_balance || 0, used: 0 });
         } else {
             const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
             if (creds) {
@@ -359,7 +359,7 @@ export default function DashboardPage() {
     async function fetchCredits(userId) {
         if (!userId) return;
         const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', userId).single();
-        if (profileData && profileData.credits_balance !== undefined) {
+        if (profileData && profileData.credits_balance !== null && profileData.credits_balance !== undefined) {
             setAiCredits({ total: profileData.credits_balance, used: 0 });
         } else {
             const { data } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
@@ -1330,7 +1330,7 @@ export default function DashboardPage() {
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Sparkles size={16} color="#7ECECA" />
                     <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Créditos IA: {aiCredits.total - aiCredits.used} / {aiCredits.total}</span>
-                    <button onClick={handleBuyCredits} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
+                    <button onClick={() => window.dispatchEvent(new CustomEvent('open-credits'))} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
                 </div>
             </div>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
