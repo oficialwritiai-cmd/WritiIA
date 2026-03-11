@@ -149,13 +149,13 @@ export default function CalendarPage() {
             return; // Don't open panel
         }
 
-        setSelectedEvent(event);
+setSelectedEvent(event);
         setSelectedDate(event.event_date);
         setTempTitle(event.title || '');
         setTempStatus(event.status || 'idea');
         setTempPlatform(event.platform || 'General');
         setTempNotes(event.notes || '');
-        setTempColor(event.type || '');
+        setTempColor(event.color || 'purple');
         setIsPanelOpen(true);
 
         // Fetch linked script if exists
@@ -205,7 +205,7 @@ export default function CalendarPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const payload = {
+const payload = {
             user_id: user.id,
             project_id: activeProject?.id,
             title: tempTitle || 'Sin título',
@@ -213,7 +213,8 @@ export default function CalendarPage() {
             platform: tempPlatform,
             notes: tempNotes,
             event_date: selectedDate,
-            type: tempColor,
+            type: selectedEvent?.type || 'idea',
+            color: tempColor || 'purple',
             // Preserve linked script fields if they exist, but update content from editor
             reference_id: selectedEvent?.reference_id || null,
             has_script: selectedEvent?.has_script || !!linkedScript,
@@ -448,8 +449,10 @@ export default function CalendarPage() {
                         <span className="cal-day-num">{d}</span>
                         <div className="cal-cell-plus"><Plus size={12} /></div>
                     </div>
-                    <div className="cal-event-wrapper">
-                        {dayEvents.map(ev => (
+<div className="cal-event-wrapper">
+                        {dayEvents.map(ev => {
+                            const eventColor = ev.color || 'purple';
+                            return (
                             <div
                                 key={ev.id}
                                 draggable={!isDragging}
@@ -458,14 +461,15 @@ export default function CalendarPage() {
                                 onMouseEnter={() => handleEventMouseEnter(ev.id)}
                                 onClick={e => handleEventClick(e, ev)}
                                 onContextMenu={e => handleContextMenu(e, ev.id)}
-                                className={`cal-event-pill ${ev.type ? `theme-${ev.type}` : getStatusClass(ev.status)} ${selectedEvents.has(ev.id) ? 'selected' : ''}`}
+                                className={`cal-event-pill theme-${eventColor} ${selectedEvents.has(ev.id) ? 'selected' : ''}`}
                             >
-                                <div className="pill-dot" style={{ display: ev.type ? 'none' : 'block' }} />
+                                <div className="pill-dot" style={{ background: eventColor === 'purple' ? '#9D00FF' : eventColor === 'pink' ? '#EC4899' : eventColor === 'blue' ? '#3B82F6' : eventColor === 'green' ? '#10B981' : eventColor === 'yellow' ? '#F59E0B' : eventColor === 'red' ? '#EF4444' : '#6B7280' }} />
                                 <span className="pill-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {ev.title}
                                 </span>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             );

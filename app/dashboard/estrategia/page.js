@@ -598,6 +598,9 @@ export default function EstrategiaPage() {
                     descriptionStr += `\n⏰ Hora Sugerida: ${item.suggestedTime}`;
                 }
 
+                const colorOptions = ['purple', 'pink', 'blue', 'green', 'yellow'];
+                const defaultColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+
                 eventsToInsert.push({
                     user_id: user.id,
                     title: item.titulo_idea || item.titulo || 'Sin título',
@@ -605,6 +608,7 @@ export default function EstrategiaPage() {
                     event_date: item.suggestedDate,
                     type: item.tipo || item.categoria || 'idea',
                     platform: item.suggestedPlatform || item.plataforma || 'General',
+                    color: defaultColor,
                     reference_id: validRefId,
                     project_id: activeProject?.id
                 });
@@ -785,6 +789,9 @@ export default function EstrategiaPage() {
                     descriptionStr += `\n⏰ Hora Sugerida: ${suggestion.hora_sugerida || suggestion.hora}`;
                 }
 
+                const colorOptions = ['purple', 'pink', 'blue', 'green', 'yellow'];
+                const defaultColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+
                 eventsToInsert.push({
                     user_id: user.id,
                     title: idea.titulo_idea || idea.titulo || 'Sin título',
@@ -792,6 +799,7 @@ export default function EstrategiaPage() {
                     event_date: targetDate,
                     type: idea.tipo || idea.tipo_contenido || 'idea',
                     platform: idea.plataforma || 'General',
+                    color: defaultColor,
                     reference_id: validRefId,
                     project_id: activeProject?.id
                 });
