@@ -29,9 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 6) Bump to v2.6.5 - Global Support & Topbar Enhancements
-// Forced cache refresh for deployment v2.6.5
-export const VERSION = 'v2.6.5';
+// 6) Bump to v2.6.6 - Fix Scheduling & Stripe Balance
+// Forced cache refresh for deployment v2.6.6
+export const VERSION = 'v2.6.6';
 
 
 
@@ -235,10 +235,14 @@ export default function DashboardPage() {
         const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
         setProfile(profileData || user);
 
-        // Credits
-        const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
-        if (creds) {
-            setAiCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+        // Credits - prefer profile.credits_balance
+        if (profileData && profileData.credits_balance !== undefined) {
+            setAiCredits({ total: profileData.credits_balance || 0, used: 0 }); // 'used' is less relevant now with unified balance
+        } else {
+            const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+            if (creds) {
+                setAiCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+            }
         }
 
         // Library Ideas - FILTERED BY PROJECT
@@ -354,9 +358,14 @@ export default function DashboardPage() {
 
     async function fetchCredits(userId) {
         if (!userId) return;
-        const { data } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
-        if (data) {
-            setAiCredits({ total: data.total_credits, used: data.used_credits });
+        const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', userId).single();
+        if (profileData && profileData.credits_balance !== undefined) {
+            setAiCredits({ total: profileData.credits_balance, used: 0 });
+        } else {
+            const { data } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
+            if (data) {
+                setAiCredits({ total: data.total_credits, used: data.used_credits });
+            }
         }
     }
 
@@ -980,6 +989,7 @@ export default function DashboardPage() {
         try {
             // 1. First save script to library to get a reference_id
             let scriptId = planningScript.id;
+            const fullText = formatFullScript(planningScript);
 
             // ALways save/update to library to ensure full data (forced save)
             const savedItem = await saveToLibrary({
@@ -988,6 +998,7 @@ export default function DashboardPage() {
                 platform: planningScript.platform || platform || 'General',
                 goal: planningScript.goal || goal || 'engagement',
                 titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
+                script_full_text: fullText,
                 content: {
                     video_duration: planningScript.video_duration || '45-60 seg',
                     hook: planningScript.hook || planningScript.gancho || '',

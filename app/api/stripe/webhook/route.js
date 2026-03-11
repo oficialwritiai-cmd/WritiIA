@@ -177,18 +177,38 @@ async function handleCheckoutCompleted(session, supabase) {
                 .eq('id', userId);
         }
 
-        // Add credits via RPC
+        // Add credits via RPC (updates users_profiles.credits_balance)
         const { error } = await supabase.rpc('deposit_credits', {
             u_id: userId,
             amount: amount,
         });
+
+        // FALLBACK: Also update ai_credits table if it exists to keep everything in sync
+        try {
+            const { data: currentCredits } = await supabase.from('ai_credits').select('total_credits').eq('user_id', userId).single();
+            if (currentCredits) {
+                await supabase.from('ai_credits').update({
+                    total_credits: (currentCredits.total_credits || 0) + amount,
+                    updated_at: new Date().toISOString()
+                }).eq('user_id', userId);
+            } else {
+                // If row doesn't exist, create it
+                await supabase.from('ai_credits').insert({
+                    user_id: userId,
+                    total_credits: amount,
+                    used_credits: 0
+                });
+            }
+        } catch (syncErr) {
+            console.warn('[Webhook] Non-critical error syncing ai_credits table:', syncErr.message);
+        }
 
         if (error) {
             console.error('[Webhook] Error depositing credits:', error);
             throw error;
         }
 
-        console.log(`[Webhook] ✅ ${amount} credits added to user ${userId}`);
+        console.log(`[Webhook] ✅ ${amount} credits added to user ${userId} (Synced in both systems)`);
 
         // Send confirmation email
         const { data: profile } = await supabase

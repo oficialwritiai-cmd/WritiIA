@@ -25,6 +25,8 @@ export default function DashboardLayout({ children }) {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isPaymentSuccessModalOpen, setIsPaymentSuccessModalOpen] = useState(false);
+    const [purchasedCredits, setPurchasedCredits] = useState(0);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -130,7 +132,10 @@ export default function DashboardLayout({ children }) {
         // Handle URL params for credits
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('credits_purchased')) {
+            const cp = urlParams.get('credits_purchased');
+            if (cp) {
+                setPurchasedCredits(parseInt(cp) || 0);
+                setIsPaymentSuccessModalOpen(true);
                 router.replace('/dashboard');
                 handleRefreshProfile();
             } else if (urlParams.get('open_credits')) {
@@ -810,6 +815,19 @@ export default function DashboardLayout({ children }) {
                             </div>
                         </div>
                     )}
+                    {isPaymentSuccessModalOpen && (
+                        <SuccessModal
+                            isOpen={isPaymentSuccessModalOpen}
+                            onClose={() => setIsPaymentSuccessModalOpen(false)}
+                            title="¡Créditos Añadidos! 🪙"
+                            message={`Has adquirido ${purchasedCredits} créditos correctamente. Ya puedes seguir generando contenido sin límites.`}
+                            actionLabel="Ver mi Saldo"
+                            actionOnClick={() => {
+                                setIsPaymentSuccessModalOpen(false);
+                                setIsCreditsModalOpen(true);
+                            }}
+                        />
+                    )}
                 </div>
 
                 <style jsx>{`
@@ -842,7 +860,7 @@ export default function DashboardLayout({ children }) {
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
                 }
-                </style>
+                `}</style>
             </div>
         </ProjectProvider>
     );
