@@ -29,9 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 4) Bump to v2.6.2.3 - Final Dashboard Crash Fix
-// Forced cache refresh for deployment v2.6.2.3
-export const VERSION = 'v2.6.2.3';
+// 5) Bump to v2.6.3 - WhatsApp Support Widget
+// Forced cache refresh for deployment v2.6.3
+export const VERSION = 'v2.6.3';
 
 
 
