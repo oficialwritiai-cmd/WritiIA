@@ -43,14 +43,16 @@ export default function IdeasViralesPage() {
                 const { data } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
                 setProfile(data);
 
-                // Prioritize profile.credits_balance
-                if (data && data.credits_balance !== undefined) {
+                // Credits - prefer profile.credits_balance, but fallback if 0 to check legacy
+                const { data: legacyCreds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+                const netLegacy = legacyCreds ? (legacyCreds.total_credits - legacyCreds.used_credits) : 0;
+
+                if (data && data.credits_balance !== null && data.credits_balance !== undefined && (data.credits_balance > 0 || netLegacy <= 0)) {
                     setUserCredits({ total: data.credits_balance || 0, used: 0 });
+                } else if (legacyCreds) {
+                    setUserCredits({ total: legacyCreds.total_credits || 0, used: legacyCreds.used_credits || 0 });
                 } else {
-                    const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
-                    if (creds) {
-                        setUserCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
-                    }
+                    setUserCredits({ total: 0, used: 0 });
                 }
             }
         };
@@ -61,11 +63,15 @@ export default function IdeasViralesPage() {
                 if (user) {
                     // Refresh both for absolute sync
                     const { data: prof } = await supabase.from('users_profiles').select('credits_balance').eq('id', user.id).single();
-                    if (prof && prof.credits_balance !== undefined) {
+                    const { data: legacyCreds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+                    const netLegacy = legacyCreds ? (legacyCreds.total_credits - legacyCreds.used_credits) : 0;
+
+                    if (prof && prof.credits_balance !== null && prof.credits_balance !== undefined && (prof.credits_balance > 0 || netLegacy <= 0)) {
                         setUserCredits({ total: prof.credits_balance || 0, used: 0 });
+                    } else if (legacyCreds) {
+                        setUserCredits({ total: legacyCreds.total_credits || 0, used: legacyCreds.used_credits || 0 });
                     } else {
-                        const { data: creds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
-                        if (creds) setUserCredits({ total: creds.total_credits || 0, used: creds.used_credits || 0 });
+                        setUserCredits({ total: 0, used: 0 });
                     }
                 }
             });
