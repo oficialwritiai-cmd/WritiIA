@@ -747,8 +747,6 @@ export default function DashboardLayout({ children }) {
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
                 }
-
-                }
             `}</style>
                 <SupportWidget />
             </div>
