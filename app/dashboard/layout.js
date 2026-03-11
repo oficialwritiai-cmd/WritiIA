@@ -239,7 +239,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.6.3)
+                    {loadingStatus} (v2.6.4)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -275,6 +275,7 @@ export default function DashboardLayout({ children }) {
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                     @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
                 `}</style>
+                <SupportWidget />
             </div>
         );
     }
@@ -399,7 +400,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.6.3
+                            v2.6.4
                         </div>
                     </div>
                 </aside>
@@ -524,7 +525,7 @@ export default function DashboardLayout({ children }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.3</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.4</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -661,7 +662,6 @@ export default function DashboardLayout({ children }) {
 
                     <main className="main-content" style={{ padding: '32px', background: 'var(--bg-dark)', width: '100%', maxWidth: '100%' }}>
                         {children}
-                        <SupportWidget />
                     </main>
 
                     <CreditsModal
