@@ -106,8 +106,22 @@ async function handleCheckoutCompleted(session, supabase) {
         }
     }
 
+    if (!userId && userEmail) {
+        console.log('[Webhook] No userId found, attempting lookup by email:', userEmail);
+        const { data: profileByEmail } = await supabase
+            .from('users_profiles')
+            .select('id')
+            .eq('email', userEmail)
+            .single();
+        
+        if (profileByEmail) {
+            userId = profileByEmail.id;
+            console.log('[Webhook] Found userId via email lookup:', userId);
+        }
+    }
+
     if (!userId) {
-        console.warn('[Webhook] No userId found in session metadata or client_reference_id');
+        console.warn('[Webhook] CRITICAL: No userId found in session metadata, client_reference_id, or via email lookup. Email was:', userEmail);
         return;
     }
 
