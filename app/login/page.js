@@ -142,6 +142,17 @@ export default function LoginPage() {
                             used_by_user_id: user.id,
                             used_at: now.toISOString()
                         }).eq('id', keyData.id);
+
+                        // Trigger trial welcome email via API
+                        try {
+                            await fetch('/api/auth/trial-welcome', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id })
+                            });
+                        } catch (err) {
+                            console.error('[Registration] Error sending trial email:', err);
+                        }
                     }
 
                     if (plan === 'pending') {

@@ -23,6 +23,7 @@ export default function SettingsPage() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [deploying, setDeploying] = useState(false);
     const [deployResult, setDeployResult] = useState({ success: false, message: '' });
+    const [periodEnd, setPeriodEnd] = useState(null);
 
     useEffect(() => {
         loadProfile();
@@ -50,6 +51,7 @@ export default function SettingsPage() {
                 setDefaultTone(data.default_tone || 'Profesional');
                 setPlan(data.plan || 'trial');
                 setIsAdmin(data.is_admin || false);
+                setPeriodEnd(data.plan === 'pro' ? data.subscription_period_end : data.trial_ends_at);
             }
         } catch (err) {
             setError('Error al cargar el perfil.');
@@ -206,6 +208,13 @@ export default function SettingsPage() {
                             <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Cerebro IA</strong> — memoria de tu voz de marca</div>
                             <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca + Calendario</strong> — organiza tu contenido</div>
                         </div>
+
+                        {periodEnd && (
+                            <div style={{ margin: '20px 0', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
+                                📅 Su plan {plan === 'pro' ? 'se renueva / finaliza' : 'de prueba termina'} el: <br />
+                                <strong style={{ color: '#7ECECA', fontSize: '1rem' }}>{new Date(periodEnd).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
+                            </div>
+                        )}
 
                         <button
                             type="button"

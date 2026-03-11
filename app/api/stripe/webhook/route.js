@@ -82,12 +82,19 @@ async function handleCheckoutCompleted(session, supabase) {
         console.log('[Webhook] Processing Plan Pro activation for user:', userId);
 
         // Update user profile
+        let periodEnd = null;
+        if (session.subscription) {
+            const sub = await stripe.subscriptions.retrieve(session.subscription);
+            periodEnd = new Date(sub.current_period_end * 1000).toISOString();
+        }
+
         const { error } = await supabase
             .from('users_profiles')
             .update({
                 plan: 'pro',
                 subscription_status: 'active',
                 stripe_customer_id: customerId,
+                subscription_period_end: periodEnd,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
@@ -97,7 +104,7 @@ async function handleCheckoutCompleted(session, supabase) {
             throw error;
         }
 
-        console.log(`[Webhook] ✅ Plan Pro activated for user ${userId}`);
+        console.log(`[Webhook] ✅ Plan Pro activated for user ${userId} until ${periodEnd}`);
 
         // Send confirmation email
         const { data: profile } = await supabase
@@ -221,12 +228,16 @@ async function handleSubscriptionUpdated(subscription, supabase) {
     }
 
     const isPro = status === 'active' || status === 'trialing';
+    const periodEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null;
 
     const { error } = await supabase
         .from('users_profiles')
         .update({
             plan: isPro ? 'pro' : 'Free',
             subscription_status: status,
+            subscription_period_end: periodEnd,
             updated_at: new Date().toISOString(),
         })
         .eq('id', profile.id);

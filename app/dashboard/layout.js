@@ -19,7 +19,6 @@ export default function DashboardLayout({ children }) {
     const [profile, setProfile] = useState(null);
     const [hoveredItem, setHoveredItem] = useState(null);
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
-    const [trialDaysRemaining, setTrialDaysRemaining] = useState(0);
     const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
     const [planCheckoutLoading, setPlanCheckoutLoading] = useState(false);
     const router = useRouter();
@@ -144,20 +143,34 @@ export default function DashboardLayout({ children }) {
         };
     }, []);
 
-    useEffect(() => {
-        if (profile?.trial_active && profile?.trial_started_at) {
-            const trialStart = new Date(profile.trial_started_at);
-            const now = new Date();
-            const daysPassed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
-            const daysRemaining = Math.max(0, 7 - daysPassed);
-            setTrialDaysRemaining(daysRemaining);
+    const [daysRemaining, setDaysRemaining] = useState(null);
 
-            if (daysRemaining <= 0) {
-                supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id);
-                setTrialDaysRemaining(0);
+    useEffect(() => {
+        if (!profile) {
+            setDaysRemaining(null);
+            return;
+        }
+
+        const now = new Date();
+        let targetDate = null;
+
+        if (profile.plan === 'trial' && profile.trial_ends_at) {
+            targetDate = new Date(profile.trial_ends_at);
+        } else if (profile.plan === 'pro' && profile.subscription_period_end) {
+            targetDate = new Date(profile.subscription_period_end);
+        }
+
+        if (targetDate) {
+            const diff = targetDate - now;
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            setDaysRemaining(Math.max(0, days));
+
+            // Auto-deactivate trial if expired
+            if (profile.plan === 'trial' && days <= 0 && profile.is_trial_active) {
+                supabase.from('users_profiles').update({ is_trial_active: false }).eq('id', profile.id);
             }
         } else {
-            setTrialDaysRemaining(0);
+            setDaysRemaining(null);
         }
     }, [profile]);
 
@@ -225,7 +238,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.6.1)
+                    {loadingStatus} (v2.6.2)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -385,7 +398,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.6.1
+                            v2.6.2
                         </div>
                     </div>
                 </aside>
@@ -510,7 +523,7 @@ export default function DashboardLayout({ children }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.1</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.2</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -525,14 +538,14 @@ export default function DashboardLayout({ children }) {
                                     <span className="badge" style={{
                                         fontSize: '0.6rem',
                                         padding: '2px 8px',
-                                        background: profile?.trial_active ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                        color: profile?.trial_active || profile?.plan === 'pro' ? 'white' : 'white',
+                                        background: profile?.plan === 'trial' ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
+                                        color: 'white',
                                         fontWeight: 800,
                                         whiteSpace: 'nowrap',
                                         flexShrink: 0,
                                         marginLeft: '4px'
                                     }}>
-                                        {profile?.trial_active ? `TRIAL ${trialDaysRemaining}d` : profile?.plan?.toUpperCase() || 'FREE'}
+                                        {profile?.plan === 'trial' ? `TRIAL ${daysRemaining ?? 0}d` : profile?.plan === 'pro' ? `PRO ${daysRemaining ?? 0}d` : 'FREE'}
                                     </span>
                                 </div>
                             </div>
