@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request) {
     try {
         const { userId, email } = await request.json();
+        const baseUrl = new URL(request.url).origin;
 
         if (!userId) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -24,8 +25,8 @@ export async function POST(request) {
                 },
             ],
             mode: 'subscription', // Assuming "Writi Plan Pro." is a subscription
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`,
+            success_url: `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/dashboard`,
             customer_email: email,
             client_reference_id: userId,
             metadata: {

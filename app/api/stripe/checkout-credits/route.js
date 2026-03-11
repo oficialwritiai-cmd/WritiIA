@@ -14,6 +14,7 @@ const CREDIT_PRODUCTS = {
 export async function POST(request) {
     try {
         const { pack_type, userId, email } = await request.json();
+        const baseUrl = new URL(request.url).origin;
 
         if (!userId || !email) {
             return NextResponse.json({ error: 'userId and email are required' }, { status: 400 });
@@ -76,8 +77,8 @@ export async function POST(request) {
                 },
             ],
             mode: 'payment',
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?credits_purchased=${packStr}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`,
+            success_url: `${baseUrl}/dashboard?credits_purchased=${packStr}`,
+            cancel_url: `${baseUrl}/dashboard`,
             client_reference_id: userId,
             metadata: {
                 userId: userId,
