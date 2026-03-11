@@ -56,10 +56,9 @@ export default function CalendarPage() {
     const [tempStatus, setTempStatus] = useState('idea');
     const [tempPlatform, setTempPlatform] = useState('General');
     const [tempNotes, setTempNotes] = useState('');
-    const [tempColor, setTempColor] = useState('');
+    const [tempColor, setTempColor] = useState('purple');
 
     const THEME_COLORS = [
-        { id: '', hex: '#333333', name: 'Default' },
         { id: 'purple', hex: '#9D00FF', name: 'Morado' },
         { id: 'pink', hex: '#EC4899', name: 'Rosa' },
         { id: 'blue', hex: '#3B82F6', name: 'Azul' },
@@ -130,7 +129,7 @@ export default function CalendarPage() {
         setTempStatus('idea');
         setTempPlatform('General');
         setTempNotes('');
-        setTempColor('');
+        setTempColor('purple');
         setIsPanelOpen(true);
     };
 
@@ -149,14 +148,16 @@ export default function CalendarPage() {
             return; // Don't open panel
         }
 
-setSelectedEvent(event);
+        setSelectedEvent(event);
         setSelectedDate(event.event_date);
         setTempTitle(event.title || '');
         setTempStatus(event.status || 'idea');
         setTempPlatform(event.platform || 'General');
-        setTempNotes(event.notes || '');
-        setTempColor(event.color || 'purple');
+        setTempNotes(event.script_full_text || event.notes || '');
+        const loadedColor = event.color || 'purple';
+        setTempColor(loadedColor);
         setIsPanelOpen(true);
+
 
         // Fetch linked script if exists
         if (event.content) {
@@ -205,39 +206,83 @@ setSelectedEvent(event);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-const payload = {
-            user_id: user.id,
-            project_id: activeProject?.id,
-            title: tempTitle || 'Sin título',
-            status: tempStatus,
-            platform: tempPlatform,
-            notes: tempNotes,
-            event_date: selectedDate,
-            type: selectedEvent?.type || 'idea',
-            color: tempColor || 'purple',
-            // Preserve linked script fields if they exist, but update content from editor
-            reference_id: selectedEvent?.reference_id || null,
-            has_script: selectedEvent?.has_script || !!linkedScript,
-            content: linkedScript?.content || selectedEvent?.content || null
-        };
+        const colorValue = tempColor || 'purple';
 
         try {
-            if (selectedEvent) {
-                const { error: updateErr } = await supabase.from('calendar_events').update(payload).eq('id', selectedEvent.id);
+            // Build the full script text Document if it's a script/guion
+            let fullScriptText = tempNotes;
+            if (linkedScript && tempStatus !== 'idea') {
+                const content = linkedScript.content || {};
+                const hook = content.hook || content.gancho || '';
+                const des = (Array.isArray(content.desarrollo) ? content.desarrollo :
+                    (Array.isArray(content.puntos) ? content.puntos : [])).join('\n');
+                const cta = content.cta || content.cierre || '';
+                const copy = content.copy_post || {};
+                const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ') : '';
+
+                fullScriptText = `TÍTULO: ${tempTitle}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
+            }
+
+            if (selectedEvent && selectedEvent.id) {
+                const updates = {
+                    title: tempTitle || 'Sin título',
+                    status: tempStatus,
+                    platform: tempPlatform,
+                    notes: tempNotes,
+                    event_date: selectedDate,
+                    color: colorValue,
+                    has_script: selectedEvent?.has_script || !!linkedScript,
+                    script_full_text: fullScriptText,
+                    content: linkedScript?.content || selectedEvent?.content || null
+                };
+
+                const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
                 if (updateErr) throw updateErr;
+
+                // Also update the linked library item if it exists
+                if (selectedEvent.reference_id) {
+                    await supabase.from('library').update({
+                        titulo: tempTitle,
+                        script_full_text: fullScriptText,
+                        platform: tempPlatform,
+                        content: updates.content
+                    }).eq('id', selectedEvent.reference_id);
+                }
+
+                // Immediately update local state
+                const newEvents = events.map(ev =>
+                    ev.id === selectedEvent.id ? { ...ev, ...updates } : ev
+                );
+                setEvents([...newEvents]);
             } else {
-                const { error: insertErr } = await supabase.from('calendar_events').insert(payload);
+                const payload = {
+                    user_id: user.id,
+                    project_id: activeProject?.id,
+                    title: tempTitle || 'Sin título',
+                    status: tempStatus,
+                    platform: tempPlatform,
+                    notes: tempNotes,
+                    event_date: selectedDate,
+                    type: 'idea',
+                    color: colorValue,
+                    has_script: !!linkedScript,
+                    script_full_text: fullScriptText,
+                    content: linkedScript?.content || null
+                };
+                const { data: newEv, error: insertErr } = await supabase.from('calendar_events').insert(payload).select().single();
                 if (insertErr) throw insertErr;
+                if (newEv) setEvents([...events, newEv]);
             }
 
             setIsPanelOpen(false);
-            loadData();
-            alert('Cambios guardados correctamente ✓');
+            // Reload silently to ensure sync
+            setTimeout(() => loadData(), 500);
         } catch (err) {
             console.error('Error saving panel:', err);
             alert('Error al guardar: ' + err.message);
         }
     };
+
 
     const handleDeleteEvent = async (id) => {
         if (!confirm('¿Eliminar este evento?')) return;
@@ -449,25 +494,43 @@ const payload = {
                         <span className="cal-day-num">{d}</span>
                         <div className="cal-cell-plus"><Plus size={12} /></div>
                     </div>
-<div className="cal-event-wrapper">
+                    <div className="cal-event-wrapper">
                         {dayEvents.map(ev => {
                             const eventColor = ev.color || 'purple';
                             return (
-                            <div
-                                key={ev.id}
-                                draggable={!isDragging}
-                                onDragStart={e => onDragStart(e, ev.id)}
-                                onMouseDown={e => { e.stopPropagation(); handleEventMouseDown(e, ev.id); }}
-                                onMouseEnter={() => handleEventMouseEnter(ev.id)}
-                                onClick={e => handleEventClick(e, ev)}
-                                onContextMenu={e => handleContextMenu(e, ev.id)}
-                                className={`cal-event-pill theme-${eventColor} ${selectedEvents.has(ev.id) ? 'selected' : ''}`}
-                            >
-                                <div className="pill-dot" style={{ background: eventColor === 'purple' ? '#9D00FF' : eventColor === 'pink' ? '#EC4899' : eventColor === 'blue' ? '#3B82F6' : eventColor === 'green' ? '#10B981' : eventColor === 'yellow' ? '#F59E0B' : eventColor === 'red' ? '#EF4444' : '#6B7280' }} />
-                                <span className="pill-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {ev.title}
-                                </span>
-                            </div>
+                                <div
+                                    key={ev.id}
+                                    draggable={!isDragging}
+                                    onDragStart={e => onDragStart(e, ev.id)}
+                                    onMouseDown={e => { e.stopPropagation(); handleEventMouseDown(e, ev.id); }}
+                                    onMouseEnter={() => handleEventMouseEnter(ev.id)}
+                                    onClick={e => handleEventClick(e, ev)}
+                                    onContextMenu={e => handleContextMenu(e, ev.id)}
+                                    className={`cal-event-pill theme-${eventColor} ${selectedEvents.has(ev.id) ? 'selected' : ''}`}
+                                    style={{
+                                        background: eventColor === 'purple' ? 'rgba(157, 0, 255, 0.25)' :
+                                            eventColor === 'pink' ? 'rgba(236, 72, 153, 0.25)' :
+                                                eventColor === 'blue' ? 'rgba(59, 130, 246, 0.25)' :
+                                                    eventColor === 'green' ? 'rgba(16, 185, 129, 0.25)' :
+                                                        eventColor === 'yellow' ? 'rgba(245, 158, 11, 0.25)' :
+                                                            eventColor === 'red' ? 'rgba(239, 68, 68, 0.25)' :
+                                                                eventColor === 'gray' ? 'rgba(107, 114, 128, 0.25)' :
+                                                                    'rgba(157, 0, 255, 0.25)',
+                                        borderColor: eventColor === 'purple' ? 'rgba(157, 0, 255, 0.5)' :
+                                            eventColor === 'pink' ? 'rgba(236, 72, 153, 0.5)' :
+                                                eventColor === 'blue' ? 'rgba(59, 130, 246, 0.5)' :
+                                                    eventColor === 'green' ? 'rgba(16, 185, 129, 0.5)' :
+                                                        eventColor === 'yellow' ? 'rgba(245, 158, 11, 0.5)' :
+                                                            eventColor === 'red' ? 'rgba(239, 68, 68, 0.5)' :
+                                                                eventColor === 'gray' ? 'rgba(107, 114, 128, 0.5)' :
+                                                                    'rgba(157, 0, 255, 0.5)'
+                                    }}
+                                >
+                                    <div className="pill-dot" style={{ background: eventColor === 'purple' ? '#9D00FF' : eventColor === 'pink' ? '#EC4899' : eventColor === 'blue' ? '#3B82F6' : eventColor === 'green' ? '#10B981' : eventColor === 'yellow' ? '#F59E0B' : eventColor === 'red' ? '#EF4444' : '#6B7280' }} />
+                                    <span className="pill-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {ev.title}
+                                    </span>
+                                </div>
                             );
                         })}
                     </div>

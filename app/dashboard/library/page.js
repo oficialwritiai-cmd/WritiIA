@@ -324,9 +324,10 @@ export default function LibraryPage() {
                                             <Calendar size={14} style={{ marginRight: '6px' }} /> Planificar
                                         </button>
                                     </div>
-                                    <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                        {hookText ? hookText.substring(0, 200) + (hookText.length > 200 ? '...' : '') : 'Sin descripción disponible'}
+                                    <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                        {item.script_full_text || hookText || 'Sin descripción disponible'}
                                     </p>
+
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>

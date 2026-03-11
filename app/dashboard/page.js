@@ -29,8 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 4) Bump to v2.5.16 to force Vercel to invalidate cache fully.
-export const VERSION = 'v2.5.16';
+// 4) Bump to v2.6.0 to force Vercel to invalidate cache fully.
+export const VERSION = 'v2.6.0';
+
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState('single');
@@ -853,8 +854,20 @@ export default function DashboardPage() {
         }
     };
 
+    const formatFullScript = (script) => {
+        const hook = script.hook || script.gancho || '';
+        const des = (Array.isArray(script.desarrollo) ? script.desarrollo : (script.puntos ? script.puntos : [])).join('\n');
+        const cta = script.cta || script.cierre || '';
+        const copy = script.copy_post || {};
+        const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ') : '';
+
+        return `TÍTULO: ${script.titulo_guion || script.titulo_angulo || 'Sin título'}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
+    };
+
     const saveScript = async (script, silent = false) => {
         if (!profile?.id) return;
+
+        const fullText = formatFullScript(script);
 
         try {
             await saveToLibrary({
@@ -863,6 +876,7 @@ export default function DashboardPage() {
                 platform: script.platform || platform || 'General',
                 goal: script.goal || goal || 'engagement',
                 titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
+                script_full_text: fullText,
                 content: {
                     video_duration: script.video_duration || '45-60 seg',
                     hook: script.hook || script.gancho || '',
@@ -874,6 +888,7 @@ export default function DashboardPage() {
                 tags: ['guion', script.platform || platform, script.goal || goal].filter(Boolean),
                 projectId: activeProject?.id
             });
+
 
             if (!silent) alert('Guardado en biblioteca ✓');
         } catch (err) {
@@ -990,10 +1005,7 @@ export default function DashboardPage() {
                 title: planningScript.titulo_guion || 'Guion Planificado',
                 platform: planningScript.platform || platform || 'General',
                 type: 'guion',
-                reference_id: scriptId,
-                has_script: true,
-                status: 'En preparación',
-                description: `Planificado para las ${plannedTime}`,
+                script_full_text: formatFullScript(planningScript),
                 content: {
                     video_duration: planningScript.video_duration || '45-60 seg',
                     hook: planningScript.hook || planningScript.gancho || '',
@@ -1004,6 +1016,7 @@ export default function DashboardPage() {
                 },
                 project_id: activeProject?.id
             });
+
 
             if (calErr) throw calErr;
 
@@ -1238,12 +1251,14 @@ export default function DashboardPage() {
                     platform: slot.platform,
                     reference_id: refId,
                     has_script: slot.has_script || false,
+                    script_full_text: slot.script_data ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${slot.script_data.hook}\n\nDESARROLLO:\n${slot.script_data.desarrollo.join('\n')}\n\nCTA:\n${slot.script_data.cta}\n\nCOPY POST:\n${slot.script_data.copy_post?.descripcion_larga || ''}\n\nHASHTAGS:\n${Array.isArray(slot.script_data.copy_post?.hashtags) ? slot.script_data.copy_post.hashtags.map(t => '#' + t).join(' ') : ''}` : null,
                     content: slot.script_data || {
                         hook: slot.idea_title,
                         desarrollo: [slot.goal, slot.content_type],
                         cta: 'Click aquí'
                     }
                 });
+
             }
 
             const { error: eventError } = await supabase
