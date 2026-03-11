@@ -90,7 +90,24 @@ export default function LoginPage() {
                     keyData = data;
                 }
 
-                // Sign Up
+                if (!hasAccessKey) {
+                    // DEFERRED REGISTRATION: Redirect to payment first
+                    const res = await fetch('/api/auth/register-pending', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Error al preparar registro');
+
+                    if (data.url) {
+                        window.location.href = data.url;
+                        return;
+                    }
+                }
+
+                // Sign Up (IMMEDIATE: only for Keys)
                 const { error: signUpError, data: { user } } = await supabase.auth.signUp({
                     email,
                     password,
@@ -156,20 +173,6 @@ export default function LoginPage() {
                     }
 
                     if (plan === 'pending') {
-                        try {
-                            const resp = await fetch('/api/stripe/checkout-plan', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id, email: user.email }),
-                            });
-                            const data = await resp.json();
-                            if (data.url) {
-                                window.location.href = data.url;
-                                return;
-                            }
-                        } catch (err) {
-                            console.error('Checkout error:', err);
-                        }
                     }
                 }
                 router.push('/dashboard');

@@ -67,10 +67,44 @@ export async function POST(req) {
 // ─────────────────────────────────────────────
 async function handleCheckoutCompleted(session, supabase) {
     const type = session.metadata?.type;
-    const userId = session.metadata?.userId || session.client_reference_id;
+    let userId = session.metadata?.userId || session.client_reference_id;
     const customerId = session.customer;
+    const userEmail = session.customer_email || session.metadata?.email;
 
     console.log(`[Webhook] checkout.session.completed | type=${type} | userId=${userId} | customer=${customerId}`);
+
+    // LOGIC: Check if this is a pending registration
+    if (userId) {
+        const { data: pending, error: pendingFetchError } = await supabase
+            .from('pending_registrations')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (pending && !pendingFetchError) {
+            console.log('[Webhook] Found pending registration for:', pending.email);
+
+            // Create the user via admin auth
+            const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+                email: pending.email,
+                password: pending.password_plan,
+                email_confirm: false // Forces them to confirm via email AFTER paying
+            });
+
+            if (authError) {
+                console.error('[Webhook] Error creating user from pending:', authError);
+                // If user already exists (maybe they registered while pago was pending), don't fail everything
+                if (!authError.message.includes('already registered')) throw authError;
+            } else {
+                console.log('[Webhook] Successfully created user:', authUser.user.id);
+                // Switch userId to the REAL one
+                userId = authUser.user.id;
+
+                // Cleanup pending table
+                await supabase.from('pending_registrations').delete().eq('id', pending.id);
+            }
+        }
+    }
 
     if (!userId) {
         console.warn('[Webhook] No userId found in session metadata or client_reference_id');
@@ -90,14 +124,16 @@ async function handleCheckoutCompleted(session, supabase) {
 
         const { error } = await supabase
             .from('users_profiles')
-            .update({
+            .upsert({
+                id: userId,
+                email: userEmail,
+                name: userEmail?.split('@')[0] || 'User',
                 plan: 'pro',
                 subscription_status: 'active',
                 stripe_customer_id: customerId,
                 subscription_period_end: periodEnd,
                 updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
+            });
 
         if (error) {
             console.error('[Webhook] Error activating plan:', error);
