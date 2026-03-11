@@ -29,9 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 6) Bump to v2.6.9 - Fix SuccessModal Import
-// Forced cache refresh for deployment v2.6.9
-export const VERSION = 'v2.6.9';
+// 7) Bump to v2.7.0 - Improve Stripe Webhook & Manual Credit Fix
+// Forced cache refresh for deployment v2.7.0
+export const VERSION = 'v2.7.0';
 
 
 

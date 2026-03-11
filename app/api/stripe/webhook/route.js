@@ -157,10 +157,21 @@ async function handleCheckoutCompleted(session, supabase) {
     }
 
     // ── CREDITS (one-time payment) ──
-    if (type === 'credits_purchase' || session.mode === 'payment') {
-        const packType = session.metadata?.pack_type || session.metadata?.pack;
+    if (type === 'credits_purchase' || session.mode === 'payment' || (session.submit_type === 'pay' && !session.subscription)) {
+        let packType = session.metadata?.pack_type || session.metadata?.pack;
         const packAmounts = { '100': 100, '250': 250, '500': 500 };
-        const amount = packAmounts[packType];
+        
+        // Logical fallback: if no packType in metadata, but it's a successful payment, 
+        // we might check the amount_total, but for now we default to at least 100 if we suspect it's a credit purchase
+        let amount = packAmounts[packType];
+
+        if (!amount && session.amount_total) {
+            // Stripe amount_total is in cents
+            const total = session.amount_total / 100;
+            if (total >= 60) amount = 500;
+            else if (total >= 30) amount = 250;
+            else if (total >= 15) amount = 100;
+        }
 
         console.log('[Webhook] Processing credits purchase:', { userId, packType, amount });
 
