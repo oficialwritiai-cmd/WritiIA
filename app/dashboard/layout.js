@@ -9,7 +9,7 @@ import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
 import ProjectSelector from '@/app/components/ProjectSelector';
-import SupportWidget from '@/app/components/SupportWidget';
+import { Bell, Search, LogOut as LogOutIcon, User, Settings as SettingsIcon, X as CloseIcon } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
@@ -22,6 +22,9 @@ export default function DashboardLayout({ children }) {
     const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
     const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
     const [planCheckoutLoading, setPlanCheckoutLoading] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -239,7 +242,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.6.4)
+                    {loadingStatus} (v2.6.5)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -274,8 +277,18 @@ export default function DashboardLayout({ children }) {
                     }
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                     @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+                    @keyframes fadeInUp {
+                        from { opacity: 0; transform: translateY(10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes scaleIn {
+                        from { opacity: 0; transform: translateX(-50%) scale(0.95); }
+                        to { opacity: 1; transform: translateX(-50%) scale(1); }
+                    }
+                    .menu-item-hover:hover {
+                        background: rgba(255,255,255,0.05) !important;
+                    }
                 `}</style>
-                <SupportWidget />
             </div>
         );
     }
@@ -512,7 +525,7 @@ export default function DashboardLayout({ children }) {
                         </div>
                     )}
                     {/* Topbar refined */}
-                    <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, minWidth: 0 }}>
+                    <header className="topbar" style={{ height: '72px', borderBottom: '1px solid var(--border)', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, minWidth: 0, position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                             <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
                                 <Logo />
@@ -522,10 +535,27 @@ export default function DashboardLayout({ children }) {
                                 <ProjectSelector />
                                 <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.01)', borderRadius: '20px', padding: '4px 12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+
+                            {/* User Profile Menu */}
+                            <div style={{ position: 'relative' }}>
+                                <div
+                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        background: 'rgba(255,255,255,0.01)',
+                                        borderRadius: '20px',
+                                        padding: '4px 12px',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        cursor: 'pointer',
+                                        transition: '0.2s'
+                                    }}
+                                    className="user-profile-badge"
+                                    title="Mi Cuenta"
+                                >
                                     <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.4</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.6.5</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -534,22 +564,44 @@ export default function DashboardLayout({ children }) {
                                         textOverflow: 'ellipsis',
                                         maxWidth: '120px',
                                         margin: 0
-                                    }} title={user?.email}>
+                                    }}>
                                         {user?.email?.split('@')[0] || 'User'}
                                     </p>
-                                    <span className="badge" style={{
-                                        fontSize: '0.6rem',
-                                        padding: '2px 8px',
-                                        background: profile?.plan === 'trial' ? 'linear-gradient(135deg, #9D00FF, #7C3AED)' : profile?.plan === 'pro' ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                        color: 'white',
-                                        fontWeight: 800,
-                                        whiteSpace: 'nowrap',
-                                        flexShrink: 0,
-                                        marginLeft: '4px'
-                                    }}>
-                                        {profile?.plan === 'trial' ? `TRIAL ${daysRemaining ?? 0}d` : profile?.plan === 'pro' ? `PRO ${daysRemaining ?? 0}d` : 'FREE'}
-                                    </span>
+                                    <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.4)', transform: isUserMenuOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
                                 </div>
+
+                                {isUserMenuOpen && (
+                                    <>
+                                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} onClick={() => setIsUserMenuOpen(false)} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 10px)',
+                                            left: 0,
+                                            width: '200px',
+                                            background: '#1a1a1a',
+                                            borderRadius: '12px',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                            zIndex: 999,
+                                            overflow: 'hidden',
+                                            animation: 'fadeInUp 0.2s ease'
+                                        }}>
+                                            <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#888' }}>Conectado como</p>
+                                                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</p>
+                                            </div>
+                                            <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
+                                                <User size={16} /> Perfil
+                                            </Link>
+                                            <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
+                                                <SettingsIcon size={16} /> Configuración
+                                            </Link>
+                                            <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ff4d4d', background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left' }} className="menu-item-hover">
+                                                <LogOutIcon size={16} /> Cerrar sesión
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -598,64 +650,107 @@ export default function DashboardLayout({ children }) {
                                 alignItems: 'center',
                                 gap: '6px',
                                 background: (profile?.credits_balance || 0) > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(239, 68, 68, 0.1)',
+                                padding: '8px 16px',
                                 borderRadius: '100px',
-                                padding: '6px 14px',
+                                border: '1px solid rgba(255,255,255,0.1)',
                                 cursor: 'pointer',
                                 transition: '0.2s',
-                                border: (profile?.credits_balance || 0) > 0 ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(239, 68, 68, 0.3)',
                                 flexShrink: 0
                             }}>
                                 <span style={{ fontSize: '1rem' }}>🪙</span>
-                                <span style={{
-                                    fontSize: '0.85rem',
-                                    fontWeight: 800,
-                                    color: (profile?.credits_balance || 0) > 0 ? 'var(--accent)' : '#FCA5A5'
-                                }}>
-                                    {(profile?.credits_balance || 0) > 0
-                                        ? `${profile.credits_balance} créditos`
-                                        : 'Sin créditos'}
+                                <span style={{ color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FF4D4D', fontWeight: 800, fontSize: '0.9rem' }}>
+                                    {profile?.credits_balance || 0}
                                 </span>
-                                {profile?.plan === 'pro' || profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' ? (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setIsCreditsModalOpen(true); }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FCA5A5',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 900,
-                                            cursor: 'pointer',
-                                            padding: '2px 4px',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                    >
-                                        + DEPOSITAR
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); router.push('/dashboard/settings'); }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            color: '#9D00FF',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 900,
-                                            cursor: 'pointer',
-                                            padding: '2px 4px',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                    >
-                                        + PLAN
-                                    </button>
-                                )}
+                                <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 600 }}>CRÉDITOS</span>
                             </div>
 
                             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
 
                             <div style={{ display: 'flex', gap: '14px', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                                <span style={{ cursor: 'pointer' }}>🔔</span>
-                                <span style={{ cursor: 'pointer' }}>🔍</span>
-                                <Link href="/dashboard/settings" style={{ textDecoration: 'none', color: 'inherit' }}>⚙️</Link>
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                                        style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        title="Notificaciones"
+                                    >
+                                        <Bell size={20} />
+                                    </button>
+                                    {isNotificationsOpen && (
+                                        <>
+                                            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} onClick={() => setIsNotificationsOpen(false)} />
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 'calc(100% + 20px)',
+                                                right: 0,
+                                                width: '300px',
+                                                background: '#1a1a1a',
+                                                borderRadius: '16px',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                                                zIndex: 999,
+                                                padding: '20px',
+                                                animation: 'fadeInUp 0.2s ease'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Notificaciones</h3>
+                                                    <CloseIcon size={16} style={{ cursor: 'pointer', color: '#666' }} onClick={() => setIsNotificationsOpen(false)} />
+                                                </div>
+                                                <div style={{ textAlign: 'center', padding: '20px 0', color: '#666' }}>
+                                                    <Bell size={32} style={{ opacity: 0.2, marginBottom: '12px' }} />
+                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>Próximamente: Notificaciones en tiempo real.</p>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setIsSearchOpen(!isSearchOpen)}
+                                        style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        title="Buscar"
+                                    >
+                                        <Search size={20} />
+                                    </button>
+                                    {isSearchOpen && (
+                                        <>
+                                            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={() => setIsSearchOpen(false)} />
+                                            <div style={{
+                                                position: 'fixed',
+                                                top: '15%',
+                                                left: '50%',
+                                                transform: 'translateX(-50%)',
+                                                width: '90%',
+                                                maxWidth: '600px',
+                                                background: '#1a1a1a',
+                                                borderRadius: '20px',
+                                                border: '1px solid rgba(255,255,255,0.2)',
+                                                boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
+                                                zIndex: 999,
+                                                padding: '24px',
+                                                animation: 'scaleIn 0.2s ease'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px 16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                    <Search size={20} style={{ color: '#7ECECA' }} />
+                                                    <input
+                                                        autoFocus
+                                                        placeholder="Buscar proyectos o ideas..."
+                                                        style={{ background: 'none', border: 'none', color: 'white', fontSize: '1rem', width: '100%', outline: 'none' }}
+                                                    />
+                                                </div>
+                                                <p style={{ margin: '16px 0 0', fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>Buscador global en desarrollo. Próximamente integrado.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <Link
+                                    href="/dashboard/settings"
+                                    style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}
+                                    title="Configuración"
+                                >
+                                    <SettingsIcon size={20} />
+                                </Link>
                             </div>
                         </div>
                     </header>
@@ -747,8 +842,7 @@ export default function DashboardLayout({ children }) {
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
                 }
-            `}</style>
-                <SupportWidget />
+                </style>
             </div>
         </ProjectProvider>
     );

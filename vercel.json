@@ -1,0 +1,26 @@
+{
+    "redirects": [
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "writi-ia.vercel.app"
+                }
+            ],
+            "destination": "https://www.writi-ai.com/$1",
+            "permanent": true
+        },
+        {
+            "source": "/(.*)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "writi-ai.com"
+                }
+            ],
+            "destination": "https://www.writi-ai.com/$1",
+            "permanent": true
+        }
+    ]
+}
