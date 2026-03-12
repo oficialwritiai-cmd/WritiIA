@@ -114,6 +114,7 @@ Objetivo: ${goal || 'Engagement'}
 Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
 
         let result;
+        let rawContent = '';
         try {
             const haikuRes = await generateIdeasWithHaiku({
                 apiKey: process.env.ANTHROPIC_API_KEY,
@@ -121,6 +122,26 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
                 userMessage,
             });
             result = haikuRes.parsed;
+            rawContent = haikuRes.content || '';
+
+            // --- LOCAL ROBUST EXTRACTION (v2.8.6) ---
+            // If the library gave us the "default" fallback or something missing keys,
+            // we try to extract JSON ourselves from the raw text.
+            try {
+                const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const localParsed = JSON.parse(jsonMatch[0].trim());
+                    // If this local parse has our specific keys, it's better than the library's "fix"
+                    if (localParsed.titles || localParsed.hooks || localParsed.descriptions || 
+                        localParsed.titulos || localParsed.ganchos || localParsed.descripciones) {
+                        result = localParsed;
+                        console.log('[Copys IA] Local extraction succeeded and preferred.');
+                    }
+                }
+            } catch (localErr) {
+                console.warn('[Copys IA] Local JSON extraction attempt failed:', localErr.message);
+            }
+
         } catch (genErr) {
             console.error('[generate-copys] Gen Error:', genErr);
             return NextResponse.json({ error: 'La IA no pudo procesar la solicitud. Por favor intenta de nuevo.' }, { status: 500 });
@@ -136,22 +157,12 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
         }
 
         // --- HARDENING & NORMALIZATION ---
-        // Ensure result is always an object
-        if (typeof result === 'string') {
-            try {
-                // Try to extract JSON from string if haikuRes.parsed was just a string
-                const jsonMatch = result.match(/\{[\s\S]*\}/);
-                if (jsonMatch) result = JSON.parse(jsonMatch[0]);
-            } catch (e) {
-                console.error('[Copys IA] String parse failed:', e);
-            }
-        }
-
-        // Map Spanish keys back to English if the AI got confused
+        // Map Spanish keys back to English if the AI got confused,
+        // and ALSO handle the "Idea Bank" fallback keys just in case.
         const normalized = {
-            titles: result.titles || result.titulos || [],
-            hooks: result.hooks || result.ganchos || [],
-            descriptions: result.descriptions || result.descripciones || [],
+            titles: result.titles || result.titulos || (result.titulo_angulo ? [result.titulo_angulo] : []),
+            hooks: result.hooks || result.ganchos || (result.gancho ? [result.gancho] : []),
+            descriptions: result.descriptions || result.descripciones || (Array.isArray(result.desarrollo) ? result.desarrollo : (result.desarrollo ? [result.desarrollo] : [])),
             hashtags_groups: result.hashtags_groups || result.hashtags || [],
             youtube_tags: result.youtube_tags || result.youtubeTags || []
         };
@@ -165,6 +176,13 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             console.error('[Copys IA] No valid content in normalized result:', result);
             return NextResponse.json({ error: 'La IA devolvió un formato inválido. Por favor intenta de nuevo.' }, { status: 500 });
         }
+
+        // v2.8.6: Force clean strings
+        const cleanList = (list) => Array.isArray(list) ? list.filter(i => i && typeof i === 'string' && i.length > 2) : [];
+        normalized.titles = cleanList(normalized.titles);
+        normalized.hooks = cleanList(normalized.hooks);
+        normalized.descriptions = cleanList(normalized.descriptions);
+        normalized.youtube_tags = cleanList(normalized.youtube_tags);
 
         // Add to stats
         if (projectId) {
