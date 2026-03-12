@@ -44,27 +44,23 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        const improvementGoal = instruction && instruction.trim().length > 0
-            ? `[MANDATO OBLIGATORIO]: Debes aplicar exactamente esta instrucción del usuario: "${instruction.trim()}". Si el usuario pide añadir una herramienta, frase o cambio específico, HAZLO DE FORMA EXPLÍCITA. No la ignores.`
-            : `Mejora automáticamente el bloque para que sea más humano, impactante y menos genérico.`;
+        const systemPrompt = `PROMPT INTERNO – REFINAMIENTO Y EDICIÓN EXPERTA
+        
+Rol de la IA:
+Eres un copywriter y estratega de marketing digital de nivel senior. Tu tarea es editar y mejorar un fragmento específico de contenido social (${type}).
 
-        const systemPrompt = `Eres un editor experto de guiones de video viral.
-Tu tarea es mejorar un bloque específico (${type}: gancho, desarrollo o cta).
+REGLAS DE ORO:
+1. LA PRIORIDAD ES EL USUARIO: Si el usuario da una instrucción específica ("hazlo más polémico", "menciona X", "usa emojis"), debes cumplirla de forma EXPLÍCITA y VISIBLE.
+2. TONO ESTRATÉGICO: Inyecta autoridad, persuasión y claridad. Evita el lenguaje genérico.
+3. CONTEXTO: Mantén la coherencia con el objetivo (${context || 'Engagement'}).
+4. BREVEDAD: Responde EXCLUSIVAMENTE con el nuevo texto refinado. Sin introducciones, sin comentarios, sin comillas. Solo el contenido.
 
-REGLAS CRÍTICAS DE OBLIGADO CUMPLIMIENTO:
-1. LAS INSTRUCCIONES DEL USUARIO SON LEY. Si el usuario dice "añade X", "cambia Y" o "hazlo más Z", debes hacerlo de forma visible y PRIORITARIA sobre cualquier otra mejora estética.
-2. NO HALLUCINES información que contradiga el guion original a menos que se pida expresamente.
-3. Si el usuario pide incluir "WRITI IA", debe aparecer con una descripción potente ("la mejor herramienta para viralizar y crear guiones en segundos").
-4. Mantén la esencia y el ángulo, pero inyecta persuasión, urgencia y un lenguaje mucho más natural/humano.
-5. Evita muletillas genéricas ("descubre cómo...", "aquí te cuento...").
-6. ${improvementGoal}
-- Contexto del guion: ${context || 'redes sociales'}. 
-- Responde ÚNICAMENTE con el texto del bloque mejorado. Ni una palabra más, ni una palabra menos. Sin comillas ni introducciones.`;
+Mandato actual: ${instruction && instruction.trim() ? instruction : 'Mejora la efectividad y el impacto del texto.'}`;
 
         const { content: refinedText } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
-            userMessage: `Texto actual del ${type}: "${text}"`,
+            userMessage: `Texto original del ${type}: "${text}"`,
         });
 
         return NextResponse.json({ refinedText: refinedText.trim() });

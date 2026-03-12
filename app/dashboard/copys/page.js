@@ -267,58 +267,109 @@ export default function CopysPage() {
 
         return (
             <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '24px', padding: '32px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#white', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={18} color="#9D00FF" /> {title}
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#white', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(157, 0, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Sparkles size={18} color="#9D00FF" />
+                    </div>
+                    {title}
                 </h3>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {items.map((item, index) => {
                         const isRefining = refiningTarget?.type === type && refiningTarget?.index === index;
                         const valueStr = type === 'hashtags_groups' && Array.isArray(item) ? item.join(' ') : (Array.isArray(item) ? item.join(', ') : item);
 
                         return (
-                            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1 }}>
-                                        {isTextarea ? (
-                                            <textarea 
-                                                value={valueStr}
-                                                onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
-                                                style={{ width: '100%', minHeight: '120px', background: 'transparent', border: 'none', color: '#eee', fontSize: '1rem', lineHeight: '1.6', outline: 'none', resize: 'vertical' }}
-                                            />
-                                        ) : (
-                                            <input 
-                                                value={valueStr}
-                                                onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
-                                                style={{ width: '100%', background: 'transparent', border: 'none', color: '#eee', fontSize: '1rem', outline: 'none', fontWeight: type === 'titulos' ? 700 : 400 }}
-                                            />
-                                        )}
+                            <div key={index} style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                background: 'rgba(255,255,255,0.01)', 
+                                borderRadius: '20px', 
+                                border: '1px solid aria(255,255,255,0.05)',
+                                overflow: 'hidden',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                <div style={{ padding: '20px', position: 'relative' }}>
+                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                            {isTextarea ? (
+                                                <textarea 
+                                                    value={valueStr}
+                                                    onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
+                                                    style={{ width: '100%', minHeight: '100px', background: 'transparent', border: 'none', color: '#eee', fontSize: '1rem', lineHeight: '1.6', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+                                                />
+                                            ) : (
+                                                <input 
+                                                    value={valueStr}
+                                                    onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
+                                                    style={{ width: '100%', background: 'transparent', border: 'none', color: '#eee', fontSize: '1.05rem', outline: 'none', fontWeight: type === 'titles' ? 800 : 500 }}
+                                                />
+                                            )}
+                                        </div>
+                                        <button 
+                                            onClick={() => copyToClipboard(valueStr)} 
+                                            style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '36px', height: '36px', borderRadius: '10px', color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }} 
+                                            className="hover-bright"
+                                            title="Copiar"
+                                        >
+                                            <Copy size={16} />
+                                        </button>
                                     </div>
-                                    <button onClick={() => copyToClipboard(valueStr)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '8px', borderRadius: '8px', color: '#aaa', cursor: 'pointer' }} title="Copiar">
-                                        <Copy size={16} />
-                                    </button>
                                 </div>
                                 
-                                {/* Mini Chat Refinement */}
-                                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px', marginTop: '4px' }}>
+                                {/* Mini Chat Refinement v2.9.0 */}
+                                <div style={{ 
+                                    background: 'rgba(126, 206, 202, 0.03)', 
+                                    padding: '12px 20px', 
+                                    borderTop: '1px solid rgba(126, 206, 202, 0.1)',
+                                    display: 'flex',
+                                    gap: '12px',
+                                    alignItems: 'center'
+                                }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <Sparkles size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#7ECECA', opacity: 0.6 }} />
                                         <input 
                                             type="text"
-                                            placeholder="Instrucción IA (ej: hazlo más polémico...)"
+                                            placeholder="¿Quieres ajustar algo? (ej: hazlo más divertido, añade un emoji...)"
                                             value={refineInstructions[`${type}-${index}`] || ''}
                                             onChange={e => setRefineInstructions(prev => ({...prev, [`${type}-${index}`]: e.target.value}))}
                                             onKeyDown={e => e.key === 'Enter' && handleRefine(type, index)}
-                                            style={{ width: '100%', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)', borderRadius: '12px', padding: '8px 12px 8px 32px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+                                            style={{ 
+                                                width: '100%', 
+                                                background: 'rgba(0,0,0,0.2)', 
+                                                border: '1px solid rgba(255,255,255,0.05)', 
+                                                borderRadius: '12px', 
+                                                padding: '10px 12px 10px 36px', 
+                                                color: 'white', 
+                                                fontSize: '0.85rem', 
+                                                outline: 'none',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onFocus={(e) => e.target.style.borderColor = 'rgba(126, 206, 202, 0.4)'}
+                                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
                                         />
                                     </div>
                                     <button 
                                         onClick={() => handleRefine(type, index)} 
-                                        disabled={isRefining}
-                                        style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', borderRadius: '12px', padding: '0 16px', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                        disabled={isRefining || !refineInstructions[`${type}-${index}`]?.trim()}
+                                        style={{ 
+                                            padding: '10px 16px',
+                                            borderRadius: '12px',
+                                            background: isRefining ? 'rgba(255,255,255,0.05)' : 'var(--accent-gradient)',
+                                            color: 'black',
+                                            border: 'none',
+                                            fontWeight: 800,
+                                            fontSize: '0.85rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            transition: 'all 0.2s ease',
+                                            opacity: (!refineInstructions[`${type}-${index}`]?.trim() && !isRefining) ? 0.5 : 1
+                                        }}
                                     >
-                                        {isRefining ? <Loader2 className="animate-spin" size={14} /> : <Send size={14} />}
-                                        <span className="hide-mobile">Mejorar</span>
+                                        {isRefining ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                                        <span className="hide-mobile">{isRefining ? 'Mejorando...' : 'Pedir Cambio'}</span>
                                     </button>
                                 </div>
                             </div>
@@ -334,10 +385,10 @@ export default function CopysPage() {
             
             <div style={{ textAlign: 'center' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '16px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
-                    Títulos y Copys IA
+                    Títulos y Copys IA <span style={{ fontSize: '0.8rem', verticalAlign: 'middle', padding: '4px 8px', borderRadius: '8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', marginLeft: '10px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.9.0</span>
                 </h1>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6' }}>
-                    Convierte cualquier idea o guion en múltiples variaciones listas para publicar. Generamos títulos virales, ganchos de 3 segundos, descripciones y hashtags.
+                    Genera múltiples variaciones y ajústalas a tu gusto con el nuevo **Chat de Refinamiento** integrado en cada resultado.
                 </p>
             </div>
 
@@ -345,10 +396,13 @@ export default function CopysPage() {
             <div className="premium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Guion, Idea o Tema Base</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Guion, Idea o Tema Base</label>
+                        <span style={{ fontSize: '0.75rem', color: '#888' }}>{baseText.length} caracteres</span>
+                    </div>
                     <textarea 
                         className="input-field"
-                        style={{ minHeight: '160px', padding: '20px', fontSize: '1.05rem', resize: 'vertical' }}
+                        style={{ minHeight: '160px', padding: '20px', fontSize: '1.05rem', resize: 'vertical', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)' }}
                         placeholder="Pega aquí tu guion o escribe la idea principal de tu contenido. La IA lo usará como base para generar todas las variaciones posibles..."
                         value={baseText}
                         onChange={(e) => setBaseText(e.target.value)}
@@ -370,25 +424,43 @@ export default function CopysPage() {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#7ECECA', marginBottom: '4px' }}>¿Qué deseas generar hoy?</label>
-                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(126, 206, 202, 0.03)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(126, 206, 202, 0.1)' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: '#7ECECA', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CheckCircle2 size={16} /> ¿Qué deseas generar hoy?
+                    </label>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                         {[
-                            { id: 'titulos', label: 'Títulos Virales' },
-                            { id: 'ganchos', label: 'Ganchos (Hooks)' },
-                            { id: 'descripciones', label: 'Descripciones/Copys' },
+                            { id: 'titulos', label: 'Títulos' },
+                            { id: 'ganchos', label: 'Ganchos' },
+                            { id: 'descripciones', label: 'Descripciones' },
                             { id: 'hashtags', label: 'Hashtags' },
-                            { id: 'youtubeTags', label: 'Etiquetas YouTube', show: platform === 'YouTube' }
+                            { id: 'youtubeTags', label: 'YouTube Tags', show: platform === 'YouTube' }
                         ].map(section => {
                             if (section.show === false) return null;
+                            const isChecked = selectedSections[section.id];
                             return (
-                                <label key={section.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#ccc' }}>
+                                <label key={section.id} style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '10px', 
+                                    cursor: 'pointer', 
+                                    fontSize: '0.85rem', 
+                                    color: isChecked ? 'white' : '#888',
+                                    padding: '8px 16px',
+                                    borderRadius: '100px',
+                                    background: isChecked ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
+                                    border: `1px solid ${isChecked ? 'rgba(126, 206, 202, 0.3)' : 'rgba(255,255,255,0.05)'}`,
+                                    transition: '0.2s'
+                                }}>
                                     <input 
                                         type="checkbox" 
-                                        checked={selectedSections[section.id]} 
+                                        checked={isChecked} 
                                         onChange={e => setSelectedSections(prev => ({...prev, [section.id]: e.target.checked}))}
-                                        style={{ accentColor: '#7ECECA', width: '18px', height: '18px' }}
+                                        style={{ display: 'none' }}
                                     />
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '4px', border: '1px solid currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {isChecked && <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'currentColor' }} />}
+                                    </div>
                                     {section.label}
                                 </label>
                             );
@@ -401,59 +473,59 @@ export default function CopysPage() {
                         onClick={handleGenerate} 
                         disabled={isGenerating || !baseText.trim() || Object.values(selectedSections).every(v => !v)}
                         className="btn-primary" 
-                        style={{ width: '100%', padding: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 30px rgba(157, 0, 255, 0.3)' }}
+                        style={{ width: '100%', padding: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 40px rgba(126, 206, 202, 0.2)' }}
                     >
                         {isGenerating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
-                        {isGenerating ? 'Analizando Cerebro IA y generando...' : 'Generar Copys con IA'}
+                        {isGenerating ? 'Estratega Senior analizando...' : 'Generar Copys Maestros'}
                     </button>
-                    <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.85rem', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <span>⚡ Esta acción pre-calculada consume 1 crédito de IA</span>
+                    <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.85rem', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Coins size={14} /> 1 Crédito por generación</span>
                         {credits !== null && (
-                            <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', fontWeight: 700, color: credits > 0 ? '#7ECECA' : '#FF4D4D' }}>Saldo: {credits}</span>
+                            <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '100px', fontWeight: 800, color: credits > 0 ? '#7ECECA' : '#FF4D4D', border: '1px solid rgba(255,255,255,0.05)' }}>Saldo: {credits}</span>
                         )}
                     </div>
                 </div>
 
                 {apiError && (
-                    <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '16px', padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-                        <p style={{ color: '#FF4D4D', fontWeight: 600, margin: 0 }}>{apiError}</p>
-                        <button onClick={handleGenerate} className="btn-secondary" style={{ padding: '8px 24px' }}>Reintentar</button>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', padding: '20px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                        <p style={{ color: '#F87171', fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>{apiError}</p>
+                        <button onClick={handleGenerate} className="btn-secondary" style={{ padding: '6px 20px', fontSize: '0.85rem' }}>Reintentar</button>
                     </div>
                 )}
             </div>
 
             {/* Results Section */}
             {results && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.5s ease' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', animation: 'fadeInUp 0.6s ease' }}>
                     
                     {/* Floating Action Bar */}
-                    <div style={{ position: 'sticky', top: '24px', zIndex: 100, background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(20px)', padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-                        <div style={{ fontWeight: 800, color: 'white' }}>Resultados IA</div>
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <button onClick={copyAll} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}>
-                                <Copy size={16} /> <span className="hide-mobile">Copiar Todo</span>
+                    <div style={{ position: 'sticky', top: '24px', zIndex: 100, background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(20px)', padding: '12px 24px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7ECECA' }}></div>
+                            <span style={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.5px' }}>RESULTADOS IA</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button onClick={copyAll} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem', borderRadius: '100px' }}>
+                                <Copy size={14} /> <span className="hide-mobile">Copiar Todo</span>
                             </button>
-                            <button onClick={exportToTxt} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}>
-                                <Download size={16} /> <span className="hide-mobile">Exportar TXT</span>
-                            </button>
-                            <button onClick={saveToLibraryAsCopy} disabled={isSaving} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}>
-                                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} 
-                                <span className="hide-mobile">Guardar en Biblioteca</span>
+                            <button onClick={saveToLibraryAsCopy} disabled={isSaving} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem', borderRadius: '100px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', border: '1px solid rgba(126, 206, 202, 0.3)' }}>
+                                {isSaving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} 
+                                <span className="hide-mobile">Guardar</span>
                             </button>
                         </div>
                     </div>
 
                     {renderBlock('titles', 'Opciones de Títulos Virales', results.titles, false)}
-                    {renderBlock('hooks', 'Ganchos (Hooks) - Primeros 3 Segundos', results.hooks, true)}
-                    {renderBlock('descriptions', 'Copys / Descripciones Largas', results.descriptions, true)}
-                    {renderBlock('hashtags_groups', 'Bloques de Hashtags', results.hashtags_groups, false)}
-                    {renderBlock('youtube_tags', 'Etiquetas YouTube SEO', results.youtube_tags ? [results.youtube_tags.join(', ')] : null, false)}
+                    {renderBlock('hooks', 'Ganchos de 3 Segundos', results.hooks, true)}
+                    {renderBlock('descriptions', 'Copys y Descripciones', results.descriptions, true)}
+                    {renderBlock('hashtags_groups', 'Hashtags Sugeridos', results.hashtags_groups, false)}
+                    {renderBlock('youtube_tags', 'SEO YouTube (Etiquetas)', results.youtube_tags ? [results.youtube_tags.join(', ')] : null, false)}
 
                 </div>
             )}
 
             {toast && (
-                <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#FF4D4D' : '#7ECECA', color: toast.type === 'error' ? 'white' : 'black', padding: '14px 28px', borderRadius: '50px', fontWeight: 700, boxShadow: '0 15px 40px rgba(0,0,0,0.4)', zIndex: 1000 }}>
+                <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#FF4D4D' : '#7ECECA', color: toast.type === 'error' ? 'white' : 'black', padding: '14px 28px', borderRadius: '50px', fontWeight: 800, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 1000, animation: 'fadeInUp 0.3s ease-out' }}>
                     {toast.message}
                 </div>
             )}
@@ -461,6 +533,10 @@ export default function CopysPage() {
             <style jsx>{`
                 @media (max-width: 600px) {
                     .hide-mobile { display: none; }
+                }
+                .hover-bright:hover {
+                    background: rgba(255,255,255,0.1) !important;
+                    color: white !important;
                 }
             `}</style>
         </div>
