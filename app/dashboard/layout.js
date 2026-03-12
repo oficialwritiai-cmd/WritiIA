@@ -643,9 +643,9 @@ export default function DashboardLayout({ children }) {
                                         borderRadius: '100px',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
                                         flexShrink: 0
                                     }}
+                                >
                                     💎 COMPRAR CRÉDITOS
                                 </button>
                                 <button
@@ -665,7 +665,7 @@ export default function DashboardLayout({ children }) {
                                         whiteSpace: 'nowrap'
                                     }}
                                 >
-                                    {planCheckoutLoading ? 'Ã¢ÂÂ³' : profile?.plan === 'pro' ? 'Ã¢Å“â€¦ PRO' : 'Ã°Å¸Å¡â‚¬ PLAN PRO'}
+                                    {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? '✅ PRO' : '🚀 PLAN PRO'}
                                 </button>
                             </div>
                             <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
@@ -740,7 +740,7 @@ export default function DashboardLayout({ children }) {
                                                 </div>
                                                 <div style={{ textAlign: 'center', padding: '20px 0', color: '#666' }}>
                                                     <Bell size={32} style={{ opacity: 0.2, marginBottom: '12px' }} />
-                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>PrÃ³ximamente: Notificaciones en tiempo real.</p>
+                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>Próximamente: Notificaciones en tiempo real.</p>
                                                 </div>
                                             </div>
                                         </>
