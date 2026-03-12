@@ -70,9 +70,11 @@ export async function POST(request) {
         const wantsYoutubeTags = sections?.youtubeTags === true;
 
         const systemPrompt = `PROMPT INTERNO – COPYS Y GANCHOS (NO MOSTRAR AL USUARIO)
-
+        
 Rol de la IA:
-Eres un copywriter y estratega de marketing digital de nivel senior, especialista en contenido para redes sociales, lanzamientos digitales y creación de marca personal.
+Eres un copywriter y estratega de marketing digital de nivel senior.
+
+idioma: ESPAÑOL (Responde SIEMPRE en español, sin excepciones).
 
 REGLA DE ORO (FIDELIDAD):
 - ÚNICAMENTE usa la información proporcionada por el usuario en su "IDEA/GUION".
