@@ -29,6 +29,8 @@ export default function CopysPage() {
     // States for refining
     const [refiningTarget, setRefiningTarget] = useState(null); // { type, index }
     const [refineInstructions, setRefineInstructions] = useState({});
+    const [globalRefineInstructions, setGlobalRefineInstructions] = useState({}); // New v2.9.5 for bulk
+    const [isBulkRefining, setIsBulkRefining] = useState(null); // type being refined
     
     const [toast, setToast] = useState(null);
     const [userId, setUserId] = useState(null);
@@ -147,17 +149,67 @@ export default function CopysPage() {
                     newRes[type][index] = data.refinedText.split(' ').filter(h => h.startsWith('#'));
                 } else {
                     newRes[type][index] = data.refinedText;
+    };
+
+    const fetchCredits = async () => {
+        if (!userId) return;
+        try {
+            const { data: profile } = await supabase.from('users_profiles').select('credits_balance').eq('id', userId).single();
+            if (profile && profile.credits_balance !== null) setCredits(profile.credits_balance);
+        } catch (e) {
+            console.error('Error fetching credits:', e);
+        }
+    };
+
+    const handleBulkRefine = async (type) => {
+        const instruction = globalRefineInstructions[type];
+        if (!instruction?.trim() || isBulkRefining || !results[type]) return;
+
+        setIsBulkRefining(type);
+        try {
+            const currentTexts = results[type];
+            const inputTexts = type === 'hashtags_groups' 
+                ? currentTexts.map(g => Array.isArray(g) ? g.join(' ') : g)
+                : currentTexts;
+
+            const response = await fetch('/api/refine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    texts: inputTexts,
+                    type,
+                    context: goal,
+                    instruction,
+                    userId,
+                    projectId: activeProject?.id
+                })
+            });
+
+            const res = await response.json();
+            if (res.error) throw new Error(res.error);
+
+            let refinedList = res.refinedText;
+            if (typeof refinedList === 'string' && refinedList.includes('[') && refinedList.includes(']')) {
+                try { refinedList = JSON.parse(refinedList); } catch(e) {}
+            }
+
+            setResults(prev => {
+                const newRes = { ...prev };
+                if (Array.isArray(refinedList)) {
+                    newResults[type] = refinedList;
+                } else {
+                    newResults[type] = [refinedList];
                 }
                 return newRes;
             });
-            
-            // Clear instruction input
-            setRefineInstructions(prev => ({...prev, [`${type}-${index}`]: ''}));
-            showToast('Texto mejorado', 'success');
+
+            setGlobalRefineInstructions(prev => ({...prev, [type]: ''}));
+            showToast('Grupo actualizado correctamente');
+            fetchCredits();
         } catch (err) {
-            showToast(err.message, 'error');
+            showToast(err.message || 'Error en refinamiento grupal', 'error');
         } finally {
-            setRefiningTarget(null);
+            setIsBulkRefining(null);
         }
     };
 
