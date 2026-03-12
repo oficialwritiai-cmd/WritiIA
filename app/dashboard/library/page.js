@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Search, Filter, Star, Calendar, Trash2, Edit3, Loader2, Copy, RefreshCw, Zap, Sparkles } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
+import LibraryScriptEditor from '@/app/components/LibraryScriptEditor';
 
 const PLATFORMS = ['Todas', 'Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X'];
 const CONTENT_TYPES = ['Todos', 'guion', 'idea', 'mensual'];
@@ -26,6 +27,8 @@ export default function LibraryPage() {
     const [dateTo, setDateTo] = useState('');
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [selectedScript, setSelectedScript] = useState(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [scriptToEdit, setScriptToEdit] = useState(null);
     const [error, setError] = useState('');
 
     const supabase = createSupabaseClient();
@@ -317,6 +320,16 @@ export default function LibraryPage() {
                                             placeholder="Título del contenido..."
                                         />
                                         <button
+                                            onClick={() => {
+                                                setScriptToEdit(item);
+                                                setIsEditorOpen(true);
+                                            }}
+                                            className="btn-secondary"
+                                            style={{ padding: '6px 16px', fontSize: '0.8rem', background: 'rgba(255, 255, 255, 0.05)', color: 'white' }}
+                                        >
+                                            <Edit3 size={14} style={{ marginRight: '6px' }} /> Editar
+                                        </button>
+                                        <button
                                             onClick={() => router.push(`/dashboard/calendar?import=${item.id}`)}
                                             className="btn-primary"
                                             style={{ padding: '6px 16px', fontSize: '0.8rem', background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}
@@ -347,6 +360,22 @@ export default function LibraryPage() {
                         );
                     })}
                 </div>
+            )}
+
+            {/* Script Editor Modal */}
+            {isEditorOpen && scriptToEdit && (
+                <LibraryScriptEditor 
+                    item={scriptToEdit}
+                    onClose={() => setIsEditorOpen(false)}
+                    onSave={(updated) => {
+                        setScripts(prev => prev.map(s => s.id === updated.id ? updated : s));
+                        setIsEditorOpen(false);
+                        showToast('Guion actualizado correctamente ✓', 'success');
+                    }}
+                    supabase={supabase}
+                    userId={scripts[0]?.user_id} // Just to get a userId if needed, or better fetch it
+                    projectId={activeProject?.id}
+                />
             )}
 
             {/* Toast */}

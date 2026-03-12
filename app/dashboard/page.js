@@ -29,9 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 10) Bump to v2.7.3 - Status Membresía Live + Cache Revoke
-// Forced cache refresh for deployment v2.7.3
-export const VERSION = 'v2.7.3';
+// 11) Bump to v2.7.4 - Library Editor + AI Mini Chat
+// Forced cache refresh for deployment v2.7.4
+export const VERSION = 'v2.7.4';
 
 
 
