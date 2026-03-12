@@ -142,13 +142,18 @@ export default function CopysPage() {
             if (!res.ok) throw new Error(data.error || 'Error al refinar');
 
             // Update the results with the new text
-            setResults(prev => {
-                const newRes = { ...prev };
-                if (type === 'hashtags_groups') {
-                    // Primitive split by space for hashtags if AI returned string
-                    newRes[type][index] = data.refinedText.split(' ').filter(h => h.startsWith('#'));
-                } else {
-                    newRes[type][index] = data.refinedText;
+                }
+                return newRes;
+            });
+            
+            // Clear instruction input
+            setRefineInstructions(prev => ({...prev, [`${type}-${index}`]: ''}));
+            showToast('Texto mejorado', 'success');
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            setRefiningTarget(null);
+        }
     };
 
     const fetchCredits = async () => {
@@ -196,9 +201,9 @@ export default function CopysPage() {
             setResults(prev => {
                 const newRes = { ...prev };
                 if (Array.isArray(refinedList)) {
-                    newResults[type] = refinedList;
+                    newRes[type] = refinedList;
                 } else {
-                    newResults[type] = [refinedList];
+                    newRes[type] = [refinedList];
                 }
                 return newRes;
             });
