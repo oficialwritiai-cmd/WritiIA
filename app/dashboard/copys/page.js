@@ -96,10 +96,17 @@ export default function CopysPage() {
                 throw new Error(data.error || 'Error al generar copys');
             }
 
-            setResults(data.result);
-            if (credits !== null) setCredits(prev => Math.max(0, prev - 1));
-            showToast('¡Copys generados con éxito!');
+            if (data.result) {
+                console.log('[Copys IA] Generation Success:', data.result);
+                setResults(data.result);
+                if (credits !== null) setCredits(prev => Math.max(0, prev - 1));
+                showToast('¡Copys generados con éxito!');
+            } else {
+                console.error('[Copys IA] Empty result object:', data);
+                throw new Error('La IA devolvió un resultado inesperado.');
+            }
         } catch (err) {
+            console.error('[Copys IA] Generation Error:', err);
             setApiError(err.message || 'Error de conexión. Fallo en la IA.');
         } finally {
             setIsGenerating(false);
@@ -135,7 +142,7 @@ export default function CopysPage() {
             // Update the results with the new text
             setResults(prev => {
                 const newRes = { ...prev };
-                if (type === 'hashtags') {
+                if (type === 'hashtags_groups') {
                     // Primitive split by space for hashtags if AI returned string
                     newRes[type][index] = data.refinedText.split(' ').filter(h => h.startsWith('#'));
                 } else {
@@ -157,7 +164,7 @@ export default function CopysPage() {
     const handleUpdateResultValue = (type, index, value) => {
         setResults(prev => {
             const newRes = { ...prev };
-            if (type === 'hashtags') {
+            if (type === 'hashtags_groups') {
                 newRes[type][index] = value.split(' ').filter(h => h.trim() !== '');
             } else {
                 newRes[type][index] = value;
@@ -173,12 +180,14 @@ export default function CopysPage() {
 
     const copyAll = () => {
         if (!results) return;
-        let final = `--- TÍTULOS ---\n${results.titulos.join('\n')}\n\n`;
-        final += `--- GANCHOS ---\n${results.ganchos.join('\n')}\n\n`;
-        final += `--- DESCRIPCIONES ---\n${results.descripciones.join('\n\n')}\n\n`;
-        final += `--- HASHTAGS ---\n${results.hashtags.map(set => set.join(' ')).join('\n\n')}`;
+        let final = "";
+        if (results.titles) final += `--- TÍTULOS ---\n${results.titles.join('\n')}\n\n`;
+        if (results.hooks) final += `--- GANCHOS ---\n${results.hooks.join('\n')}\n\n`;
+        if (results.descriptions) final += `--- DESCRIPCIONES ---\n${results.descriptions.join('\n\n')}\n\n`;
+        if (results.hashtags_groups) final += `--- HASHTAGS ---\n${results.hashtags_groups.map(set => set.join(' ')).join('\n\n')}\n\n`;
+        if (results.youtube_tags) final += `--- ETIQUETAS YOUTUBE ---\n${results.youtube_tags.join(', ')}`;
         
-        copyToClipboard(final);
+        copyToClipboard(final.trim());
     };
 
     const exportToTxt = () => {
@@ -204,10 +213,10 @@ export default function CopysPage() {
         
         try {
             // Build a COMPACT structured object for the library (taking only the 1st elements)
-            const firstTitle = results.titulos?.[0] || 'Copys Generados';
-            const firstHook = results.ganchos?.[0] || '';
-            const firstCopy = results.descripciones?.[0] || '';
-            const firstHashtags = results.hashtags?.[0] || [];
+            const firstTitle = results.titles?.[0] || 'Copys Generados';
+            const firstHook = results.hooks?.[0] || '';
+            const firstCopy = results.descriptions?.[0] || '';
+            const firstHashtags = results.hashtags_groups?.[0] || [];
             
             const copyPostObj = {
                 titulo: firstTitle,
@@ -227,11 +236,12 @@ export default function CopysPage() {
                 script_full_text: fullTextPreview,
                 content: {
                     descripcion: baseText,
-                    titulos_sugeridos: [firstTitle], // Compact format
-                    ganchos_sugeridos: [firstHook], 
-                    descripciones_sugeridas: [firstCopy], 
-                    hashtags_sugeridos: [firstHashtags],
-                    variaciones_extra: results, // Keep the rest as background data
+                    titulos_sugeridos: results.titles || [firstTitle], 
+                    ganchos_sugeridos: results.hooks || [firstHook], 
+                    descripciones_sugeridas: results.descriptions || [firstCopy], 
+                    hashtags_sugeridos: results.hashtags_groups || [firstHashtags],
+                    youtube_tags: results.youtube_tags || [],
+                    variaciones_extra: results, 
                     hook: firstHook,
                     copy_post: copyPostObj,
                     titulo_angulo: firstTitle
@@ -263,7 +273,7 @@ export default function CopysPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {items.map((item, index) => {
                         const isRefining = refiningTarget?.type === type && refiningTarget?.index === index;
-                        const valueStr = type === 'hashtags' && Array.isArray(item) ? item.join(' ') : item;
+                        const valueStr = type === 'hashtags_groups' && Array.isArray(item) ? item.join(' ') : (Array.isArray(item) ? item.join(', ') : item);
 
                         return (
                             <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
@@ -432,11 +442,11 @@ export default function CopysPage() {
                         </div>
                     </div>
 
-                    {renderBlock('titulos', 'Opciones de Títulos Virales', results.titulos, false)}
-                    {renderBlock('ganchos', 'Ganchos (Hooks) - Primeros 3 Segundos', results.ganchos, true)}
-                    {renderBlock('descripciones', 'Copys / Descripciones Largas', results.descripciones, true)}
-                    {renderBlock('hashtags', 'Bloques de Hashtags', results.hashtags, false)}
-                    {renderBlock('youtubeTags', 'Etiquetas YouTube SEO', results.youtubeTags ? [results.youtubeTags.join(', ')] : null, false)}
+                    {renderBlock('titles', 'Opciones de Títulos Virales', results.titles, false)}
+                    {renderBlock('hooks', 'Ganchos (Hooks) - Primeros 3 Segundos', results.hooks, true)}
+                    {renderBlock('descriptions', 'Copys / Descripciones Largas', results.descriptions, true)}
+                    {renderBlock('hashtags_groups', 'Bloques de Hashtags', results.hashtags_groups, false)}
+                    {renderBlock('youtube_tags', 'Etiquetas YouTube SEO', results.youtube_tags ? [results.youtube_tags.join(', ')] : null, false)}
 
                 </div>
             )}

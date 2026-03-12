@@ -55,7 +55,11 @@ export async function POST(request) {
 
         let brandContextString = '';
         if (brandBrain) {
-            brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---\nBiografía: ${brandBrain.biography || 'No especificada'}\nEstilo/Tono: ${brandBrain.style_words || 'No especificado'}\n---------------------------------------\nTodo el texto generado debe estar alineado a esta identidad.`;
+            brandContextString = `
+- negocio: ${brandBrain.biography || 'No especificada'}
+- publico_objetivo: ${brandBrain.target_audience || 'No especificado'}
+- tono: ${brandBrain.style_words || 'Profesional y cercano'}
+`;
         }
 
         // Checklist filter
@@ -65,39 +69,49 @@ export async function POST(request) {
         const wantsHashtags = sections?.hashtags !== false;
         const wantsYoutubeTags = sections?.youtubeTags === true;
 
-        const systemPrompt = `Eres un copywriter experto en redes sociales.
+        const systemPrompt = `PROMPT INTERNO – COPYS Y GANCHOS (NO MOSTRAR AL USUARIO)
+
+Rol de la IA:
+Eres un copywriter y estratega de marketing digital de nivel senior, especialista en contenido para redes sociales, lanzamientos digitales y creación de marca personal. Escribes textos claros, persuasivos, con foco en conversiones y engagement, adaptados a la plataforma y al público objetivo del proyecto.
+
+Contexto:
 ${brandContextString}
+- plataforma: ${platform}
+- objetivo: ${goal || 'Engagement'}
 
-Tu objetivo es generar variaciones de TÍTULOS, GANCHOS (Hooks), DESCRIPCIONES (Copys) y HASHTAGS a partir de un texto base o guion proporcionado por el usuario.
+Objetivo:
+A partir de ese contexto y la entrada del usuario, debes crear los mejores títulos, copys/descripciones, ganchos y grupos de hashtags.
 
-Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura ESTRICTA. No incluyas markdown, saludos ni explicaciones, solo el JSON puro.
+Reglas para la respuesta:
+1) Respóndeme EXCLUSIVAMENTE en JSON válido, sin texto adicional, sin comentarios.
+2) Mantén esta estructura EXACTA (omite los campos marcados como false):
+
 {
-  ${wantsTitulos ? '"titulos": ["título 1", "título 2", "título 3", "título 4", "título 5"],' : ''}
-  ${wantsGanchos ? '"ganchos": ["gancho 1", "gancho 2", "gancho 3", "gancho 4", "gancho 5"],' : ''}
-  ${wantsDescripciones ? '"descripciones": ["descripción larga 1", "descripción larga 2", "descripción larga 3"],' : ''}
-  ${wantsHashtags ? '"hashtags": [["#hash1", "#hash2", "#hash3"], ["#tag1", "#tag2", "#tag3"]],' : ''}
-  ${wantsYoutubeTags ? '"youtubeTags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]' : ''}
+  ${wantsTitulos ? '"titles": ["Título 1...", "Título 2...", "Título 3...", "Título 4...", "Título 5..."],' : ''}
+  ${wantsDescripciones ? '"descriptions": ["Descripción/copy principal 1...", "Descripción/copy principal 2...", "Descripción/copy principal 3..."],' : ''}
+  ${wantsGanchos ? '"hooks": ["Hook 1...", "Hook 2...", "Hook 3...", "Hook 4...", "Hook 5..."],' : ''}
+  ${wantsHashtags ? '"hashtags_groups": [["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"], ["#tag6", "#tag7", "#tag8", "#tag9", "#tag10"]],' : ''}
+  ${wantsYoutubeTags ? '"youtube_tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]' : ''}
 }
-(Asegúrate de que el JSON no tenga comas sobrantes al final si omites campos).
 
-REGLAS ESTRICTAS:
-${wantsTitulos ? '- DEBES generar EXACTAMENTE 5 "titulos" ultra-llamativos y cortos.' : ''}
-${wantsGanchos ? '- DEBES generar EXACTAMENTE 5 "ganchos" que capten la atención en los primeros 3 segundos.' : ''}
-${wantsDescripciones ? '- DEBES generar EXACTAMENTE 3 "descripciones" largas, con llamadas a la acción (CTA) y emojis.' : ''}
-${wantsHashtags ? '- DEBES generar EXACTAMENTE 2 arreglos de "hashtags" reales y categorizados.' : ''}
-${wantsYoutubeTags ? '- DEBES generar EXACTAMENTE 10 etiquetas SEO relevantes para YouTube en el campo "youtubeTags".' : ''}`;
+Guías específicas:
+- Títulos: Máx 60 chars, fórmulas probadas ("Cómo X sin Y", "X errores...").
+- Descripciones: 2-4 frases, estructura (Gancho+Problema -> Promesa -> CTA).
+- Hooks: 1 sola frase potente que genere curiosidad o tensión.
+- Hashtags: Máx 5 por grupo, combina nicho con específicos.
+
+REGLA CRÍTICA: Responde SOLO con el objeto JSON puro para que mi sistema pueda parsearlo directamente con JSON.parse().`;
 
         const userMessage = `
-TEXTO BASE / GUION / IDEA:
+ENTRADA DEL USUARIO (IDEA/GUION):
 """
 ${text}
 """
 
-PLATAFORMA OBJETIVO: ${platform}
-META PRINCIPAL: ${goal || 'Engagement'}
+Plataforma: ${platform}
+Objetivo: ${goal || 'Engagement'}
 
-Por favor, devuelve el JSON con las variaciones solicitadas basadas en este texto, optimizadas para ${platform} buscando lograr ${goal || 'Engagement'}.
-`;
+Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
 
         let result;
         try {

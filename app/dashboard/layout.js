@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -265,7 +265,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.8.3)
+                    {loadingStatus} (v2.8.4)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -437,7 +437,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.8.3
+                            v2.8.4
                         </div>
                     </div>
                 </aside>
@@ -579,7 +579,7 @@ export default function DashboardLayout({ children }) {
                                     title="Mi Cuenta"
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>ðŸ‘¤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.8.3</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.8.4</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -646,8 +646,7 @@ export default function DashboardLayout({ children }) {
                                         whiteSpace: 'nowrap',
                                         flexShrink: 0
                                     }}
-                                >
-                                    ðŸ’Ž COMPRAR CRÃ‰DITOS
+                                    💎 COMPRAR CRÉDITOS
                                 </button>
                                 <button
                                     onClick={handleCheckoutPlan}
@@ -681,7 +680,7 @@ export default function DashboardLayout({ children }) {
                                 transition: '0.2s',
                                 flexShrink: 0
                             }}>
-                                <span style={{ fontSize: '1rem' }}>ðŸ’Ž</span>
+                                <span style={{ fontSize: '1rem' }}>💎</span>
                                 <span style={{ color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FF4D4D', fontWeight: 800, fontSize: '0.9rem' }}>
                                     {profile?.credits_balance || 0}
                                 </span>
@@ -698,13 +697,12 @@ export default function DashboardLayout({ children }) {
                                 border: '1px solid rgba(126, 206, 202, 0.2)',
                                 flexShrink: 0
                             }}>
-                                <span style={{ fontSize: '0.9rem' }}>ðŸ’Ž</span>
+                                <span style={{ fontSize: '0.9rem' }}>💎</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                                         {profile?.plan === 'pro' ? 'MEMBRESÃƒÂA PRO' : 'PRUEBA GRATUITA'}
                                     </span>
-                                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600 }}>
-                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} dÃ­as restantes` : daysRemaining) : 'Cargando...'}
+                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : 'Cargando...'}
                                     </span>
                                 </div>
                             </div>
