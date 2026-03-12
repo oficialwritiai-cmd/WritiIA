@@ -534,6 +534,52 @@
     }
 }
 
+@media (max-width: 480px) {
+    .cal-monthly-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: transparent;
+        border: none;
+    }
+    .cal-header-cell {
+        display: none;
+    }
+    .cal-day-cell.empty {
+        display: none;
+    }
+    .cal-day-cell {
+        border-radius: 12px;
+        min-height: auto;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 12px;
+    }
+    .cal-event-wrapper {
+        flex-direction: column;
+    }
+    .cal-event-pill {
+        width: 100%;
+        border-radius: 8px;
+        justify-content: flex-start;
+        height: auto;
+        padding: 8px;
+    }
+    .cal-event-pill .pill-text {
+        display: block;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+    
+    .cal-panel-header {
+        padding: 20px 20px 10px 20px;
+    }
+    .cal-panel-body {
+        padding: 0 20px 20px 20px;
+    }
+}
+
+
 /* Mini Calendar Widget */
 .mini-cal-widget {
     background: rgba(255, 255, 255, 0.02);

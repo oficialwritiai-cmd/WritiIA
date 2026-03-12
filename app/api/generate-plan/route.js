@@ -57,32 +57,33 @@ export async function POST(request) {
 
         let brandContextString = '';
         if (brandBrain) {
-            brandContextString = `PERFIL: ${brandBrain.biography || ''}. ESTILO: ${brandBrain.style_words || ''}.`;
+            brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---\nBiografía/Identidad: ${brandBrain.biography || 'No especificada'}\nPalabras y Estilo: ${brandBrain.style_words || 'No especificado'}\n---------------------------------------\n\nMUY IMPORTANTE: Todo el plan, ideas, títulos y enfoques DEBEN estar 100% alineados y ADAPTADOS a esta Identidad de Marca (Cerebro IA). Eres la voz de esta marca.`;
         } else {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
-        const systemPrompt = `Eres un estratega de contenido premium.
+        const systemPrompt = `Eres un estratega de contenido web premium y experto en redes sociales.
 ${brandContextString}
+
 Diseña un PLAN DE CONTENIDO para ${postCount || 30} publicaciones. Responde ÚNICAMENTE en formato JSON (un array de objetos).
 
 CADA OBJETO DEBE TENER ESTAS CLAVES EXACTAS:
 - "day_number": número del 1 al 30.
 - "platform": string (TikTok, Reels, LinkedIn, etc).
 - "content_type": string (educativo, venta, personal, etc).
-- "idea_title": un título corto y gancho para el post (OBLIGATORIO).
+- "idea_title": un título ultra-atractivo, gancho y RELEVANTE PARA LA MARCA (OBLIGATORIO).
 - "goal": el objetivo del post.
 
-Ejemplo: [{"day_number": 1, "platform": "Reels", "content_type": "Venta", "idea_title": "3 trucos para escalar", "goal": "conversión"}]`;
+Ejemplo: [{"day_number": 1, "platform": "Reels", "content_type": "Venta", "idea_title": "3 trucos para escalar como marca personal", "goal": "conversión"}]`;
 
         const userMessage = `
-DESCRIPCIÓN DE LA MARCA/PRODUCTO: ${description}
+DESCRIPCIÓN DE LA CAMPAÑA / PRODUCTO: ${description}
 OBJETIVO/ENFOQUE DEL MES: ${focus}
 PLATAFORMAS SELECCIONADAS: ${platforms.join(', ')}
 FRECUENCIA: ${frequency}
 ${selectedIdeas && selectedIdeas.length > 0 ? `IDEAS PREFERIDAS (Usa estas como base para el contenido): \n- ${selectedIdeas.join('\n- ')}` : ''}
 
-IMPORTANTE: El plan debe cubrir 30 días. Si hay menos ideas preferidas que días, genera ideas complementarias siguiendo el mismo estilo y objetivo.
+IMPORTANTE: El plan debe cubrir ${postCount || 30} publicaciones. Si hay menos ideas preferidas que la cantidad indicada, genera ideas complementarias siguiendo la IDENTIDAD DE MARCA y el objetivo.
 `;
 
         const { parsed: results } = await generateIdeasWithHaiku({

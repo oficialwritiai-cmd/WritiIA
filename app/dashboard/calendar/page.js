@@ -684,12 +684,28 @@ export default function CalendarPage() {
                                 <button className="cal-close-icon" title="Opciones"><MoreVertical size={18} /></button>
                             </div>
                         </div>
-                        <input
+                        <textarea
                             className="cal-input-minimal"
-                            style={{ fontSize: '1.25rem', fontWeight: 950, marginTop: '20px', color: 'white' }}
+                            style={{ 
+                                fontSize: '1.25rem', 
+                                fontWeight: 950, 
+                                marginTop: '20px', 
+                                color: 'white',
+                                resize: 'none',
+                                overflow: 'hidden',
+                                minHeight: '40px'
+                            }}
                             placeholder="Título de la publicación..."
                             value={tempTitle}
-                            onChange={e => setTempTitle(e.target.value)}
+                            onChange={e => {
+                                setTempTitle(e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
+                            onFocus={e => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
                         />
                     </div>
 

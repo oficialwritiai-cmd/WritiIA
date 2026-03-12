@@ -29,8 +29,8 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 14) Bump to v2.7.8 - Force refresh for Batch Generation & Plan Fix
-export const VERSION = 'v2.7.8';
+// 14) Bump to v2.7.9 - Fix Batch Generation, Brain IA Context & Calendar UI
+export const VERSION = 'v2.7.9';
 
 
 
@@ -838,26 +838,28 @@ export default function DashboardPage() {
                     successCount++;
                     // Also save to library
                     const scriptData = result.script_data;
+                    let refId = null;
                     if (scriptData) {
                         try {
-                            await saveToLibrary({
+                            const libraryItem = await saveToLibrary({
                                 userId: profile.id,
                                 type: 'guion',
                                 platform: slot.platform || 'General',
                                 goal: slot.goal || 'engagement',
                                 titulo: slot.idea_title || 'Guión del Plan',
-                                script_full_text: `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || ''}`,
+                                script_full_text: `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || scriptData.gancho || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || scriptData.cierre || ''}`,
                                 content: {
                                     video_duration: videoDuration || '60 seg',
-                                    hook: scriptData.hook || '',
+                                    hook: scriptData.hook || scriptData.gancho || '',
                                     desarrollo: scriptData.desarrollo || [],
-                                    cierre: scriptData.cierre || '',
-                                    cta: scriptData.cta || '',
+                                    cierre: scriptData.cierre || scriptData.cta || '',
+                                    cta: scriptData.cta || scriptData.cierre || '',
                                     copy_post: scriptData.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                                 },
                                 tags: ['guion', slot.platform, 'plan-mensual'].filter(Boolean),
                                 projectId: activeProject?.id
                             });
+                            refId = libraryItem?.id || null;
                         } catch (libErr) {
                             console.error('Error saving to library:', libErr);
                         }
@@ -872,10 +874,11 @@ export default function DashboardPage() {
                                 title: slot.idea_title || 'Guión Planificado',
                                 description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                                 event_date: slot.scheduled_date,
-                                type: slot.content_type || 'guion',
+                                type: 'guion', // Change type from content_type to guion logically
                                 platform: slot.platform,
+                                reference_id: refId, // Bind the library item reference ID
                                 has_script: true,
-                                script_full_text: scriptData ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || ''}` : null,
+                                script_full_text: scriptData ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || scriptData.gancho || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || scriptData.cierre || ''}` : null,
                                 content: scriptData || { hook: slot.idea_title, desarrollo: [], cta: '' }
                             });
                         } catch (calErr) {
