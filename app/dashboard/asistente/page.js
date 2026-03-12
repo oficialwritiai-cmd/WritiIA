@@ -256,6 +256,7 @@ export default function AsistentePage() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [userName, setUserName] = useState('');
     const [userId, setUserId] = useState(null);
     const [toast, setToast] = useState(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -264,10 +265,17 @@ export default function AsistentePage() {
     const supabase = createSupabaseClient();
     const { activeProject } = useProject();
 
-    // Get userId once
+    // Get userId and Profile once
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) setUserId(user.id);
+            if (user) {
+                setUserId(user.id);
+                supabase.from('users_profiles').select('full_name').eq('id', user.id).single().then(({ data }) => {
+                    if (data?.full_name) {
+                        setUserName(data.full_name.split(' ')[0]); // Use first name
+                    }
+                });
+            }
         });
     }, []);
 
@@ -284,18 +292,18 @@ export default function AsistentePage() {
                 if (data.messages && data.messages.length > 0) {
                     setMessages(data.messages);
                 } else {
-                    // Welcome message
+                    // Welcome message (Jarvis Style)
                     setMessages([{
                         id: 'welcome',
                         role: 'assistant',
-                        content: `¡Hola! 👋 Soy tu Asistente WRITI IA.\n\nEstoy conectado al Cerebro IA de tu proyecto **${activeProject?.name || 'activo'}** y puedo ayudarte con:\n\n💡 **Ideas de contenido** virales para tu nicho\n📋 **Títulos y copys** que generan engagement\n🎬 **Guiones completos** para Reels, TikTok y YouTube\n📅 **Planificación** de tu calendario de contenido\n\n¿Por dónde empezamos hoy?`,
+                        content: `¡Hola${userName ? ' ' + userName : ''}! 👋 Soy **WRITI JARVIS**, tu estratega personal.\n\nHe cargado todo el contexto del proyecto **${activeProject?.name || 'activo'}** y estoy listo para ayudarte a escalar tu contenido.\n\n¿En qué nos enfocamos hoy?\n💡 **Ideas virales** alineadas a tu nicho\n📋 **Títulos y copys** que detengan el scroll\n🎬 **Guiones** con estructura de retención\n📅 **Planificación** estratégica del mes`,
                         timestamp: new Date().toISOString()
                     }]);
                 }
                 setHistoryLoaded(true);
             })
             .catch(() => setHistoryLoaded(true));
-    }, [userId, activeProject?.id]);
+    }, [userId, activeProject?.id, userName]);
 
     // Auto-scroll
     useEffect(() => {
@@ -337,7 +345,8 @@ export default function AsistentePage() {
                     userId,
                     projectId: activeProject?.id || null,
                     messages: apiMessages,
-                    mode
+                    mode,
+                    userName
                 })
             });
 
