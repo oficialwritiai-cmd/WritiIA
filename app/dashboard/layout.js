@@ -61,7 +61,7 @@ export default function DashboardLayout({ children }) {
 
         const checkAuth = async () => {
             if (!isMounted) return;
-            setLoadingStatus('Verificando sesiÃƒÂ³n...');
+            setLoadingStatus('Verificando sesión...');
 
             try {
                 // Short timeout for the initial session check - increased speed
@@ -278,13 +278,13 @@ export default function DashboardLayout({ children }) {
                             className="btn-primary"
                             style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)' }}
                         >
-                            Ã¢Å¡Â¡ FORZAR ENTRADA AL DASHBOARD
+                            ⚠️ FORZAR ENTRADA AL DASHBOARD
                         </button>
                         <button
                             onClick={() => window.location.reload(true)}
                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px 20px', borderRadius: '12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
                         >
-                            LIMPIAR CACHÃƒâ€° Y RECARGAR
+                            LIMPIAR CACHÉ Y RECARGAR
                         </button>
                     </div>
                 </div>
@@ -325,8 +325,8 @@ export default function DashboardLayout({ children }) {
         { href: '/dashboard/library', icon: BookOpen, label: 'Biblioteca' },
         { href: '/dashboard/knowledge', icon: Brain, label: 'Cerebro IA' },
         { href: '/dashboard/calendar', icon: CalendarDays, label: 'Calendario' },
-        { href: '/dashboard/stats', icon: BarChart2, label: 'MÃƒÂ©tricas' },
-        { href: '/dashboard/settings', icon: Settings, label: 'ConfiguraciÃƒÂ³n' },
+        { href: '/dashboard/stats', icon: BarChart2, label: 'Métricas' },
+        { href: '/dashboard/settings', icon: Settings, label: 'Configuración' },
     ];
 
     return (
@@ -394,7 +394,7 @@ export default function DashboardLayout({ children }) {
                     <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '24px' }}>
                         <button
                             onClick={handleLogout}
-                            onMouseEnter={() => setHoveredItem('Cerrar sesiÃƒÂ³n')}
+                            onMouseEnter={() => setHoveredItem('Cerrar sesión')}
                             onMouseLeave={() => setHoveredItem(null)}
                             style={{
                                 position: 'relative',
@@ -411,7 +411,7 @@ export default function DashboardLayout({ children }) {
                             }}
                         >
                             <LogOut size={22} />
-                            {hoveredItem === 'Cerrar sesiÃƒÂ³n' && (
+                            {hoveredItem === 'Cerrar sesión' && (
                                 <div style={{
                                     position: 'absolute',
                                     left: '60px',
@@ -543,7 +543,7 @@ export default function DashboardLayout({ children }) {
                                     }}
                                 >
                                     <LogOut size={20} />
-                                    Cerrar sesiÃƒÂ³n
+                                    Cerrar sesión
                                 </button>
                             </aside>
                         </div>
@@ -578,7 +578,7 @@ export default function DashboardLayout({ children }) {
                                     className="user-profile-badge"
                                     title="Mi Cuenta"
                                 >
-                                    <span style={{ fontSize: '0.75rem' }}>ðŸ‘¤</span>
+                                    <span style={{ fontSize: '0.75rem' }}>👤</span>
                                     <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.8.4</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
@@ -618,10 +618,10 @@ export default function DashboardLayout({ children }) {
                                                 <User size={16} /> Perfil
                                             </Link>
                                             <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
-                                                <SettingsIcon size={16} /> ConfiguraciÃ³n
+                                                <SettingsIcon size={16} /> Configuración
                                             </Link>
                                             <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ff4d4d', background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left' }} className="menu-item-hover">
-                                                <LogOutIcon size={16} /> Cerrar sesiÃ³n
+                                                <LogOutIcon size={16} /> Cerrar sesión
                                             </button>
                                         </div>
                                     </>
@@ -643,6 +643,7 @@ export default function DashboardLayout({ children }) {
                                         borderRadius: '100px',
                                         border: '1px solid rgba(255,255,255,0.1)',
                                         cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
                                         flexShrink: 0
                                     }}
                                 >
@@ -700,8 +701,9 @@ export default function DashboardLayout({ children }) {
                                 <span style={{ fontSize: '0.9rem' }}>💎</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
-                                        {profile?.plan === 'pro' ? 'MEMBRESÃƒÂA PRO' : 'PRUEBA GRATUITA'}
+                                        {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'PRUEBA GRATUITA'}
                                     </span>
+                                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600 }}>
                                         {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : 'Cargando...'}
                                     </span>
                                 </div>
@@ -781,7 +783,7 @@ export default function DashboardLayout({ children }) {
                                                         style={{ background: 'none', border: 'none', color: 'white', fontSize: '1rem', width: '100%', outline: 'none' }}
                                                     />
                                                 </div>
-                                                <p style={{ margin: '16px 0 0', fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>Buscador global en desarrollo. PrÃƒÂ³ximamente integrado.</p>
+                                                <p style={{ margin: '16px 0 0', fontSize: '0.8rem', color: '#666', textAlign: 'center' }}>Buscador global en desarrollo. Próximamente integrado.</p>
                                             </div>
                                         </>
                                     )}
@@ -790,7 +792,7 @@ export default function DashboardLayout({ children }) {
                                 <Link
                                     href="/dashboard/settings"
                                     style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}
-                                    title="ConfiguraciÃƒÂ³n"
+                                    title="Configuración"
                                 >
                                     <SettingsIcon size={20} />
                                 </Link>
@@ -818,14 +820,14 @@ export default function DashboardLayout({ children }) {
                                 background: '#1a1a1a', borderRadius: '24px', padding: '40px', maxWidth: '480px', width: '90%',
                                 border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center'
                             }} onClick={e => e.stopPropagation()}>
-                                <div style={{ fontSize: '4rem', marginBottom: '16px' }}>Ã°Å¸â€â€™</div>
+                                <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🔄</div>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px', color: 'white' }}>
                                     Activa WRITI
                                 </h2>
                                 <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
-                                    Necesitas crÃƒÂ©ditos o un plan activo para usar las funciones de IA.
+                                    Necesitas créditos o un plan activo para usar las funciones de IA.
                                     {profile?.is_trial_active && daysRemaining > 0 && (
-                                        <><br /><span style={{ color: '#9D00FF' }}>Ã‚Â¡Tienes {daysRemaining} dÃƒÂ­as de prueba gratis!</span></>
+                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {daysRemaining} días de prueba gratis!</span></>
                                     )}
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -834,14 +836,14 @@ export default function DashboardLayout({ children }) {
                                         className="btn-primary"
                                         style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
                                     >
-                                        Ã°Å¸Å½Â¯ Elegir Plan Pro
+                                        🎯 Elegir Plan Pro
                                     </button>
                                     <button
                                         onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}
                                         className="btn-secondary"
                                         style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
                                     >
-                                        Ã°Å¸Âªâ„¢ Depositar CrÃƒÂ©ditos
+                                        💎 Depositar Créditos
                                     </button>
                                 </div>
                                 <button
@@ -857,8 +859,8 @@ export default function DashboardLayout({ children }) {
                         <SuccessModal
                             isOpen={isPaymentSuccessModalOpen}
                             onClose={() => setIsPaymentSuccessModalOpen(false)}
-                            title="Ã‚Â¡CrÃƒÂ©ditos AÃƒÂ±adidos! Ã°Å¸Âªâ„¢"
-                            message={`Has adquirido ${purchasedCredits} crÃƒÂ©ditos correctamente. Ya puedes seguir generando contenido sin lÃƒÂ­mites.`}
+                            title="¡Créditos Añadidos! 💎"
+                            message={`Has adquirido ${purchasedCredits} créditos correctamente. Ya puedes seguir generando contenido sin límites.`}
                             actionLabel="Ver mi Saldo"
                             actionOnClick={() => {
                                 setIsPaymentSuccessModalOpen(false);
