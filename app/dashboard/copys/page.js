@@ -385,7 +385,7 @@ export default function CopysPage() {
             
             <div style={{ textAlign: 'center' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '16px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
-                    Títulos y Copys IA <span style={{ fontSize: '0.8rem', verticalAlign: 'middle', padding: '4px 8px', borderRadius: '8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', marginLeft: '10px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.9.1</span>
+                    Títulos y Copys IA <span style={{ fontSize: '0.8rem', verticalAlign: 'middle', padding: '4px 8px', borderRadius: '8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', marginLeft: '10px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.9.2</span>
                 </h1>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6' }}>
                     Genera múltiples variaciones y ajústalas a tu gusto con el nuevo **Chat de Refinamiento** integrado en cada resultado.

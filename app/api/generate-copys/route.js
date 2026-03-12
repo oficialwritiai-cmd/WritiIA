@@ -113,7 +113,7 @@ Objetivo: ${goal || 'Engagement'}
 
 Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
 
-        let result;
+        let result = null;
         let rawContent = '';
         try {
             const haikuRes = await generateIdeasWithHaiku({
@@ -121,25 +121,30 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
                 systemPrompt,
                 userMessage,
             });
-            result = haikuRes.parsed;
             rawContent = haikuRes.content || '';
-
-            // --- LOCAL ROBUST EXTRACTION (v2.8.6) ---
-            // If the library gave us the "default" fallback or something missing keys,
-            // we try to extract JSON ourselves from the raw text.
-            try {
-                const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const localParsed = JSON.parse(jsonMatch[0].trim());
-                    // If this local parse has our specific keys, it's better than the library's "fix"
-                    if (localParsed.titles || localParsed.hooks || localParsed.descriptions || 
-                        localParsed.titulos || localParsed.ganchos || localParsed.descripciones) {
-                        result = localParsed;
-                        console.log('[Copys IA] Local extraction succeeded and preferred.');
+            
+            // --- NUCLEAR JSON EXTRACTION (v2.9.2) ---
+            // We ignore the library's 'parsed' field because it forces a different schema.
+            const extractJSON = (text) => {
+                try {
+                    // Try to find the LARGEST JSON object in the text
+                    const firstBrace = text.indexOf('{');
+                    const lastBrace = text.lastIndexOf('}');
+                    if (firstBrace !== -1 && lastBrace !== -1) {
+                        const jsonStr = text.substring(firstBrace, lastBrace + 1);
+                        return JSON.parse(jsonStr);
                     }
+                } catch (e) {
+                    console.error('[Copys IA] Primary extraction failed:', e.message);
                 }
-            } catch (localErr) {
-                console.warn('[Copys IA] Local JSON extraction attempt failed:', localErr.message);
+                return null;
+            };
+
+            result = extractJSON(rawContent);
+
+            // If primary failed, try to pick up the library's version but sanitize it
+            if (!result && haikuRes.parsed) {
+                result = Array.isArray(haikuRes.parsed) ? haikuRes.parsed[0] : haikuRes.parsed;
             }
 
         } catch (genErr) {
@@ -148,24 +153,53 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
         }
 
         if (!result) {
-            return NextResponse.json({ error: 'La IA devolvió un formato vacío. Por favor intenta de nuevo.' }, { status: 500 });
+            return NextResponse.json({ error: 'La IA devolvió un formato vacío o ilegible. Reintenta por favor.' }, { status: 500 });
         }
 
-        // Handle case where Anthropic library might wrap the single object in an array
-        if (Array.isArray(result)) {
-            result = result[0];
-        }
+        // --- DEEP NORMALIZATION ---
+        // Some AI responses might be nested like { result: { titles: ... } } or { data: { ... } }
+        const deepResult = result.result || result.data || result.content || result;
 
-        // --- HARDENING & NORMALIZATION ---
-        // Map Spanish keys back to English if the AI got confused,
-        // and ALSO handle the "Idea Bank" fallback keys just in case.
         const normalized = {
-            titles: result.titles || result.titulos || (result.titulo_angulo ? [result.titulo_angulo] : []),
-            hooks: result.hooks || result.ganchos || (result.gancho ? [result.gancho] : []),
-            descriptions: result.descriptions || result.descripciones || (Array.isArray(result.desarrollo) ? result.desarrollo : (result.desarrollo ? [result.desarrollo] : [])),
-            hashtags_groups: result.hashtags_groups || result.hashtags || [],
-            youtube_tags: result.youtube_tags || result.youtubeTags || []
+            titles: deepResult.titles || deepResult.titulos || (deepResult.titulo_angulo ? [deepResult.titulo_angulo] : []),
+            hooks: deepResult.hooks || deepResult.ganchos || (deepResult.gancho ? [deepResult.gancho] : []),
+            descriptions: deepResult.descriptions || deepResult.descripciones || (Array.isArray(deepResult.desarrollo) ? deepResult.desarrollo : (deepResult.desarrollo ? [deepResult.desarrollo] : [])),
+            hashtags_groups: deepResult.hashtags_groups || deepResult.hashtags || [],
+            youtube_tags: deepResult.youtube_tags || deepResult.youtubeTags || []
         };
+
+        // SAFETY: If the AI puts all JSON as a string inside a field (happens with some library fallbacks)
+        const isJsonString = (str) => typeof str === 'string' && (str.startsWith('{') || str.startsWith('['));
+        
+        if (normalized.descriptions.length === 1 && isJsonString(normalized.descriptions[0])) {
+            console.log('[Copys IA] Detected JSON string inside description, re-parsing...');
+            const nested = extractJSON(normalized.descriptions[0]);
+            if (nested) {
+                normalized.titles = nested.titles || nested.titulos || normalized.titles;
+                normalized.hooks = nested.hooks || nested.ganchos || normalized.hooks;
+                normalized.descriptions = nested.descriptions || nested.descripciones || (Array.isArray(nested.desarrollo) ? nested.desarrollo : []);
+            }
+        }
+
+        // Final list cleaner
+        const cleanList = (list) => {
+            if (!Array.isArray(list)) return [];
+            return list.map(item => {
+                if (typeof item === 'string') return item.trim();
+                if (Array.isArray(item)) return item.join(' ').trim();
+                return String(item);
+            }).filter(i => i && i.length > 3 && !i.startsWith('{'));
+        };
+
+        normalized.titles = cleanList(normalized.titles);
+        normalized.hooks = cleanList(normalized.hooks);
+        normalized.descriptions = cleanList(normalized.descriptions);
+        normalized.youtube_tags = cleanList(normalized.youtube_tags);
+
+        // Map hashtags specifically
+        normalized.hashtags_groups = Array.isArray(normalized.hashtags_groups) 
+            ? normalized.hashtags_groups.map(group => Array.isArray(group) ? group : [group])
+            : [];
 
         // Check if we have at least SOME content
         const hasContent = normalized.titles.length > 0 || 
@@ -173,16 +207,9 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
                           normalized.descriptions.length > 0;
 
         if (!hasContent) {
-            console.error('[Copys IA] No valid content in normalized result:', result);
+            console.error('[Copys IA] No valid content after normalization:', result);
             return NextResponse.json({ error: 'La IA devolvió un formato inválido. Por favor intenta de nuevo.' }, { status: 500 });
         }
-
-        // v2.8.6: Force clean strings
-        const cleanList = (list) => Array.isArray(list) ? list.filter(i => i && typeof i === 'string' && i.length > 2) : [];
-        normalized.titles = cleanList(normalized.titles);
-        normalized.hooks = cleanList(normalized.hooks);
-        normalized.descriptions = cleanList(normalized.descriptions);
-        normalized.youtube_tags = cleanList(normalized.youtube_tags);
 
         // Add to stats
         if (projectId) {
