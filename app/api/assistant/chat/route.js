@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { chargeCredits } from '@/lib/credits';
+import { improveBlockWithHaiku } from '@/lib/anthropic';
 
 export const maxDuration = 60;
 
@@ -44,68 +45,52 @@ export async function POST(req) {
 - Tono y Valores: ${brain.values_tone || 'No configurado'}
 - Palabras clave de estilo: ${brain.style_words || 'No configurado'}
 - Base de conocimiento: ${(brain.knowledge_raw || '').substring(0, 1500)}
-=============================` : '\n(No hay Cerebro IA configurado para este proyecto aún)';
+=============================` : '\n(Sin Cerebro IA configurado. Ve a la sección Cerebro IA para entrenarlo.)';
 
         const modeContext = mode ? `\nModo activo: ${mode}. Enfoca tu ayuda en esto.` : '';
 
-        const systemPrompt = `Eres el Asistente IA oficial de WRITI.AI — la herramienta de marketing y creación de contenido más avanzada.
+        const systemPrompt = `Eres el Asistente IA oficial de WRITI.AI — herramienta de marketing y creación de contenido.
 
-Eres un experto en:
-- Marketing digital y copywriting de respuesta directa
-- Creación de guiones virales para Reels, TikTok, YouTube Shorts y YouTube
-- Títulos y copys que generan engagement y retención
-- Estrategia de contenido y planificación de calendarios editoriales
-- Storytelling y narrativas que conectan con audiencias
+Eres experto en: marketing digital, copywriting, guiones virales para Reels/TikTok/YouTube, títulos y copys de alto engagement, estrategia de contenido y storytelling.
 
-IDIOMA: Responde SIEMPRE en el mismo idioma del usuario. Si el usuario escribe en español, responde en español.
+IDIOMA: Responde SIEMPRE en el mismo idioma del usuario (normalmente español).
 ${brainContext}${modeContext}
 
 REGLAS:
-1. Adapta SIEMPRE tus respuestas al Cerebro IA del proyecto — usa su tono, estilo, audiencia y nicho.
-2. Sé concreto, útil y accionable. Sin respuestas vagas o genéricas.
-3. Cuando generes ideas, títulos, copys o guiones:
-   - Ofrece 3-5 opciones cuando sea pertinente.
-   - Usa formato legible con emojis y saltos de línea claros.
-4. Si el usuario no tiene Cerebro IA, sugiere configurarlo en la sección "Cerebro IA".
-5. Eres cercano, motivador y profesional — como un estratega de contenido personal experto.`;
+1. Adapta tus respuestas al Cerebro IA del proyecto: usa su tono, estilo, audiencia y nicho.
+2. Sé concreto, útil y accionable. Sin respuestas vagas.
+3. Al generar ideas, títulos, copys o guiones: ofrece 3-5 opciones con formato claro (emojis + saltos de línea).
+4. Eres cercano, motivador y profesional — como un estratega de contenido personal.`;
 
-        // Use direct fetch like lib/anthropic.js does internally
-        const cleanApiKey = (process.env.ANTHROPIC_API_KEY || '').replace(/['"\\s]/g, '').trim();
+        // Build conversation history (last 10 messages)
+        const historyMessages = (messages || []).slice(-10);
 
-        // Build message history (last 10 turns)
-        const historyMessages = (messages || []).slice(-10).map(m => ({
-            role: m.role,
-            content: m.content
-        }));
+        // The last message is the current user message
+        const lastMsg = historyMessages[historyMessages.length - 1];
+        const userMessage = lastMsg?.content || '';
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': cleanApiKey,
-                'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-                model: 'claude-3-5-haiku-20241022',
-                max_tokens: 1500,
-                system: systemPrompt,
-                messages: historyMessages
-            })
+        // Previous turns as context string
+        const previousContext = historyMessages.slice(0, -1).map(m =>
+            `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`
+        ).join('\n\n');
+
+        const fullUserMessage = previousContext
+            ? `[Conversación previa]\n${previousContext}\n\n[Mensaje actual del usuario]\n${userMessage}`
+            : userMessage;
+
+        // Use the existing lib/anthropic helper (handles API key correctly)
+        const { content } = await improveBlockWithHaiku({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            systemPrompt,
+            userMessage: fullUserMessage,
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error('[assistant/chat] Anthropic error:', errText);
-            throw new Error('Error conectando con la IA');
-        }
-
-        const data = await response.json();
-        const reply = data.content?.[0]?.text || 'No pude generar respuesta. Intenta de nuevo.';
+        const reply = content || 'No pude generar respuesta. Intenta de nuevo.';
 
         return NextResponse.json({ reply });
 
     } catch (error) {
-        console.error('[assistant/chat] Error:', error);
+        console.error('[assistant/chat] Error:', error?.message || error);
         return NextResponse.json({
             error: 'Tuvimos un problema al conectar con la IA. Intenta de nuevo en unos segundos.'
         }, { status: 500 });
