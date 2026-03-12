@@ -22,5 +22,25 @@
             "destination": "https://www.writi-ai.com/$1",
             "permanent": true
         }
+    ],
+    "headers": [
+        {
+            "source": "/dashboard/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+                }
+            ]
+        }
     ]
 }

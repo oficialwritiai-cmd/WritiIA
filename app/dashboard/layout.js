@@ -259,7 +259,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.7.2)
+                    {loadingStatus} (v2.7.3)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -430,7 +430,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.7.2
+                            v2.7.3
                         </div>
                     </div>
                 </aside>
@@ -571,8 +571,8 @@ export default function DashboardLayout({ children }) {
                                     className="user-profile-badge"
                                     title="Mi Cuenta"
                                 >
-                                    <span style={{ fontSize: '0.9rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.7.2</span>
+                                    <span style={{ fontSize: '0.75rem' }}>👤</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.7.3</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -678,7 +678,28 @@ export default function DashboardLayout({ children }) {
                                 <span style={{ color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FF4D4D', fontWeight: 800, fontSize: '0.9rem' }}>
                                     {profile?.credits_balance || 0}
                                 </span>
-                                <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', fontWeight: 600 }}>CRÉDITOS</span>
+                            </div>
+                            
+                            {/* Membership Status Badge */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: 'rgba(126, 206, 202, 0.05)',
+                                padding: '8px 16px',
+                                borderRadius: '100px',
+                                border: '1px solid rgba(126, 206, 202, 0.2)',
+                                flexShrink: 0
+                            }}>
+                                <span style={{ fontSize: '0.9rem' }}>💎</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                                    <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                                        {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'PRUEBA GRATUITA'}
+                                    </span>
+                                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600 }}>
+                                        {daysRemaining !== null ? `${daysRemaining} días restantes` : 'Cargando...'}
+                                    </span>
+                                </div>
                             </div>
 
                             <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }}></div>
