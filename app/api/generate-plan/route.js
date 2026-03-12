@@ -35,7 +35,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { description, platforms, frequency, focus, userId, selectedIdeas, projectId } = validation.data;
+        const { description, platforms, frequency, focus, userId, selectedIdeas, projectId, postCount } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Credit Check & Charge (3 credits)

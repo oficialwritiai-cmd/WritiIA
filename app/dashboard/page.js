@@ -29,9 +29,8 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 12) Bump to v2.7.6 - Unblocked Credits RPC + Unified Balance
-// Forced cache refresh for deployment v2.7.6
-export const VERSION = 'v2.7.6';
+// 14) Bump to v2.7.8 - Force refresh for Batch Generation & Plan Fix
+export const VERSION = 'v2.7.8';
 
 
 
@@ -714,17 +713,17 @@ export default function DashboardPage() {
             return;
         }
 
-        // Pre-check credits: 5 (plan) + postCount (for each script)
+        // Pre-check credits: only 3 for the plan itself (scripts generated separately)
         let postCount = 12;
         if (planFrequency === '4 publicaciones por semana') postCount = 16;
         if (planFrequency === '5 publicaciones por semana') postCount = 20;
         if (planFrequency === '7 publicaciones por semana') postCount = 28;
 
-        const totalCost = 5 + postCount;
+        const planCost = 3;
         const available = aiCredits.total - aiCredits.used;
 
-        if (available < totalCost) {
-            setError(`Créditos insuficientes. Necesitas ${totalCost} créditos (5 para el plan + ${postCount} para los guiones) y tienes ${available}.`);
+        if (available < planCost) {
+            setError(`Créditos insuficientes. Necesitas ${planCost} créditos para generar el plan y tienes ${available}.`);
             return;
         }
 
@@ -779,48 +778,131 @@ export default function DashboardPage() {
 
             setPlanSlots(slotsWithDates);
 
+            // Update scheduled dates in DB
             for (const slot of slotsWithDates) {
                 await supabase.from('content_slots').update({
                     scheduled_date: slot.scheduled_date
                 }).eq('id', slot.id);
             }
 
+            // Show plan immediately - scripts are generated separately
             setStep(3);
-            setIsGeneratingMassive(true);
-            setGenerationProgress({ current: 0, total: slotsWithDates.length, status: 'Iniciando generación masiva...' });
-
-            const slotsWithScripts = [];
-            for (let i = 0; i < slotsWithDates.length; i++) {
-                const slot = slotsWithDates[i];
-                setGenerationProgress({ current: i + 1, total: slotsWithDates.length, status: `Generando guion ${i + 1} de ${slotsWithDates.length}: ${slot.idea_title}` });
-
-                try {
-                    const result = await handleGenerateSlotScript(slot, true);
-                    slotsWithScripts.push({
-                        ...slot,
-                        has_script: !!result,
-                        script_id: result?.script?.id || null,
-                        script_data: result?.script_data || null
-                    });
-                } catch (e) {
-                    console.error(`Error generating script for slot ${slot.id}:`, e);
-                    slotsWithScripts.push({ ...slot, has_script: false, script_id: null, script_data: null });
-                }
-            }
-
-            setPlanSlots(slotsWithScripts);
-            // Initially select all slots
-            setSelectedSlots(new Set(slotsWithScripts.map(s => s.id)));
-            setIsGeneratingMassive(false);
-            setGenerationProgress({ current: slotsWithScripts.length, total: slotsWithScripts.length, status: '¡Plan generado! Revisa y confirma para sincronizar.' });
-
+            // Select all slots by default
+            setSelectedSlots(new Set(slotsWithDates.map(s => s.id)));
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
+
+            // Refresh credits in header
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
+            fetchCredits(profile.id);
 
         } catch (err) {
             setError(err.message);
             setStep(1);
         }
     }
+
+    // ── BATCH: Analizar y Planificar ──
+    const handleBatchGenerateScripts = async () => {
+        const slotsToProcess = planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script);
+        if (slotsToProcess.length === 0) {
+            alert('No hay ideas sin guión para generar. Selecciona ideas que aún no tengan guión.');
+            return;
+        }
+
+        // Credit check
+        const available = aiCredits.total - aiCredits.used;
+        const estimatedCost = slotsToProcess.length; // 1 credit per script
+        if (available < estimatedCost) {
+            setError(`Créditos insuficientes. Necesitas ~${estimatedCost} créditos para ${slotsToProcess.length} guiones y tienes ${available}.`);
+            return;
+        }
+
+        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas? Esto usará ~${estimatedCost} créditos.`)) return;
+
+        setIsGeneratingMassive(true);
+        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando generación masiva...' });
+
+        let successCount = 0;
+
+        for (let i = 0; i < slotsToProcess.length; i++) {
+            const slot = slotsToProcess[i];
+            setGenerationProgress({
+                current: i + 1,
+                total: slotsToProcess.length,
+                status: `Generando guión ${i + 1} de ${slotsToProcess.length}: ${slot.idea_title}`
+            });
+
+            try {
+                const result = await handleGenerateSlotScript(slot, true);
+                if (result) {
+                    successCount++;
+                    // Also save to library
+                    const scriptData = result.script_data;
+                    if (scriptData) {
+                        try {
+                            await saveToLibrary({
+                                userId: profile.id,
+                                type: 'guion',
+                                platform: slot.platform || 'General',
+                                goal: slot.goal || 'engagement',
+                                titulo: slot.idea_title || 'Guión del Plan',
+                                script_full_text: `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || ''}`,
+                                content: {
+                                    video_duration: videoDuration || '60 seg',
+                                    hook: scriptData.hook || '',
+                                    desarrollo: scriptData.desarrollo || [],
+                                    cierre: scriptData.cierre || '',
+                                    cta: scriptData.cta || '',
+                                    copy_post: scriptData.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                                },
+                                tags: ['guion', slot.platform, 'plan-mensual'].filter(Boolean),
+                                projectId: activeProject?.id
+                            });
+                        } catch (libErr) {
+                            console.error('Error saving to library:', libErr);
+                        }
+                    }
+
+                    // Create calendar event
+                    if (slot.scheduled_date) {
+                        try {
+                            await supabase.from('calendar_events').insert({
+                                user_id: profile.id,
+                                project_id: activeProject?.id,
+                                title: slot.idea_title || 'Guión Planificado',
+                                description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
+                                event_date: slot.scheduled_date,
+                                type: slot.content_type || 'guion',
+                                platform: slot.platform,
+                                has_script: true,
+                                script_full_text: scriptData ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || ''}` : null,
+                                content: scriptData || { hook: slot.idea_title, desarrollo: [], cta: '' }
+                            });
+                        } catch (calErr) {
+                            console.error('Error creating calendar event:', calErr);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(`Error generating script for slot ${slot.id}:`, e);
+            }
+        }
+
+        setIsGeneratingMassive(false);
+        setGenerationProgress({
+            current: slotsToProcess.length,
+            total: slotsToProcess.length,
+            status: `¡Completado! ${successCount} de ${slotsToProcess.length} guiones generados.`
+        });
+
+        // Refresh credits
+        window.dispatchEvent(new CustomEvent('refresh-profile'));
+        fetchCredits(profile.id);
+
+        if (successCount > 0) {
+            alert(`✅ ¡${successCount} guiones generados, guardados en biblioteca y añadidos al calendario!`);
+        }
+    };
 
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
 
@@ -2375,11 +2457,11 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.5.7</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.7.7</span>
                                 </h2>
-                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y sincroniza con tu calendario.</p>
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y genera guiones automáticamente.</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {selectedSlots.size > 0 && (
                                     <button
                                         onClick={handleBulkDelete}
@@ -2390,13 +2472,28 @@ export default function DashboardPage() {
                                     </button>
                                 )}
                                 <button
+                                    onClick={handleBatchGenerateScripts}
+                                    disabled={isGeneratingMassive || selectedSlots.size === 0}
+                                    className="btn-primary"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        background: 'linear-gradient(135deg, #7ECECA, #4db8b2)',
+                                        opacity: (isGeneratingMassive || selectedSlots.size === 0) ? 0.7 : 1,
+                                        fontWeight: 800,
+                                        boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)'
+                                    }}
+                                >
+                                    {isGeneratingMassive ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                                    {isGeneratingMassive ? 'Generando...' : `Analizar y Planificar (${planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script).length})`}
+                                </button>
+                                <button
                                     onClick={handleConfirmAndSync}
                                     disabled={sendingToCalendar || selectedSlots.size === 0}
-                                    className="btn-primary"
+                                    className="btn-secondary"
                                     style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
                                 >
                                     {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                                    {sendingToCalendar ? 'Sincronizando...' : `Confirmar y Sincronizar (${selectedSlots.size})`}
+                                    {sendingToCalendar ? 'Sincronizando...' : `Sincronizar Calendario (${selectedSlots.size})`}
                                 </button>
                                 <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
                             </div>
