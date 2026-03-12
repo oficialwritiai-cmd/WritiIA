@@ -35,10 +35,13 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, type, context, instruction, userId, projectId } = validation.data;
+        const { text, texts, type, context, instruction, userId, projectId } = validation.data;
+        const inputTexts = texts || (Array.isArray(text) ? text : [text]);
+        const isBulk = inputTexts.length > 1 || ['titles', 'hooks', 'descriptions', 'hashtags_groups'].includes(type);
+
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        // Charge Credits (1 credit)
+        // Charge Credits (1 credit per call)
         const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
@@ -47,25 +50,53 @@ export async function POST(request) {
         const systemPrompt = `PROMPT INTERNO – REFINAMIENTO Y EDICIÓN EXPERTA
         
 Rol de la IA:
-Eres un copywriter y estratega de marketing digital de nivel senior. Tu tarea es editar y mejorar un fragmento específico de contenido social (${type}).
+Eres un copywriter y estratega de marketing digital de nivel senior. Tu tarea es editar y mejorar contenido social.
 
-idioma: ESPAÑOL (Responde SIEMPRE en español, sin excepciones).
+idioma: ESPAÑOL (Responde SIEMPRE en español).
 
 REGLAS DE ORO:
-1. FIDELIDAD ABSOLUTA: No inventes datos, resultados o estadísticas que no estén en el texto original o en el contexto del proyecto.
-2. CUMPLIMIENTO EXPLÍCITO: Si el usuario da una instrucción específica ("hazlo más polémico", "menciona X", "enfócate en el proceso"), debes cumplirla de forma PRIORITARIA.
-3. TONO ESTRATÉGICO: Inyecta autoridad y claridad. Si el texto habla de un proceso incipiente, mantén el tono de "estoy empezando" o "vlog de progreso".
-4. BREVEDAD: Responde EXCLUSIVAMENTE con el nuevo texto refinado en español. Sin comentarios ni comillas.
+1. FIDELIDAD TOTAL AL TEMA: No inventes hechos, resultados ni datos que no estén en el texto original o en el contexto.
+2. CUMPLIMIENTO EXPLÍCITO: Tu prioridad es aplicar el cambio solicitado por el usuario: "${instruction || 'Mejora general'}".
+3. TONO ESTRATÉGICO: Mantén la autoridad y el enfoque persuasivo.
+4. FORMATO DE SALIDA:
+   - Si recibes una lista de textos, responde ÚNICAMENTE con un array JSON de strings: ["Refinado 1", "Refinado 2", ...].
+   - Si recibes un solo texto, responde ÚNICAMENTE con el texto refinado (sin comillas, sin intro).
 
-Mandato actual: ${instruction && instruction.trim() ? instruction : 'Mejora la efectividad y el impacto del texto.'}`;
+REGLA CRÍTICA: Responde SOLO con el contenido refinado (o el array JSON si es bulk).`;
 
-        const { content: refinedText } = await improveBlockWithHaiku({
+        const userMessage = isBulk 
+            ? `Por favor refina esta lista de ${type} siguiendo el mandato: "${instruction}":\n${JSON.stringify(inputTexts)}`
+            : `Refina este ${type} siguiendo el mandato: "${instruction}":\n"${inputTexts[0]}"`;
+
+        const { content: rawRefined } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
-            userMessage: `Texto original del ${type}: "${text}"`,
+            userMessage,
         });
 
-        return NextResponse.json({ refinedText: refinedText.trim() });
+        let finalResult = rawRefined.trim();
+        
+        // Clean up potential AI artifacts like markdown code blocks
+        if (finalResult.startsWith('```json')) finalResult = finalResult.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+        else if (finalResult.startsWith('```')) finalResult = finalResult.replace(/^```\n?/, '').replace(/\n?```$/, '');
+
+        // If bulk, try to parse it
+        if (isBulk) {
+            try {
+                const parsed = JSON.parse(finalResult);
+                return NextResponse.json({ refinedText: parsed });
+            } catch (e) {
+                // If it failed to parse as JSON but we wanted bulk, maybe it returned line by line
+                const lines = finalResult.split('\n').filter(l => l.trim().length > 2);
+                if (lines.length === inputTexts.length) {
+                    return NextResponse.json({ refinedText: lines });
+                }
+                // Fallback: return the raw result if we can't parse it
+                return NextResponse.json({ refinedText: finalResult });
+            }
+        }
+
+        return NextResponse.json({ refinedText: finalResult });
 
     } catch (err) {
         console.error('[refine] Error:', err?.message);

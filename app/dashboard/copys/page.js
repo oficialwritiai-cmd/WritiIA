@@ -376,6 +376,67 @@ export default function CopysPage() {
                         );
                     })}
                 </div>
+
+                {/* Bulk Refine Chat v2.9.5 */}
+                {items.length > 1 && (
+                    <div style={{ 
+                        marginTop: '12px',
+                        background: 'rgba(157, 0, 255, 0.05)', 
+                        padding: '24px', 
+                        borderRadius: '20px', 
+                        border: '1px solid rgba(157, 0, 255, 0.1)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#B066FF', fontSize: '0.85rem', fontWeight: 700 }}>
+                            <Sparkles size={16} /> Refinar Todo el Grupo de {title}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <input 
+                                type="text"
+                                placeholder={`Ej: Mejora todos los ${type} para que sean más curiosos...`}
+                                value={globalRefineInstructions[type] || ''}
+                                onChange={e => setGlobalRefineInstructions(prev => ({...prev, [type]: e.target.value}))}
+                                onKeyDown={e => e.key === 'Enter' && handleBulkRefine(type)}
+                                style={{ 
+                                    flex: 1,
+                                    background: 'rgba(0,0,0,0.3)', 
+                                    border: '1px solid rgba(255,255,255,0.05)', 
+                                    borderRadius: '12px', 
+                                    padding: '12px 16px', 
+                                    color: 'white', 
+                                    fontSize: '0.9rem', 
+                                    outline: 'none'
+                                }}
+                            />
+                            <button 
+                                onClick={() => handleBulkRefine(type)} 
+                                disabled={isBulkRefining === type || !globalRefineInstructions[type]?.trim()}
+                                style={{ 
+                                    padding: '12px 24px',
+                                    borderRadius: '12px',
+                                    background: isBulkRefining === type ? 'rgba(255,255,255,0.05)' : '#9D00FF',
+                                    color: 'white',
+                                    border: 'none',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: '0.2s'
+                                }}
+                            >
+                                {isBulkRefining === type ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                                <span>{isBulkRefining === type ? 'Mejorando...' : 'Cambiar Todos'}</span>
+                            </button>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#888', fontStyle: 'italic' }}>
+                            * Esto modificará los {items.length} elementos de esta sección a la vez. Consume 1 crédito.
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
@@ -385,7 +446,7 @@ export default function CopysPage() {
             
             <div style={{ textAlign: 'center' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '16px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
-                    Títulos y Copys IA <span style={{ fontSize: '0.8rem', verticalAlign: 'middle', padding: '4px 8px', borderRadius: '8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', marginLeft: '10px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.9.4</span>
+                    Títulos y Copys IA <span style={{ fontSize: '0.8rem', verticalAlign: 'middle', padding: '4px 8px', borderRadius: '8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', marginLeft: '10px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.9.5</span>
                 </h1>
                 <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6' }}>
                     Genera múltiples variaciones y ajústalas a tu gusto con el nuevo **Chat de Refinamiento** integrado en cada resultado.
