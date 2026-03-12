@@ -63,7 +63,7 @@ ${brandContextString}
 
 Tu objetivo es generar variaciones de TÍTULOS, GANCHOS (Hooks), DESCRIPCIONES (Copys) y HASHTAGS a partir de un texto base o guion proporcionado por el usuario.
 
-Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
+Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura ESTRICTA. No incluyas markdown, saludos ni explicaciones, solo el JSON puro.
 {
   "titulos": ["título 1", "título 2", "título 3", "título 4", "título 5"],
   "ganchos": ["gancho 1", "gancho 2", "gancho 3", "gancho 4", "gancho 5"],
@@ -75,10 +75,10 @@ Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
 }
 
 REGLAS ESTRICTAS:
-- Los "titulos" deben ser ultra-llamativos y cortos.
-- Los "ganchos" deben captar la atención en los primeros 3 segundos.
-- Las "descripciones" deben acompañar el post (copy), incluir llamadas a la acción (CTA) y emojis.
-- Los "hashtags" deben ser 2 o 3 arreglos de hashtags reales y categorizados, no inventados al azar.`;
+- DEBES generar EXACTAMENTE 5 "titulos" ultra-llamativos y cortos.
+- DEBES generar EXACTAMENTE 5 "ganchos" que capten la atención en los primeros 3 segundos.
+- DEBES generar EXACTAMENTE 3 "descripciones" largas, con llamadas a la acción (CTA) y emojis.
+- DEBES generar EXACTAMENTE 2 arreglos de "hashtags" reales y categorizados, no inventados al azar.`;
 
         const userMessage = `
 TEXTO BASE / GUION / IDEA:
@@ -92,11 +92,22 @@ META PRINCIPAL: ${goal || 'Engagement'}
 Por favor, devuelve el JSON con las variaciones solicitadas basadas en este texto, optimizadas para ${platform} buscando lograr ${goal || 'Engagement'}.
 `;
 
-        const { parsed: result } = await generateIdeasWithHaiku({
-            apiKey: process.env.ANTHROPIC_API_KEY,
-            systemPrompt,
-            userMessage,
-        });
+        let result;
+        try {
+            const haikuRes = await generateIdeasWithHaiku({
+                apiKey: process.env.ANTHROPIC_API_KEY,
+                systemPrompt,
+                userMessage,
+            });
+            result = haikuRes.parsed;
+        } catch (genErr) {
+            console.error('[generate-copys] Gen Error:', genErr);
+            return NextResponse.json({ error: 'La IA no pudo procesar la solicitud. Por favor intenta de nuevo.' }, { status: 500 });
+        }
+
+        if (!result || !result.titulos || !result.ganchos || !result.descripciones) {
+            return NextResponse.json({ error: 'La IA devolvió un formato vacío o inválido. Por favor intenta de nuevo.' }, { status: 500 });
+        }
 
         // Add to stats
         if (projectId) {

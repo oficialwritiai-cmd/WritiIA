@@ -29,8 +29,8 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 14) Bump to v2.7.9 - Fix Batch Generation, Brain IA Context & Calendar UI
-export const VERSION = 'v2.7.9';
+// 15) v2.8.2 - Direct Calendar Save & Improved Copys IA UI
+export const VERSION = 'v2.8.2';
 
 
 
@@ -119,6 +119,7 @@ export default function DashboardPage() {
     const [loadingPresets, setLoadingPresets] = useState(false);
     const [isNamingModalOpen, setIsNamingModalOpen] = useState(false);
     const [newPresetName, setNewPresetName] = useState('');
+    const [sourceEventId, setSourceEventId] = useState(null);
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
@@ -392,6 +393,7 @@ export default function DashboardPage() {
                 if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
+                if (params.get('source_event_id')) setSourceEventId(params.get('source_event_id'));
             }
         }
     }, [supabase, router]);
@@ -460,6 +462,7 @@ export default function DashboardPage() {
                 if (savedPlatform) setPlatform(decodeURIComponent(savedPlatform));
                 if (savedGoal) setGoal(decodeURIComponent(savedGoal));
                 if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
+                if (params.get('source_event_id')) setSourceEventId(params.get('source_event_id'));
 
                 setGenerationMode('single');
                 setWizardStep(3); // Land on Step 3 (Details/Hooks)
@@ -1134,6 +1137,68 @@ export default function DashboardPage() {
         } catch (err) {
             console.error('Error planning script:', err);
             alert('Error al planificar: ' + err.message);
+        } finally {
+            setIsPlanningLoading(false);
+        }
+    };
+    const handleDirectCalendarSave = async (script) => {
+        if (!sourceEventId || !profile?.id) return;
+        setIsPlanningLoading(true);
+
+        try {
+            const fullText = formatFullScript(script);
+
+            // 1. Save to library for permanence
+            const savedItem = await saveToLibrary({
+                userId: profile.id,
+                type: 'guion',
+                platform: script.platform || platform || 'General',
+                goal: script.goal || goal || 'engagement',
+                titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
+                script_full_text: fullText,
+                content: {
+                    video_duration: script.video_duration || '45-60 seg',
+                    hook: script.hook || script.gancho || '',
+                    desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                    cierre: script.cierre || '',
+                    cta: script.cta || '',
+                    copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                },
+                tags: ['guion', script.platform || platform, 'calendario-update'].filter(Boolean),
+                projectId: activeProject?.id
+            });
+
+            // 2. Update existing calendar event
+            const { error: updateErr } = await supabase
+                .from('calendar_events')
+                .update({
+                    has_script: true,
+                    script_full_text: fullText,
+                    title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                    reference_id: savedItem.id,
+                    content: {
+                        video_duration: script.video_duration || '45-60 seg',
+                        hook: script.hook || script.gancho || '',
+                        desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                        cierre: script.cierre || '',
+                        cta: script.cta || '',
+                        copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                    }
+                })
+                .eq('id', sourceEventId);
+
+            if (updateErr) throw updateErr;
+
+            setSuccessModalData({
+                title: '¡Actualizado en el Calendario! ✅',
+                message: `El guion ha sido guardado y vinculado directamente a tu idea del calendario.`,
+                actionLabel: 'Volver al Calendario',
+                actionRedirect: '/dashboard/calendar'
+            });
+            setIsSuccessModalOpen(true);
+        } catch (err) {
+            console.error('Error in handleDirectCalendarSave:', err);
+            alert('Error al guardar en el calendario: ' + err.message);
         } finally {
             setIsPlanningLoading(false);
         }
@@ -2416,8 +2481,8 @@ export default function DashboardPage() {
                                             {
                                                 id: `plan-${i}`,
                                                 icon: <Calendar size={16} />,
-                                                label: 'Planificar Content',
-                                                action: () => handleOpenPlanner(s),
+                                                label: sourceEventId ? 'Guardar en este día del calendario' : 'Planificar Content',
+                                                action: () => sourceEventId ? handleDirectCalendarSave(s) : handleOpenPlanner(s),
                                                 premium: true
                                             },
                                         ].map((btn, bidx) => (

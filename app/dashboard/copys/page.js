@@ -16,6 +16,8 @@ export default function CopysPage() {
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [results, setResults] = useState(null); // { titulos, ganchos, descripciones, hashtags }
+    const [apiError, setApiError] = useState(null);
+    const [credits, setCredits] = useState(null);
     
     // States for refining
     const [refiningTarget, setRefiningTarget] = useState(null); // { type, index }
@@ -32,7 +34,18 @@ export default function CopysPage() {
     useEffect(() => {
         const init = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) setUserId(user.id);
+            if (user) {
+                setUserId(user.id);
+                // Fetch credits logic
+                const { data: profile } = await supabase.from('users_profiles').select('credits_balance').eq('id', user.id).single();
+                if (profile && profile.credits_balance !== null && profile.credits_balance !== undefined) {
+                    setCredits(profile.credits_balance);
+                } else {
+                    const { data: legacy } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
+                    if (legacy) setCredits(legacy.total_credits - legacy.used_credits);
+                    else setCredits(0);
+                }
+            }
         };
         init();
     }, [supabase]);
@@ -50,6 +63,7 @@ export default function CopysPage() {
 
         setIsGenerating(true);
         setResults(null);
+        setApiError(null);
 
         try {
             const res = await fetch('/api/generate-copys', {
@@ -75,9 +89,10 @@ export default function CopysPage() {
             }
 
             setResults(data.result);
+            if (credits !== null) setCredits(prev => Math.max(0, prev - 1));
             showToast('¡Copys generados con éxito!');
         } catch (err) {
-            showToast(err.message || 'Error de conexión', 'error');
+            setApiError(err.message || 'Error de conexión. Fallo en la IA.');
         } finally {
             setIsGenerating(false);
         }
@@ -180,33 +195,36 @@ export default function CopysPage() {
         setIsSaving(true);
         
         try {
-            // Build a structured object for the library
-            const firstTitle = results.titulos[0] || 'Copys Generados';
-            const firstHook = results.ganchos[0] || '';
-            const firstCopy = results.descripciones[0] || '';
+            // Build a COMPACT structured object for the library (taking only the 1st elements)
+            const firstTitle = results.titulos?.[0] || 'Copys Generados';
+            const firstHook = results.ganchos?.[0] || '';
+            const firstCopy = results.descripciones?.[0] || '';
+            const firstHashtags = results.hashtags?.[0] || [];
+            
             const copyPostObj = {
                 titulo: firstTitle,
                 descripcion_larga: firstCopy,
-                hashtags: results.hashtags[0] || []
+                hashtags: firstHashtags
             };
 
-            const fullTextPreview = `IDEA ORIGINAL:\n${baseText}\n\nTÍTULOS GENERADOS:\n${results.titulos.join('\n')}\n\nGANCHOS:\n${results.ganchos.join('\n')}\n\nCOPYS:\n${results.descripciones.join('\n\n')}`;
+            const fullTextPreview = `IDEA ORIGINAL:\n${baseText}\n\nTÍTULO: ${firstTitle}\n\nGANCHO:\n${firstHook}\n\nCOPY:\n${firstCopy}`;
 
             const { error } = await supabase.from('library').insert({
                 user_id: userId,
                 project_id: activeProject?.id,
-                type: 'idea', // Saving as idea / concepts
+                type: 'idea',
                 platform: platform,
                 goal: goal,
                 titulo: `Copys para: ${firstTitle.substring(0, 30)}...`,
                 script_full_text: fullTextPreview,
                 content: {
                     descripcion: baseText,
-                    titulos_sugeridos: results.titulos,
-                    ganchos_sugeridos: results.ganchos,
-                    descripciones_sugeridas: results.descripciones,
-                    hashtags_sugeridos: results.hashtags,
-                    hook: firstHook, // Fallbacks
+                    titulos_sugeridos: [firstTitle], // Compact format
+                    ganchos_sugeridos: [firstHook], 
+                    descripciones_sugeridas: [firstCopy], 
+                    hashtags_sugeridos: [firstHashtags],
+                    variaciones_extra: results, // Keep the rest as background data
+                    hook: firstHook,
                     copy_post: copyPostObj,
                     titulo_angulo: firstTitle
                 },
@@ -343,7 +361,20 @@ export default function CopysPage() {
                         {isGenerating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
                         {isGenerating ? 'Analizando Cerebro IA y generando...' : 'Generar Copys con IA'}
                     </button>
+                    <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.85rem', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <span>⚡ Esta acción pre-calculada consume 1 crédito de IA</span>
+                        {credits !== null && (
+                            <span style={{ padding: '2px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', fontWeight: 700, color: credits > 0 ? '#7ECECA' : '#FF4D4D' }}>Saldo: {credits}</span>
+                        )}
+                    </div>
                 </div>
+
+                {apiError && (
+                    <div style={{ background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.3)', borderRadius: '16px', padding: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                        <p style={{ color: '#FF4D4D', fontWeight: 600, margin: 0 }}>{apiError}</p>
+                        <button onClick={handleGenerate} className="btn-secondary" style={{ padding: '8px 24px' }}>Reintentar</button>
+                    </div>
+                )}
             </div>
 
             {/* Results Section */}
