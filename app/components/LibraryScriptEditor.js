@@ -5,6 +5,7 @@ import { X, Send, Sparkles, Loader2, Save, Copy, CheckCircle2 } from 'lucide-rea
 
 export default function LibraryScriptEditor({ item, onClose, onSave, supabase, userId, projectId }) {
     const [content, setContent] = useState(item.content || {});
+    const [titulo, setTitulo] = useState(item.titulo || item.content?.titulo_angulo || 'Sin título');
     const [saving, setSaving] = useState(false);
     const [refining, setRefining] = useState(null); // 'gancho', 'desarrollo', 'cta', 'copy'
     const [chatInputs, setChatInputs] = useState({});
@@ -81,13 +82,42 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
     const handleLocalSave = async () => {
         setSaving(true);
         try {
+            const updatedContent = { ...content, titulo_angulo: titulo };
+
+            // 1. Update Library DB
             const { error } = await supabase
                 .from('library')
-                .update({ content })
+                .update({ titulo, content: updatedContent })
                 .eq('id', item.id);
 
             if (error) throw error;
-            onSave({ ...item, content });
+
+            // 2. Sync to Calendar Events
+            let calendarText = `GUION:\n\nHOOK: ${updatedContent.gancho || ''}\n\n`;
+            calendarText += `DESARROLLO:\n${Array.isArray(updatedContent.desarrollo) ? updatedContent.desarrollo.join('\\n') : (updatedContent.desarrollo || '')}\n\n`;
+            if (updatedContent.cierre) calendarText += `CIERRE: ${updatedContent.cierre}\n\n`;
+            calendarText += `CTA: ${updatedContent.cta || ''}\n\n`;
+
+            // Adding copies strings for calendar 
+            if (updatedContent.copy_post?.descripcion_larga) {
+                calendarText += `\n--- COPY POST ---\n${updatedContent.copy_post.descripcion_larga}\n`;
+            }
+
+            const { error: calError } = await supabase
+                .from('calendar_events')
+                .update({
+                    title: titulo,
+                    script_full_text: calendarText,
+                    content: updatedContent
+                })
+                .eq('reference_id', item.id);
+
+            if (calError) {
+                console.error('Error syncing to calendar:', calError);
+                // Note: Not throwing to let library save succeed, but ideally we'd want a transaction
+            }
+
+            onSave({ ...item, titulo, content: updatedContent });
             onClose();
         } catch (err) {
             alert('Error al guardar: ' + err.message);
@@ -108,9 +138,17 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
             }}>
                 {/* Header */}
                 <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0 }}>Editor de Guion con IA</h2>
-                        <p style={{ fontSize: '0.85rem', color: '#888' }}>{item.platform} • {item.type}</p>
+                    <div style={{ width: '80%' }}>
+                        <input 
+                            value={titulo}
+                            onChange={(e) => setTitulo(e.target.value)}
+                            style={{ 
+                                fontSize: '1.5rem', fontWeight: 900, color: 'white', margin: 0, 
+                                background: 'transparent', border: 'none', borderBottom: '1px dashed rgba(255,255,255,0.3)',
+                                width: '100%', outline: 'none'
+                            }}
+                        />
+                        <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '8px' }}>{item.platform} • {item.type}</p>
                     </div>
                     <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '10px', borderRadius: '12px', cursor: 'pointer' }}>
                         <X size={20} />
@@ -156,16 +194,30 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
 
                     {/* COPY POST (Optional) */}
                     {content.copy_post && (
-                        <Section 
-                            title="📱 Copy Post / Descripción" 
-                            value={content.copy_post.descripcion_larga || ''} 
-                            onChange={v => handleUpdateCopy('descripcion_larga', v)}
-                            onRefine={() => handleRefine('copy', content.copy_post.descripcion_larga || '')}
-                            instruction={chatInputs['copy'] || ''}
-                            onInstructionChange={v => setChatInputs(prev => ({...prev, copy: v}))}
-                            loading={refining === 'copy'}
-                            isTextarea
-                        />
+                        <>
+                            <Section 
+                                title="📱 Copy Post / Descripción" 
+                                value={content.copy_post.descripcion_larga || ''} 
+                                onChange={v => handleUpdateCopy('descripcion_larga', v)}
+                                onRefine={() => handleRefine('copy', content.copy_post.descripcion_larga || '')}
+                                instruction={chatInputs['copy'] || ''}
+                                onInstructionChange={v => setChatInputs(prev => ({...prev, copy: v}))}
+                                loading={refining === 'copy'}
+                                isTextarea
+                            />
+
+                            {(content.copy_post.hashtags || content.hashtags) && (
+                                <Section 
+                                    title="#️⃣ Hashtags" 
+                                    value={Array.isArray(content.copy_post.hashtags) ? content.copy_post.hashtags.join(' ') : content.copy_post.hashtags || ''} 
+                                    onChange={v => handleUpdateCopy('hashtags', v.split(' ').filter(x => x.trim() !== ''))}
+                                    onRefine={() => handleRefine('hashtags', Array.isArray(content.copy_post.hashtags) ? content.copy_post.hashtags.join(' ') : content.copy_post.hashtags || '')}
+                                    instruction={chatInputs['hashtags'] || ''}
+                                    onInstructionChange={v => setChatInputs(prev => ({...prev, hashtags: v}))}
+                                    loading={refining === 'hashtags'}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
@@ -319,6 +319,7 @@ export default function DashboardLayout({ children }) {
     const navItems = [
         { href: '/dashboard/home', icon: Home, label: 'Inicio' },
         { href: '/dashboard', icon: PenLine, label: 'Nuevo Guión' },
+        { href: '/dashboard/copys', icon: Type, label: 'Copys y Títulos' },
         { href: '/dashboard/estrategia', icon: Target, label: 'Estrategia' },
         { href: '/dashboard/ideas-virales', icon: Sparkles, label: 'Ideas virales' },
         { href: '/dashboard/library', icon: BookOpen, label: 'Biblioteca' },
@@ -436,7 +437,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.7.8
+                            v2.8.0
                         </div>
                     </div>
                 </aside>

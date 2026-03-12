@@ -1,0 +1,391 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createSupabaseClient } from '@/lib/supabase';
+import { Sparkles, Save, Copy, CheckCircle2, Loader2, Send, Download } from 'lucide-react';
+import { useProject } from '@/app/components/ProjectContext';
+
+const PLATFORMS = ['Instagram', 'TikTok', 'LinkedIn', 'YouTube', 'X (Twitter)', 'Facebook'];
+const GOALS = ['Engagement (Comentarios/Likes)', 'Ventas (Conversión)', 'Atracción de Leads', 'Autoridad/Educación', 'Viralidad', 'Storytelling'];
+
+export default function CopysPage() {
+    const [baseText, setBaseText] = useState('');
+    const [platform, setPlatform] = useState('Instagram');
+    const [goal, setGoal] = useState('Engagement (Comentarios/Likes)');
+    
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [results, setResults] = useState(null); // { titulos, ganchos, descripciones, hashtags }
+    
+    // States for refining
+    const [refiningTarget, setRefiningTarget] = useState(null); // { type, index }
+    const [refineInstructions, setRefineInstructions] = useState({});
+    
+    const [toast, setToast] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const supabase = createSupabaseClient();
+    const router = useRouter();
+    const { activeProject } = useProject();
+
+    useEffect(() => {
+        const init = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setUserId(user.id);
+        };
+        init();
+    }, [supabase]);
+
+    const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const handleGenerate = async () => {
+        if (!baseText.trim()) {
+            showToast('Por favor ingresa un guion, idea o tema.', 'error');
+            return;
+        }
+
+        setIsGenerating(true);
+        setResults(null);
+
+        try {
+            const res = await fetch('/api/generate-copys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: baseText,
+                    platform,
+                    goal,
+                    userId,
+                    projectId: activeProject?.id
+                })
+            });
+
+            const data = await res.json();
+            
+            if (!res.ok) {
+                if (data.code === 'NO_CREDITS') {
+                    router.push('/dashboard/credits');
+                    throw new Error(data.error);
+                }
+                throw new Error(data.error || 'Error al generar copys');
+            }
+
+            setResults(data.result);
+            showToast('¡Copys generados con éxito!');
+        } catch (err) {
+            showToast(err.message || 'Error de conexión', 'error');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleRefine = async (type, index) => {
+        const instruction = refineInstructions[`${type}-${index}`] || '';
+        const currentText = type === 'hashtags' ? results[type][index].join(' ') : results[type][index];
+
+        if (!currentText) return;
+
+        setRefiningTarget({ type, index });
+
+        try {
+            // Reusing existing refine API, mapping concepts
+            const res = await fetch('/api/refine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: currentText,
+                    type: type === 'descripciones' ? 'desarrollo' : (type === 'titulos' ? 'titulo' : 'gancho'), 
+                    instruction,
+                    context: `Generando variaciones para ${platform} con objetivo de ${goal}. Texto base original: ${baseText.substring(0, 100)}...`,
+                    userId,
+                    projectId: activeProject?.id
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Error al refinar');
+
+            // Update the results with the new text
+            setResults(prev => {
+                const newRes = { ...prev };
+                if (type === 'hashtags') {
+                    // Primitive split by space for hashtags if AI returned string
+                    newRes[type][index] = data.refinedText.split(' ').filter(h => h.startsWith('#'));
+                } else {
+                    newRes[type][index] = data.refinedText;
+                }
+                return newRes;
+            });
+            
+            // Clear instruction input
+            setRefineInstructions(prev => ({...prev, [`${type}-${index}`]: ''}));
+            showToast('Texto mejorado', 'success');
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            setRefiningTarget(null);
+        }
+    };
+
+    const handleUpdateResultValue = (type, index, value) => {
+        setResults(prev => {
+            const newRes = { ...prev };
+            if (type === 'hashtags') {
+                newRes[type][index] = value.split(' ').filter(h => h.trim() !== '');
+            } else {
+                newRes[type][index] = value;
+            }
+            return newRes;
+        });
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        showToast('Copiado al portapapeles');
+    };
+
+    const copyAll = () => {
+        if (!results) return;
+        let final = `--- TÍTULOS ---\n${results.titulos.join('\n')}\n\n`;
+        final += `--- GANCHOS ---\n${results.ganchos.join('\n')}\n\n`;
+        final += `--- DESCRIPCIONES ---\n${results.descripciones.join('\n\n')}\n\n`;
+        final += `--- HASHTAGS ---\n${results.hashtags.map(set => set.join(' ')).join('\n\n')}`;
+        
+        copyToClipboard(final);
+    };
+
+    const exportToTxt = () => {
+        if (!results) return;
+        let final = `--- TÍTULOS ---\n${results.titulos.join('\n')}\n\n`;
+        final += `--- GANCHOS ---\n${results.ganchos.join('\n')}\n\n`;
+        final += `--- DESCRIPCIONES ---\n${results.descripciones.join('\n\n')}\n\n`;
+        final += `--- HASHTAGS ---\n${results.hashtags.map(set => set.join(' ')).join('\n\n')}`;
+        
+        const blob = new Blob([final], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'copys-generados.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const saveToLibraryAsCopy = async () => {
+        if (!results || isSaving) return;
+        setIsSaving(true);
+        
+        try {
+            // Build a structured object for the library
+            const firstTitle = results.titulos[0] || 'Copys Generados';
+            const firstHook = results.ganchos[0] || '';
+            const firstCopy = results.descripciones[0] || '';
+            const copyPostObj = {
+                titulo: firstTitle,
+                descripcion_larga: firstCopy,
+                hashtags: results.hashtags[0] || []
+            };
+
+            const fullTextPreview = `IDEA ORIGINAL:\n${baseText}\n\nTÍTULOS GENERADOS:\n${results.titulos.join('\n')}\n\nGANCHOS:\n${results.ganchos.join('\n')}\n\nCOPYS:\n${results.descripciones.join('\n\n')}`;
+
+            const { error } = await supabase.from('library').insert({
+                user_id: userId,
+                project_id: activeProject?.id,
+                type: 'idea', // Saving as idea / concepts
+                platform: platform,
+                goal: goal,
+                titulo: `Copys para: ${firstTitle.substring(0, 30)}...`,
+                script_full_text: fullTextPreview,
+                content: {
+                    descripcion: baseText,
+                    titulos_sugeridos: results.titulos,
+                    ganchos_sugeridos: results.ganchos,
+                    descripciones_sugeridas: results.descripciones,
+                    hashtags_sugeridos: results.hashtags,
+                    hook: firstHook, // Fallbacks
+                    copy_post: copyPostObj,
+                    titulo_angulo: firstTitle
+                },
+                tags: ['copys', platform.toLowerCase()],
+                status: 'borrador'
+            });
+
+            if (error) throw error;
+            showToast('Guardado en Biblioteca correctamente');
+        } catch (err) {
+            showToast('Error al guardar en biblioteca', 'error');
+            console.error(err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+
+    const renderBlock = (type, title, items, isTextarea = false) => {
+        if (!items || items.length === 0) return null;
+
+        return (
+            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '24px', padding: '32px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={18} color="#9D00FF" /> {title}
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {items.map((item, index) => {
+                        const isRefining = refiningTarget?.type === type && refiningTarget?.index === index;
+                        const valueStr = type === 'hashtags' && Array.isArray(item) ? item.join(' ') : item;
+
+                        return (
+                            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1 }}>
+                                        {isTextarea ? (
+                                            <textarea 
+                                                value={valueStr}
+                                                onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
+                                                style={{ width: '100%', minHeight: '120px', background: 'transparent', border: 'none', color: '#eee', fontSize: '1rem', lineHeight: '1.6', outline: 'none', resize: 'vertical' }}
+                                            />
+                                        ) : (
+                                            <input 
+                                                value={valueStr}
+                                                onChange={(e) => handleUpdateResultValue(type, index, e.target.value)}
+                                                style={{ width: '100%', background: 'transparent', border: 'none', color: '#eee', fontSize: '1rem', outline: 'none', fontWeight: type === 'titulos' ? 700 : 400 }}
+                                            />
+                                        )}
+                                    </div>
+                                    <button onClick={() => copyToClipboard(valueStr)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '8px', borderRadius: '8px', color: '#aaa', cursor: 'pointer' }} title="Copiar">
+                                        <Copy size={16} />
+                                    </button>
+                                </div>
+                                
+                                {/* Mini Chat Refinement */}
+                                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px', marginTop: '4px' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <Sparkles size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#7ECECA', opacity: 0.6 }} />
+                                        <input 
+                                            type="text"
+                                            placeholder="Instrucción IA (ej: hazlo más polémico...)"
+                                            value={refineInstructions[`${type}-${index}`] || ''}
+                                            onChange={e => setRefineInstructions(prev => ({...prev, [`${type}-${index}`]: e.target.value}))}
+                                            onKeyDown={e => e.key === 'Enter' && handleRefine(type, index)}
+                                            style={{ width: '100%', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)', borderRadius: '12px', padding: '8px 12px 8px 32px', color: 'white', fontSize: '0.85rem', outline: 'none' }}
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={() => handleRefine(type, index)} 
+                                        disabled={isRefining}
+                                        style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', borderRadius: '12px', padding: '0 16px', fontWeight: 800, cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        {isRefining ? <Loader2 className="animate-spin" size={14} /> : <Send size={14} />}
+                                        <span className="hide-mobile">Mejorar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '80px' }}>
+            
+            <div style={{ textAlign: 'center' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '16px', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' }}>
+                    Títulos y Copys IA
+                </h1>
+                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', maxWidth: '700px', margin: '0 auto', lineHeight: '1.6' }}>
+                    Convierte cualquier idea o guion en múltiples variaciones listas para publicar. Generamos títulos virales, ganchos de 3 segundos, descripciones y hashtags.
+                </p>
+            </div>
+
+            {/* Input Section */}
+            <div className="premium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Guion, Idea o Tema Base</label>
+                    <textarea 
+                        className="input-field"
+                        style={{ minHeight: '160px', padding: '20px', fontSize: '1.05rem', resize: 'vertical' }}
+                        placeholder="Pega aquí tu guion o escribe la idea principal de tu contenido. La IA lo usará como base para generar todas las variaciones posibles..."
+                        value={baseText}
+                        onChange={(e) => setBaseText(e.target.value)}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Plataforma Principal</label>
+                        <select className="select-field" value={platform} onChange={e => setPlatform(e.target.value)}>
+                            {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                    </div>
+                    <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Objetivo del Post</label>
+                        <select className="select-field" value={goal} onChange={e => setGoal(e.target.value)}>
+                            {GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: '12px' }}>
+                    <button 
+                        onClick={handleGenerate} 
+                        disabled={isGenerating || !baseText.trim()}
+                        className="btn-primary" 
+                        style={{ width: '100%', padding: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 30px rgba(157, 0, 255, 0.3)' }}
+                    >
+                        {isGenerating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
+                        {isGenerating ? 'Analizando Cerebro IA y generando...' : 'Generar Copys con IA'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Results Section */}
+            {results && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.5s ease' }}>
+                    
+                    {/* Floating Action Bar */}
+                    <div style={{ position: 'sticky', top: '24px', zIndex: 100, background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(20px)', padding: '16px 24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+                        <div style={{ fontWeight: 800, color: 'white' }}>Resultados IA</div>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                            <button onClick={copyAll} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}>
+                                <Copy size={16} /> <span className="hide-mobile">Copiar Todo</span>
+                            </button>
+                            <button onClick={exportToTxt} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px' }}>
+                                <Download size={16} /> <span className="hide-mobile">Exportar TXT</span>
+                            </button>
+                            <button onClick={saveToLibraryAsCopy} disabled={isSaving} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'rgba(126, 206, 202, 0.2)', color: '#7ECECA', border: '1px solid #7ECECA' }}>
+                                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} 
+                                <span className="hide-mobile">Guardar en Biblioteca</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {renderBlock('titulos', 'Opciones de Títulos Virales', results.titulos, false)}
+                    {renderBlock('ganchos', 'Ganchos (Hooks) - Primeros 3 Segundos', results.ganchos, true)}
+                    {renderBlock('descripciones', 'Copys / Descripciones Largas', results.descripciones, true)}
+                    {renderBlock('hashtags', 'Bloques de Hashtags', results.hashtags, false)}
+
+                </div>
+            )}
+
+            {toast && (
+                <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#FF4D4D' : '#7ECECA', color: toast.type === 'error' ? 'white' : 'black', padding: '14px 28px', borderRadius: '50px', fontWeight: 700, boxShadow: '0 15px 40px rgba(0,0,0,0.4)', zIndex: 1000 }}>
+                    {toast.message}
+                </div>
+            )}
+            
+            <style jsx>{`
+                @media (max-width: 600px) {
+                    .hide-mobile { display: none; }
+                }
+            `}</style>
+        </div>
+    );
+}
