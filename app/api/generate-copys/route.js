@@ -28,7 +28,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
         }
 
-        const { text, platform, goal, userId, projectId } = body;
+        const { text, platform, goal, userId, projectId, sections } = body;
 
         if (!text || !platform || !userId) {
             return NextResponse.json({ error: 'Faltan campos requeridos (text, platform, userId).' }, { status: 400 });
@@ -58,6 +58,13 @@ export async function POST(request) {
             brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---\nBiografía: ${brandBrain.biography || 'No especificada'}\nEstilo/Tono: ${brandBrain.style_words || 'No especificado'}\n---------------------------------------\nTodo el texto generado debe estar alineado a esta identidad.`;
         }
 
+        // Checklist filter
+        const wantsTitulos = sections?.titulos !== false;
+        const wantsGanchos = sections?.ganchos !== false;
+        const wantsDescripciones = sections?.descripciones !== false;
+        const wantsHashtags = sections?.hashtags !== false;
+        const wantsYoutubeTags = sections?.youtubeTags === true;
+
         const systemPrompt = `Eres un copywriter experto en redes sociales.
 ${brandContextString}
 
@@ -65,20 +72,20 @@ Tu objetivo es generar variaciones de TÍTULOS, GANCHOS (Hooks), DESCRIPCIONES (
 
 Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura ESTRICTA. No incluyas markdown, saludos ni explicaciones, solo el JSON puro.
 {
-  "titulos": ["título 1", "título 2", "título 3", "título 4", "título 5"],
-  "ganchos": ["gancho 1", "gancho 2", "gancho 3", "gancho 4", "gancho 5"],
-  "descripciones": ["descripción larga 1", "descripción larga 2", "descripción larga 3"],
-  "hashtags": [
-    ["#hash1", "#hash2", "#hash3"],
-    ["#tag1", "#tag2", "#tag3"]
-  ]
+  ${wantsTitulos ? '"titulos": ["título 1", "título 2", "título 3", "título 4", "título 5"],' : ''}
+  ${wantsGanchos ? '"ganchos": ["gancho 1", "gancho 2", "gancho 3", "gancho 4", "gancho 5"],' : ''}
+  ${wantsDescripciones ? '"descripciones": ["descripción larga 1", "descripción larga 2", "descripción larga 3"],' : ''}
+  ${wantsHashtags ? '"hashtags": [["#hash1", "#hash2", "#hash3"], ["#tag1", "#tag2", "#tag3"]],' : ''}
+  ${wantsYoutubeTags ? '"youtubeTags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]' : ''}
 }
+(Asegúrate de que el JSON no tenga comas sobrantes al final si omites campos).
 
 REGLAS ESTRICTAS:
-- DEBES generar EXACTAMENTE 5 "titulos" ultra-llamativos y cortos.
-- DEBES generar EXACTAMENTE 5 "ganchos" que capten la atención en los primeros 3 segundos.
-- DEBES generar EXACTAMENTE 3 "descripciones" largas, con llamadas a la acción (CTA) y emojis.
-- DEBES generar EXACTAMENTE 2 arreglos de "hashtags" reales y categorizados, no inventados al azar.`;
+${wantsTitulos ? '- DEBES generar EXACTAMENTE 5 "titulos" ultra-llamativos y cortos.' : ''}
+${wantsGanchos ? '- DEBES generar EXACTAMENTE 5 "ganchos" que capten la atención en los primeros 3 segundos.' : ''}
+${wantsDescripciones ? '- DEBES generar EXACTAMENTE 3 "descripciones" largas, con llamadas a la acción (CTA) y emojis.' : ''}
+${wantsHashtags ? '- DEBES generar EXACTAMENTE 2 arreglos de "hashtags" reales y categorizados.' : ''}
+${wantsYoutubeTags ? '- DEBES generar EXACTAMENTE 10 etiquetas SEO relevantes para YouTube en el campo "youtubeTags".' : ''}`;
 
         const userMessage = `
 TEXTO BASE / GUION / IDEA:
@@ -105,8 +112,17 @@ Por favor, devuelve el JSON con las variaciones solicitadas basadas en este text
             return NextResponse.json({ error: 'La IA no pudo procesar la solicitud. Por favor intenta de nuevo.' }, { status: 500 });
         }
 
-        if (!result || !result.titulos || !result.ganchos || !result.descripciones) {
-            return NextResponse.json({ error: 'La IA devolvió un formato vacío o inválido. Por favor intenta de nuevo.' }, { status: 500 });
+        if (!result) {
+            return NextResponse.json({ error: 'La IA devolvió un formato vacío. Por favor intenta de nuevo.' }, { status: 500 });
+        }
+
+        // Handle case where Anthropic library might wrap the single object in an array
+        if (Array.isArray(result)) {
+            result = result[0];
+        }
+
+        if (!result.titulos && !result.ganchos && !result.descripciones) {
+            return NextResponse.json({ error: 'La IA devolvió un formato inválido. Por favor intenta de nuevo.' }, { status: 500 });
         }
 
         // Add to stats

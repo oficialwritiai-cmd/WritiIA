@@ -265,7 +265,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.8.2)
+                    {loadingStatus} (v2.8.3)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -437,7 +437,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.8.2
+                            v2.8.3
                         </div>
                     </div>
                 </aside>
@@ -579,7 +579,7 @@ export default function DashboardLayout({ children }) {
                                     title="Mi Cuenta"
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.8.2</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.8.3</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -618,10 +618,10 @@ export default function DashboardLayout({ children }) {
                                                 <User size={16} /> Perfil
                                             </Link>
                                             <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
-                                                <SettingsIcon size={16} /> ConfiguraciÃ³n
+                                                <SettingsIcon size={16} /> Configuración
                                             </Link>
                                             <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ff4d4d', background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left' }} className="menu-item-hover">
-                                                <LogOutIcon size={16} /> Cerrar sesiÃ³n
+                                                <LogOutIcon size={16} /> Cerrar sesión
                                             </button>
                                         </div>
                                     </>
@@ -647,7 +647,7 @@ export default function DashboardLayout({ children }) {
                                         flexShrink: 0
                                     }}
                                 >
-                                    ðŸª™ COMPRAR CRÃ‰DITOS
+                                    💎 COMPRAR CRÉDITOS
                                 </button>
                                 <button
                                     onClick={handleCheckoutPlan}
@@ -681,7 +681,7 @@ export default function DashboardLayout({ children }) {
                                 transition: '0.2s',
                                 flexShrink: 0
                             }}>
-                                <span style={{ fontSize: '1rem' }}>ðŸª™</span>
+                                <span style={{ fontSize: '1rem' }}>💎</span>
                                 <span style={{ color: (profile?.credits_balance || 0) > 0 ? '#7ECECA' : '#FF4D4D', fontWeight: 800, fontSize: '0.9rem' }}>
                                     {profile?.credits_balance || 0}
                                 </span>
@@ -698,13 +698,13 @@ export default function DashboardLayout({ children }) {
                                 border: '1px solid rgba(126, 206, 202, 0.2)',
                                 flexShrink: 0
                             }}>
-                                <span style={{ fontSize: '0.9rem' }}>ðŸ’Ž</span>
+                                <span style={{ fontSize: '0.9rem' }}>💎</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                                         {profile?.plan === 'pro' ? 'MEMBRESÃA PRO' : 'PRUEBA GRATUITA'}
                                     </span>
                                     <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600 }}>
-                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} dÃ­as restantes` : daysRemaining) : 'Cargando...'}
+                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : 'Cargando...'}
                                     </span>
                                 </div>
                             </div>
@@ -742,7 +742,7 @@ export default function DashboardLayout({ children }) {
                                                 </div>
                                                 <div style={{ textAlign: 'center', padding: '20px 0', color: '#666' }}>
                                                     <Bell size={32} style={{ opacity: 0.2, marginBottom: '12px' }} />
-                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>PrÃ³ximamente: Notificaciones en tiempo real.</p>
+                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>Próximamente: Notificaciones en tiempo real.</p>
                                                 </div>
                                             </div>
                                         </>

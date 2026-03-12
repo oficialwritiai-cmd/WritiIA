@@ -13,6 +13,13 @@ export default function CopysPage() {
     const [baseText, setBaseText] = useState('');
     const [platform, setPlatform] = useState('Instagram');
     const [goal, setGoal] = useState('Engagement (Comentarios/Likes)');
+    const [selectedSections, setSelectedSections] = useState({
+        titulos: true,
+        ganchos: true,
+        descripciones: true,
+        hashtags: true,
+        youtubeTags: platform === 'YouTube'
+    });
     
     const [isGenerating, setIsGenerating] = useState(false);
     const [results, setResults] = useState(null); // { titulos, ganchos, descripciones, hashtags }
@@ -74,7 +81,8 @@ export default function CopysPage() {
                     platform,
                     goal,
                     userId,
-                    projectId: activeProject?.id
+                    projectId: activeProject?.id,
+                    sections: selectedSections
                 })
             });
 
@@ -351,10 +359,36 @@ export default function CopysPage() {
                     </div>
                 </div>
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 700, color: '#7ECECA', marginBottom: '4px' }}>¿Qué deseas generar hoy?</label>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        {[
+                            { id: 'titulos', label: 'Títulos Virales' },
+                            { id: 'ganchos', label: 'Ganchos (Hooks)' },
+                            { id: 'descripciones', label: 'Descripciones/Copys' },
+                            { id: 'hashtags', label: 'Hashtags' },
+                            { id: 'youtubeTags', label: 'Etiquetas YouTube', show: platform === 'YouTube' }
+                        ].map(section => {
+                            if (section.show === false) return null;
+                            return (
+                                <label key={section.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#ccc' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedSections[section.id]} 
+                                        onChange={e => setSelectedSections(prev => ({...prev, [section.id]: e.target.checked}))}
+                                        style={{ accentColor: '#7ECECA', width: '18px', height: '18px' }}
+                                    />
+                                    {section.label}
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div style={{ marginTop: '12px' }}>
                     <button 
                         onClick={handleGenerate} 
-                        disabled={isGenerating || !baseText.trim()}
+                        disabled={isGenerating || !baseText.trim() || Object.values(selectedSections).every(v => !v)}
                         className="btn-primary" 
                         style={{ width: '100%', padding: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 30px rgba(157, 0, 255, 0.3)' }}
                     >
@@ -402,6 +436,7 @@ export default function CopysPage() {
                     {renderBlock('ganchos', 'Ganchos (Hooks) - Primeros 3 Segundos', results.ganchos, true)}
                     {renderBlock('descripciones', 'Copys / Descripciones Largas', results.descripciones, true)}
                     {renderBlock('hashtags', 'Bloques de Hashtags', results.hashtags, false)}
+                    {renderBlock('youtubeTags', 'Etiquetas YouTube SEO', results.youtubeTags ? [results.youtubeTags.join(', ')] : null, false)}
 
                 </div>
             )}
