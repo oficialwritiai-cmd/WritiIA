@@ -181,21 +181,22 @@ export default function CopysPage() {
     const copyAll = () => {
         if (!results) return;
         let final = "";
-        if (results.titles) final += `--- TÍTULOS ---\n${results.titles.join('\n')}\n\n`;
-        if (results.hooks) final += `--- GANCHOS ---\n${results.hooks.join('\n')}\n\n`;
-        if (results.descriptions) final += `--- DESCRIPCIONES ---\n${results.descriptions.join('\n\n')}\n\n`;
-        if (results.hashtags_groups) final += `--- HASHTAGS ---\n${results.hashtags_groups.map(set => set.join(' ')).join('\n\n')}\n\n`;
-        if (results.youtube_tags) final += `--- ETIQUETAS YOUTUBE ---\n${results.youtube_tags.join(', ')}`;
+        if (results.titles?.length) final += `--- TÍTULOS ---\n${results.titles.join('\n')}\n\n`;
+        if (results.hooks?.length) final += `--- GANCHOS ---\n${results.hooks.join('\n')}\n\n`;
+        if (results.descriptions?.length) final += `--- DESCRIPCIONES ---\n${results.descriptions.join('\n\n')}\n\n`;
+        if (results.hashtags_groups?.length) final += `--- HASHTAGS ---\n${results.hashtags_groups.map(set => (Array.isArray(set) ? set.join(' ') : set)).join('\n\n')}\n\n`;
+        if (results.youtube_tags?.length) final += `--- ETIQUETAS YOUTUBE ---\n${results.youtube_tags.join(', ')}`;
         
         copyToClipboard(final.trim());
     };
 
     const exportToTxt = () => {
         if (!results) return;
-        let final = `--- TÍTULOS ---\n${results.titulos.join('\n')}\n\n`;
-        final += `--- GANCHOS ---\n${results.ganchos.join('\n')}\n\n`;
-        final += `--- DESCRIPCIONES ---\n${results.descripciones.join('\n\n')}\n\n`;
-        final += `--- HASHTAGS ---\n${results.hashtags.map(set => set.join(' ')).join('\n\n')}`;
+        let final = "";
+        if (results.titles?.length) final += `--- TÍTULOS ---\n${results.titles.join('\n')}\n\n`;
+        if (results.hooks?.length) final += `--- GANCHOS ---\n${results.hooks.join('\n')}\n\n`;
+        if (results.descriptions?.length) final += `--- DESCRIPCIONES ---\n${results.descriptions.join('\n\n')}\n\n`;
+        if (results.hashtags_groups?.length) final += `--- HASHTAGS ---\n${results.hashtags_groups.map(set => (Array.isArray(set) ? set.join(' ') : set)).join('\n\n')}`;
         
         const blob = new Blob([final], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);

@@ -135,7 +135,34 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             result = result[0];
         }
 
-        if (!result.titulos && !result.ganchos && !result.descripciones) {
+        // --- HARDENING & NORMALIZATION ---
+        // Ensure result is always an object
+        if (typeof result === 'string') {
+            try {
+                // Try to extract JSON from string if haikuRes.parsed was just a string
+                const jsonMatch = result.match(/\{[\s\S]*\}/);
+                if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                console.error('[Copys IA] String parse failed:', e);
+            }
+        }
+
+        // Map Spanish keys back to English if the AI got confused
+        const normalized = {
+            titles: result.titles || result.titulos || [],
+            hooks: result.hooks || result.ganchos || [],
+            descriptions: result.descriptions || result.descripciones || [],
+            hashtags_groups: result.hashtags_groups || result.hashtags || [],
+            youtube_tags: result.youtube_tags || result.youtubeTags || []
+        };
+
+        // Check if we have at least SOME content
+        const hasContent = normalized.titles.length > 0 || 
+                          normalized.hooks.length > 0 || 
+                          normalized.descriptions.length > 0;
+
+        if (!hasContent) {
+            console.error('[Copys IA] No valid content in normalized result:', result);
             return NextResponse.json({ error: 'La IA devolvió un formato inválido. Por favor intenta de nuevo.' }, { status: 500 });
         }
 
@@ -144,7 +171,7 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             await supabase.rpc('increment_project_stat', { p_project_id: projectId, p_column: 'hooks_generated', p_amount: 1 });
         }
 
-        return NextResponse.json({ result: result });
+        return NextResponse.json({ result: normalized });
 
     } catch (err) {
         console.error('[generate-copys] Error:', err?.message);
