@@ -141,7 +141,12 @@ export default function CopysPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Error al refinar');
 
-            // Update the results with the new text
+            setResults(prev => {
+                const newRes = { ...prev };
+                if (type === 'hashtags_groups') {
+                    newRes[type][index] = data.refinedText.split(' ').filter(h => h.startsWith('#'));
+                } else {
+                    newRes[type][index] = data.refinedText;
                 }
                 return newRes;
             });
