@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
@@ -319,6 +319,7 @@ export default function DashboardLayout({ children }) {
 
     const navItems = [
         { href: '/dashboard/home', icon: Home, label: 'Inicio' },
+        { href: '/dashboard/asistente', icon: MessageSquare, label: 'Asistente IA', highlight: true },
         { href: '/dashboard', icon: PenLine, label: 'Nuevo Guion' },
         { href: '/dashboard/copys', icon: Type, label: 'Copys IA' },
         { href: '/dashboard/estrategia', icon: Target, label: 'Estrategia' },
@@ -359,13 +360,18 @@ export default function DashboardLayout({ children }) {
                                         width: '48px',
                                         height: '48px',
                                         borderRadius: '12px',
-                                        background: isActive ? 'rgba(126, 206, 202, 0.1)' : 'transparent',
-                                        color: isActive ? '#7ECECA' : '#888888',
+                                        background: isActive ? 'rgba(126, 206, 202, 0.1)' : item.highlight ? 'rgba(126,206,202,0.05)' : 'transparent',
+                                        color: isActive ? '#7ECECA' : item.highlight ? '#7ECECA' : '#888888',
                                         transition: 'all 0.2s ease',
-                                        textDecoration: 'none'
+                                        textDecoration: 'none',
+                                        boxShadow: item.highlight && !isActive ? '0 0 12px rgba(126,206,202,0.15)' : 'none',
+                                        border: item.highlight && !isActive ? '1px solid rgba(126,206,202,0.2)' : 'none',
                                     }}
                                 >
                                     <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                                    {item.highlight && !isActive && (
+                                        <span style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', borderRadius: '50%', background: '#7ECECA', boxShadow: '0 0 5px #7ECECA' }} />
+                                    )}
 
                                     {/* Tooltip */}
                                     {hoveredItem === item.label && (
@@ -580,7 +586,7 @@ export default function DashboardLayout({ children }) {
                                     title="Mi Cuenta"
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v2.9.5</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.0.0</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
