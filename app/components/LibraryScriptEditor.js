@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Send, Sparkles, Loader2, Save, Copy, CheckCircle2 } from 'lucide-react';
 
 export default function LibraryScriptEditor({ item, onClose, onSave, supabase, userId, projectId }) {
@@ -9,6 +9,18 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
     const [refining, setRefining] = useState(null); // 'gancho', 'desarrollo', 'cta', 'copy'
     const [chatInputs, setChatInputs] = useState({});
     const [copied, setCopied] = useState(false);
+
+    // Normalize keys on mount
+    useEffect(() => {
+        if (item.content) {
+            const c = { ...item.content };
+            // If gancho is missing but hook/hook_principal etc exist, normalize it
+            if (!c.gancho) {
+                c.gancho = c.hook || c.hook_principal || c.hookText || c.gancho_principal || '';
+            }
+            setContent(c);
+        }
+    }, [item]);
 
     const handleUpdateContent = (field, value) => {
         setContent(prev => ({ ...prev, [field]: value }));
@@ -23,6 +35,12 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
 
     const handleRefine = async (field, text) => {
         const instruction = chatInputs[field] || '';
+        
+        if (!text || text.trim().length < 5) {
+            alert('El texto es demasiado corto para refinar. Escribe algo más de 5 caracteres.');
+            return;
+        }
+
         setRefining(field);
 
         try {

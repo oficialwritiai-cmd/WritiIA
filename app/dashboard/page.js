@@ -29,9 +29,9 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
-// 11) Bump to v2.7.4 - Library Editor + AI Mini Chat
-// Forced cache refresh for deployment v2.7.4
-export const VERSION = 'v2.7.4';
+// 11) Bump to v2.7.5 - Fixed Library Editor Hook & AI Validation
+// Forced cache refresh for deployment v2.7.5
+export const VERSION = 'v2.7.5';
 
 
 

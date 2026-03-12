@@ -29,6 +29,7 @@ export default function LibraryPage() {
     const [selectedScript, setSelectedScript] = useState(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [scriptToEdit, setScriptToEdit] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
     const [error, setError] = useState('');
 
     const supabase = createSupabaseClient();
@@ -44,7 +45,9 @@ export default function LibraryPage() {
         setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) { router.push('/login'); return; }
+            
+            setCurrentUserId(user.id);
 
             let query = supabase
                 .from('library')
@@ -373,7 +376,7 @@ export default function LibraryPage() {
                         showToast('Guion actualizado correctamente ✓', 'success');
                     }}
                     supabase={supabase}
-                    userId={scripts[0]?.user_id} // Just to get a userId if needed, or better fetch it
+                    userId={currentUserId}
                     projectId={activeProject?.id}
                 />
             )}
