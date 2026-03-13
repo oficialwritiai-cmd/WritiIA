@@ -13,7 +13,16 @@ function getSupabase() {
 }
 
 // Adding GET for easy testing/confirmation that route is live
-export async function GET() {
+export async function GET(req) {
+    const supabase = getSupabase();
+    const url = req.url;
+    const userAgent = req.headers.get('user-agent');
+    
+    await supabase.from('webhook_logs').insert({
+        event_type: 'GET_PING',
+        payload: { url, userAgent, note: 'Check if this is a redirected Stripe POST' }
+    });
+
     return NextResponse.json({ status: 'Online', service: 'Stripe Webhook' });
 }
 
