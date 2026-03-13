@@ -351,7 +351,6 @@ export default function DashboardLayout({ children }) {
         { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
         { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
         { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
-        { href: '/dashboard/ads-plan', icon: Megaphone, label: t('nav.ads_plan') },
         { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
         { href: '/dashboard/ideas-virales', icon: Sparkles, label: t('nav.viral_ideas') },
         { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
