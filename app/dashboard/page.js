@@ -30,7 +30,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 // 17) v2.8.4 - Clean UI Encoding & Professional Prompt
-export const VERSION = 'v2.8.4';
+export const VERSION = 'v3.8.0';
 
 
 
@@ -888,60 +888,21 @@ export default function DashboardPage() {
                                 projectId: activeProject?.id
                             });
                             refId = libraryItem?.id || null;
+                            
+                            // Explicitly update slot to reflect it has a script now
+                            await supabase.from('content_slots').update({
+                                has_script: true,
+                                script_id: result.script?.id,
+                                script_data: scriptData
+                            }).eq('id', slot.id);
+
                         } catch (libErr) {
-                            console.error('Error saving to library:', libErr);
-                        }
-                    }
-
-                    // Create calendar event (check for existing first)
-                    if (slot.scheduled_date) {
-                        try {
-                            // Check if event already exists on this date for this project
-                            const { data: existing } = await supabase
-                                .from('calendar_events')
-                                .select('id')
-                                .eq('user_id', profile.id)
-                                .eq('event_date', slot.scheduled_date)
-                                .eq('title', slot.idea_title)
-                                .maybeSingle();
-
-                            if (!existing) {
-                                const hookVal2 = scriptData?.hook || scriptData?.gancho || '';
-                                const desArr2 = Array.isArray(scriptData?.desarrollo) ? scriptData.desarrollo : [];
-                                const ctaVal2 = scriptData?.cta || scriptData?.cierre || '';
-                                const cpPost2 = scriptData?.copy_post || {};
-                                const htags2 = Array.isArray(cpPost2.hashtags) ? cpPost2.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
-
-                                const calScript = [
-                                    slot.idea_title,
-                                    '', '🎯 GANCHO', hookVal2,
-                                    '', '📝 DESARROLLO', ...desArr2.map((d, idx) => `${idx + 1}. ${d}`),
-                                    '', '🔥 CTA', ctaVal2,
-                                    '', '📱 COPY', cpPost2.titulo || '', cpPost2.descripcion_larga || '',
-                                    htags2 ? `\nHASHTAGS: ${htags2}` : ''
-                                ].filter(l => l !== undefined).join('\n');
-
-                                await supabase.from('calendar_events').insert({
-                                    user_id: profile.id,
-                                    project_id: activeProject?.id,
-                                    title: slot.idea_title || 'Guión Planificado',
-                                    description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
-                                    event_date: slot.scheduled_date,
-                                    type: 'guion',
-                                    platform: slot.platform,
-                                    reference_id: refId,
-                                    has_script: true,
-                                    script_full_text: calScript,
-                                    content: scriptData || { hook: slot.idea_title, desarrollo: [], cta: '' }
-                                });
-                            }
-                        } catch (calErr) {
-                            console.error('Error creating calendar event:', calErr);
+                            console.error('Error saving to library or updating slot:', libErr);
                         }
                     }
                 }
             } catch (e) {
-                console.error(`Error generating script for slot ${slot.id}:`, e);
+                console.error(`[BatchGenerate] Error for slot ${slot.id}:`, e);
             }
         }
 
@@ -1399,6 +1360,7 @@ export default function DashboardPage() {
         }
 
         setSendingToCalendar(true);
+        setGenerationProgress({ current: 0, total: slots.length, status: 'Iniciando sincronización...' });
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1429,19 +1391,44 @@ export default function DashboardPage() {
             }
 
             const eventsToInsert = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Fetch existing events to avoid overlaps
+            const { data: existingEvents } = await supabase
+                .from('calendar_events')
+                .select('event_date')
+                .eq('user_id', user.id)
+                .eq('project_id', activeProject?.id);
+
+            const occupiedDates = new Set(existingEvents?.map(e => e.event_date) || []);
 
             for (let i = 0; i < slots.length; i++) {
                 const slot = slots[i];
+                setGenerationProgress({
+                    current: i + 1,
+                    total: slots.length,
+                    status: `Sincronizando ${i + 1}/${slots.length}: ${slot.idea_title}`
+                });
 
-                let targetDate = slot.scheduled_date;
-                if (!targetDate) {
-                    const slotDate = new Date();
-                    slotDate.setDate(slotDate.getDate() + i + 1);
-                    targetDate = slotDate.toISOString().split('T')[0];
+                let targetDate = slot.scheduled_date ? new Date(slot.scheduled_date + 'T12:00:00') : new Date(today);
+                
+                // Rule 1: No past dates
+                if (targetDate < today) {
+                    targetDate = new Date(today);
                 }
 
-                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                // Rule 2: No duplicates/overlaps (look for next free slot)
+                let dateStr = targetDate.toISOString().split('T')[0];
+                let attempts = 0;
+                while (occupiedDates.has(dateStr) && attempts < 60) {
+                    targetDate.setDate(targetDate.getDate() + 1);
+                    dateStr = targetDate.toISOString().split('T')[0];
+                    attempts++;
+                }
+                occupiedDates.add(dateStr); // Mark as occupied for next slots in loop
 
+                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
                 let refId = slot.id && isValidUUID(slot.id) ? slot.id : null;
 
                 if (!refId) {
@@ -1457,10 +1444,9 @@ export default function DashboardPage() {
                         status: 'planificado'
                     }).select().single();
 
-                    if (savedIdea?.id) {
-                        refId = savedIdea.id;
-                    }
+                    if (savedIdea?.id) refId = savedIdea.id;
                 }
+
                 const sd = slot.script_data;
                 const hookVal = sd?.hook || sd?.gancho || '';
                 const desArr = Array.isArray(sd?.desarrollo) ? sd.desarrollo : [];
@@ -1477,34 +1463,23 @@ export default function DashboardPage() {
                     htags ? `\nHASHTAGS: ${htags}` : ''
                 ].filter(l => l !== undefined).join('\n') : null;
 
-                // Check for duplicates before inserting
-                const { data: existingEvent } = await supabase
-                    .from('calendar_events')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .eq('event_date', targetDate)
-                    .eq('title', slot.idea_title)
-                    .maybeSingle();
-
-                if (!existingEvent) {
-                    eventsToInsert.push({
-                        user_id: user.id,
-                        project_id: activeProject?.id,
-                        title: slot.idea_title || 'Idea Sin Título',
-                        description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
-                        event_date: targetDate,
-                        type: slot.has_script ? 'guion' : (slot.content_type || 'idea'),
-                        platform: slot.platform,
-                        reference_id: refId,
-                        has_script: slot.has_script || false,
-                        script_full_text: calScriptText,
-                        content: sd || {
-                            hook: slot.idea_title,
-                            desarrollo: [slot.goal, slot.content_type],
-                            cta: 'Click aquí'
-                        }
-                    });
-                }
+                eventsToInsert.push({
+                    user_id: user.id,
+                    project_id: activeProject?.id,
+                    title: slot.idea_title || 'Idea Sin Título',
+                    description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
+                    event_date: dateStr,
+                    type: slot.has_script ? 'guion' : (slot.content_type || 'idea'),
+                    platform: slot.platform,
+                    reference_id: refId,
+                    has_script: slot.has_script || false,
+                    script_full_text: calScriptText,
+                    content: sd || {
+                        hook: slot.idea_title,
+                        desarrollo: [slot.goal, slot.content_type],
+                        cta: 'Click aquí'
+                    }
+                });
             }
 
             if (eventsToInsert.length > 0) {
@@ -1516,8 +1491,9 @@ export default function DashboardPage() {
             }
 
             setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
+            setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Sincronización completa!' });
 
-            alert(`✅ Plan enviado al calendario: ${slots.length} eventos creados`);
+            alert(`✅ Plan mensual sincronizado: ${slots.length} ideas con sus guiones y copys añadidos.`);
             router.push('/dashboard/calendar');
 
         } catch (err) {
