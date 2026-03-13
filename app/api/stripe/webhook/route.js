@@ -12,11 +12,17 @@ function getSupabase() {
     );
 }
 
+// Adding GET for easy testing/confirmation that route is live
+export async function GET() {
+    return NextResponse.json({ status: 'Online', service: 'Stripe Webhook' });
+}
+
 export async function POST(req) {
     const payload = await req.text();
     const signature = req.headers.get('stripe-signature');
 
     let event;
+    const supabase = getSupabase();
 
     try {
         event = stripe.webhooks.constructEvent(
@@ -26,10 +32,20 @@ export async function POST(req) {
         );
     } catch (err) {
         console.error('Webhook signature verification failed:', err.message);
+        // Log basic info even if signature fails (to check if we are receiving data)
+        await supabase.from('webhook_logs').insert({
+            event_type: 'SIGNATURE_FAILURE',
+            payload: { message: err.message, hasSignature: !!signature },
+            error: err.message
+        });
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    // Log start of processing
+    const { data: logEntry, error: logErr } = await supabase.from('webhook_logs').insert({
+        event_type: event.type,
+        payload: event.data.object
+    }).select().single();
 
     try {
         switch (event.type) {
@@ -54,8 +70,16 @@ export async function POST(req) {
             default:
                 console.log(`Unhandled event type: ${event.type}`);
         }
+        
+        // Mark as success
+        if (logEntry) {
+            await supabase.from('webhook_logs').update({ error: 'SUCCESS' }).eq('id', logEntry.id);
+        }
     } catch (err) {
         console.error(`Error processing webhook event ${event.type}:`, err);
+        if (logEntry) {
+            await supabase.from('webhook_logs').update({ error: err.message }).eq('id', logEntry.id);
+        }
         return NextResponse.json({ error: 'Webhook processing error' }, { status: 500 });
     }
 
@@ -121,8 +145,22 @@ async function handleCheckoutCompleted(session, supabase) {
     }
 
     if (!userId) {
-        console.warn('[Webhook] CRITICAL: No userId found in session metadata, client_reference_id, or via email lookup. Email was:', userEmail);
+        console.warn('[Webhook] CRITICAL: No userId found. Logging to DB and exiting.');
+        if (logEntry) {
+            await supabase.from('webhook_logs').update({ 
+                error: 'MISSING_USER_ID',
+                payload: { ...session, WARNING: 'No userId found in metadata or email lookup' }
+            }).eq('id', logEntry.id);
+        }
         return;
+    }
+
+    // ENSURE the profile has the stripe_customer_id saved
+    if (customerId) {
+        await supabase
+            .from('users_profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', userId);
     }
 
     // ── PLAN PRO (subscription) ──
