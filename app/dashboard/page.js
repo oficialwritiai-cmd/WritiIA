@@ -10,6 +10,7 @@ import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
+import FormPresets from '@/app/components/FormPresets';
 
 
 
@@ -1767,6 +1768,34 @@ export default function DashboardPage() {
 
             {step === 1 && generationMode === 'single' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
+                    {/* Script Presets */}
+                    <FormPresets
+                        type="script"
+                        getCurrentConfig={() => ({
+                            topic, platform, toneBrand, goal, awareness, quantity, hookType,
+                            intensity, videoDuration, specificDetails, ctaIdea,
+                            experienciaReal, opinionPersonal, faseCreador, victory, opinion, story
+                        })}
+                        onLoadConfig={(c) => {
+                            if (c.topic) setTopic(c.topic);
+                            if (c.platform) setPlatform(c.platform);
+                            if (c.toneBrand) setToneBrand(c.toneBrand);
+                            if (c.goal) setGoal(c.goal);
+                            if (c.awareness) setAwareness(c.awareness);
+                            if (c.quantity) setQuantity(c.quantity);
+                            if (c.hookType) setHookType(c.hookType);
+                            if (c.intensity) setIntensity(c.intensity);
+                            if (c.videoDuration) setVideoDuration(c.videoDuration);
+                            if (c.specificDetails) setSpecificDetails(c.specificDetails);
+                            if (c.ctaIdea) setCtaIdea(c.ctaIdea);
+                            if (c.experienciaReal) setExperienciaReal(c.experienciaReal);
+                            if (c.opinionPersonal) setOpinionPersonal(c.opinionPersonal);
+                            if (c.faseCreador) setFaseCreador(c.faseCreador);
+                            if (c.victory) setVictory(c.victory);
+                            if (c.opinion) setOpinion(c.opinion);
+                            if (c.story) setStory(c.story);
+                        }}
+                    />
                     {/* Wizard Progress */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
                         {[1, 2, 3].map(w => (
@@ -2034,6 +2063,34 @@ export default function DashboardPage() {
             {/* Plan Monthly Mode (v4.0.0) */}
             {step === 1 && generationMode === 'plan' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)', maxWidth: '900px', margin: '0 auto' }}>
+                    {/* Plan Presets */}
+                    <FormPresets
+                        type="plan"
+                        getCurrentConfig={() => ({
+                            businessOffer, ticketPrice, targetAudience, targetAudienceType,
+                            mainPainPoint, monthlyGoals, successMetric, keyThemes, contentStyles,
+                            howNotToSound, brandMantra, planPlatforms, planFrequency, planFocus,
+                            toneBrand, videoDuration
+                        })}
+                        onLoadConfig={(c) => {
+                            if (c.businessOffer) setBusinessOffer(c.businessOffer);
+                            if (c.ticketPrice) setTicketPrice(c.ticketPrice);
+                            if (c.targetAudience) setTargetAudience(c.targetAudience);
+                            if (c.targetAudienceType) setTargetAudienceType(c.targetAudienceType);
+                            if (c.mainPainPoint) setMainPainPoint(c.mainPainPoint);
+                            if (c.monthlyGoals) setMonthlyGoals(c.monthlyGoals);
+                            if (c.successMetric) setSuccessMetric(c.successMetric);
+                            if (c.keyThemes) setKeyThemes(c.keyThemes);
+                            if (c.contentStyles) setContentStyles(c.contentStyles);
+                            if (c.howNotToSound) setHowNotToSound(c.howNotToSound);
+                            if (c.brandMantra) setBrandMantra(c.brandMantra);
+                            if (c.planPlatforms) setPlanPlatforms(c.planPlatforms);
+                            if (c.planFrequency) setPlanFrequency(c.planFrequency);
+                            if (c.planFocus) setPlanFocus(c.planFocus);
+                            if (c.toneBrand) setToneBrand(c.toneBrand);
+                            if (c.videoDuration) setVideoDuration(c.videoDuration);
+                        }}
+                    />
                     {/* Stepper Header */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '40px', gap: '20px' }}>
                         {[1, 2, 3, 4].map(w => (
