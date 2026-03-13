@@ -1643,7 +1643,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle →</button>
                             </div>
                         </div>
@@ -1738,7 +1738,7 @@ export default function DashboardPage() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>
                             </div>
                             {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
@@ -2009,7 +2009,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                     <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
                                 </div>
                                 {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
