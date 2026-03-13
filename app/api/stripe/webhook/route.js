@@ -145,7 +145,7 @@ async function handleCheckoutCompleted(session, supabase) {
             const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
                 email: pending.email,
                 password: pending.password_plan,
-                email_confirm: false // Forces them to confirm via email AFTER paying
+                email_confirm: true // Now that they paid, we confirm the account immediately for better UX
             });
 
             if (authError) {
