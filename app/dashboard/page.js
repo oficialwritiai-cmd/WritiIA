@@ -87,6 +87,8 @@ export default function DashboardPage() {
     const [planWizardStep, setPlanWizardStep] = useState(1);
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
+    const [expandedSlots, setExpandedSlots] = useState(new Set());
+    const [savedPlanSlotIds, setSavedPlanSlotIds] = useState(new Set());
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
     const [recommendedIdeas, setRecommendedIdeas] = useState([]);
     const [loadingRecommended, setLoadingRecommended] = useState(false);
@@ -905,7 +907,10 @@ export default function DashboardPage() {
         fetchCredits(profile.id);
 
         if (successCount > 0) {
-            alert(`✅ ¡${successCount} guiones generados, guardados en biblioteca y añadidos al calendario!`);
+            // Auto-expand all generated slots to show full scripts
+            const newExpanded = new Set(expandedSlots);
+            slotsToProcess.forEach(s => newExpanded.add(s.id));
+            setExpandedSlots(newExpanded);
         }
     };
 
@@ -2592,79 +2597,277 @@ export default function DashboardPage() {
                         )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {Array.isArray(planSlots) && planSlots.map((slot, i) => (
+                            {Array.isArray(planSlots) && planSlots.map((slot, i) => {
+                                const isExpanded = expandedSlots.has(slot.id);
+                                const sd = slot.script_data;
+                                const isSaved = savedPlanSlotIds.has(slot.id);
+                                const hookText = sd?.hook || sd?.gancho || '';
+                                const desarrolloArr = Array.isArray(sd?.desarrollo) ? sd.desarrollo : [];
+                                const ctaText = sd?.cta || sd?.cierre || '';
+                                const copyPost = sd?.copy_post || {};
+                                const hashtagsArr = Array.isArray(copyPost.hashtags) ? copyPost.hashtags : [];
+
+                                const handleSavePlanSlot = async () => {
+                                    if (!sd || isSaved) return;
+                                    try {
+                                        await saveScript({
+                                            titulo_guion: slot.idea_title,
+                                            hook: hookText,
+                                            gancho: hookText,
+                                            desarrollo: desarrolloArr,
+                                            cta: ctaText,
+                                            cierre: ctaText,
+                                            copy_post: copyPost,
+                                            platform: slot.platform,
+                                            goal: slot.goal
+                                        }, true);
+                                        setSavedPlanSlotIds(prev => new Set([...prev, slot.id]));
+                                    } catch (e) {
+                                        console.error('Error saving plan slot:', e);
+                                    }
+                                };
+
+                                const handleCopyPlanSlot = () => {
+                                    if (!sd) return;
+                                    const text = `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${hookText}\n\nDESARROLLO:\n${desarrolloArr.map((d, idx) => `${idx + 1}. ${d}`).join('\n')}\n\nCTA:\n${ctaText}\n\nCOPY POST:\n${copyPost.titulo || ''}\n${copyPost.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtagsArr.map(h => h.startsWith('#') ? h : '#' + h).join(' ')}`;
+                                    navigator.clipboard.writeText(text);
+                                };
+
+                                const toggleExpand = () => {
+                                    const newSet = new Set(expandedSlots);
+                                    if (isExpanded) newSet.delete(slot.id);
+                                    else newSet.add(slot.id);
+                                    setExpandedSlots(newSet);
+                                };
+
+                                return (
                                 <div
                                     key={slot.id}
                                     className="premium-card plan-slot-card"
-                                    onMouseDown={() => handleSlotMouseDown(slot.id)}
-                                    onMouseEnter={() => handleSlotMouseEnter(slot.id)}
-                                    onContextMenu={(e) => handleContextMenu(e, slot.id)}
                                     style={{
-                                        padding: '24px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
                                         border: selectedSlots.has(slot.id) ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
-                                        background: selectedSlots.has(slot.id) ? 'rgba(126, 206, 202, 0.05)' : 'transparent',
+                                        background: selectedSlots.has(slot.id) ? 'rgba(126, 206, 202, 0.03)' : 'transparent',
                                         opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
                                         transition: '0.2s',
-                                        cursor: 'pointer',
-                                        userSelect: 'none'
+                                        overflow: 'hidden'
                                     }}
                                 >
-                                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flex: 1 }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedSlots.has(slot.id)}
-                                            onChange={() => handleToggleSlotSelection(slot.id)}
-                                            style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#7ECECA' }}
-                                        />
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', minWidth: '60px', height: '60px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase' }}>DÃA</span>
-                                            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{slot.day_number}</span>
-                                        </div>
-
-                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{slot.platform}</span>
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}> Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
-                                                {slot.has_script && (
-                                                    <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid #00ff00' }}>✓ Guión Listo</span>
-                                                )}
-                                            </div>
-                                            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', marginTop: '4px' }}>{slot.idea_title}</h4>
-                                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Enfoque: {slot.content_type}</p>
-                                        </div>
-
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px', paddingLeft: '24px', borderLeft: '1px solid rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                            <Calendar size={14} color="var(--text-secondary)" />
+                                    {/* Header row */}
+                                    <div
+                                        onMouseDown={() => handleSlotMouseDown(slot.id)}
+                                        onMouseEnter={() => handleSlotMouseEnter(slot.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, slot.id)}
+                                        style={{
+                                            padding: '20px 24px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }}>
                                             <input
-                                                type="date"
-                                                value={slot.scheduled_date || ''}
-                                                onChange={(e) => handleScheduleSlot(slot.id, e.target.value)}
-                                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', colorScheme: 'dark' }}
+                                                type="checkbox"
+                                                checked={selectedSlots.has(slot.id)}
+                                                onChange={() => handleToggleSlotSelection(slot.id)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#7ECECA', flexShrink: 0 }}
                                             />
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(126, 206, 202, 0.08)', borderRadius: '12px', minWidth: '56px', height: '56px', flexShrink: 0 }}>
+                                                <span style={{ fontSize: '0.65rem', color: '#7ECECA', fontWeight: 800, textTransform: 'uppercase' }}>DÍA</span>
+                                                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{slot.day_number}</span>
+                                            </div>
+
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                    <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', fontSize: '0.7rem', padding: '3px 10px' }}>{slot.platform}</span>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
+                                                    {slot.has_script && (
+                                                        <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid rgba(0,255,0,0.3)', fontSize: '0.65rem', padding: '2px 8px' }}>✓ Guión Listo</span>
+                                                    )}
+                                                </div>
+                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>{slot.idea_title}</h4>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Enfoque: {slot.content_type}</p>
+                                            </div>
                                         </div>
-                                        {!slot.has_script ? (
-                                            <button
-                                                onClick={() => handleGenerateSlotScript(slot)}
-                                                disabled={generatingSlotId === slot.id}
-                                                className="btn-primary"
-                                                style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1 }}
-                                            >
-                                                {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
-                                            </button>
-                                        ) : (
-                                            <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem' }}>
-                                                Ver Calendario →
-                                            </button>
-                                        )}
+
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Calendar size={14} color="var(--text-secondary)" />
+                                                <input
+                                                    type="date"
+                                                    value={slot.scheduled_date || ''}
+                                                    onChange={(e) => handleScheduleSlot(slot.id, e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', colorScheme: 'dark' }}
+                                                />
+                                            </div>
+                                            {!slot.has_script ? (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleGenerateSlotScript(slot); }}
+                                                    disabled={generatingSlotId === slot.id}
+                                                    className="btn-primary"
+                                                    style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1, whiteSpace: 'nowrap' }}
+                                                >
+                                                    {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generando...</> : <><Sparkles size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generar Guión</>}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
+                                                    className="btn-secondary"
+                                                    style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                >
+                                                    <BookOpen size={14} />
+                                                    {isExpanded ? 'Ocultar Guión' : 'Ver Guión'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {/* Expanded Script Content */}
+                                    {isExpanded && slot.has_script && sd && (
+                                        <div style={{ padding: '0 24px 24px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+                                                {/* Left Column: Script */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                    {/* Hook */}
+                                                    <div style={{ background: 'rgba(255, 215, 0, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255, 215, 0, 0.15)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                                            <span style={{ fontSize: '1rem' }}>🎯</span>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gancho / Hook</span>
+                                                        </div>
+                                                        <p style={{ fontSize: '0.9rem', color: 'white', lineHeight: '1.6', margin: 0, fontWeight: 600 }}>{hookText || 'Sin gancho'}</p>
+                                                    </div>
+
+                                                    {/* Desarrollo */}
+                                                    <div style={{ background: 'rgba(126, 206, 202, 0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(126, 206, 202, 0.1)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                                            <span style={{ fontSize: '1rem' }}>📝</span>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Desarrollo</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            {desarrolloArr.length > 0 ? desarrolloArr.map((punto, pidx) => (
+                                                                <div key={pidx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                                                    <span style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}>{pidx + 1}</span>
+                                                                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5', margin: 0 }}>{punto}</p>
+                                                                </div>
+                                                            )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Sin desarrollo</p>}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* CTA */}
+                                                    <div style={{ background: 'rgba(255, 77, 77, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255, 77, 77, 0.15)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                                            <span style={{ fontSize: '1rem' }}>🔥</span>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FF4D4D', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CTA / Cierre</span>
+                                                        </div>
+                                                        <p style={{ fontSize: '0.9rem', color: 'white', lineHeight: '1.6', margin: 0, fontWeight: 600 }}>{ctaText || 'Sin CTA'}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right Column: Copy Post */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                    <div style={{ background: 'rgba(157, 0, 255, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(157, 0, 255, 0.15)', flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                                            <span style={{ fontSize: '1rem' }}>📱</span>
+                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#9D00FF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Copy para Post</span>
+                                                        </div>
+                                                        {copyPost.titulo && (
+                                                            <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', marginBottom: '8px' }}>{copyPost.titulo}</p>
+                                                        )}
+                                                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', marginBottom: '12px', whiteSpace: 'pre-wrap' }}>
+                                                            {copyPost.descripcion_larga || 'Sin descripción'}
+                                                        </p>
+                                                        {hashtagsArr.length > 0 && (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                                {hashtagsArr.map((tag, tidx) => (
+                                                                    <span key={tidx} style={{ fontSize: '0.7rem', padding: '3px 10px', background: 'rgba(157, 0, 255, 0.1)', color: '#9D00FF', borderRadius: '100px', border: '1px solid rgba(157, 0, 255, 0.2)', fontWeight: 600 }}>
+                                                                        #{tag.replace(/^#/, '')}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        <button
+                                                            onClick={handleSavePlanSlot}
+                                                            disabled={isSaved}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '14px 20px',
+                                                                fontSize: '0.9rem',
+                                                                fontWeight: 800,
+                                                                borderRadius: '12px',
+                                                                border: 'none',
+                                                                cursor: isSaved ? 'default' : 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '8px',
+                                                                background: isSaved ? 'rgba(0,255,0,0.1)' : 'var(--accent-gradient)',
+                                                                color: isSaved ? '#00ff00' : 'black',
+                                                                boxShadow: isSaved ? 'none' : '0 0 20px rgba(126, 206, 202, 0.3)',
+                                                                transition: '0.2s'
+                                                            }}
+                                                        >
+                                                            {isSaved ? <><CheckCircle2 size={18} /> Guardado en Biblioteca</> : <><Bookmark size={18} /> Guardar en Biblioteca</>}
+                                                        </button>
+                                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                                            <button
+                                                                onClick={handleCopyPlanSlot}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '10px 16px',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 700,
+                                                                    borderRadius: '10px',
+                                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                                    background: 'rgba(255,255,255,0.03)',
+                                                                    color: 'rgba(255,255,255,0.8)',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: '6px',
+                                                                    transition: '0.2s'
+                                                                }}
+                                                            >
+                                                                <Copy size={14} /> Copiar Todo
+                                                            </button>
+                                                            <button
+                                                                onClick={() => router.push('/dashboard/calendar')}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '10px 16px',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 700,
+                                                                    borderRadius: '10px',
+                                                                    border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                    background: 'rgba(126, 206, 202, 0.05)',
+                                                                    color: '#7ECECA',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: '6px',
+                                                                    transition: '0.2s'
+                                                                }}
+                                                            >
+                                                                <Calendar size={14} /> Ver Calendario
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )
