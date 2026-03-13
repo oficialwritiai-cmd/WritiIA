@@ -20,7 +20,7 @@ const SUGGESTED_TRENDS = [
 ];
 
 const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'X', 'YouTube Shorts', 'YouTube', 'Instagram'];
-const TONOS_MARCA = ['brutal honesto', 'elegante', 'polÃ©mico', 'cercano', 'experto', 'profesional'];
+const TONOS_MARCA = ['brutal honesto', 'elegante', 'polémico', 'cercano', 'experto', 'profesional'];
 const OBJETIVOS = ['atraer leads', 'autoridad', 'venta directa', 'engagement', 'storytelling', 'educar'];
 const AWARENESS_LEVELS = ['no te conoce', 'tibia', 'muy caliente'];
 const HOOK_TYPES = ['historia personal', 'pain fuerte', 'contraintuitivo', 'prueba social', 'curiosidad extrema'];
@@ -191,7 +191,7 @@ export default function DashboardPage() {
 
     const handleBulkDelete = async () => {
         if (selectedSlots.size === 0) return;
-        if (!confirm(`Â¿EstÃ¡s seguro de eliminar ${selectedSlots.size} ideas?`)) return;
+        if (!confirm(`¿Estás seguro de eliminar ${selectedSlots.size} ideas?`)) return;
 
         try {
             const idsToDelete = Array.from(selectedSlots);
@@ -213,7 +213,7 @@ export default function DashboardPage() {
             return;
         }
         await handleSendPlanToCalendar(slotsToSync);
-        alert('Â¡Calendario sincronizado con Ã©xito! âœ“');
+        alert('¡Calendario sincronizado con éxito! ✓');
         // Optionally move to calendar or stay
     };
 
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                 }
             });
             if (error) throw error;
-            alert('âœ… Preajuste guardado');
+            alert('✅ Preajuste guardado');
             setIsNamingModalOpen(false);
             setNewPresetName('');
             fetchPresets(user.id);
@@ -343,7 +343,7 @@ export default function DashboardPage() {
 
     const singleLoadingSteps = [
         "Leyendo tu Cerebro IA...",
-        "Buscando Ã¡ngulos interesantes...",
+        "Buscando ángulos interesantes...",
         "Redactando ganchos de alto impacto...",
         "Afinando CTA y desarrollo...",
     ];
@@ -352,8 +352,8 @@ export default function DashboardPage() {
         "Leyendo tu Cerebro IA...",
         "Analizando tu objetivo mensual...",
         "Distribuyendo temas por semanas...",
-        "Asignando plataformas y Ã¡ngulos...",
-        "Generando estructura de 30 dÃ­as..."
+        "Asignando plataformas y ángulos...",
+        "Generando estructura de 30 días..."
     ];
 
     const loadingSteps = generationMode === 'single' ? singleLoadingSteps : planLoadingSteps;
@@ -418,7 +418,7 @@ export default function DashboardPage() {
                     userId: profile.id,
                     projectId: activeProject.id,
                     proactive: true,
-                    context: 'GeneraciÃ³n proactiva basada en cerebro' // Dummy context for validation
+                    context: 'Generación proactiva basada en cerebro' // Dummy context for validation
                 })
             });
             const data = await res.json();
@@ -494,7 +494,7 @@ export default function DashboardPage() {
         console.log('[Dashboard] handleGenerateSingle called', { topic, platform, goal, hasBrain, wizardStep });
 
         if (!topic?.trim()) {
-            setError('Por favor, indica sobre quÃ© quieres crear contenido.');
+            setError('Por favor, indica sobre qué quieres crear contenido.');
             return;
         }
 
@@ -555,7 +555,7 @@ export default function DashboardPage() {
             const data = await res.json();
             console.log('[Dashboard] Response:', data);
 
-            if (!res.ok) throw new Error(data.error || 'No se pudo generar los guiones. IntÃ©ntalo de nuevo en unos minutos.');
+            if (!res.ok) throw new Error(data.error || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
 
             console.log('[Dashboard] handleGenerateSingle - data:', data);
 
@@ -573,7 +573,7 @@ export default function DashboardPage() {
 
             const finalScripts = generatedScripts.map(s => ({
                 ...s,
-                titulo_guion: s.titulo_guion || s.titulo_interno || 'Sin tÃ­tulo',
+                titulo_guion: s.titulo_guion || s.titulo_interno || 'Sin título',
                 video_duration: s.video_duration || '45-60 seg',
                 desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [],
                 cierre: s.cierre || '',
@@ -586,8 +586,7 @@ export default function DashboardPage() {
             window.dispatchEvent(new CustomEvent('refresh-profile'));
             fetchCredits(profile.id);
         } catch (err) {
-            console.error('Error real en generaciÃ³n:', err);
-            setError(err.message || 'No se pudo generar los guiones. IntÃ©ntalo de nuevo en unos minutos.');
+            setError(err.message || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
             setStep(1);
         }
     }
@@ -597,7 +596,7 @@ export default function DashboardPage() {
         const currentCount = improvementCounts[key] || 0;
 
         if (currentCount >= 3) {
-            alert('LÃ­mite de mejoras alcanzado para este bloque.');
+            alert('Límite de mejoras alcanzado para este bloque.');
             return;
         }
 
@@ -620,7 +619,7 @@ export default function DashboardPage() {
 
         const script = scripts[scriptIndex];
         if (!script) {
-            alert('Error: No se encontrÃ³ el guion');
+            alert('Error: No se encontró el guion');
             setRefiningBlock(null);
             return;
         }
@@ -700,7 +699,7 @@ export default function DashboardPage() {
             for (const s of scripts) {
                 await saveScript(s, true); // Silent save
             }
-            alert('Todos los guiones guardados en biblioteca âœ“');
+            alert('Todos los guiones guardados en biblioteca ✓');
         } catch (err) {
             alert('Error al guardar todos: ' + err.message);
         }
@@ -726,7 +725,7 @@ export default function DashboardPage() {
         const available = aiCredits.total - aiCredits.used;
 
         if (available < planCost) {
-            setError(`CrÃ©ditos insuficientes. Necesitas ${planCost} crÃ©ditos para generar el plan y tienes ${available}.`);
+            setError(`Créditos insuficientes. Necesitas ${planCost} créditos para generar el plan y tienes ${available}.`);
             return;
         }
 
@@ -804,11 +803,11 @@ export default function DashboardPage() {
         }
     }
 
-    // â”€â”€ BATCH: Analizar y Planificar â”€â”€
+    // —— BATCH: Analizar y Planificar ——
     const handleBatchGenerateScripts = async () => {
         const slotsToProcess = planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script);
         if (slotsToProcess.length === 0) {
-            alert('No hay ideas sin guiÃ³n para generar. Selecciona ideas que aÃºn no tengan guiÃ³n.');
+            alert('No hay ideas sin guion para generar. Selecciona ideas que aún no tengan guion.');
             return;
         }
 
@@ -816,14 +815,14 @@ export default function DashboardPage() {
         const available = aiCredits.total - aiCredits.used;
         const estimatedCost = slotsToProcess.length; // 1 credit per script
         if (available < estimatedCost) {
-            setError(`CrÃ©ditos insuficientes. Necesitas ~${estimatedCost} crÃ©ditos para ${slotsToProcess.length} guiones y tienes ${available}.`);
+            setError(`Créditos insuficientes. Necesitas ~${estimatedCost} créditos para ${slotsToProcess.length} guiones y tienes ${available}.`);
             return;
         }
 
-        if (!confirm(`Â¿Generar guiones para ${slotsToProcess.length} ideas? Esto usarÃ¡ ~${estimatedCost} crÃ©ditos.`)) return;
+        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas? Esto usará ~${estimatedCost} créditos.`)) return;
 
         setIsGeneratingMassive(true);
-        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando generaciÃ³n masiva...' });
+        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando generación masiva...' });
 
         let successCount = 0;
 
@@ -832,7 +831,7 @@ export default function DashboardPage() {
             setGenerationProgress({
                 current: i + 1,
                 total: slotsToProcess.length,
-                status: `Generando guiÃ³n ${i + 1} de ${slotsToProcess.length}: ${slot.idea_title}`
+                status: `Generando guión ${i + 1} de ${slotsToProcess.length}: ${slot.idea_title}`
             });
 
             try {
@@ -898,7 +897,7 @@ export default function DashboardPage() {
         setGenerationProgress({
             current: slotsToProcess.length,
             total: slotsToProcess.length,
-            status: `Â¡Completado! ${successCount} de ${slotsToProcess.length} guiones generados.`
+            status: `¡Completado! ${successCount} de ${slotsToProcess.length} guiones generados.`
         });
 
         // Refresh credits
@@ -906,7 +905,7 @@ export default function DashboardPage() {
         fetchCredits(profile.id);
 
         if (successCount > 0) {
-            alert(`âœ… Â¡${successCount} guiones generados, guardados en biblioteca y aÃ±adidos al calendario!`);
+            alert(`✅ ¡${successCount} guiones generados, guardados en biblioteca y añadidos al calendario!`);
         }
     };
 
@@ -953,7 +952,7 @@ export default function DashboardPage() {
         const btn = document.getElementById(`copy-${id}`);
         if (btn) {
             const oldText = btn.innerText;
-            btn.innerText = 'âœ“ Copiado';
+            btn.innerText = '✓ Copiado';
             setTimeout(() => { btn.innerText = oldText; }, 2000);
         }
     };
@@ -994,7 +993,7 @@ export default function DashboardPage() {
             });
 
 
-            if (!silent) alert('Guardado en biblioteca âœ“');
+            if (!silent) alert('Guardado en biblioteca ✓');
         } catch (err) {
             console.error('Error saving script:', err);
             if (!silent) throw err;
@@ -1089,7 +1088,7 @@ export default function DashboardPage() {
                 type: 'guion',
                 platform: planningScript.platform || platform || 'General',
                 goal: planningScript.goal || goal || 'engagement',
-                titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin tÃ­tulo',
+                titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
                 script_full_text: fullText,
                 content: {
                     video_duration: planningScript.video_duration || '45-60 seg',
@@ -1104,7 +1103,7 @@ export default function DashboardPage() {
             });
             scriptId = savedItem.id;
 
-            // 2. Insert into calendar_events with 'En preparaciÃ³n' status
+            // 2. Insert into calendar_events with 'En preparación' status
             const { error: calErr } = await supabase.from('calendar_events').insert({
                 user_id: profile.id,
                 event_date: plannedDate,
@@ -1236,19 +1235,19 @@ export default function DashboardPage() {
                 return null;
             }
 
-            if (!res.ok) throw new Error('Error al generar el guiÃ³n individual');
+            if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
             console.log('[Dashboard] Generate script response:', data);
 
             if (!data.scripts || !Array.isArray(data.scripts) || data.scripts.length === 0) {
                 console.error('[Dashboard] No scripts in response:', data);
-                throw new Error('No se recibiÃ³ ningÃºn guion. Intenta de nuevo.');
+                throw new Error('No se recibió ningún guion. Intenta de nuevo.');
             }
 
             const generatedScript = data.scripts[0];
 
             if (!generatedScript) {
-                throw new Error('El guion recibido estÃ¡ vacÃ­o. Intenta de nuevo.');
+                throw new Error('El guion recibido está vacío. Intenta de nuevo.');
             }
 
             const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.join('\n') : (generatedScript.desarrollo || '');
@@ -1324,7 +1323,7 @@ export default function DashboardPage() {
                 await supabase.from('scripts').update({ scheduled_date: dateValue }).eq('id', slot.script_id);
             }
 
-            alert('AÃ±adido al calendario âœ…');
+            alert('Añadido al calendario ✅');
         } catch (err) {
             alert('Error al programar: ' + err.message);
         }
@@ -1336,7 +1335,7 @@ export default function DashboardPage() {
         const slots = slotsToSend || planSlots;
 
         if (!profile?.id) {
-            alert('Error: No hay sesiÃ³n de usuario');
+            alert('Error: No hay sesión de usuario');
             return;
         }
         if (!slots || slots.length === 0) {
@@ -1348,7 +1347,7 @@ export default function DashboardPage() {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No hay sesiÃ³n');
+            if (!user) throw new Error('No hay sesión');
 
             const existingPlanId = slots[0]?.plan_id;
             let planId = existingPlanId;
@@ -1411,7 +1410,7 @@ export default function DashboardPage() {
                 eventsToInsert.push({
                     user_id: user.id,
                     project_id: activeProject?.id,
-                    title: slot.idea_title || 'Idea Sin TÃ­tulo',
+                    title: slot.idea_title || 'Idea Sin Título',
                     description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                     event_date: targetDate,
                     type: slot.content_type || 'idea',
@@ -1422,7 +1421,7 @@ export default function DashboardPage() {
                     content: slot.script_data || {
                         hook: slot.idea_title,
                         desarrollo: [slot.goal, slot.content_type],
-                        cta: 'Click aquÃ­'
+                        cta: 'Click aquí'
                     }
                 });
 
@@ -1436,7 +1435,7 @@ export default function DashboardPage() {
 
             setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
 
-            alert(`âœ… Plan enviado al calendario: ${slots.length} eventos creados`);
+            alert(`✅ Plan enviado al calendario: ${slots.length} eventos creados`);
             router.push('/dashboard/calendar');
 
         } catch (err) {
@@ -1451,7 +1450,7 @@ export default function DashboardPage() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                alert('Inicia sesiÃ³n para continuar');
+                alert('Inicia sesión para continuar');
                 return;
             }
 
@@ -1468,7 +1467,7 @@ export default function DashboardPage() {
             if (data.url) {
                 window.location.href = data.url;
             } else {
-                throw new Error(data.error || 'Error al crear la sesiÃ³n de pago');
+                throw new Error(data.error || 'Error al crear la sesión de pago');
             }
         } catch (err) {
             console.error('Error in buy credits:', err);
@@ -1482,14 +1481,14 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Sparkles size={16} color="#7ECECA" />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>CrÃ©ditos IA: {aiCredits.total - aiCredits.used} / {aiCredits.total}</span>
-                    <button onClick={() => window.dispatchEvent(new CustomEvent('open-credits'))} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar mÃ¡s</button>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Créditos IA: {aiCredits.total - aiCredits.used} / {aiCredits.total}</span>
+                    <button onClick={() => window.dispatchEvent(new CustomEvent('open-credits'))} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
                 </div>
             </div>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                 {[
                     { label: 'Generaciones Realizadas', val: stats.monthGenerations, sub: 'Mes actual', color: '#9D00FF' },
-                    { label: 'Guiones Guardados', val: stats.saved, sub: 'Total histÃ³rico', color: '#F59E0B' },
+                    { label: 'Guiones Guardados', val: stats.saved, sub: 'Total histórico', color: '#F59E0B' },
                 ].map((s, i) => (
                     <div key={i} className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)' }}>
                         <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</p>
@@ -1529,7 +1528,7 @@ export default function DashboardPage() {
                                     color: wizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
                                 }}>
-                                    {wizardStep > w ? 'âœ“' : w}
+                                    {wizardStep > w ? '✓' : w}
                                 </div>
                                 <span style={{ color: wizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: wizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
                                     {w === 1 ? 'Marca' : w === 2 ? 'Contexto' : 'Detalle'}
@@ -1549,17 +1548,17 @@ export default function DashboardPage() {
                             {hasBrain ? (
                                 <div style={{ padding: '24px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                        <p style={{ fontWeight: 700, color: '#7ECECA' }}>âœ“ Cerebro IA configurado</p>
+                                        <p style={{ fontWeight: 700, color: '#7ECECA' }}>✓ Cerebro IA configurado</p>
                                         <button onClick={() => setEditingBrain(!editingBrain)} style={{ background: 'none', border: 'none', color: '#7ECECA', cursor: 'pointer', fontSize: '0.85rem' }}>
                                             {editingBrain ? 'Cancelar' : 'Editar'}
                                         </button>
                                     </div>
                                     {editingBrain ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <input className="input-field" placeholder="QuiÃ©n eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
-                                            <input className="input-field" placeholder="QuÃ© vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
-                                            <input className="input-field" placeholder="A quiÃ©n ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
-                                            <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irÃ³nico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
+                                            <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
+                                            <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
+                                            <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                            <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                             <button onClick={async () => {
                                                 const { data: { user } } = await supabase.auth.getUser();
                                                 await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
@@ -1571,39 +1570,39 @@ export default function DashboardPage() {
                                     ) : (
                                         <div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>QuiÃ©n eres</p><p style={{ fontWeight: 600 }}>{brainProfile?.biography || '-'}</p></div>
-                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>QuÃ© vendes</p><p style={{ fontWeight: 600 }}>{brainProfile?.products_services || '-'}</p></div>
-                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>A quiÃ©n ayudas</p><p style={{ fontWeight: 600 }}>{brainProfile?.audience || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Quién eres</p><p style={{ fontWeight: 600 }}>{brainProfile?.biography || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Qué vendes</p><p style={{ fontWeight: 600 }}>{brainProfile?.products_services || '-'}</p></div>
+                                                <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>A quién ayudas</p><p style={{ fontWeight: 600 }}>{brainProfile?.audience || '-'}</p></div>
                                                 <div><p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Estilo</p><p style={{ fontWeight: 600 }}>{brainProfile?.style_words || '-'}</p></div>
                                             </div>
                                             <button onClick={() => setWizardStep(2)} className="btn-primary" style={{ width: '100%', height: '50px', fontSize: '1rem' }}>
-                                                Continuar al siguiente paso â†’
+                                                Continuar al siguiente paso →
                                             </button>
                                         </div>
                                     )}
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Completa tu perfil para que la IA genere contenido con tu voz Ãºnica.</p>
-                                    <input className="input-field" placeholder="QuiÃ©n eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
-                                    <input className="input-field" placeholder="QuÃ© vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
-                                    <input className="input-field" placeholder="A quiÃ©n ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
-                                    <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irÃ³nico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Completa tu perfil para que la IA genere contenido con tu voz única.</p>
+                                    <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
+                                    <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
+                                    <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                    <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                     <button onClick={async () => {
                                         const { data: { user } } = await supabase.auth.getUser();
                                         if (!brainForm.biography || !brainForm.helps) {
-                                            setError('Por favor, completa al menos "QuiÃ©n eres" y "A quiÃ©n ayuda"');
+                                            setError('Por favor, completa al menos "Quién eres" y "A quién ayuda"');
                                             return;
                                         }
                                         await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
                                         setHasBrain(true);
                                         setBrainName(brainForm.biography.substring(0, 30));
                                         setWizardStep(2);
-                                    }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar â†’</button>
+                                    }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar →</button>
                                 </div>
                             )}
                             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                                Este paso se completa solo una vez. Puedes editarlo despuÃ©s en "Cerebro IA".
+                                Este paso se completa solo una vez. Puedes editarlo después en "Cerebro IA".
                             </p>
                         </div>
                     )}
@@ -1636,7 +1635,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>DuraciÃ³n del video</p>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración del video</p>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                     {DURACIONES.map(d => (
                                         <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white', fontWeight: videoDuration === d ? 700 : 400 }}>{d}</button>
@@ -1655,10 +1654,10 @@ export default function DashboardPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Sobre quÃ© va el contenido</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Sobre qué va el contenido</p>
                                     <VoiceDictation onResult={(text) => setTopic(prev => prev ? `${prev} ${text}` : text)} />
                                 </div>
-                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: CÃ³mo ganar 1.000 seguidores en 30 dÃ­as sin pagar ads" style={{ minHeight: '100px' }} />
+                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '100px' }} />
                             </div>
                             <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
@@ -1688,12 +1687,12 @@ export default function DashboardPage() {
                                     <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} />
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>OpiniÃ³n impopular</p>
-                                    <input className="input-field" placeholder="Tu opiniÃ³n controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} />
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular</p>
+                                    <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} />
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / SituaciÃ³n</p>
-                                    <input className="input-field" placeholder="Cliente o situaciÃ³n real" value={story} onChange={(e) => setStory(e.target.value)} />
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación</p>
+                                    <input className="input-field" placeholder="Cliente o situación real" value={story} onChange={(e) => setStory(e.target.value)} />
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
@@ -1713,13 +1712,13 @@ export default function DashboardPage() {
                             </div>
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Temas o detalles especÃ­ficos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Temas o detalles específicos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
                                     <VoiceDictation onResult={(text) => setSpecificDetails(prev => prev ? `${prev} ${text}` : text)} />
                                 </div>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Ej: "Lista las 5 mejores IA para crear contenido: Notion AI, Jasper, Copy.ai, ChatGPT, Claude" Â· "Habla del error de publicar sin estrategia" Â· "AÃ±ade la tÃ©cnica del loop abierto"</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Ej: "Lista las 5 mejores IA para crear contenido: Notion AI, Jasper, Copy.ai, ChatGPT, Claude" · "Habla del error de publicar sin estrategia" · "Añade la técnica del loop abierto"</p>
                                 <textarea
                                     className="textarea-field"
-                                    placeholder="Escribe aquÃ­ los temas, herramientas, listas o puntos clave que quieres que cubra el guionâ€¦"
+                                    placeholder="Escribe aquí los temas, herramientas, listas o puntos clave que quieres que cubra el guion…"
                                     value={specificDetails}
                                     onChange={(e) => setSpecificDetails(e.target.value)}
                                     rows={3}
@@ -1734,7 +1733,7 @@ export default function DashboardPage() {
 
                             <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <p style={{ fontSize: '0.85rem', color: '#7ECECA', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0 }}>
-                                    <Mic size={16} /> Puedes rellenar cada campo hablando: pulsa el icono del micrÃ³fono y dicta tu idea.
+                                    <Mic size={16} /> Puedes rellenar cada campo hablando: pulsa el icono del micrófono y dicta tu idea.
                                 </p>
                             </div>
 
@@ -1761,10 +1760,10 @@ export default function DashboardPage() {
                                         color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
                                     }}>
-                                        {planWizardStep > w ? 'âœ“' : w}
+                                        {planWizardStep > w ? '✓' : w}
                                     </div>
                                     <span style={{ color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: planWizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
-                                        {w === 1 ? 'Ideas Base' : 'ConfiguraciÃ³n'}
+                                        {w === 1 ? 'Ideas Base' : 'Configuración'}
                                     </span>
                                     {w < 2 && <div style={{ width: '40px', height: '2px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
                                 </div>
@@ -1779,7 +1778,7 @@ export default function DashboardPage() {
                                     className="btn-secondary"
                                     style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
                                 >
-                                    <Search size={16} /> Explorar mÃ¡s ideas
+                                    <Search size={16} /> Explorar más ideas
                                 </button>
                             )}
                         </h2>
@@ -1787,7 +1786,7 @@ export default function DashboardPage() {
                         {planWizardStep === 1 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                    Escoge las ideas en las que quieres basar tu mes. La IA las expandirÃ¡ y crearÃ¡ guiones coherentes.
+                                    Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
                                 </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', maxHeight: '500px', overflowY: 'auto', paddingRight: '10px' }}>
@@ -2001,7 +2000,7 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>DuraciÃ³n de los videos</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración de los videos</p>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                         {DURACIONES.map(d => (
                                             <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white' }}>{d}</button>
@@ -2086,10 +2085,10 @@ export default function DashboardPage() {
                                                 <button
                                                     onClick={() => setActiveBlockChat(null)}
                                                     style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '1rem' }}
-                                                >âœ•</button>
+                                                >✖</button>
                                             </div>
                                             <textarea
-                                                placeholder="Escribe cÃ³mo quieres mejorar este bloque... o dÃ©jalo vacÃ­o para mejora automÃ¡tica."
+                                                placeholder="Escribe cómo quieres mejorar este bloque... o déjalo vacío para mejora automática."
                                                 value={blockChats[activeBlockChat] || ''}
                                                 onChange={(e) => setBlockChats({ ...blockChats, [activeBlockChat]: e.target.value })}
                                                 style={{
@@ -2127,7 +2126,7 @@ export default function DashboardPage() {
                                                 }}
                                             >
                                                 {refiningBlock === activeBlockChat ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                                                Mejorar parte (+1 crÃ©dito)
+                                                Mejorar parte (+1 crédito)
                                             </button>
                                         </div>
                                     )}
@@ -2149,7 +2148,7 @@ export default function DashboardPage() {
                                         justifyContent: 'center',
                                         gap: '10px'
                                     }}>
-                                        <Sparkles size={16} /> MODO PROFESIONAL ACTIVADO â€” v2.5.3 <Sparkles size={16} />
+                                        <Sparkles size={16} /> MODO PROFESIONAL ACTIVADO — v2.5.3 <Sparkles size={16} />
                                     </div>
 
                                     {/* Wizard Header */}
@@ -2184,7 +2183,7 @@ export default function DashboardPage() {
                                                         news[i].titulo_guion = e.target.value;
                                                         setScripts(news);
                                                     }}
-                                                    placeholder="TÃ­tulo del guion..."
+                                                    placeholder="Título del guion..."
                                                     style={{
                                                         background: 'transparent',
                                                         border: 'none',
@@ -2276,7 +2275,7 @@ export default function DashboardPage() {
                                                     transition: '0.3s'
                                                 }}
                                             />
-                                            {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>VersiÃ³n mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
+                                            {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>Versión mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
                                         </div>
 
                                         {/* DESARROLLO (3 PUNTOS) */}
@@ -2333,7 +2332,7 @@ export default function DashboardPage() {
                                         {/* CTA */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÃ“N (CTA)</label>
+                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÓN (CTA)</label>
                                                 <button
                                                     onClick={() => handleRefineBlock(i, 'cta')}
                                                     disabled={refiningBlock === `${i}-cta`}
@@ -2406,7 +2405,7 @@ export default function DashboardPage() {
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <PenLine size={20} color="#7ECECA" />
-                                                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7ECECA' }}>Copy para publicaciÃ³n</h4>
+                                                <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#7ECECA' }}>Copy para publicación</h4>
                                             </div>
 
                                             <div>
@@ -2425,7 +2424,7 @@ export default function DashboardPage() {
                                             </div>
 
                                             <div>
-                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>DESCRIPCIÃ“N LARGA / CAPTION</label>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>DESCRIPCIÓN LARGA / CAPTION</label>
                                                 <textarea
                                                     value={s.copy_post?.descripcion_larga || ''}
                                                     onChange={(e) => {
@@ -2588,7 +2587,7 @@ export default function DashboardPage() {
                                 <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
                                     <div style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%`, height: '100%', background: 'var(--accent-gradient)', transition: '0.3s' }} />
                                 </div>
-                                <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generaciÃ³n.</p>
+                                <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generación.</p>
                             </div>
                         )}
 
@@ -2631,7 +2630,7 @@ export default function DashboardPage() {
                                                 <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{slot.platform}</span>
                                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}> Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
                                                 {slot.has_script && (
-                                                    <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid #00ff00' }}>âœ“ GuiÃ³n Listo</span>
+                                                    <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid #00ff00' }}>✓ Guión Listo</span>
                                                 )}
                                             </div>
                                             <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', marginTop: '4px' }}>{slot.idea_title}</h4>
@@ -2656,11 +2655,11 @@ export default function DashboardPage() {
                                                 className="btn-primary"
                                                 style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1 }}
                                             >
-                                                {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar GuiÃ³n</>}
+                                                {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generando...</> : <><Sparkles size={16} style={{ marginRight: '8px', display: 'inline' }} /> Generar Guión</>}
                                             </button>
                                         ) : (
                                             <button onClick={() => router.push('/dashboard/calendar')} className="btn-secondary" style={{ width: '100%', padding: '8px 16px', fontSize: '0.85rem' }}>
-                                                Ver Calendario â†’
+                                                Ver Calendario →
                                             </button>
                                         )}
                                     </div>
@@ -2707,7 +2706,7 @@ export default function DashboardPage() {
                         }} onClick={e => e.stopPropagation()}>
                             <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar mÃ¡s ideas</h3>
                             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-                                CuÃ©ntanos mÃ¡s sobre quÃ© contenido quieres este mes y la IA te propondrÃ¡ nuevas ideas.
+                                Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
                             </p>
 
                             {/* Preset Selector */}
@@ -2750,10 +2749,10 @@ export default function DashboardPage() {
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Â¿QuÃ© quieres este mes? *</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué quieres este mes? *</p>
                                     <textarea
                                         className="textarea-field"
-                                        placeholder="Ej: Quiero crear contenido sobre cÃ³mo vender programas de mentorÃ­a online..."
+                                        placeholder="Ej: Quiero crear contenido sobre cómo vender programas de mentoría online..."
                                         value={extraIdeasModal.form.context}
                                         onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, context: e.target.value } })}
                                         style={{ minHeight: '80px' }}
@@ -2774,7 +2773,7 @@ export default function DashboardPage() {
                                         <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Ticket de producto</p>
                                         <input
                                             className="input-field"
-                                            placeholder="Ej: 500-2000â‚¬"
+                                            placeholder="Ej: 500-2000€"
                                             value={extraIdeasModal.form.productTicket}
                                             onChange={(e) => setExtraIdeasModal({ ...extraIdeasModal, form: { ...extraIdeasModal.form, productTicket: e.target.value } })}
                                         />
@@ -2813,7 +2812,7 @@ export default function DashboardPage() {
                                 <button
                                     onClick={async () => {
                                         if (!extraIdeasModal.form.context.trim()) {
-                                            alert('Escribe quÃ© quieres este mes');
+                                            alert('Escribe qué quieres este mes');
                                             return;
                                         }
                                         setExtraIdeasModal({ ...extraIdeasModal, loading: true });
@@ -2968,7 +2967,7 @@ export default function DashboardPage() {
                                     disabled={isPlanningLoading}
                                 >
                                     {isPlanningLoading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar PlanificaciÃ³n'}
+                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
                                 </button>
                             </div>
                         </div>

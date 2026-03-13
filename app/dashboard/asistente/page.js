@@ -1,76 +1,17 @@
 'use client';
-// Asistente IA (Chat Pro) — v3.0.0
+// Asistente IA (Chat Pro) — v3.5.0 (Jarvis + Orbita Style Redesign)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Send, Mic, BookOpen, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X } from 'lucide-react';
-
-// ── Particle Canvas (space background) ────────────────────
-function ParticleCanvas() {
-    const canvasRef = useRef(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let animId;
-        const particles = [];
-        const COUNT = 120;
-
-        const resize = () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-        };
-        resize();
-        window.addEventListener('resize', resize);
-
-        for (let i = 0; i < COUNT; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 1.5 + 0.3,
-                dx: (Math.random() - 0.5) * 0.25,
-                dy: (Math.random() - 0.5) * 0.25,
-                alpha: Math.random() * 0.6 + 0.2,
-            });
-        }
-
-        const draw = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(126, 206, 202, ${p.alpha})`;
-                ctx.fill();
-                p.x += p.dx;
-                p.y += p.dy;
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
-            });
-            animId = requestAnimationFrame(draw);
-        };
-        draw();
-
-        return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
-    }, []);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none', opacity: 0.45 }}
-        />
-    );
-}
+import { Send, Mic, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X, Paperclip, ChevronDown } from 'lucide-react';
 
 // ── Typing Indicator ──────────────────────────────────────
 function TypingIndicator() {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '12px 16px', background: 'rgba(126,206,202,0.06)', border: '1px solid rgba(126,206,202,0.1)', borderRadius: '16px 16px 16px 4px', width: 'fit-content', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px 16px 16px 4px', width: 'fit-content', marginBottom: '8px' }}>
             {[0, 1, 2].map(i => (
-                <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#7ECECA', display: 'inline-block', animation: `typingPulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+                <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#888', display: 'inline-block', animation: `typingPulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
             ))}
         </div>
     );
@@ -149,26 +90,26 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: '16px', animation: 'msgFadeIn 0.35s ease-out' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', marginBottom: '24px', animation: 'msgFadeIn 0.35s ease-out', width: '100%' }}>
             {!isUser && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #7ECECA, #9D00FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>✨</div>
-                    <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 700 }}>WRITI IA</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>✨</div>
+                    <span style={{ fontSize: '0.85rem', color: '#888', fontWeight: 600 }}>WRITI JARVIS</span>
                 </div>
             )}
 
             <div style={{
-                maxWidth: '78%',
-                padding: '14px 18px',
-                borderRadius: isUser ? '16px 16px 4px 16px' : '4px 16px 16px 16px',
+                maxWidth: '85%',
+                padding: '16px 20px',
+                borderRadius: isUser ? '20px 20px 4px 20px' : '4px 20px 20px 20px',
                 background: isUser
-                    ? 'linear-gradient(135deg, rgba(126,206,202,0.18), rgba(157,0,255,0.12))'
-                    : 'rgba(255,255,255,0.04)',
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'transparent',
                 border: isUser
-                    ? '1px solid rgba(126,206,202,0.3)'
-                    : '1px solid rgba(255,255,255,0.08)',
+                    ? '1px solid rgba(255,255,255,0.1)'
+                    : 'none',
                 color: 'white',
-                fontSize: '0.95rem',
+                fontSize: '1.05rem',
                 lineHeight: '1.6',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
@@ -178,55 +119,50 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
 
             {/* Action Buttons for AI messages */}
             {!isUser && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px', maxWidth: '78%' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', maxWidth: '85%' }}>
                     <button
                         onClick={() => handleAction('idea', onSaveIdea)}
                         disabled={!!saved.idea}
+                        className="action-btn"
                         style={{
-                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(16,185,129,0.4)',
-                            background: saved.idea ? 'rgba(16,185,129,0.2)' : 'transparent', color: saved.idea ? '#10B981' : '#888',
-                            cursor: saved.idea ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                            background: saved.idea ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.idea ? '#7ECECA' : '#888',
+                            cursor: saved.idea ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
                         }}
                     >
-                        <Save size={12} /> {saved.idea ? '✓ Idea guardada' : 'Guardar como Idea'}
+                        <Save size={14} /> {saved.idea ? 'Idea guardada' : 'Guardar Idea'}
                     </button>
                     <button
                         onClick={() => handleAction('script', onSaveScript)}
                         disabled={!!saved.script}
+                        className="action-btn"
                         style={{
-                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(126,206,202,0.3)',
-                            background: saved.script ? 'rgba(126,206,202,0.15)' : 'transparent', color: saved.script ? '#7ECECA' : '#888',
-                            cursor: saved.script ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                            background: saved.script ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.script ? '#7ECECA' : '#888',
+                            cursor: saved.script ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
                         }}
                     >
-                        <PenLine size={12} /> {saved.script ? '✓ Guardado' : 'Guardar como Guion'}
+                        <PenLine size={14} /> {saved.script ? 'Guardado' : 'Guardar Guion'}
                     </button>
                     <button
                         onClick={() => setCalendarOpen(true)}
+                        className="action-btn"
                         style={{
-                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(157,0,255,0.4)',
-                            background: 'transparent', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
                         }}
                     >
-                        <Calendar size={12} /> Planificar
+                        <Calendar size={14} /> Calendario
                     </button>
                     <button
                         onClick={onGenerateTitles}
+                        className="action-btn"
                         style={{
-                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,215,0,0.3)',
-                            background: 'transparent', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
                         }}
                     >
-                        <Type size={12} /> Generar Títulos
-                    </button>
-                    <button
-                        onClick={onGenerateScript}
-                        style={{
-                            fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.15)',
-                            background: 'transparent', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
-                        }}
-                    >
-                        <Sparkles size={12} /> Generar Guion
+                        <Type size={14} /> Ir a Títulos
                     </button>
                 </div>
             )}
@@ -242,13 +178,12 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
     );
 }
 
-// ── Quick Chips ───────────────────────────────────────────
-const QUICK_MODES = [
-    { label: 'Ideas de contenido', icon: '💡', mode: 'ideas de contenido viral', prompt: 'Dame ideas de contenido viral para mi niche y plataforma. Dame al menos 5 ideas creativas con ángulos únicos.' },
-    { label: 'Títulos y Copys', icon: '📋', mode: 'títulos y copys', prompt: 'Genera títulos virales y copys atractivos para mi próximo contenido. Usa mi tono y estilo de marca.' },
-    { label: 'Guiones', icon: '🎬', mode: 'guiones', prompt: 'Ayúdame a crear un guion para un video corto. Dame la estructura completa: gancho, desarrollo y CTA.' },
-    { label: 'Calendario', icon: '📅', mode: 'planificación de calendario', prompt: 'Ayúdame a planificar mi contenido para esta semana. ¿Qué debería publicar y cuándo para maximizar el engagement?' },
-    { label: 'Biblioteca', icon: '📚', mode: 'biblioteca y organización', prompt: 'Revisa mi estrategia de contenido. ¿Cómo puedo mejorar mis guiones y referencias para tener más impacto?' },
+// ── Quick Action Cards (Empty State) ──────────────────────
+const ORBITA_CARDS = [
+    { title: 'Descripción YouTube', desc: 'Prepara el texto para tu video.', icon: '📝', mode: 'copys', prompt: 'Escribe la descripción de YouTube para mi último video. Céntrate en un CTA claro hacia mi Instagram.' },
+    { title: 'Generar 30 ideas', desc: 'Planifica todo el mes rápido.', icon: '💡', mode: 'ideas de contenido viral', prompt: 'Dame 30 ideas de contenido corto para Reels/TikTok sobre mi nicho. Sólo títulos listos.' },
+    { title: 'Reescribir guion', desc: 'Mejora el hook y estructura.', icon: '🎬', mode: 'guiones', prompt: 'Voy a pasarte un guion. Por favor, mejóralo cambiando el hook por uno más directo y ajusta la retención.' },
+    { title: 'Plan semanal', desc: 'Organiza qué publicar y cuándo.', icon: '📅', mode: 'planificación de calendario', prompt: 'Ayúdame a organizar la estructura de mi contenido para esta semana (lunes a domingo).' }
 ];
 
 // ── Main Page ─────────────────────────────────────────────
@@ -291,14 +226,6 @@ export default function AsistentePage() {
             .then(data => {
                 if (data.messages && data.messages.length > 0) {
                     setMessages(data.messages);
-                } else {
-                    // Welcome message (Jarvis Style)
-                    setMessages([{
-                        id: 'welcome',
-                        role: 'assistant',
-                        content: `¡Hola${userName ? ' ' + userName : ''}! 👋 Soy **WRITI JARVIS**, tu estratega personal.\n\nHe cargado todo el contexto del proyecto **${activeProject?.name || 'activo'}** y estoy listo para ayudarte a escalar tu contenido.\n\n¿En qué nos enfocamos hoy?\n💡 **Ideas virales** alineadas a tu nicho\n📋 **Títulos y copys** que detengan el scroll\n🎬 **Guiones** con estructura de retención\n📅 **Planificación** estratégica del mes`,
-                        timestamp: new Date().toISOString()
-                    }]);
                 }
                 setHistoryLoaded(true);
             })
@@ -335,6 +262,11 @@ export default function AsistentePage() {
         setMessages(newMessages);
         setInput('');
         setIsTyping(true);
+
+        // Reset textarea height
+        if (textareaRef.current) {
+            textareaRef.current.style.height = '24px';
+        }
 
         try {
             const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
@@ -432,10 +364,6 @@ export default function AsistentePage() {
         }
     };
 
-    const handleQuickChip = (chip) => {
-        sendMessage(chip.prompt, chip.mode);
-    };
-
     const handleClearChat = async () => {
         if (!confirm('¿Borrar el historial de esta conversación?')) return;
         setMessages([]);
@@ -448,10 +376,10 @@ export default function AsistentePage() {
         }
     };
 
-    return (
-        <div style={{ position: 'relative', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#050505' }}>
-            <ParticleCanvas />
+    const isEmpty = messages.length === 0 && historyLoaded;
 
+    return (
+        <div style={{ position: 'relative', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a0a0a', color: '#fff' }}>
             {/* CSS */}
             <style>{`
                 @keyframes msgFadeIn {
@@ -462,148 +390,191 @@ export default function AsistentePage() {
                     0%, 100% { opacity: 0.3; transform: scale(0.8); }
                     50% { opacity: 1; transform: scale(1.2); }
                 }
-                .chip-btn:hover { border-color: rgba(126,206,202,0.5) !important; color: #7ECECA !important; background: rgba(126,206,202,0.06) !important; }
-                .action-btn:hover { border-color: rgba(126,206,202,0.5) !important; color: white !important; }
-                .send-btn:hover { box-shadow: 0 0 20px rgba(126,206,202,0.6) !important; transform: scale(1.05); }
+                .action-card {
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 16px;
+                    padding: 20px;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                .action-card:hover { 
+                    background: rgba(255,255,255,0.06);
+                    border-color: rgba(126,206,202,0.3);
+                    transform: translateY(-2px);
+                }
+                .action-btn:hover { border-color: rgba(126,206,202,0.4) !important; color: white !important; background: rgba(126,206,202,0.05) !important;}
+                .send-btn:hover { background: #fff !important; color: #000 !important; }
+                
+                /* Orb animation */
+                @keyframes float {
+                    0% { transform: translateY(0px); }
+                    50% { transform: translateY(-8px); }
+                    100% { transform: translateY(0px); }
+                }
+                @keyframes glow {
+                    0% { box-shadow: 0 0 20px rgba(126,206,202,0.3); }
+                    50% { box-shadow: 0 0 40px rgba(126,206,202,0.6); }
+                    100% { box-shadow: 0 0 20px rgba(126,206,202,0.3); }
+                }
             `}</style>
 
-            {/* Header */}
-            <div style={{ position: 'relative', zIndex: 10, padding: '20px 24px 0', flexShrink: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #7ECECA, #9D00FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: '0 0 20px rgba(126,206,202,0.3)' }}>✨</div>
-                            <div>
-                                <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, background: 'linear-gradient(135deg, #7ECECA, #fff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                    Asistente WRITI IA
-                                </h1>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#666' }}>
-                                    Conectado al Cerebro IA de: <span style={{ color: '#7ECECA', fontWeight: 700 }}>{activeProject?.name || 'Sin proyecto'}</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            {/* Top Navigation / Dropdown area (Minimalist) */}
+            <div style={{ padding: '24px', display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
+                {messages.length > 0 && (
                     <button
                         onClick={handleClearChat}
-                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#666', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
+                        style={{ background: 'transparent', border: 'none', color: '#666', fontSize: '0.85rem', cursor: 'pointer' }}
                     >
                         Limpiar chat
                     </button>
-                </div>
-            </div>
-
-            {/* Messages area */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
-                {!historyLoaded ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <div className="loading-spinner" />
-                    </div>
-                ) : (
-                    <>
-                        {messages.map(msg => (
-                            <MessageBubble
-                                key={msg.id}
-                                msg={msg}
-                                onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
-                                onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
-                                onPlanify={(data) => handlePlanifyInCalendar({ ...data, content: msg.content })}
-                                onGenerateTitles={() => handleGenerateResource('titles', msg.content)}
-                                onGenerateCopys={() => handleGenerateResource('copys', msg.content)}
-                                onGenerateScript={() => handleGenerateResource('script', msg.content)}
-                            />
-                        ))}
-                        {isTyping && <TypingIndicator />}
-                        <div ref={messagesEndRef} />
-                    </>
                 )}
             </div>
 
-            {/* Input area */}
-            <div style={{ position: 'relative', zIndex: 10, padding: '0 24px 24px', flexShrink: 0 }}>
-                {/* Quick chips */}
-                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'none' }}>
-                    {QUICK_MODES.map(chip => (
-                        <button
-                            key={chip.label}
-                            onClick={() => handleQuickChip(chip)}
-                            disabled={isTyping}
-                            className="chip-btn"
-                            style={{
-                                flexShrink: 0, fontSize: '0.78rem', padding: '7px 14px', borderRadius: '20px',
-                                border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)',
-                                color: 'rgba(255,255,255,0.65)', cursor: 'pointer', transition: '0.2s',
-                                whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px',
-                                opacity: isTyping ? 0.5 : 1
-                            }}
-                        >
-                            {chip.icon} {chip.label}
-                        </button>
-                    ))}
-                </div>
+            {/* Scrollable Content Area */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10 }}>
+                
+                {/* Empty State Centered */}
+                {isEmpty && (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', animation: 'msgFadeIn 0.5s ease-out' }}>
+                        <div style={{
+                            width: '48px', height: '48px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)',
+                            animation: 'float 4s ease-in-out infinite, glow 3s ease-in-out infinite',
+                            marginBottom: '24px'
+                        }} />
+                        
+                        <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: '0 0 12px', textAlign: 'center' }}>
+                            Hola{userName ? `, ${userName}` : ''} 👋
+                        </h1>
+                        <p style={{ color: '#888', fontSize: '1.05rem', margin: '0 0 48px', textAlign: 'center' }}>
+                            Dime qué necesitas con tu contenido y yo me encargo.
+                        </p>
 
-                {/* Text input */}
-                <div style={{
-                    display: 'flex', gap: '12px', alignItems: 'flex-end',
-                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(126,206,202,0.2)',
-                    borderRadius: '20px', padding: '12px 16px',
-                    boxShadow: '0 0 40px rgba(126,206,202,0.05)',
-                    transition: '0.3s'
-                }}>
-                    <textarea
-                        ref={textareaRef}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Pregúntale a tu asistente sobre ideas, títulos, guiones, calendario…"
-                        rows={1}
-                        style={{
-                            flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white',
-                            fontSize: '0.95rem', lineHeight: '1.5', resize: 'none', maxHeight: '120px',
-                            overflowY: 'auto', fontFamily: 'inherit'
-                        }}
-                        onInput={e => {
-                            e.target.style.height = 'auto';
-                            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                        }}
-                        disabled={isTyping}
-                    />
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                        <button
-                            title="Dictado (próximamente)"
-                            style={{ background: 'none', border: 'none', color: '#555', cursor: 'not-allowed', padding: '4px', display: 'flex', alignItems: 'center' }}
-                        >
-                            <Mic size={20} />
-                        </button>
-                        <button
-                            onClick={() => sendMessage()}
-                            disabled={isTyping || !input.trim()}
-                            className="send-btn"
-                            style={{
-                                width: '40px', height: '40px', borderRadius: '12px', border: 'none',
-                                background: !input.trim() || isTyping ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #7ECECA, #5bb8b8)',
-                                color: !input.trim() || isTyping ? '#555' : '#0a0a0a',
-                                cursor: !input.trim() || isTyping ? 'not-allowed' : 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: '0.2s', flexShrink: 0
-                            }}
-                        >
-                            <Send size={18} />
-                        </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', width: '100%', maxWidth: '800px' }}>
+                            {ORBITA_CARDS.map((card, idx) => (
+                                <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)}>
+                                    <div style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{card.icon}</div>
+                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>{card.title}</h3>
+                                    <p style={{ fontSize: '0.8rem', color: '#666', margin: 0, lineHeight: '1.4' }}>{card.desc}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
+                )}
+
+                {/* Chat History */}
+                {!isEmpty && (
+                    <div style={{ padding: '0 24px', maxWidth: '860px', width: '100%', margin: '0 auto', flex: 1 }}>
+                        {!historyLoaded ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                <div className="loading-spinner" />
+                            </div>
+                        ) : (
+                            <>
+                                {messages.map(msg => (
+                                    <MessageBubble
+                                        key={msg.id}
+                                        msg={msg}
+                                        onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
+                                        onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
+                                        onPlanify={(data) => handlePlanifyInCalendar({ ...data, content: msg.content })}
+                                        onGenerateTitles={() => handleGenerateResource('titles', msg.content)}
+                                        onGenerateCopys={() => handleGenerateResource('copys', msg.content)}
+                                        onGenerateScript={() => handleGenerateResource('script', msg.content)}
+                                    />
+                                ))}
+                                {isTyping && <TypingIndicator />}
+                                <div ref={messagesEndRef} style={{ height: '24px' }} />
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Centered Bottom Input Area */}
+            <div style={{ padding: '0 24px 32px', display: 'flex', justifyContent: 'center', zIndex: 10, background: 'linear-gradient(to top, #0a0a0a 70%, transparent)' }}>
+                <div style={{ width: '100%', maxWidth: '860px' }}>
+                    
+                    <div style={{
+                        display: 'flex', alignItems: 'flex-end',
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '24px', padding: '12px 12px 12px 18px',
+                        transition: '0.3s',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '40px', paddingRight: '12px', borderRight: '1px solid rgba(255,255,255,0.1)', marginRight: '12px' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#888', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                Proyecto: {activeProject?.name || 'Vacio'} <ChevronDown size={14} />
+                            </span>
+                        </div>
+
+                        <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Escribe tu pregunta o pega tu guion..."
+                            rows={1}
+                            style={{
+                                flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white',
+                                fontSize: '1rem', lineHeight: '1.5', resize: 'none', maxHeight: '150px',
+                                overflowY: 'auto', fontFamily: 'inherit', padding: '8px 0', alignSelf: 'center'
+                            }}
+                            onInput={e => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                            }}
+                            disabled={isTyping}
+                        />
+                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center' }}>
+                            <button
+                                title="Adjuntar (próximamente)"
+                                style={{ background: 'none', border: 'none', color: '#666', cursor: 'not-allowed', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Paperclip size={18} />
+                            </button>
+                            <button
+                                title="Voz (próximamente)"
+                                style={{ background: 'none', border: 'none', color: '#666', cursor: 'not-allowed', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Mic size={18} />
+                            </button>
+                            <button
+                                onClick={() => sendMessage()}
+                                disabled={isTyping || !input.trim()}
+                                className="send-btn"
+                                style={{
+                                    height: '40px', padding: '0 18px', borderRadius: '20px', border: 'none',
+                                    background: !input.trim() || isTyping ? 'rgba(255,255,255,0.1)' : '#fff',
+                                    color: !input.trim() || isTyping ? '#555' : '#000',
+                                    fontWeight: 600, fontSize: '0.9rem',
+                                    cursor: !input.trim() || isTyping ? 'not-allowed' : 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                    transition: '0.2s', flexShrink: 0
+                                }}
+                            >
+                                Send <Send size={14} />
+                            </button>
+                        </div>
+                    </div>
+                    <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#555', marginTop: '12px' }}>
+                        Writi Jarvis puede equivocarse. Revisa la información importante. · 1 crédito por mensaje
+                    </p>
                 </div>
-                <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#333', marginTop: '10px' }}>
-                    Enter para enviar · Shift+Enter para salto de línea · 1 crédito por mensaje
-                </p>
             </div>
 
             {/* Toast */}
             {toast && (
                 <div style={{
-                    position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
-                    background: toast.type === 'error' ? '#FF4D4D' : '#7ECECA',
-                    color: toast.type === 'error' ? 'white' : '#0a0a0a',
-                    padding: '12px 24px', borderRadius: '50px', fontWeight: 700,
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 3000, whiteSpace: 'nowrap',
+                    position: 'fixed', bottom: '120px', left: '50%', transform: 'translateX(-50%)',
+                    background: toast.type === 'error' ? '#FF4D4D' : '#fff',
+                    color: toast.type === 'error' ? 'white' : '#000',
+                    padding: '12px 24px', borderRadius: '50px', fontWeight: 600, fontSize: '0.9rem',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 3000, whiteSpace: 'nowrap',
                     animation: 'msgFadeIn 0.3s ease-out'
                 }}>
                     {toast.msg}
