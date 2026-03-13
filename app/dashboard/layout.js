@@ -1,5 +1,5 @@
 'use client';
-// Force Build: 2026-03-13 18:52 (v3.6.0)
+// Force Build: 2026-03-13 19:10 (v3.6.0)
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -595,7 +595,7 @@ export default function DashboardLayout({ children }) {
                                     title="Mi Cuenta"
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.5.4</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.6.0</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
