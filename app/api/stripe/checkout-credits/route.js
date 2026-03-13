@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // Product IDs for credit packs
 const CREDIT_PRODUCTS = {
     '100': 'prod_U5X3aTmOroVFwW',
-    '250': 'prod_U5X4JuborfAJNW',
+    '250': 'prod_U8q9D9e8M4lusU',
     '500': 'prod_U5X53LOdSC6k9B',
 };
 
