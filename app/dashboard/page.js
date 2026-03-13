@@ -14,8 +14,8 @@ import { useProject } from '@/app/components/ProjectContext';
 
 
 const SUGGESTED_TRENDS = [
-    { name: 'Nicho Marketing', icon: 'ðŸ“ˆ', grow: '+12.5%', color: '#9D00FF' },
-    { name: 'IA Generativa', icon: 'ðŸ¤–', grow: '+45.2%', color: '#00F3FF' },
+    { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
+    { name: 'IA Generativa', icon: '🤖', grow: '+45.2%', color: '#00F3FF' },
     { name: 'Productividad', icon: 'â³', grow: '+8.1%', color: '#FF007A' },
 ];
 
@@ -848,7 +848,7 @@ export default function DashboardPage() {
                                 type: 'guion',
                                 platform: slot.platform || 'General',
                                 goal: slot.goal || 'engagement',
-                                titulo: slot.idea_title || 'GuiÃ³n del Plan',
+                                titulo: slot.idea_title || 'Guión del Plan',
                                 script_full_text: `TÃTULO: ${slot.idea_title}\n\nGANCHO:\n${scriptData.hook || scriptData.gancho || ''}\n\nDESARROLLO:\n${(scriptData.desarrollo || []).join('\n')}\n\nCTA:\n${scriptData.cta || scriptData.cierre || ''}`,
                                 content: {
                                     video_duration: videoDuration || '60 seg',
@@ -873,7 +873,7 @@ export default function DashboardPage() {
                             await supabase.from('calendar_events').insert({
                                 user_id: profile.id,
                                 project_id: activeProject?.id,
-                                title: slot.idea_title || 'GuiÃ³n Planificado',
+                                title: slot.idea_title || 'Guión Planificado',
                                 description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                                 event_date: slot.scheduled_date,
                                 type: 'guion', // Change type from content_type to guion logically
@@ -964,7 +964,7 @@ export default function DashboardPage() {
         const copy = script.copy_post || {};
         const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ') : '';
 
-        return `TÃTULO: ${script.titulo_guion || script.titulo_angulo || 'Sin tÃ­tulo'}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
+        return `TÃTULO: ${script.titulo_guion || script.titulo_angulo || 'Sin título'}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
     };
 
     const saveScript = async (script, silent = false) => {
@@ -978,7 +978,7 @@ export default function DashboardPage() {
                 type: 'guion',
                 platform: script.platform || platform || 'General',
                 goal: script.goal || goal || 'engagement',
-                titulo: script.titulo_guion || script.titulo_angulo || 'Sin tÃ­tulo',
+                titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
                 script_full_text: fullText,
                 content: {
                     video_duration: script.video_duration || '45-60 seg',
@@ -1643,8 +1643,8 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† AtrÃ¡s</button>
-                                <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle â†’</button>
+                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle →</button>
                             </div>
                         </div>
                     )}
@@ -1738,8 +1738,8 @@ export default function DashboardPage() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>â† AtrÃ¡s</button>
-                                <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones â†’</button>
+                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>
                             </div>
                             {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                         </div>
@@ -1940,15 +1940,15 @@ export default function DashboardPage() {
                                         </>
                                     ) : (
                                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
-                                            <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavÃ­a.</p>
-                                            <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir a Estrategia â†’</button>
+                                            <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
+                                            <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir al Banco de Ideas Virales →</button>
                                         </div>
                                     )}
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                     <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
-                                    <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) â†’</button>
+                                    <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) →</button>
                                 </div>
                             </div>
                         )}
@@ -1957,7 +1957,7 @@ export default function DashboardPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos extra del mes</p>
-                                    <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentorÃ­a." style={{ minHeight: '100px' }} />
+                                    <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
                                 </div>
                                 <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                     <div>
@@ -1978,7 +1978,7 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>DistribuciÃ³n del contenido (%)</p>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                                         {CONTENT_TYPES_PLAN.map(type => (
                                             <div key={type}>
@@ -1990,7 +1990,7 @@ export default function DashboardPage() {
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                     <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>CampaÃ±as del mes</p>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
                                         <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
                                     </div>
                                     <div>
@@ -2009,8 +2009,8 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† AtrÃ¡s</button>
-                                    <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 dÃ­as â†’</button>
+                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>â† Atrás</button>
+                                    <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
                                 </div>
                                 {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                             </div>
@@ -2130,7 +2130,7 @@ export default function DashboardPage() {
                                             </button>
                                         </div>
                                     )}
-                                    {/* BANNER DE CONFIRMACIÃ“N DE DESPLIEGUE v2.5.3 */}
+                                    {/* BANNER DE CONFIRMACIÓN DE DESPLIEGUE v2.5.3 */}
                                     <div style={{
                                         padding: '8px 24px',
                                         background: 'linear-gradient(90deg, #7ECECA, #22c55e)',
@@ -2704,7 +2704,7 @@ export default function DashboardPage() {
                         <div style={{
                             background: '#1a1a1a', borderRadius: '20px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflowY: 'auto'
                         }} onClick={e => e.stopPropagation()}>
-                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar mÃ¡s ideas</h3>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Explorar más ideas</h3>
                             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>
                                 Cuéntanos más sobre qué contenido quieres este mes y la IA te propondrá nuevas ideas.
                             </p>
@@ -2742,7 +2742,7 @@ export default function DashboardPage() {
                                             {p.name}
                                         </button>
                                     )) : (
-                                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>No hay preajustes guardados aÃºn.</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>No hay preajustes guardados aún.</p>
                                     )}
                                 </div>
                             </div>
@@ -2953,7 +2953,7 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '0 8px' }}>
                                     <div style={{ marginTop: '4px' }}><AlertCircle size={16} color="rgba(255,255,255,0.3)" /></div>
                                     <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>
-                                        Esta publicaciÃ³n se aÃ±adirÃ¡ a tu calendario como "En preparaciÃ³n". PodrÃ¡s cambiar el estado a "Publicado" una vez lo subas.
+                                        Esta publicación se añadirá a tu calendario como "En preparación". Podrás cambiar el estado a "Publicado" una vez lo subas.
                                     </p>
                                 </div>
                             </div>
