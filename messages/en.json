@@ -1,0 +1,54 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "success": "Success!",
+    "error": "Error"
+  },
+  "nav": {
+    "home": "Home",
+    "assistant": "AI Assistant",
+    "new_script": "New Script",
+    "copys": "AI Copys",
+    "strategy": "Strategy",
+    "viral_ideas": "Viral Ideas",
+    "library": "Library",
+    "brain": "AI Brain",
+    "calendar": "Calendar",
+    "stats": "Stats",
+    "settings": "Settings",
+    "logout": "Logout",
+    "exit": "Exit"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "new_project": "New Project",
+    "monthly_plan": "Monthly Plan",
+    "generate": "Generate",
+    "scripts": "Scripts",
+    "buy_credits": "💎 BUY CREDITS",
+    "plan_pro": "🚀 PRO PLAN",
+    "pro_badge": "✅ PRO",
+    "membership_pro": "PRO MEMBERSHIP",
+    "free_trial": "FREE TRIAL",
+    "days_remaining": "{{days}} days remaining",
+    "connected_as": "Connected as",
+    "profile": "Profile",
+    "my_account": "My Account"
+  },
+  "brain": {
+    "title": "AI Brain",
+    "niche": "Niche",
+    "sub_niche": "Sub-niche",
+    "audience": "Target Audience",
+    "tone": "Tone",
+    "examples": "Favorite Examples",
+    "learning_notes": "Learning Log (Brain)",
+    "training_status": "Last training",
+    "notes_placeholder": "The lessons AI learns from your feedback will be saved here...",
+    "save_brain": "Update Brain"
+  }
+}

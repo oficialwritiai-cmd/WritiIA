@@ -5,8 +5,10 @@ import { createSupabaseClient } from '@/lib/supabase';
 import BrainField from '@/app/components/BrainField';
 import BrainWizardModal from '@/app/components/BrainWizardModal';
 import { useProject } from '@/app/components/ProjectContext';
+import { useLanguage } from '@/app/components/LanguageContext';
 
 export default function KnowledgePage() {
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
@@ -14,10 +16,13 @@ export default function KnowledgePage() {
         biography: '',
         audience: '',
         values_tone: '',
+        niche: '',
+        sub_niche: '',
         niche_topics: '',
         knowledge_raw: '',
         products_services: '',
-        style_words: ''
+        style_words: '',
+        learning_notes: ''
     });
     const [showWizard, setShowWizard] = useState(false);
 
@@ -43,20 +48,26 @@ export default function KnowledgePage() {
                     biography: data.biography || '',
                     audience: data.audience || '',
                     values_tone: data.values_tone || '',
+                    niche: data.niche || '',
+                    sub_niche: data.sub_niche || '',
                     niche_topics: data.niche_topics || '',
                     knowledge_raw: data.knowledge_raw || '',
                     products_services: data.products_services || '',
-                    style_words: data.style_words || ''
+                    style_words: data.style_words || '',
+                    learning_notes: data.learning_notes || ''
                 });
             } else {
                 setBrain({
                     biography: '',
                     audience: '',
                     values_tone: '',
+                    niche: '',
+                    sub_niche: '',
                     niche_topics: '',
                     knowledge_raw: '',
                     products_services: '',
-                    style_words: ''
+                    style_words: '',
+                    learning_notes: ''
                 });
             }
         } catch (err) {
@@ -68,7 +79,7 @@ export default function KnowledgePage() {
 
     const handleSave = async () => {
         if (!activeProject) {
-            showToast('Selecciona un proyecto primero.', 'error');
+            showToast(t('dashboard.select_project'), 'error');
             return;
         }
         setSaving(true);
@@ -78,21 +89,25 @@ export default function KnowledgePage() {
                 biography: brain.biography,
                 audience: brain.audience,
                 values_tone: brain.values_tone,
+                niche: brain.niche,
+                sub_niche: brain.sub_niche,
                 niche_topics: brain.niche_topics,
                 knowledge_raw: brain.knowledge_raw,
                 products_services: brain.products_services,
                 style_words: brain.style_words,
-                updated_at: new Date().toISOString()
+                learning_notes: brain.learning_notes,
+                updated_at: new Date().toISOString(),
+                last_trained_at: new Date().toISOString()
             }, {
                 onConflict: 'project_id'
             });
 
             if (error) throw error;
-            showToast('Cerebro IA del proyecto guardado ✓', 'success');
+            showToast(t('common.success'), 'success');
             await refreshBrain();
         } catch (err) {
             console.error('Error saving project brain:', err);
-            showToast('No se pudieron guardar los cambios. Intenta de nuevo.', 'error');
+            showToast(t('common.error'), 'error');
         } finally {
             setSaving(false);
         }
@@ -181,12 +196,12 @@ export default function KnowledgePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
                 {[
+                    { key: 'niche', label: t('brain.niche'), icon: '🎯', placeholder: 'Ej: Marketing, Cicloturismo, Fitness...' },
+                    { key: 'sub_niche', label: t('brain.sub_niche'), icon: '🔍', placeholder: 'Ej: Marketing de afiliados, Rutas por Europa...' },
                     { key: 'biography', label: 'Biografía / Historia', icon: '👤', placeholder: '¿Quién eres? Cuéntanos tu trayectoria...' },
-                    { key: 'audience', label: 'Público Objetivo', icon: '👥', placeholder: '¿Para quién escribes? ¿Qué necesitan?' },
-                    { key: 'values_tone', label: 'Valores y Tono', icon: '✨', placeholder: '¿Qué tono usas? (Ej: Cercano, Rebelde...)' },
-                    { key: 'niche_topics', label: 'Nicho y Temas', icon: '🎯', placeholder: 'Marketing, Fitness, IA... ¿Cuáles son tus temas?' },
+                    { key: 'audience', label: t('brain.audience'), icon: '👥', placeholder: '¿Para quién escribes? ¿Qué necesitan?' },
                     { key: 'products_services', label: 'Productos / Servicios', icon: '💼', placeholder: '¿Qué vendes o qué servicios ofreces?' },
-                    { key: 'style_words', label: 'Palabras de Estilo', icon: '🎨', placeholder: 'Palabras que definen tu marca: directo, inspirador...' },
+                    { key: 'values_tone', label: t('brain.tone'), icon: '✨', placeholder: '¿Qué tono usas? (Ej: Cercano, Rebelde...)' },
                 ].map((sec) => (
                     <div key={sec.key} className="premium-card" style={{ padding: '24px' }}>
                         <BrainField
@@ -194,7 +209,7 @@ export default function KnowledgePage() {
                             label={sec.label}
                             icon={sec.icon}
                             className="textarea-field"
-                            rows={6}
+                            rows={3}
                             placeholder={sec.placeholder}
                             value={brain[sec.key]}
                             onChange={(e) => setBrain({ ...brain, [sec.key]: e.target.value })}
@@ -203,6 +218,30 @@ export default function KnowledgePage() {
                         />
                     </div>
                 ))}
+            </div>
+
+            {/* AI Learning & Evolution Section */}
+            <div className="premium-card" style={{ padding: '32px', marginBottom: '32px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '1.5rem' }}>🚀</div>
+                    <div>
+                        <h3 style={{ fontSize: '1.3rem', marginBottom: '4px' }}>Algoritmo de Aprendizaje (Log de Entrenamiento)</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Aquí es donde la IA guarda lo que "aprende" de tu feedback. Puedes editarlo manualmente para guiar a la IA.
+                        </p>
+                    </div>
+                </div>
+
+                <BrainField
+                    fieldKey="learning_notes"
+                    className="textarea-field"
+                    rows={6}
+                    placeholder="Feedback aprendido: 'Evita hablar de precios directamente', 'Usa más storytelling emocional', 'Enfatiza que somos pro-ambiente'..."
+                    value={brain.learning_notes}
+                    onChange={(e) => setBrain({ ...brain, learning_notes: e.target.value })}
+                    brainContext={brain}
+                    style={{ background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', fontSize: '0.95rem', color: '#7ECECA' }}
+                />
             </div>
 
             {/* Knowledge Base Section */}

@@ -159,6 +159,9 @@ CONTEXTO DEL CREADOR Y NEGOCIO:
 ${brandContextString}
 ${contextLines.join('\n')}
 
+INSTRUCCIONES DE IDIOMA:
+- Debes escribir TODO el guion y el copy en idoma: ${projectLanguage === 'en' ? 'INGLÉS' : 'ESPAÑOL'}. Esto es una regla de hierro.
+
 INSTRUCCIONES DE ESTILO (CRÍTICAS):
 1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...", "No te pierdas esta oportunidad..." o "¿Alguna vez has soñado con...?".
 2) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. Si el creador dice que está "empezando", actúa como tal.
@@ -240,10 +243,17 @@ export async function POST(request) {
 
         // Fetch Brand Brain: project-scoped first, fallback to global
         let brandBrain = null;
+        let projectData = null;
+
         if (projectId) {
-            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
-            brandBrain = data;
+            const [brainRes, projectRes] = await Promise.all([
+                supabase.from('project_brains').select('*').eq('project_id', projectId).single(),
+                supabase.from('projects').select('*').eq('id', projectId).single()
+            ]);
+            brandBrain = brainRes.data;
+            projectData = projectRes.data;
         }
+
         if (!brandBrain) {
             const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
             brandBrain = data;
@@ -253,12 +263,17 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
+        const projectLanguage = projectData?.language || 'es';
+
         // Rich brand context including personal details
         let brandContextString = `[CONTEXTO BASE DEL CREADOR]
 - Bio: ${brandBrain.biography || ''}
+- Nicho: ${brandBrain.niche || ''}
+- Sub-nicho: ${brandBrain.sub_niche || ''}
 - Estilo: ${brandBrain.style_words || ''}
 - Tono de marca: ${brandBrain.values_tone || ''}
-- Audiencia: ${brandBrain.audience || ''}`;
+- Audiencia: ${brandBrain.audience || ''}
+- APRENDIZAJE / FEEDBACK ACUMULADO: ${brandBrain.learning_notes || ''}`;
 
         // Keep legacy fields for backward compatibility if they aren't provided in the new fields
         if (victory) brandContextString += `\n- Victoria/Fracaso reciente: ${victory}`;

@@ -23,6 +23,7 @@ export const fetchCache = 'force-no-store';
 export const runtime = 'nodejs'; // Ensure no edge-caching of the layout itself
 
 import SupportWidget from '@/app/components/SupportWidget';
+import { Providers } from '@/app/components/Providers';
 
 export default function RootLayout({ children }) {
     return (
@@ -34,7 +35,9 @@ export default function RootLayout({ children }) {
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@300;600;900&display=swap" rel="stylesheet" />
             </head>
             <body>
-                {children}
+                <Providers>
+                    {children}
+                </Providers>
                 <SupportWidget />
             </body>
         </html>

@@ -1,0 +1,54 @@
+{
+  "common": {
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "loading": "Cargando...",
+    "success": "¡Éxito!",
+    "error": "Error"
+  },
+  "nav": {
+    "home": "Inicio",
+    "assistant": "Asistente IA",
+    "new_script": "Nuevo Guion",
+    "copys": "Copys IA",
+    "strategy": "Estrategia",
+    "viral_ideas": "Ideas virales",
+    "library": "Biblioteca",
+    "brain": "Cerebro IA",
+    "calendar": "Calendario",
+    "stats": "Métricas",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "exit": "Salir"
+  },
+  "dashboard": {
+    "welcome": "Bienvenido",
+    "new_project": "Nuevo Proyecto",
+    "monthly_plan": "Plan Mensual",
+    "generate": "Generar",
+    "scripts": "Guiones",
+    "buy_credits": "💎 COMPRAR CRÉDITOS",
+    "plan_pro": "🚀 PLAN PRO",
+    "pro_badge": "✅ PRO",
+    "membership_pro": "MEMBRESÍA PRO",
+    "free_trial": "PRUEBA GRATUITA",
+    "days_remaining": "{{days}} días restantes",
+    "connected_as": "Conectado como",
+    "profile": "Perfil",
+    "my_account": "Mi Cuenta"
+  },
+  "brain": {
+    "title": "Cerebro IA",
+    "niche": "Nicho",
+    "sub_niche": "Sub-nicho",
+    "audience": "Público Objetivo",
+    "tone": "Tono",
+    "examples": "Ejemplos Favoritos",
+    "learning_notes": "Log de Aprendizaje (Cerebro)",
+    "training_status": "Último entrenamiento",
+    "notes_placeholder": "Aquí se guardarán las lecciones que la IA aprenda de tu feedback...",
+    "save_brain": "Actualizar Cerebro"
+  }
+}

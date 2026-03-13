@@ -51,18 +51,33 @@ export async function POST(request) {
 
         // Fetch Brand Brain: project-scoped first, fallback to global
         let brandBrain = null;
+        let projectData = null;
+
         if (projectId) {
-            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
-            brandBrain = data;
+            const [brainRes, projectRes] = await Promise.all([
+                supabase.from('project_brains').select('*').eq('project_id', projectId).single(),
+                supabase.from('projects').select('*').eq('id', projectId).single()
+            ]);
+            brandBrain = brainRes.data;
+            projectData = projectRes.data;
         }
+
         if (!brandBrain) {
             const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
             brandBrain = data;
         }
 
+        const projectLanguage = projectData?.language || 'es';
+
         let brandContextString = '';
         if (brandBrain) {
-            brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---\nBiografía/Identidad: ${brandBrain.biography || 'No especificada'}\nPalabras y Estilo: ${brandBrain.style_words || 'No especificado'}\n---------------------------------------\n\nMUY IMPORTANTE: Todo el plan, ideas, títulos y enfoques DEBEN estar 100% alineados y ADAPTADOS a esta Identidad de Marca (Cerebro IA). Eres la voz de esta marca.`;
+            brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---
+Biografía/Identidad: ${brandBrain.biography || 'No especificada'}
+Nicho/Sub-nicho: ${brandBrain.niche || ''} / ${brandBrain.sub_niche || ''}
+Palabras y Estilo: ${brandBrain.style_words || 'No especificado'}
+APRENDIZAJE / FEEDBACK ACUMULADO: ${brandBrain.learning_notes || ''}
+---------------------------------------\n\nMUY IMPORTANTE: Todo el plan, ideas, títulos y enfoques DEBEN estar 100% alineados y ADAPTADOS a esta Identidad de Marca (Cerebro IA). Eres la voz de esta marca.
+IDIOMA OBLIGATORIO: Debes responder COMPLETAMENTE en idoma: ${projectLanguage === 'en' ? 'INGLÉS' : 'ESPAÑOL'}.`;
         } else {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }

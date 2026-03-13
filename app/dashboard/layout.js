@@ -1,5 +1,5 @@
 'use client';
-// Force Build: 2026-03-13 21:25 (v3.7.1)
+// Force Build: 2026-03-13 21:25 (v4.1.0)
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -8,15 +8,35 @@ import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
-import { ProjectProvider, useProject } from '@/app/components/ProjectContext';
+import { useProject } from '@/app/components/ProjectContext';
 import ProjectSelector from '@/app/components/ProjectSelector';
 import { Bell, Search, LogOut as LogOutIcon, User, Settings as SettingsIcon, X as CloseIcon } from 'lucide-react';
-import SuccessModal from '@/app/components/SuccessModal';
+import { useLanguage } from '@/app/components/LanguageContext';
+import { Globe } from 'lucide-react';
+
+// LanguageSelector Component inside DashboardLayout file or as separate component
+function LanguageSelector() {
+    const { locale, setLocale } = useLanguage();
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '100px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Globe size={14} style={{ color: '#7ECECA' }} />
+            <select 
+                value={locale} 
+                onChange={(e) => setLocale(e.target.value)}
+                style={{ background: 'none', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
+            >
+                <option value="es" style={{ background: '#1a1a1a' }}>ES</option>
+                <option value="en" style={{ background: '#1a1a1a' }}>EN</option>
+            </select>
+        </div>
+    );
+}
 
 export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [loadingStatus, setLoadingStatus] = useState('Verificando acceso...');
+    const { t } = useLanguage();
+    const [loadingStatus, setLoadingStatus] = useState(t('common.loading'));
     const [authError, setAuthError] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profile, setProfile] = useState(null);
@@ -275,7 +295,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v3.7.0)
+                    {loadingStatus} (v4.1.0)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -327,22 +347,21 @@ export default function DashboardLayout({ children }) {
     }
 
     const navItems = [
-        { href: '/dashboard/home', icon: Home, label: 'Inicio' },
-        { href: '/dashboard/asistente', icon: MessageSquare, label: 'Asistente IA', highlight: true },
-        { href: '/dashboard', icon: PenLine, label: 'Nuevo Guion' },
-        { href: '/dashboard/copys', icon: Type, label: 'Copys IA' },
-        { href: '/dashboard/estrategia', icon: Target, label: 'Estrategia' },
-        { href: '/dashboard/ideas-virales', icon: Sparkles, label: 'Ideas virales' },
-        { href: '/dashboard/library', icon: BookOpen, label: 'Biblioteca' },
-        { href: '/dashboard/knowledge', icon: Brain, label: 'Cerebro IA' },
-        { href: '/dashboard/calendar', icon: CalendarDays, label: 'Calendario' },
-        { href: '/dashboard/stats', icon: BarChart2, label: 'Métricas' },
-        { href: '/dashboard/settings', icon: Settings, label: 'Configuración' },
+        { href: '/dashboard/home', icon: Home, label: t('nav.home') },
+        { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
+        { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
+        { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
+        { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
+        { href: '/dashboard/ideas-virales', icon: Sparkles, label: t('nav.viral_ideas') },
+        { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
+        { href: '/dashboard/knowledge', icon: Brain, label: t('nav.brain') },
+        { href: '/dashboard/calendar', icon: CalendarDays, label: t('nav.calendar') },
+        { href: '/dashboard/stats', icon: BarChart2, label: t('nav.stats') },
+        { href: '/dashboard/settings', icon: Settings, label: t('nav.settings') },
     ];
 
     return (
-        <ProjectProvider>
-            <div className="app-layout" style={{ background: '#050505' }}>
+        <div className="app-layout" style={{ background: '#050505' }}>
                 {/* Sidebar Lucide (Icons Only) */}
                 <aside className="sidebar">
                     <div style={{ marginBottom: '40px' }}>
@@ -442,6 +461,7 @@ export default function DashboardLayout({ children }) {
                                     border: '1px solid rgba(255,255,255,0.1)'
                                 }}>
                                     Salir
+                                    {t('nav.exit')}
                                 </div>
                             )}
                         </button>
@@ -453,7 +473,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v3.7.0
+                            v4.1.0
                         </div>
                     </div>
                 </aside>
@@ -559,7 +579,7 @@ export default function DashboardLayout({ children }) {
                                     }}
                                 >
                                     <LogOut size={20} />
-                                    Cerrar sesión
+                                    {t('nav.logout')}
                                 </button>
                             </aside>
                         </div>
@@ -592,14 +612,14 @@ export default function DashboardLayout({ children }) {
                                         transition: '0.2s'
                                     }}
                                     className="user-profile-badge"
-                                    title="Mi Cuenta"
+                                    title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.7.0</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.1.0</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
-                                        whiteSpace: 'nowrap',
+                                        whiteWhiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         maxWidth: '120px',
@@ -627,17 +647,17 @@ export default function DashboardLayout({ children }) {
                                             animation: 'fadeInUp 0.2s ease'
                                         }}>
                                             <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#888' }}>Conectado como</p>
+                                                <p style={{ margin: 0, fontSize: '0.75rem', color: '#888' }}>{t('dashboard.connected_as')}</p>
                                                 <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</p>
                                             </div>
                                             <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
-                                                <User size={16} /> Perfil
+                                                <User size={16} /> {t('dashboard.profile')}
                                             </Link>
                                             <Link href="/dashboard/settings" onClick={() => setIsUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ccc', textDecoration: 'none', fontSize: '0.9rem', transition: '0.2s' }} className="menu-item-hover">
-                                                <SettingsIcon size={16} /> Configuración
+                                                <SettingsIcon size={16} /> {t('nav.settings')}
                                             </Link>
                                             <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', color: '#ff4d4d', background: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left' }} className="menu-item-hover">
-                                                <LogOutIcon size={16} /> Cerrar sesión
+                                                <LogOutIcon size={16} /> {t('nav.logout')}
                                             </button>
                                         </div>
                                     </>
@@ -646,7 +666,8 @@ export default function DashboardLayout({ children }) {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+                                <LanguageSelector />
                                 <button
                                     onClick={() => setIsCreditsModalOpen(true)}
                                     className="btn-primary"
@@ -663,7 +684,7 @@ export default function DashboardLayout({ children }) {
                                         flexShrink: 0
                                     }}
                                 >
-                                    💎 COMPRAR CRÉDITOS
+                                    {t('dashboard.buy_credits')}
                                 </button>
                                 <button
                                     onClick={handleCheckoutPlan}
@@ -682,7 +703,7 @@ export default function DashboardLayout({ children }) {
                                         whiteSpace: 'nowrap'
                                     }}
                                 >
-                                    {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? '✅ PRO' : '🚀 PLAN PRO'}
+                                    {planCheckoutLoading ? '⏳' : profile?.plan === 'pro' ? t('dashboard.pro_badge') : t('dashboard.plan_pro')}
                                 </button>
                             </div>
                             <div className="credit-badge" onClick={() => setIsCreditsModalOpen(true)} style={{
@@ -717,10 +738,10 @@ export default function DashboardLayout({ children }) {
                                 <span style={{ fontSize: '0.9rem' }}>💎</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
-                                        {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'PRUEBA GRATUITA'}
+                                        {profile?.plan === 'pro' ? t('dashboard.membership_pro') : t('dashboard.free_trial')}
                                     </span>
                                     <span style={{ color: (typeof daysRemaining === 'number' && daysRemaining <= 2) ? '#FF4D4D' : '#FFD700', fontSize: '0.75rem', fontWeight: 800 }}>
-                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : '...'}
+                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? t('dashboard.days_remaining', { days: daysRemaining }) : daysRemaining) : '...'}
                                     </span>
                                 </div>
                             </div>
@@ -918,6 +939,5 @@ export default function DashboardLayout({ children }) {
                 }
                 `}</style>
             </div>
-        </ProjectProvider>
     );
 }

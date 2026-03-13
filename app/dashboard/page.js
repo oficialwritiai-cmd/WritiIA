@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2, Sparkles, Search, X, Mic } from 'lucide-react';
+import { PenLine, CheckCircle2, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
@@ -144,6 +144,41 @@ export default function DashboardPage() {
     const [isNamingModalOpen, setIsNamingModalOpen] = useState(false);
     const [newPresetName, setNewPresetName] = useState('');
     const [sourceEventId, setSourceEventId] = useState(null);
+    const [scriptFeedback, setScriptFeedback] = useState({}); // { [scriptIdx]: 'like' | 'dislike' }
+
+    const handleFeedback = async (idx, type) => {
+        if (scriptFeedback[idx]) return; // Already voted
+
+        const script = scripts[idx];
+        const scriptText = `GANCHO: ${script.hook || script.gancho}\nDESARROLLO: ${script.desarrollo.join(' | ')}\nCTA: ${script.cta}`;
+
+        setScriptFeedback(prev => ({ ...prev, [idx]: type }));
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const res = await fetch('/api/train-brain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    feedback: type === 'like' ? 'Me gusta mucho este estilo y estructura.' : 'No me gusta este enfoque, cámbialo.',
+                    scriptContext: scriptText,
+                    projectId: activeProject?.id,
+                    userId: user.id,
+                    type: type === 'like' ? 'Positivo' : 'Negativo'
+                })
+            });
+
+            if (!res.ok) throw new Error('Failed to train');
+            const data = await res.json();
+            console.log('[Feedback] Brain updated:', data.newNotes);
+            
+            // Optionally refresh the local brain context if we use it for live generation
+            if (refreshBrain) await refreshBrain();
+
+        } catch (err) {
+            console.error('Error sending feedback:', err);
+        }
+    };
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
@@ -2443,60 +2478,54 @@ export default function DashboardPage() {
 
                                     {/* Wizard Header */}
                                     <div style={{
-                                        padding: '20px 32px',
-                                        borderBottom: '1px solid #1E1E1E',
+                                        padding: '24px 32px 0 32px',
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        background: 'rgba(255,255,255,0.02)'
+                                        alignItems: 'center'
                                     }}>
-                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                             <div style={{
-                                                width: '24px',
-                                                height: '24px',
-                                                borderRadius: '50%',
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '12px',
                                                 background: 'var(--accent-gradient)',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                color: '#000',
-                                                fontWeight: 900,
-                                                fontSize: '0.7rem'
+                                                boxShadow: '0 4px 12px rgba(126, 206, 202, 0.2)'
                                             }}>
-                                                #{i + 1}
+                                                <span style={{ fontWeight: 900, color: '#000', fontSize: '1.2rem' }}>{i + 1}</span>
                                             </div>
-                                            <div style={{ flex: 1 }}>
-                                                <input
-                                                    value={s.titulo_guion || s.titulo_angulo || `Guion #${i + 1}`}
-                                                    onChange={(e) => {
-                                                        const news = [...scripts];
-                                                        news[i].titulo_guion = e.target.value;
-                                                        setScripts(news);
-                                                    }}
-                                                    placeholder="Título del guion..."
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: 'none',
-                                                        borderBottom: '1px dashed rgba(255,255,255,0.2)',
-                                                        color: '#fff',
-                                                        fontSize: '1rem',
-                                                        fontWeight: 800,
-                                                        width: '100%',
-                                                        outline: 'none',
-                                                        padding: '4px 0'
-                                                    }}
-                                                />
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700 }}>
-                                                        <Loader2 size={12} className="animate-spin" />
+                                            <div>
+                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'white' }}>{s.titulo_guion || s.titulo_angulo || `Guion ${i + 1}`}</h3>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        background: 'rgba(255,255,255,0.03)',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid rgba(255,255,255,0.05)'
+                                                    }}>
+                                                        <Clock size={12} color="rgba(255,255,255,0.5)" />
                                                         <input
-                                                            value={s.video_duration || '45-60 seg'}
+                                                            type="text"
+                                                            value={s.video_duration || videoDuration}
                                                             onChange={(e) => {
                                                                 const news = [...scripts];
                                                                 news[i].video_duration = e.target.value;
                                                                 setScripts(news);
                                                             }}
-                                                            style={{ background: 'transparent', border: 'none', color: 'inherit', width: '80px', fontSize: 'inherit', fontWeight: 'inherit', padding: 0, outline: 'none' }}
+                                                            style={{
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                color: 'rgba(255,255,255,0.5)',
+                                                                fontSize: '0.7rem',
+                                                                fontWeight: 700,
+                                                                width: '40px',
+                                                                outline: 'none'
+                                                            }}
                                                         />
                                                     </div>
                                                     <span className="badge" style={{
@@ -2508,6 +2537,42 @@ export default function DashboardPage() {
                                                     }}>{platform}</span>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Brain Learning Feedback Loop */}
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <button
+                                                onClick={() => handleFeedback(i, 'like')}
+                                                disabled={scriptFeedback[i]}
+                                                style={{
+                                                    width: '36px', height: '36px', borderRadius: '50%',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    background: scriptFeedback[i] === 'like' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.02)',
+                                                    border: scriptFeedback[i] === 'like' ? '1px solid #4ade80' : '1px solid rgba(255,255,255,0.05)',
+                                                    color: scriptFeedback[i] === 'like' ? '#4ade80' : 'rgba(255,255,255,0.3)',
+                                                    cursor: scriptFeedback[i] ? 'default' : 'pointer',
+                                                    transition: '0.2s'
+                                                }}
+                                                title="Me gusta este estilo (Entrenar IA)"
+                                            >
+                                                <ThumbsUp size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleFeedback(i, 'dislike')}
+                                                disabled={scriptFeedback[i]}
+                                                style={{
+                                                    width: '36px', height: '36px', borderRadius: '50%',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    background: scriptFeedback[i] === 'dislike' ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255,255,255,0.02)',
+                                                    border: scriptFeedback[i] === 'dislike' ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.05)',
+                                                    color: scriptFeedback[i] === 'dislike' ? '#f87171' : 'rgba(255,255,255,0.3)',
+                                                    cursor: scriptFeedback[i] ? 'default' : 'pointer',
+                                                    transition: '0.2s'
+                                                }}
+                                                title="No me gusta (Entrenar IA)"
+                                            >
+                                                <ThumbsDown size={16} />
+                                            </button>
                                         </div>
                                     </div>
 
