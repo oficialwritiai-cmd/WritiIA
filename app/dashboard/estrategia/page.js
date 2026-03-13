@@ -75,6 +75,7 @@ export default function EstrategiaPage() {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
     const [selectedPhase, setSelectedPhase] = useState('ideacion');
+    const [syncProgress, setSyncProgress] = useState(null);
     
     // Nuevo flujo de planificación inteligente
     const [isAnalyzingPlan, setIsAnalyzingPlan] = useState(false);
@@ -710,12 +711,14 @@ export default function EstrategiaPage() {
         }
 
         setSavingToCalendar(true);
+        setSyncProgress({ current: 0, total: selectedIdeasForPlan.length, text: 'Iniciando sincronización...' });
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión');
 
             // 1. Get AI suggested schedule
+            setSyncProgress(prev => ({ ...prev, text: '📅 Calculando fechas óptimas...' }));
             const scheduleRes = await fetch('/api/calendar/plan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -745,7 +748,7 @@ export default function EstrategiaPage() {
 
             if (planError) throw planError;
 
-            // 3. Prepare events and ensure all ideas are in library
+            // 3. Prepare events and generate scripts sequentially
             const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
             const eventsToInsert = [];
 
@@ -754,34 +757,94 @@ export default function EstrategiaPage() {
                 const suggestion = schedule?.find(s => s.id_idea === idea.id || s.id === idea.id) || {};
                 const targetDate = suggestion.fecha_sugerida || suggestion.fecha || new Date(new Date().setDate(new Date().getDate() + idx + 1)).toISOString().split('T')[0];
 
+                setSyncProgress({ current: idx + 1, total: selectedIdeasForPlan.length, text: `Generando guion y copy: ${idea.titulo_idea || idea.titulo || 'Idea ' + (idx+1)}...` });
+                console.log(`[PLAN_CALENDARIO] Generando guion para idea ${idx + 1}/${selectedIdeasForPlan.length}: ${idea.titulo_idea || idea.titulo}`);
+
+                // --- 3.1 GENERATE FULL SCRIPT VIA API ---
+                let fullScriptContent = { ...idea };
+                let scriptFullText = idea.descripcion || '';
+
+                try {
+                    const scriptRes = await fetch('/api/generate-scripts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            topic: `${idea.titulo_idea || idea.titulo || ''} - ${idea.descripcion || ''}`,
+                            platform: idea.plataforma || 'General',
+                            count: 1,
+                            tone: 'Directo y persuasivo',
+                            intensity: 4,
+                            videoDuration: '60 seg',
+                            userId: user.id,
+                            projectId: activeProject?.id
+                        })
+                    });
+
+                    if (scriptRes.ok) {
+                        const scriptData = await scriptRes.json();
+                        if (scriptData.scripts && scriptData.scripts.length > 0) {
+                            const generatedScript = scriptData.scripts[0];
+                            fullScriptContent = { ...fullScriptContent, ...generatedScript };
+                            
+                            // Reconstruct the full text for the calendar event
+                            let textParts = [];
+                            if (generatedScript.titulo_guion) textParts.push(`🎬 TÍTULO: ${generatedScript.titulo_guion}`);
+                            if (generatedScript.gancho) textParts.push(`\n🪝 GANCHO (Hook):\n${generatedScript.gancho}`);
+                            if (generatedScript.desarrollo && Array.isArray(generatedScript.desarrollo)) {
+                                textParts.push(`\n📝 DESARROLLO:\n${generatedScript.desarrollo.join('\n')}`);
+                            }
+                            if (generatedScript.cierre) textParts.push(`\n✨ CIERRE:\n${generatedScript.cierre}`);
+                            if (generatedScript.cta) textParts.push(`\n🎯 CTA:\n${generatedScript.cta}`);
+                            if (generatedScript.copy_post) {
+                                textParts.push(`\n\n📌 COPY PARA EL POST:\n${generatedScript.copy_post.titulo || ''}\n${generatedScript.copy_post.descripcion_larga || ''}\n${generatedScript.copy_post.hashtags?.join(' ') || ''}`);
+                            }
+                            
+                            scriptFullText = textParts.join('\n');
+                        }
+                    } else {
+                        console.warn('[PLAN_CALENDARIO] Falló la generación del guion para:', idea.titulo_idea);
+                    }
+                } catch (scriptErr) {
+                    console.error('[PLAN_CALENDARIO] Error llamando a /api/generate-scripts:', scriptErr);
+                }
+                // ----------------------------------------
+
                 let validRefId = isValidUUID(idea.id) ? idea.id : null;
 
-                // Si no tiene UUID válido, guardarla primero en biblioteca para obtener uno
-                if (!validRefId) {
-                    try {
-                        const savedData = await supabase.from('library').insert({
-                            user_id: user.id,
-                            type: 'idea',
-                            platform: idea.plataforma || 'General',
-                            goal: idea.objetivo || 'engagement',
-                            titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
-                            content: idea,
-                            tags: [idea.plataforma, idea.tipo, idea.objetivo].filter(Boolean),
-                            status: 'borrador',
-                            project_id: activeProject?.id
-                        }).select().single();
+                // 3.2 GUARDAR EN BIBLIOTECA COMO GUION COMPLETO
+                try {
+                    setSyncProgress(prev => ({ ...prev, text: `Guardando en biblioteca: ${idea.titulo_idea || idea.titulo || 'Idea ' + (idx+1)}...` }));
+                    
+                    // Si ya existía, actualizamos. Si no, insertamos.
+                    const payload = {
+                        user_id: user.id,
+                        type: 'guion', // Ahora es un guion completo
+                        platform: idea.plataforma || 'General',
+                        goal: idea.objetivo || 'engagement',
+                        titulo: idea.titulo_idea || idea.titulo || 'Idea Estratégica',
+                        content: fullScriptContent,
+                        script_full_text: scriptFullText,
+                        tags: [idea.plataforma, idea.tipo, idea.objetivo, 'plan-mensual'].filter(Boolean),
+                        status: 'borrador',
+                        project_id: activeProject?.id
+                    };
 
-                        if (savedData.data && savedData.data.id) {
-                            validRefId = savedData.data.id;
-                        }
-                    } catch (saveErr) {
-                        console.error('Error auto-guardando idea antes de calendario:', saveErr);
+                    let savedData;
+                    if (validRefId) {
+                        savedData = await supabase.from('library').update(payload).eq('id', validRefId).select().single();
+                    } else {
+                        savedData = await supabase.from('library').insert(payload).select().single();
                     }
+
+                    if (savedData.data && savedData.data.id) {
+                        validRefId = savedData.data.id;
+                    }
+                } catch (saveErr) {
+                    console.error('Error auto-guardando guion en biblioteca:', saveErr);
                 }
 
-                console.log(`[PLAN_CALENDARIO] creando evento para idea ${validRefId || 'SIN_ID'} en ${targetDate}`);
-
-                let descriptionStr = idea.descripcion || '';
+                // 3.3 PREPARAR PARA CALENDARIO
+                let descriptionStr = scriptFullText;
                 if (suggestion.motivo || suggestion.razon) {
                     descriptionStr += `\n\n🎯 AI Tip: ${suggestion.motivo || suggestion.razon}`;
                 }
@@ -805,13 +868,15 @@ export default function EstrategiaPage() {
                 });
             }
 
+            // 4. INSERTAR TODOS LOS EVENTOS EN CALENDARIO
+            setSyncProgress({ current: selectedIdeasForPlan.length, total: selectedIdeasForPlan.length, text: 'Escribiendo eventos en el calendario...' });
             const { error: eventError } = await supabase
                 .from('calendar_events')
                 .insert(eventsToInsert);
 
             if (eventError) throw eventError;
 
-            // 4. (Optional) Also save to slots for backward compatibility if needed
+            // 5. Insertar slots del plan (para compatibilidad)
             const slotsToInsert = selectedIdeasForPlan.map((idea, idx) => {
                 const suggestion = schedule?.find(s => s.id_idea === idea.id || s.id === idea.id) || {};
                 const targetDate = suggestion.fecha_sugerida || suggestion.fecha;
@@ -832,8 +897,8 @@ export default function EstrategiaPage() {
             const maxDate = new Date(Math.max(...dates)).toLocaleDateString();
 
             setSuccessModalData({
-                title: '¡Plan Calendario Creado!',
-                message: `Se han planificado ${selectedIdeasForPlan.length} ideas entre el ${minDate} y el ${maxDate}. ¿Qué quieres hacer ahora?`,
+                title: '¡Plan Mensual Completo!',
+                message: `Se han generado los guiones de ${selectedIdeasForPlan.length} ideas y programado entre el ${minDate} y el ${maxDate}.`,
                 redirectTo: '/dashboard/calendar',
                 actionLabel: 'Ver Calendario',
                 secondaryActionLabel: 'Ver en Biblioteca',
@@ -845,6 +910,7 @@ export default function EstrategiaPage() {
             alert('Error al enviar al calendario: ' + err.message);
         } finally {
             setSavingToCalendar(false);
+            setSyncProgress(null);
         }
     };
 
@@ -1526,12 +1592,14 @@ export default function EstrategiaPage() {
                             </button>
                             <button
                                 className="btn-secondary"
-                                style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', border: 'none' }}
+                                style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)', border: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
                                 onClick={handleSendToCalendar}
                                 disabled={savingToCalendar}
                             >
-                                {savingToCalendar ? <Loader2 className="animate-spin" size={16} style={{ marginRight: '8px', display: 'inline' }} /> : <Calendar size={16} style={{ marginRight: '8px', display: 'inline' }} />}
-                                {savingToCalendar ? 'Guardando...' : 'Enviar al Calendario'}
+                                {savingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <Calendar size={16} />}
+                                <span>
+                                    {savingToCalendar ? (syncProgress?.text || 'Guardando...') : 'Enviar al Calendario'}
+                                </span>
                             </button>
                             <button className="btn-primary" style={{ padding: '10px 20px' }} onClick={() => router.push('/dashboard/calendar')}>
                                 Ver Calendario →
