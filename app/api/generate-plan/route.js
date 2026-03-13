@@ -35,7 +35,12 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { description, platforms, frequency, focus, userId, selectedIdeas, projectId, postCount } = validation.data;
+        const { 
+            description, platforms, frequency, focus, userId, selectedIdeas, projectId, postCount,
+            businessOffer, targetAudience, targetAudienceType, mainPainPoint,
+            monthlyGoals, successMetric, keyThemes, contentStyles,
+            howNotToSound, brandMantra, ticketPrice
+        } = validation.data;
         const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
         // Credit Check & Charge (3 credits)
@@ -62,28 +67,44 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
-        const systemPrompt = `Eres un estratega de contenido web premium y experto en redes sociales.
+        const systemPrompt = `Eres el Director Creativo de una Agencia de Marketing Web Premium.
 ${brandContextString}
 
-Diseña un PLAN DE CONTENIDO para ${postCount || 30} publicaciones. Responde ÚNICAMENTE en formato JSON (un array de objetos).
+Tu objetivo es diseñar un ESTRATEGIA DE CONTENIDO MENSUAL de alto impacto para ${postCount || 30} publicaciones.
+No generes ideas genéricas. Usa el briefing para crear ángulos de venta, autoridad y comunidad que se sientan humanos y profesionales.
 
-CADA OBJETO DEBE TENER ESTAS CLAVES EXACTAS:
+CADA OBJETO DEL JSON DEBE TENER ESTAS CLAVES:
 - "day_number": número del 1 al 30.
 - "platform": string (TikTok, Reels, LinkedIn, etc).
-- "content_type": string (educativo, venta, personal, etc).
-- "idea_title": un título ultra-atractivo, gancho y RELEVANTE PARA LA MARCA (OBLIGATORIO).
-- "goal": el objetivo del post.
+- "content_type": string (educativo, venta, autoridad, comunidad, historia, etc).
+- "idea_title": un título magnético, específico y RELEVANTE PARA EL BRIEFING (OBLIGATORIO).
+- "goal": el objetivo específico del post (alcance, leads, venta, autoridad).
 
-Ejemplo: [{"day_number": 1, "platform": "Reels", "content_type": "Venta", "idea_title": "3 trucos para escalar como marca personal", "goal": "conversión"}]`;
+Responde ÚNICAMENTE en formato JSON (un array de objetos).`;
 
         const userMessage = `
-DESCRIPCIÓN DE LA CAMPAÑA / PRODUCTO: ${description}
-OBJETIVO/ENFOQUE DEL MES: ${focus}
-PLATAFORMAS SELECCIONADAS: ${platforms.join(', ')}
-FRECUENCIA: ${frequency}
-${selectedIdeas && selectedIdeas.length > 0 ? `IDEAS PREFERIDAS (Usa estas como base para el contenido): \n- ${selectedIdeas.join('\n- ')}` : ''}
+--- BRIEFING DE CAMPAÑA ---
+Oferta Principal: ${businessOffer || description}
+Precio/Ticket: ${ticketPrice || 'No especificado'}
+Público Objetivo: ${targetAudienceType} (${targetAudience || 'General'})
+Problema/Dolor Nº1: ${mainPainPoint}
+Objetivos del Mes: ${Array.isArray(monthlyGoals) ? monthlyGoals.join(', ') : monthlyGoals}
+Métrica de Éxito: ${successMetric}
+Temas a Empujar: ${keyThemes}
+Estilos de Contenido: ${Array.isArray(contentStyles) ? contentStyles.join(', ') : contentStyles}
+FILTRO "LO QUE NO QUEREMOS": ${howNotToSound}
+MANTRA/IDEA REPETIDA: ${brandMantra}
 
-IMPORTANTE: El plan debe cubrir ${postCount || 30} publicaciones. Si hay menos ideas preferidas que la cantidad indicada, genera ideas complementarias siguiendo la IDENTIDAD DE MARCA y el objetivo.
+PLATAFORMAS: ${platforms.join(', ')}
+FRECUENCIA TOTAL: ${frequency}
+POSTS A GENERAR: ${postCount || 30}
+
+${selectedIdeas && selectedIdeas.length > 0 ? `IDEAS ESPECÍFICAS PARA INCLUIR: \n- ${selectedIdeas.join('\n- ')}` : ''}
+
+IMPORTANTE: 
+1. Distribuye el contenido para cumplir con el mix de objetivos (Ventas vs Autoridad vs Educativo).
+2. Si la oferta es de ticket alto, prioriza contenido de Autoridad y Casos de Estudio.
+3. El tono debe respetar el filtro "Lo que no queremos".
 `;
 
         const { parsed: results } = await generateIdeasWithHaiku({

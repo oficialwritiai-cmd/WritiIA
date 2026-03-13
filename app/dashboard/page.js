@@ -16,7 +16,7 @@ import { useProject } from '@/app/components/ProjectContext';
 const SUGGESTED_TRENDS = [
     { name: 'Nicho Marketing', icon: '📈', grow: '+12.5%', color: '#9D00FF' },
     { name: 'IA Generativa', icon: '🤖', grow: '+45.2%', color: '#00F3FF' },
-    { name: 'Productividad', icon: 'â³', grow: '+8.1%', color: '#FF007A' },
+    { name: 'Productividad', icon: '⌛', grow: '+8.1%', color: '#FF007A' },
 ];
 
 const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'X', 'YouTube Shorts', 'YouTube', 'Instagram'];
@@ -29,8 +29,12 @@ const ENFOQUES = ['autoridad', 'historia personal', 'venta', 'comunidad', 'mezcl
 const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunidad'];
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
+const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negocio local', 'Creadores de Contenido', 'Infoproductores', 'eCommerce', 'B2B/Empresas'];
+const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
+const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
+
 // 17) v2.8.4 - Clean UI Encoding & Professional Prompt
-export const VERSION = 'v3.9.0';
+export const VERSION = 'v4.0.0';
 
 
 
@@ -95,6 +99,21 @@ export default function DashboardPage() {
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
     const [recommendedIdeas, setRecommendedIdeas] = useState([]);
     const [loadingRecommended, setLoadingRecommended] = useState(false);
+
+    // New Marketing Briefing States (v4.0.0)
+    const [businessOffer, setBusinessOffer] = useState('');
+    const [ticketPrice, setTicketPrice] = useState('');
+    const [targetAudience, setTargetAudience] = useState('');
+    const [targetAudienceType, setTargetAudienceType] = useState('Emprendedores');
+    const [mainPainPoint, setMainPainPoint] = useState('');
+    const [monthlyGoals, setMonthlyGoals] = useState([]);
+    const [successMetric, setSuccessMetric] = useState('');
+    const [keyThemes, setKeyThemes] = useState('');
+    const [contentStyles, setContentStyles] = useState([]);
+    const [howNotToSound, setHowNotToSound] = useState('');
+    const [brandMantra, setBrandMantra] = useState('');
+    const [briefAnalysis, setBriefAnalysis] = useState('');
+    const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
 
     // Missing states restored
     const [profile, setProfile] = useState(null);
@@ -777,6 +796,45 @@ export default function DashboardPage() {
         }
     }
 
+    const handleAnalyzeBrief = async () => {
+        if (!businessOffer.trim()) {
+            alert('Por favor, indica qué vendes este mes.');
+            return;
+        }
+        setIsAnalyzingBrief(true);
+        try {
+            const res = await fetch('/api/analyze-plan-brief', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    businessOffer,
+                    targetAudience,
+                    targetAudienceType,
+                    mainPainPoint,
+                    monthlyGoals,
+                    successMetric,
+                    keyThemes,
+                    contentStyles,
+                    howNotToSound,
+                    brandMantra,
+                    ticketPrice,
+                    platforms: planPlatforms
+                })
+            });
+            const data = await res.json();
+            if (data.summary) {
+                setBriefAnalysis(data.summary);
+                setPlanWizardStep(4);
+            } else {
+                throw new Error(data.error || 'Error al analizar briefing');
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            setIsAnalyzingBrief(false);
+        }
+    };
+
     async function handleGeneratePlan() {
         if (!topic.trim()) {
             setError('Por favor, describe tu marca y objetivos para el mes.');
@@ -831,6 +889,17 @@ export default function DashboardPage() {
                         const idea = libIdeas.find(li => li.id === id);
                         return idea ? `${idea.titulo}: ${idea.content?.descripcion || ''}` : null;
                     }).filter(Boolean),
+                    businessOffer,
+                    targetAudience,
+                    targetAudienceType,
+                    mainPainPoint,
+                    monthlyGoals,
+                    successMetric,
+                    keyThemes,
+                    contentStyles,
+                    howNotToSound,
+                    brandMantra,
+                    ticketPrice,
                     projectId: activeProject?.id
                 }),
             });
@@ -1050,7 +1119,7 @@ export default function DashboardPage() {
         const copy = script.copy_post || {};
         const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ') : '';
 
-        return `TÃTULO: ${script.titulo_guion || script.titulo_angulo || 'Sin título'}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
+        return `TÍTULO: ${script.titulo_guion || script.titulo_angulo || 'Sin título'}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
     };
 
     const saveScript = async (script, silent = false) => {
@@ -1310,9 +1379,18 @@ export default function DashboardPage() {
                     goal: slot.goal,
                     count: 1,
                     videoDuration: videoDuration || '60 seg',
-                    ideas: `Enfoque: ${slot.content_type}`,
+                    ideas: `Enfoque: ${slot.content_type}${keyThemes ? `. Temas clave: ${keyThemes}` : ''}`,
                     userId: profile?.id,
-                    projectId: activeProject?.id
+                    projectId: activeProject?.id,
+                    // v4.0.0 Briefing Context
+                    businessOffer,
+                    targetAudienceType,
+                    mainPainPoint,
+                    brandMantra,
+                    experienciaReal: experienciaReal || keyThemes, // Fallback if specific story not provided
+                    opinionPersonal: opinionPersonal || brandMantra,
+                    faseCreador,
+                    ctaIdea: ctaIdea || 'Inscríbete o compra ahora'
                 }),
             });
 
@@ -1464,10 +1542,10 @@ export default function DashboardPage() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Fetch existing events to avoid overlaps
+            // Fetch existing events to avoid overlaps and duplicates
             const { data: existingEvents } = await supabase
                 .from('calendar_events')
-                .select('event_date')
+                .select('event_date, title')
                 .eq('user_id', user.id)
                 .eq('project_id', activeProject?.id);
 
@@ -1488,7 +1566,7 @@ export default function DashboardPage() {
                     targetDate = new Date(today);
                 }
 
-                // Rule 2: No duplicates/overlaps (look for next free slot)
+                // Rule 2: No overlaps (look for next free slot)
                 let dateStr = targetDate.toISOString().split('T')[0];
                 let attempts = 0;
                 while (occupiedDates.has(dateStr) && attempts < 60) {
@@ -1496,6 +1574,14 @@ export default function DashboardPage() {
                     dateStr = targetDate.toISOString().split('T')[0];
                     attempts++;
                 }
+
+                // Rule 3: Avoid exact duplicates (same title and date)
+                const isExactDuplicate = existingEvents?.some(e => e.event_date === dateStr && e.title === slot.idea_title);
+                if (isExactDuplicate) {
+                    console.log(`[Sync] Skipping exact duplicate: ${slot.idea_title} on ${dateStr}`);
+                    continue; 
+                }
+
                 occupiedDates.add(dateStr); // Mark as occupied for next slots in loop
 
                 const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
@@ -1902,297 +1988,337 @@ export default function DashboardPage() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>←  Atrás</button>
                                 <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>
                             </div>
-                            {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
                         </div>
                     )}
                 </div>
             )}
 
-            {/* Plan Monthly Mode */}
-            {
-                step === 1 && generationMode === 'plan' && (
-                    <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
-                            {[1, 2].map(w => (
-                                <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{
-                                        width: '36px', height: '36px', borderRadius: '50%',
-                                        background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                        color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
-                                    }}>
-                                        {planWizardStep > w ? '✓' : w}
-                                    </div>
-                                    <span style={{ color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: planWizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
-                                        {w === 1 ? 'Ideas Base' : 'Configuración'}
-                                    </span>
-                                    {w < 2 && <div style={{ width: '40px', height: '2px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
+            {/* Plan Monthly Mode (v4.0.0) */}
+            {step === 1 && generationMode === 'plan' && (
+                <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)', maxWidth: '900px', margin: '0 auto' }}>
+                    {/* Stepper Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '40px', gap: '20px' }}>
+                        {[1, 2, 3, 4].map(w => (
+                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{
+                                    width: '40px', height: '40px', borderRadius: '50%',
+                                    background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
+                                    color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.3)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, 
+                                    fontSize: '1rem', border: planWizardStep === w ? '2px solid #fff' : 'none',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    {planWizardStep > w ? '✓' : w}
                                 </div>
-                            ))}
-                        </div>
-
-                        <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-                            {planWizardStep === 1 ? 'Paso 1: Selecciona Ideas del Banco' : 'Paso 2: Detalles del Plan'}
-                            {planWizardStep === 1 && (
-                                <button
-                                    onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })}
-                                    className="btn-secondary"
-                                    style={{ fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                    <Search size={16} /> Explorar más ideas
-                                </button>
-                            )}
-                        </h2>
-
-                        {planWizardStep === 1 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                    Escoge las ideas en las que quieres basar tu mes. La IA las expandirá y creará guiones coherentes.
-                                </p>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', maxHeight: '500px', overflowY: 'auto', paddingRight: '10px' }}>
-                                    {loadingRecommended && (
-                                        <div style={{ gridColumn: '1 / -1', padding: '20px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px dashed rgba(126, 206, 202, 0.2)', textAlign: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                                                <Loader2 size={16} className="animate-spin" color="#7ECECA" />
-                                                <span style={{ fontSize: '0.9rem', color: '#7ECECA' }}>IA analizando tu perfil para sugerir ideas virales...</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {(libIdeas.length > 0 || recommendedIdeas.length > 0 || extraIdeasModal.ideas.length > 0) ? (
-                                        <>
-                                            {/* Recommended Ideas (Proactive) */}
-                                            {recommendedIdeas.length > 0 && (
-                                                <div style={{ gridColumn: '1 / -1', marginBottom: '10px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <Sparkles size={16} color="#7ECECA" />
-                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sugerencias para tu Estrategia (IA)</h5>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {recommendedIdeas.map((idea, idx) => {
-                                                const ideaId = `rec-${idx}`;
-                                                return (
-                                                    <div
-                                                        key={ideaId}
-                                                        onClick={() => {
-                                                            if (selectedPlanIdeas.includes(ideaId)) {
-                                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
-                                                            } else {
-                                                                setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '20px',
-                                                            background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
-                                                            borderRadius: '16px',
-                                                            border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
-                                                            cursor: 'pointer',
-                                                            transition: '0.2s',
-                                                            position: 'relative'
-                                                        }}
-                                                    >
-                                                        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                            {idea.categoria && <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>{idea.categoria}</span>}
-                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
-                                                            </div>
-                                                        </div>
-                                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
-                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                            {idea.descripcion}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {/* Extra Ideas (Manual Search) */}
-                                            {extraIdeasModal.ideas.length > 0 && (
-                                                <div style={{ gridColumn: '1 / -1', margin: '20px 0 10px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <Search size={16} color="var(--text-secondary)" />
-                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nuevas Ideas Encontradas</h5>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {extraIdeasModal.ideas.map((idea, idx) => {
-                                                const ideaId = `extra-${idx}`;
-                                                return (
-                                                    <div
-                                                        key={ideaId}
-                                                        onClick={() => {
-                                                            if (selectedPlanIdeas.includes(ideaId)) {
-                                                                setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== ideaId));
-                                                            } else {
-                                                                setSelectedPlanIdeas([...selectedPlanIdeas, ideaId]);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '20px',
-                                                            background: selectedPlanIdeas.includes(ideaId) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(157, 0, 255, 0.05)',
-                                                            borderRadius: '16px',
-                                                            border: selectedPlanIdeas.includes(ideaId) ? '2px solid #7ECECA' : '1px solid rgba(157, 0, 255, 0.3)',
-                                                            cursor: 'pointer',
-                                                            transition: '0.2s',
-                                                            position: 'relative'
-                                                        }}
-                                                    >
-                                                        <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                            <span style={{ fontSize: '0.65rem', background: '#9D00FF', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>NUEVA</span>
-                                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(ideaId) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                {selectedPlanIdeas.includes(ideaId) && <CheckCircle2 size={14} color="black" />}
-                                                            </div>
-                                                        </div>
-                                                        <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '70px' }}>{idea.titulo_idea}</h4>
-                                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                            {idea.descripcion}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-                                            {/* Idea Bank */}
-                                            {libIdeas.length > 0 && (
-                                                <div style={{ gridColumn: '1 / -1', margin: '20px 0 10px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <Bookmark size={16} color="var(--text-secondary)" />
-                                                        <h5 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ideas de tu Banco</h5>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {libIdeas.map(idea => (
-                                                <div
-                                                    key={idea.id}
-                                                    onClick={() => {
-                                                        if (selectedPlanIdeas.includes(idea.id)) {
-                                                            setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
-                                                        } else {
-                                                            setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        padding: '20px',
-                                                        background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.02)',
-                                                        borderRadius: '16px',
-                                                        border: selectedPlanIdeas.includes(idea.id) ? '2px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
-                                                        cursor: 'pointer',
-                                                        transition: '0.2s',
-                                                        position: 'relative'
-                                                    }}
-                                                >
-                                                    <div style={{ position: 'absolute', top: '12px', right: '12px' }}>
-                                                        <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: '2px solid #7ECECA', background: selectedPlanIdeas.includes(idea.id) ? '#7ECECA' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            {selectedPlanIdeas.includes(idea.id) && <CheckCircle2 size={14} color="black" />}
-                                                        </div>
-                                                    </div>
-                                                    <h4 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '8px', paddingRight: '24px' }}>
-                                                        {(() => {
-                                                            let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
-                                                            return idea.titulo || c.titulo_idea || c.Título || c.Titulo || c.titulo || c.hook?.substring(0, 40) || 'Idea sin título';
-                                                        })()}
-                                                    </h4>
-                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                        {(() => {
-                                                            let c = idea.content; if (typeof c === 'string') try { c = JSON.parse(c) } catch (e) { c = {} }; c = c || {};
-                                                            return c.descripcion || c.Descripción || c.Descripcion || c.hook || idea.descripcion || (c.desarrollo ? c.desarrollo[0] : 'Sin descripción disponible');
-                                                        })()}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px' }}>
-                                            <p style={{ color: 'var(--text-muted)' }}>No tienes ideas en tu banco todavía.</p>
-                                            <button onClick={() => router.push('/dashboard/viral')} className="btn-secondary" style={{ marginTop: '12px' }}>Ir al Banco de Ideas Virales →</button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                    <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
-                                    <button onClick={() => setPlanWizardStep(2)} className="btn-primary" style={{ flex: 2 }}>Continuar ({selectedPlanIdeas.length} seleccionadas) →</button>
-                                </div>
+                                <span style={{ 
+                                    color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', 
+                                    fontWeight: planWizardStep === w ? 800 : 400, 
+                                    fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em'
+                                }}>
+                                    {w === 1 ? 'Negocio' : w === 2 ? 'Estrategia' : w === 3 ? 'Voz' : 'Análisis'}
+                                </span>
+                                {w < 4 && <div style={{ width: '30px', height: '1px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
                             </div>
-                        )}
-
-                        {planWizardStep === 2 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Describe tu marca y objetivos extra del mes</p>
-                                    <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Soy coach de negocios para emprendedores digitales y quiero ganar autoridad y vender mi nuevo programa de mentoría." style={{ minHeight: '100px' }} />
-                                </div>
-                                <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {PLATAFORMAS.map(p => (
-                                                <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                            {FRECUENCIAS.map(f => (
-                                                <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Distribución del contenido (%)</p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                                        {CONTENT_TYPES_PLAN.map(type => (
-                                            <div key={type}>
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>{type}</p>
-                                                <input type="number" className="input-field" value={planContentTypes[type]} onChange={(e) => setPlanContentTypes({ ...planContentTypes, [type]: parseInt(e.target.value) || 0 })} style={{ width: '100%', textAlign: 'center' }} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Campañas del mes</p>
-                                        <input className="input-field" placeholder="Lanzamientos, promos, eventos..." value={planCampaigns} onChange={(e) => setPlanCampaigns(e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Temas a evitar</p>
-                                        <input className="input-field" placeholder="Lo que NO quieres tratar" value={planExcludeTopics} onChange={(e) => setPlanExcludeTopics(e.target.value)} />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración de los videos</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                        {DURACIONES.map(d => (
-                                            <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white' }}>{d}</button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                                    <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
-                                    <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Plan de 30 días →</button>
-                                </div>
-                                {error && <p style={{ color: '#FF4D4D', textAlign: 'center' }}>{error}</p>}
-                            </div>
-                        )}
+                        ))}
                     </div>
-                )
-            }
 
-            {
-                step === 2 && (
-                    <GenerationProgress
-                        steps={loadingSteps}
-                        currentPhase={loadingPhase}
-                        brainName={hasBrain ? (brainName || 'perfil configurado') : null}
-                        subtitle="Esto suele tomar entre 15 y 30 segundos..."
-                    />
-                )
-            }
+                    {/* STEP 1: NEGOCIO Y PÚBLICO */}
+                    {planWizardStep === 1 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Tu Negocio y Oferta</h2>
+                                <p style={{ color: 'var(--text-secondary)' }}>Define qué quieres vender este mes y a quién le hablas.</p>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div style={{ gridColumn: '1 / span 2' }}>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué vendes este mes? (Oferta Principal) <span style={{color: '#7ECECA'}}>*</span></p>
+                                    <input 
+                                        className="input-field" 
+                                        placeholder="Ej: Mentoría 1:1, Curso de IA, Pack de 10 guiones..." 
+                                        value={businessOffer} 
+                                        onChange={(e) => setBusinessOffer(e.target.value)} 
+                                    />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Precio / Ticket medio (Opcional)</p>
+                                    <input 
+                                        className="input-field" 
+                                        placeholder="Ej: 49€, 1500€, Suscripción 20€/mes..." 
+                                        value={ticketPrice} 
+                                        onChange={(e) => setTicketPrice(e.target.value)} 
+                                    />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Tipo de audiencia <span style={{color: '#7ECECA'}}>*</span></p>
+                                    <select 
+                                        className="input-field" 
+                                        value={targetAudienceType} 
+                                        onChange={(e) => setTargetAudienceType(e.target.value)}
+                                        style={{background: 'rgba(255,255,255,0.05)', color: 'white'}}
+                                    >
+                                        {AUDIENCIAS_PLAN.map(a => <option key={a} value={a}>{a}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ gridColumn: '1 / span 2' }}>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Describe a tu público y su problema nº1 <span style={{color: '#7ECECA'}}>*</span></p>
+                                    <textarea 
+                                        className="textarea-field" 
+                                        placeholder="Ej: Profesionales de +40 años que se sienten abrumados por la IA y tienen miedo de quedarse atrás." 
+                                        value={mainPainPoint} 
+                                        onChange={(e) => setMainPainPoint(e.target.value)} 
+                                        rows={3} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
+                                <button 
+                                    onClick={() => {
+                                        if (!businessOffer || !mainPainPoint) {
+                                            alert('Por favor rellena los campos obligatorios (*)');
+                                            return;
+                                        }
+                                        setPlanWizardStep(2);
+                                    }} 
+                                    className="btn-primary" style={{ flex: 2 }}
+                                >Siguiente: Estrategia →</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 2: OBJETIVOS Y TEMAS + IDEA BANK */}
+                    {planWizardStep === 2 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Estrategia del Mes</h2>
+                                <p style={{ color: 'var(--text-secondary)' }}>Define tus metas y los ángulos que quieres tocar.</p>
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivos principales (Selecciona varios)</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {OBJETIVOS_PLAN.map(o => (
+                                        <button 
+                                            key={o} 
+                                            onClick={() => {
+                                                if (monthlyGoals.includes(o)) setMonthlyGoals(monthlyGoals.filter(i => i !== o));
+                                                else setMonthlyGoals([...monthlyGoals, o]);
+                                            }}
+                                            style={{ 
+                                                padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                                background: monthlyGoals.includes(o) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
+                                                color: monthlyGoals.includes(o) ? 'black' : 'white', fontWeight: 700, fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            {o}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Temas clave a empujar</p>
+                                    <textarea 
+                                        className="textarea-field" 
+                                        placeholder="Ej: Detrás de cámaras, errores comunes, mindset realista..." 
+                                        value={keyThemes} 
+                                        onChange={(e) => setKeyThemes(e.target.value)} 
+                                        rows={3} 
+                                    />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Métrica de éxito mensual</p>
+                                    <input 
+                                        className="input-field" 
+                                        placeholder="Ej: 50 nuevos seguidores, 10 llamadas de venta..." 
+                                        value={successMetric} 
+                                        onChange={(e) => setSuccessMetric(e.target.value)} 
+                                    />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '20px', marginBottom: '12px' }}>Estilo de contenido</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {ESTILOS_PLAN.map(s => (
+                                            <button 
+                                                key={s} 
+                                                onClick={() => {
+                                                    if (contentStyles.includes(s)) setContentStyles(contentStyles.filter(i => i !== s));
+                                                    else setContentStyles([...contentStyles, s]);
+                                                }}
+                                                style={{ 
+                                                    padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer',
+                                                    background: contentStyles.includes(s) ? '#7ECECA' : 'rgba(255,255,255,0.05)',
+                                                    color: contentStyles.includes(s) ? 'black' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.65rem'
+                                                }}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Integrated Idea Bank Selection */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Añadir ideas de tu banco (Opcional)</h3>
+                                    <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
+                                    {(libIdeas.length > 0) ? libIdeas.slice(0, 10).map(idea => (
+                                        <div 
+                                            key={idea.id} 
+                                            onClick={() => {
+                                                if (selectedPlanIdeas.includes(idea.id)) setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
+                                                else setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
+                                            }}
+                                            style={{
+                                                minWidth: '200px', padding: '12px', borderRadius: '12px', background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.05)',
+                                                border: selectedPlanIdeas.includes(idea.id) ? '1px solid #7ECECA' : '1px solid transparent', cursor: 'pointer', transition: '0.2s'
+                                            }}
+                                        >
+                                            <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{idea.titulo || 'Idea'}</h4>
+                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', height: '2.4em', overflow: 'hidden' }}>Haz click para incluir</p>
+                                        </div>
+                                    )) : <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No hay ideas guardadas para mostrar.</p>}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setPlanWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Configuración →</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: CONFIGURACIÓN Y VOZ */}
+                    {planWizardStep === 3 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Tu Voz y Canales</h2>
+                                <p style={{ color: 'var(--text-secondary)' }}>Frecuencia, plataformas y tu estilo de comunicación.</p>
+                            </div>
+
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        {PLATAFORMAS.map(p => (
+                                            <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                        {FRECUENCIAS.map(f => (
+                                            <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Filtro: Lo que NO queremos <span style={{fontWeight:400, color:'var(--text-muted)'}}>(voto de silencio)</span></p>
+                                    <input className="input-field" placeholder="Ej: No quiero frases motivacionales vacías ni promesas de dinero rápido." value={howNotToSound} onChange={(e) => setHowNotToSound(e.target.value)} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Mantra / Idea repetida</p>
+                                    <input className="input-field" placeholder="Ej: La consistencia siempre gana al talento." value={brandMantra} onChange={(e) => setBrandMantra(e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Presión de contenido (v3.1.0)</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {['Suave (Orgánico)', 'Media (Estrategia)', 'Fuerte (Lanzamiento)'].map(p => (
+                                        <button 
+                                            key={p} 
+                                            onClick={() => setPlanFocus(p)}
+                                            style={{ 
+                                                padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                                background: planFocus === p ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
+                                                color: planFocus === p ? 'black' : 'white', fontWeight: 700, fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setPlanWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={handleAnalyzeBrief} disabled={isAnalyzingBrief} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>
+                                    {isAnalyzingBrief ? <><Loader2 size={20} className="animate-spin" /> Analizando... </> : 'Analizar con IA para Continuar →'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 4: ANÁLISIS IA Y GENERAR */}
+                    {planWizardStep === 4 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px', color: '#7ECECA' }}>Estrategia Confirmada</h2>
+                                <p style={{ color: 'var(--text-secondary)' }}>La IA ha interpretado tu briefing. Revisa antes de generar.</p>
+                            </div>
+
+                            <div style={{ 
+                                background: 'rgba(126, 206, 202, 0.05)', 
+                                padding: '32px', 
+                                borderRadius: '24px', 
+                                border: '1px solid rgba(126, 206, 202, 0.2)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <Sparkles size={40} style={{ position: 'absolute', top: '-10px', right: '-10px', color: 'rgba(126, 206, 202, 0.1)' }} />
+                                <p style={{ 
+                                    fontSize: '1.2rem', 
+                                    fontWeight: 500, 
+                                    lineHeight: '1.6', 
+                                    color: '#fff', 
+                                    textAlign: 'center',
+                                    fontStyle: 'italic'
+                                }}>
+                                    "{briefAnalysis}"
+                                </p>
+                            </div>
+
+                            <div style={{ textAlign: 'center' }}>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                                    Se generarán aproximadamente {planFrequency.split(' ')[0] === '3' ? 12 : planFrequency.split(' ')[0] === '7' ? 28 : 16} ideas de contenido alineadas con esta estrategia.
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>Re-ajustar</button>
+                                <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '64px', fontSize: '1.2rem', fontWeight: 900 }}>
+                                    ¡Generar Plan Mensual AHORA! 🚀
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {error && <p style={{ color: '#FF4D4D', textAlign: 'center', marginTop: '20px' }}>{error}</p>}
+
+            {/* Step 2: Generation Progress */}
+            {step === 2 && (
+                <GenerationProgress
+                    steps={loadingSteps}
+                    currentPhase={loadingPhase}
+                    brainName={hasBrain ? (brainName || 'perfil configurado') : null}
+                    subtitle="Esto suele tomar entre 15 y 30 segundos..."
+                />
+            )}
+
 
             {
                 step === 3 && generationMode === 'single' && (
