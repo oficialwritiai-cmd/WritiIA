@@ -21,7 +21,8 @@
     "stats": "Stats",
     "settings": "Settings",
     "logout": "Logout",
-    "exit": "Exit"
+    "exit": "Exit",
+    "ads_plan": "Ads Plan"
   },
   "dashboard": {
     "welcome": "Welcome",

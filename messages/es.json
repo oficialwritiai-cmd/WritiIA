@@ -21,7 +21,8 @@
     "stats": "Métricas",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
-    "exit": "Salir"
+    "exit": "Salir",
+    "ads_plan": "Plan Ads"
   },
   "dashboard": {
     "welcome": "Bienvenido",

@@ -1,11 +1,11 @@
 'use client';
-// Force Build: 2026-03-13 21:25 (v4.1.0)
+// Force Build: 2026-03-13 21:33 (v4.2.0 - Ads Plan)
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare, Megaphone } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import { useProject } from '@/app/components/ProjectContext';
@@ -351,6 +351,7 @@ export default function DashboardLayout({ children }) {
         { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
         { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
         { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
+        { href: '/dashboard/ads-plan', icon: Megaphone, label: t('nav.ads_plan') },
         { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
         { href: '/dashboard/ideas-virales', icon: Sparkles, label: t('nav.viral_ideas') },
         { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
