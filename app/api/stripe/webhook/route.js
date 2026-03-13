@@ -138,16 +138,14 @@ async function handleCheckoutCompleted(session, supabase) {
 
         const { error } = await supabase
             .from('users_profiles')
-            .upsert({
-                id: userId,
-                email: userEmail,
-                name: userEmail?.split('@')[0] || 'User',
+            .update({
                 plan: 'pro',
                 subscription_status: 'active',
                 stripe_customer_id: customerId,
                 subscription_period_end: periodEnd,
                 updated_at: new Date().toISOString(),
-            });
+            })
+            .eq('id', userId);
 
         if (error) {
             console.error('[Webhook] Error activating plan:', error);
@@ -202,17 +200,46 @@ async function handleCheckoutCompleted(session, supabase) {
                 .eq('id', userId);
         }
 
-        console.log('[Webhook] Adding credits via RPC deposit_credits:', { userId, amount });
-        // Add credits via RPC (updates users_profiles.credits_balance)
+        console.log('[Webhook] Adding credits to user profile...');
+        
+        // DIRECT FALLBACK AND GUARANTEE: Manually updateusers_profiles
+        let directUpdateSuccess = false;
+        const { data: currentProfile, error: fetchProfileErr } = await supabase
+            .from('users_profiles')
+            .select('credits_balance')
+            .eq('id', userId)
+            .single();
+            
+        if (!fetchProfileErr && currentProfile) {
+            const newBalance = (currentProfile.credits_balance || 0) + amount;
+            const { error: updateProfileErr } = await supabase
+                .from('users_profiles')
+                .update({ credits_balance: newBalance })
+                .eq('id', userId);
+                
+            if (!updateProfileErr) {
+                directUpdateSuccess = true;
+                console.log(`[Webhook] ✅ Direct update: New balance is ${newBalance}`);
+            } else {
+                console.error('[Webhook] Direct update failed:', updateProfileErr);
+            }
+        }
+
+        // Add credits via RPC as secondary/primary depending on its existence
         const { error: rpcError, data: rpcResult } = await supabase.rpc('deposit_credits', {
             u_id: userId,
             amount: amount,
         });
 
         if (rpcError) {
-            console.error('[Webhook] RPC deposit_credits failed:', rpcError);
+            console.warn('[Webhook] RPC deposit_credits failed (handled by direct update):', rpcError.message);
         } else {
             console.log('[Webhook] RPC deposit_credits success:', rpcResult);
+        }
+        
+        // If BOTH failed, throw an error to alert Stripe to retry
+        if (!directUpdateSuccess && rpcError) {
+             throw new Error(`Failed to deposit credits both via direct update and RPC: ${rpcError.message}`);
         }
 
         // FALLBACK: Also update ai_credits table if it exists to keep everything in sync
@@ -235,10 +262,7 @@ async function handleCheckoutCompleted(session, supabase) {
             console.warn('[Webhook] Non-critical error syncing ai_credits table:', syncErr.message);
         }
 
-        if (error) {
-            console.error('[Webhook] Error depositing credits:', error);
-            throw error;
-        }
+        // Removed the throws here since we throw earlier if BOTH update methods fail
 
         console.log(`[Webhook] ✅ ${amount} credits added to user ${userId} (Synced in both systems)`);
 

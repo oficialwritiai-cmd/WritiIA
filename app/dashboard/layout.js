@@ -136,17 +136,26 @@ export default function DashboardLayout({ children }) {
         };
         window.addEventListener('open-credits', handleOpenCredits);
 
-        // Handle URL params for credits
+        // Handle URL params for credits and plans
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
             const cp = urlParams.get('credits_purchased');
+            const pa = urlParams.get('plan_activated');
+            
             if (cp) {
                 setPurchasedCredits(parseInt(cp) || 0);
                 setIsPaymentSuccessModalOpen(true);
                 router.replace('/dashboard');
                 
                 // Polling Refresh: The webhook might take a few seconds
-                // We refresh immediately, and then at 3s and 7s intervals
+                handleRefreshProfile();
+                setTimeout(handleRefreshProfile, 3000);
+                setTimeout(handleRefreshProfile, 7000);
+            } else if (pa === 'true') {
+                // Instantly poll after plan activation to show PRO badge
+                router.replace('/dashboard');
+                
+                // Ensure profile is updated properly
                 handleRefreshProfile();
                 setTimeout(handleRefreshProfile, 3000);
                 setTimeout(handleRefreshProfile, 7000);
@@ -586,7 +595,7 @@ export default function DashboardLayout({ children }) {
                                     title="Mi Cuenta"
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.5.0</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v3.5.1</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
