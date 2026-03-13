@@ -1,5 +1,5 @@
 'use client';
-// Force Build: 2026-03-12 17:13 (v2.8.5)
+// Force Build: 2026-03-13 18:52 (v3.6.0)
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -185,7 +185,7 @@ export default function DashboardLayout({ children }) {
         const now = new Date();
         let targetDate = null;
 
-        if (profile.plan === 'trial' && profile.trial_ends_at) {
+        if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_ends_at) {
             targetDate = new Date(profile.trial_ends_at);
         } else if (profile.plan === 'pro') {
             if (profile.subscription_period_end) {
@@ -203,8 +203,8 @@ export default function DashboardLayout({ children }) {
             setDaysRemaining(Math.max(0, days));
 
             // Auto-deactivate trial if expired
-            if (profile.plan === 'trial' && days <= 0 && profile.is_trial_active) {
-                supabase.from('users_profiles').update({ is_trial_active: false }).eq('id', profile.id);
+            if ((profile.plan === 'trial' || profile.plan === 'free') && days <= 0 && profile.trial_active) {
+                supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id);
             }
         } else {
             setDaysRemaining(null);
@@ -229,7 +229,7 @@ export default function DashboardLayout({ children }) {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
-        const isTrialStillActive = profile.is_trial_active && (daysRemaining === null || daysRemaining > 0);
+        const isTrialStillActive = profile.trial_active && (daysRemaining === null || daysRemaining > 0);
         const isPending = profile.plan === 'pending';
 
         if ((!hasActivePlan && !isTrialStillActive) || isPending) {
@@ -275,7 +275,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v2.8.4)
+                    {loadingStatus} (v3.6.0)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -453,7 +453,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v2.9.0
+                            v3.6.0
                         </div>
                     </div>
                 </aside>
@@ -719,8 +719,8 @@ export default function DashboardLayout({ children }) {
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                                         {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'PRUEBA GRATUITA'}
                                     </span>
-                                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600 }}>
-                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : 'Cargando...'}
+                                    <span style={{ color: (typeof daysRemaining === 'number' && daysRemaining <= 2) ? '#FF4D4D' : '#FFD700', fontSize: '0.75rem', fontWeight: 800 }}>
+                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? `${daysRemaining} días restantes` : daysRemaining) : '...'}
                                     </span>
                                 </div>
                             </div>

@@ -214,6 +214,7 @@ async function handleCheckoutCompleted(session, supabase) {
                 subscription_status: 'active',
                 stripe_customer_id: customerId,
                 subscription_period_end: periodEnd,
+                trial_active: false,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
@@ -232,8 +233,12 @@ async function handleCheckoutCompleted(session, supabase) {
             .eq('id', userId)
             .single();
 
-        if (profile?.email) {
-            await sendPlanActivationEmail(profile.email, profile.name);
+        const emailToSendTo = profile?.email || userEmail || session.customer_details?.email;
+        if (emailToSendTo) {
+            console.log('[Webhook] Sending activation email to:', emailToSendTo);
+            await sendPlanActivationEmail(emailToSendTo, profile?.name || 'Usuario');
+        } else {
+            console.warn('[Webhook] No email found to send activation email');
         }
 
         return;
