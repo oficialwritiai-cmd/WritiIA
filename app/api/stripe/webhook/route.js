@@ -18,12 +18,36 @@ export async function GET(req) {
     const url = req.url;
     const userAgent = req.headers.get('user-agent');
     
-    await supabase.from('webhook_logs').insert({
-        event_type: 'GET_PING',
-        payload: { url, userAgent, note: 'Check if this is a redirected Stripe POST' }
-    });
+    let logResult = 'NOT_ATTEMPTED';
+    let logError = null;
 
-    return NextResponse.json({ status: 'Online', service: 'Stripe Webhook' });
+    try {
+        const { error } = await supabase.from('webhook_logs').insert({
+            event_type: 'GET_DIAGNOSTIC',
+            payload: { url, userAgent, note: 'Testing DB connectivity from Vercel' }
+        });
+        if (error) {
+            logResult = 'ERROR';
+            logError = error.message;
+        } else {
+            logResult = 'SUCCESS';
+        }
+    } catch (e) {
+        logResult = 'EXCEPTION';
+        logError = e.message;
+    }
+
+    return NextResponse.json({ 
+        status: 'Online', 
+        service: 'Stripe Webhook',
+        db_log: logResult,
+        db_error: logError,
+        env_check: {
+            url_present: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            key_present: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            webhook_secret_present: !!process.env.STRIPE_WEBHOOK_SECRET,
+        }
+    });
 }
 
 export async function POST(req) {
