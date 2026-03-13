@@ -134,65 +134,67 @@ Para CADA item de la lista, escribe un bloque de desarrollo que:
 `;
 }
 
-function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea }) {
+function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador }) {
     const parsedItems = parseUserItemList(specificDetails);
     const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
 
-    // Structure rules vary by duration
+    // Prompt context enrichment
+    const contextLines = [];
+    if (experienciaReal) contextLines.push(`- EXPERIENCIA REAL / HISTORIA: ${experienciaReal}`);
+    if (opinionPersonal) contextLines.push(`- OPINIÓN PERSONAL / MENSAJE: ${opinionPersonal}`);
+    if (faseCreador) contextLines.push(`- FASE DEL CREADOR: ${faseCreador}`);
+
     const duracionRules = videoDuration === '30 seg' || videoDuration === '60 seg'
-        ? `- DURACIÓN: ${videoDuration} → UN gancho potente, ${totalItems || 3} puntos de desarrollo (1-2 frases cada uno), CTA rápido. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
+        ? `- DURACIÓN: ${videoDuration} → UN gancho potente, ${totalItems || 3} puntos de desarrollo (1-2 frases cada uno), CTA rápido.`
         : videoDuration === '90 seg' || videoDuration === '2 min'
-            ? `- DURACIÓN: ${videoDuration} → Gancho, ${totalItems || 5} bloques de desarrollo (2-3 frases c/u), cierre emocional, CTA. Total ~${WORDS_PER_DURATION[videoDuration]} palabras.`
-            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA. Mínimo ${WORDS_PER_DURATION[videoDuration]} palabras.`;
+            ? `- DURACIÓN: ${videoDuration} → Gancho, ${totalItems || 5} bloques de desarrollo (2-3 frases c/u), cierre emocional, CTA.`
+            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA.`;
 
     const listConstraints = buildListConstraints(parsedItems, totalItems);
 
-    // Hook instruction
-    const hookInstruction = topic && topic.length > 60
-        ? `GANCHO - INSTRUCCIÓN CRÍTICA: El usuario ya escribió un hook/idea larga. DEBES USARLO COMO BASE directa y mejorarlo. NO lo reemplaces con uno genérico. Su texto de partida es: "${topic.substring(0, 200)}"`
-        : `GANCHO: Crea un hook visual, impactante (mínimo 12 palabras) que prometa la transformación del video.`;
+    return `ROL:
+Eres guionista y estratega de contenido especializado en vídeos cortos y largos para creadores de marca personal. Tu objetivo es escribir guiones que suenen a PERSONA REAL, huyendo de los clichés motivacionales de la IA.
 
-    // CTA instruction
-    const ctaInstruction = ctaIdea && ctaIdea.trim().length > 3
-        ? `CTA - INSTRUCCIÓN CRÍTICA: El usuario quiere un CTA que haga: "${ctaIdea}". Redacta el CTA siguiendo EXACTAMENTE esta idea del usuario. NO inventes un CTA diferente.`
-        : `CTA: Debe ser específico y accionable. Ej: comentar una palabra, guardar, enviar DM, visitar link. NUNCA "sígueme" a secas.`;
-
-    return `Eres un estratega de contenido viral Pro. Creas guiones profundos, auténticos y extensos.
+CONTEXTO DEL CREADOR Y NEGOCIO:
 ${brandContextString}
+${contextLines.join('\n')}
 
-REGLAS DE DURACIÓN Y ESTRUCTURA:
+INSTRUCCIONES DE ESTILO (CRÍTICAS):
+1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...", "No te pierdas esta oportunidad..." o "¿Alguna vez has soñado con...?".
+2) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. Si el creador dice que está "empezando", actúa como tal.
+3) STORYTELLING: Integra la "Experiencia Real" proporcionada como el corazón del guion (en la sección de HISTORIA).
+4) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio, no ser neutro.
+5) RITMO: Frases simples y fuertes. Evita párrafos de relleno.
+
+ESTRUCTURA DEL GUION:
+1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).
+2. CONTEXTO (2-3 frases): Quién eres y por qué esto importa ahora (basado en fase_creador).
+3. HISTORIA/CASO REAL: Narración de lo que pasó (basado en experiencia_real).
+4. LECCIÓN/OPINIÓN: La idea principal (basada en opinion_personal).
+5. CIERRE + CTA: Acción clara alineada con el objetivo.
+
+REGLAS ESPECÍFICAS DE FORMATO:
+- PLATAFORMA: ${platform}
+- TONO: ${tone}
 ${duracionRules}
-
 ${listConstraints}
 
-REGLAS GLOBALES DE ESCRITURA:
-1. ${hookInstruction}
-2. El DESARROLLO debe tener ejemplos concretos, microhistorias o datos reales. Sin consejos vagos.
-3. El CIERRE conecta el tema con la identidad del seguidor (emoción o aprendizaje).
-4. ${ctaInstruction}
-5. Intensidad del hook: ${intensity}/5.
+${ctaIdea ? `CTA OBLIGATORIO: El usuario quiere que pidas esto: "${ctaIdea}"` : ''}
 
-GENERA EXACTAMENTE ${count} GUION${count > 1 ? 'ES' : ''} DISTINTOS para ${platform} con tono ${tone}.
-${totalItems ? `NÚMERO OBLIGATORIO DE PUNTOS EN DESARROLLO: ${totalItems}` : ''}
-
-RESPONDE ÚNICAMENTE con un JSON array válido. Formato exacto:
+GENERA EXACTAMENTE ${count} GUION${count > 1 ? 'ES' : ''} DISTINTOS.
+RESPONDE ÚNICAMENTE con un JSON array válido:
 [
   {
-    "titulo_guion": "Título del guion",
+    "titulo_guion": "Título",
     "video_duration": "${videoDuration}",
-    "gancho": "Hook basado en el texto del usuario, mínimo 12 palabras",
-    "desarrollo": [
-      ${parsedItems.length > 0
-            ? parsedItems.slice(0, totalItems).map((item, i) => `"${i + 1}. ${item.split(' ')[0]}: [Explicación completa de ${item}]"`).join(',\n      ')
-            : `"Punto 1 detallado con ejemplo concreto",\n      "Punto 2 detallado con dato o historia"`
-        }
-    ],
-    "cierre": "Cierre emocional que conecta con la identidad del seguidor",
-    "cta": "${ctaIdea ? 'CTA que siga la idea: ' + ctaIdea : 'CTA específico y accionable (no genérico)'}",
+    "gancho": "Hook directo",
+    "desarrollo": ["Punto 1 con historia", "Punto 2 con opinión", "..."],
+    "cierre": "Cierre humano",
+    "cta": "Llamada a la acción",
     "copy_post": {
-      "titulo": "Título del post/reel",
-      "descripcion_larga": "Texto persuasivo para pie de foto",
-      "hashtags": ["#tag1", "#tag2", "#tag3"]
+      "titulo": "Título post",
+      "descripcion_larga": "Caption persuasiva",
+      "hashtags": ["#tag1", "..."]
     }
   }
 ]`;
@@ -220,7 +222,8 @@ export async function POST(request) {
 
         const {
             topic, platform, tone, userId, hookType, intensity,
-            count, videoDuration, specificDetails, victory, opinion, story, awareness, ctaIdea, projectId
+            count, videoDuration, specificDetails, victory, opinion, story, awareness, ctaIdea, projectId,
+            experienciaReal, opinionPersonal, faseCreador
         } = validation.data;
 
         const supabase = createClient(
@@ -257,6 +260,7 @@ export async function POST(request) {
 - Tono de marca: ${brandBrain.values_tone || ''}
 - Audiencia: ${brandBrain.audience || ''}`;
 
+        // Keep legacy fields for backward compatibility if they aren't provided in the new fields
         if (victory) brandContextString += `\n- Victoria/Fracaso reciente: ${victory}`;
         if (opinion) brandContextString += `\n- Opinión impopular a integrar: ${opinion}`;
         if (story) brandContextString += `\n- Caso real/Historia: ${story}`;
@@ -273,7 +277,8 @@ export async function POST(request) {
 
         const systemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-            count: finalCount, specificDetails, requestedCount, topic, ctaIdea
+            count: finalCount, specificDetails, requestedCount, topic, ctaIdea,
+            experienciaReal, opinionPersonal, faseCreador
         });
 
         const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;

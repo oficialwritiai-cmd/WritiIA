@@ -30,7 +30,7 @@ const CONTENT_TYPES_PLAN = ['autoridad', 'historia personal', 'venta', 'comunida
 const DURACIONES = ['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'];
 
 // 17) v2.8.4 - Clean UI Encoding & Professional Prompt
-export const VERSION = 'v3.8.0';
+export const VERSION = 'v3.9.0';
 
 
 
@@ -59,6 +59,9 @@ export default function DashboardPage() {
     const [videoDuration, setVideoDuration] = useState('60 seg');
     const [specificDetails, setSpecificDetails] = useState('');
     const [ctaIdea, setCtaIdea] = useState('');
+    const [experienciaReal, setExperienciaReal] = useState('');
+    const [opinionPersonal, setOpinionPersonal] = useState('');
+    const [faseCreador, setFaseCreador] = useState('Lanzando mi primera app / Empezando');
     // Mini-chat state per script: { [scriptIndex]: { text, loading, error } }
     const [scriptChats, setScriptChats] = useState({});
     const [activeBlockChat, setActiveBlockChat] = useState(null); // 'i-blockType'
@@ -536,6 +539,9 @@ export default function DashboardPage() {
                 videoDuration: videoDuration || '60 seg',
                 specificDetails: specificDetails || '',
                 ctaIdea: ctaIdea || '',
+                experienciaReal: experienciaReal || '',
+                opinionPersonal: opinionPersonal || '',
+                faseCreador: faseCreador || '',
                 sourceType: params.get('source_type') || null,
                 sourceReferenceId: params.get('source_reference_id') || null,
                 projectId: activeProject?.id
@@ -684,6 +690,70 @@ export default function DashboardPage() {
             if (profile?.id) fetchCredits(profile.id);
         } catch (err) {
             alert('Error al mejorar: ' + err.message);
+        } finally {
+            setRefiningBlock(null);
+        }
+    }
+
+    async function handlePolishScript(scriptIndex, instruction) {
+        const available = aiCredits.total - aiCredits.used;
+        if (available < 1) {
+            window.dispatchEvent(new CustomEvent('show-no-credits'));
+            return;
+        }
+
+        setPreviousScripts(JSON.parse(JSON.stringify(scripts)));
+        setRefiningBlock(`${scriptIndex}-full`);
+
+        const script = scripts[scriptIndex];
+        const parts = [
+            script.gancho || script.hook || '',
+            ...(Array.isArray(script.desarrollo) ? script.desarrollo : []),
+            script.cta || '',
+            script.cierre || ''
+        ];
+
+        try {
+            const res = await fetch('/api/refine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    texts: parts,
+                    type: 'full_script',
+                    instruction,
+                    context: `Guion sobre ${topic} para ${platform}. Fase: ${faseCreador}. Historia: ${experienciaReal}`,
+                    userId: profile.id,
+                    projectId: activeProject?.id
+                }),
+            });
+
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                return;
+            }
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            const updatedScripts = [...scripts];
+            const refined = data.refinedText;
+
+            if (Array.isArray(refined) && refined.length >= parts.length) {
+                updatedScripts[scriptIndex].gancho = refined[0];
+                updatedScripts[scriptIndex].hook = refined[0];
+                // Update desarrollo points if they exist
+                if (Array.isArray(updatedScripts[scriptIndex].desarrollo)) {
+                    updatedScripts[scriptIndex].desarrollo = refined.slice(1, refined.length - 2);
+                }
+                updatedScripts[scriptIndex].cta = refined[refined.length - 2];
+                updatedScripts[scriptIndex].cierre = refined[refined.length - 1];
+            }
+
+            setScripts(updatedScripts);
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
+            if (profile?.id) fetchCredits(profile.id);
+        } catch (err) {
+            alert('Error al pulir: ' + err.message);
         } finally {
             setRefiningBlock(null);
         }
@@ -1739,18 +1809,54 @@ export default function DashboardPage() {
                                 <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Intensidad del hook: {intensity}/5</p>
                                 <input type="range" min="1" max="5" value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#9D00FF' }} />
                             </div>
-                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Victoria/Fracaso reciente</p>
-                                    <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Experiencia real / historia que quieres contar <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Recomendado)</span></p>
+                                    <textarea 
+                                        className="textarea-field" 
+                                        placeholder="Ej: Ayer un cliente me dijo que mi app le ahorró 10 horas... o 'Cuando empecé no tenía ni 100€ en la cuenta...'" 
+                                        value={experienciaReal} 
+                                        onChange={(e) => setExperienciaReal(e.target.value)} 
+                                        rows={2}
+                                        style={{ width: '100%', minHeight: '80px' }}
+                                    />
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular</p>
-                                    <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Opinión personal / mensaje clave <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Recomendado)</span></p>
+                                    <input 
+                                        className="input-field" 
+                                        placeholder="Ej: El networking tradicional ha muerto, ahora todo es marca personal." 
+                                        value={opinionPersonal} 
+                                        onChange={(e) => setOpinionPersonal(e.target.value)} 
+                                    />
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación</p>
-                                    <input className="input-field" placeholder="Cliente o situación real" value={story} onChange={(e) => setStory(e.target.value)} />
+                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Nivel de experiencia / fase en la que estás</p>
+                                    <select 
+                                        className="input-field shadow-sm"
+                                        value={faseCreador}
+                                        onChange={(e) => setFaseCreador(e.target.value)}
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                                    >
+                                        <option value="Lanzando mi primera app / Empezando">Lanzando mi primera app / Empezando</option>
+                                        <option value="Tengo mis primeros clientes / Creciendo">Tengo mis primeros clientes / Creciendo</option>
+                                        <option value="Experticia consolidada (+2 años)">Experticia consolidada (+2 años)</option>
+                                        <option value="Referente en mi nicho">Referente en mi nicho</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', opacity: 0.6 }}>
+                                <div>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Victoria/Fracaso (Opcional)</p>
+                                    <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} style={{ fontSize: '0.75rem' }} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular (Opcional)</p>
+                                    <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} style={{ fontSize: '0.75rem' }} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación (Opcional)</p>
+                                    <input className="input-field" placeholder="Cliente o situación real" value={story} onChange={(e) => setStory(e.target.value)} style={{ fontSize: '0.75rem' }} />
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
@@ -2449,7 +2555,6 @@ export default function DashboardPage() {
                                                 }}
                                             />
                                         </div>
-
                                         {/* COPY DEL POST */}
                                         <div style={{
                                             marginTop: '20px',
@@ -2467,7 +2572,7 @@ export default function DashboardPage() {
                                             </div>
 
                                             <div>
-                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>TÃTULO DEL POST</label>
+                                                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(126, 206, 202, 0.6)', marginBottom: '8px', display: 'block' }}>TÃ TULO DEL POST</label>
                                                 <input
                                                     value={s.copy_post?.titulo || ''}
                                                     onChange={(e) => {
@@ -2514,11 +2619,41 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* QUICK POLISH BUTTONS */}
+                                        <div style={{ padding: '0px 0px 10px 0px' }}>
+                                            <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>✨ Pulido Rápido (Afecta a todo el guion)</p>
+                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                <button 
+                                                    onClick={() => handlePolishScript(i, 'Haz que todo el guion sea mucho más coloquial y humano, como si hablara un amigo.')}
+                                                    disabled={refiningBlock === `${i}-full`}
+                                                    className="btn-action-glass" 
+                                                    style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                >
+                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '📢 Más coloquial'}
+                                                </button>
+                                                <button 
+                                                    onClick={() => handlePolishScript(i, 'Hazlo más directo, elimina toda la "motivación barata" y ve al grano con datos u opiniones fuertes.')}
+                                                    disabled={refiningBlock === `${i}-full`}
+                                                    className="btn-action-glass" 
+                                                    style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                >
+                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '🎯 Más directo / Sin humo'}
+                                                </button>
+                                                <button 
+                                                    onClick={() => handlePolishScript(i, 'Integra mucho más la historia personal y opinión que proporcioné en el formulario para que no suene a IA.')}
+                                                    disabled={refiningBlock === `${i}-full`}
+                                                    className="btn-action-glass" 
+                                                    style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                >
+                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '👤 Más historia propia'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Card Footer */}
                                     <div style={{
-
                                         padding: '20px 32px',
                                         background: 'rgba(255,255,255,0.01)',
                                         borderTop: '1px solid #1E1E1E',
