@@ -1703,7 +1703,7 @@ export default function DashboardPage() {
             // Fetch existing events to avoid overlaps and duplicates
             const { data: existingEvents } = await supabase
                 .from('calendar_events')
-                .select('event_date, title')
+                .select('id, event_date, title, has_script')
                 .eq('user_id', user.id)
                 .eq('project_id', activeProject?.id);
 
@@ -1733,14 +1733,21 @@ export default function DashboardPage() {
                     attempts++;
                 }
 
-                // Rule 3: Avoid exact duplicates (same title and date)
-                const isExactDuplicate = existingEvents?.some(e => e.event_date === dateStr && e.title === slot.idea_title);
-                if (isExactDuplicate) {
-                    console.log(`[Sync] Skipping exact duplicate: ${slot.idea_title} on ${dateStr}`);
-                    continue; 
+                // Rule 3: Avoid exact duplicates, update if missing script
+                const existingEvent = existingEvents?.find(e => e.event_date === dateStr && e.title === slot.idea_title);
+                if (existingEvent) {
+                    if (existingEvent.has_script) {
+                        console.log(`[Sync] Skipping exact duplicate (already has script): ${slot.idea_title}`);
+                        continue; 
+                    } else {
+                        // We will update this event instead of inserting a new one
+                        slot.updateExistingEventId = existingEvent.id;
+                    }
                 }
 
-                occupiedDates.add(dateStr); // Mark as occupied for next slots in loop
+                if (!slot.updateExistingEventId) {
+                    occupiedDates.add(dateStr); // Mark as occupied for next slots in loop
+                }
 
                 const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
                 let refId = slot.id && isValidUUID(slot.id) ? slot.id : null;
@@ -1777,7 +1784,7 @@ export default function DashboardPage() {
                     htags ? `\nHASHTAGS: ${htags}` : ''
                 ].filter(l => l !== undefined).join('\n') : null;
 
-                eventsToInsert.push({
+                const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
                     title: slot.idea_title || 'Idea Sin Título',
@@ -1788,12 +1795,15 @@ export default function DashboardPage() {
                     reference_id: refId,
                     has_script: slot.has_script || false,
                     script_full_text: calScriptText,
-                    content: sd || {
-                        hook: slot.idea_title,
-                        desarrollo: [slot.goal, slot.content_type],
-                        cta: 'Click aquí'
-                    }
-                });
+                    content: null // Obligar a texto libre (sin cajones)
+                };
+
+                if (slot.updateExistingEventId) {
+                    // Update existing
+                    await supabase.from('calendar_events').update(eventPayload).eq('id', slot.updateExistingEventId);
+                } else {
+                    eventsToInsert.push(eventPayload);
+                }
             }
 
             if (eventsToInsert.length > 0) {
@@ -3578,7 +3588,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.8</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.9</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
