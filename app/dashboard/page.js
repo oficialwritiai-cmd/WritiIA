@@ -1178,6 +1178,15 @@ export default function DashboardPage() {
         fetchCredits(profile.id);
 
         if (successCount > 0) {
+            // Update planSlots state so handleConfirmAndSync sees the scripts
+            setPlanSlots(prev => prev.map(slot => {
+                const processed = slotsToProcess.find(s => s.id === slot.id);
+                if (processed && processed.has_script) {
+                    return { ...slot, has_script: true, script_data: processed.script_data };
+                }
+                return slot;
+            }));
+
             // Auto-expand all generated slots to show full scripts
             const newExpanded = new Set(expandedSlots);
             slotsToProcess.forEach(s => newExpanded.add(s.id));
