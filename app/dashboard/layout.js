@@ -1,5 +1,5 @@
 'use client';
-// Force Build: 2026-03-14 12:56 (v4.2.1 - UI Fixes)
+// Force Build: 2026-03-14 13:15 (v4.3.0 - AI Polish)
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';

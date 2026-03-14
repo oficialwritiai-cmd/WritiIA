@@ -115,6 +115,8 @@ export default function DashboardPage() {
     const [brandMantra, setBrandMantra] = useState('');
     const [briefAnalysis, setBriefAnalysis] = useState('');
     const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
+    const [polishingField, setPolishingField] = useState(null); // Used for Monthly Plan / Script polishing
+
 
     // Missing states restored
     const [profile, setProfile] = useState(null);
@@ -178,6 +180,48 @@ export default function DashboardPage() {
 
         } catch (err) {
             console.error('Error sending feedback:', err);
+        }
+    };
+
+    const handleImproveField = async (text, setter, fieldId) => {
+        if (!text || text.length < 5) return;
+        setPolishingField(fieldId);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const res = await fetch('/api/polish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    text, 
+                    userId: user?.id,
+                    projectId: activeProject?.id 
+                }),
+            });
+
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                return;
+            }
+
+            if (!res.ok) throw new Error('Error al mejorar');
+
+            const data = await res.json();
+            setter(data.polishedText);
+            
+            // Notify success
+            setIsSuccessModalOpen(true);
+            setSuccessModalData({ 
+                title: '¡Texto Mejorado!', 
+                message: 'La IA ha profesionalizado tu respuesta manteniendo tu estilo.' 
+            });
+
+            // Trigger credit refresh
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
+        } catch (err) {
+            console.error('[ImproveField] Error:', err);
+            alert('No se pudo mejorar el texto. Inténtalo de nuevo.');
+        } finally {
+            setPolishingField(null);
         }
     };
 
@@ -1833,9 +1877,31 @@ export default function DashboardPage() {
                                     </div>
                                     {editingBrain ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
-                                            <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
-                                            <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                            <div style={{ position: 'relative' }}>
+                                                <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
+                                                {brainForm.biography?.length >= 5 && (
+                                                    <button onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography_edit')} disabled={polishingField === 'brain_biography_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                        {polishingField === 'brain_biography_edit' ? '...' : <Sparkles size={10} />}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div style={{ position: 'relative' }}>
+                                                <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
+                                                {brainForm.sells?.length >= 5 && (
+                                                    <button onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells_edit')} disabled={polishingField === 'brain_sells_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                        {polishingField === 'brain_sells_edit' ? '...' : <Sparkles size={10} />}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div style={{ position: 'relative' }}>
+                                                <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                                {brainForm.helps?.length >= 5 && (
+                                                    <button onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps_edit')} disabled={polishingField === 'brain_helps_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                        {polishingField === 'brain_helps_edit' ? '...' : <Sparkles size={10} />}
+                                                    </button>
+                                                )}
+                                            </div>
+
                                             <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                             <button onClick={async () => {
                                                 const { data: { user } } = await supabase.auth.getUser();
@@ -1862,9 +1928,31 @@ export default function DashboardPage() {
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Completa tu perfil para que la IA genere contenido con tu voz única.</p>
-                                    <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
-                                    <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
-                                    <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                    <div style={{ position: 'relative' }}>
+                                        <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
+                                        {brainForm.biography?.length >= 5 && (
+                                            <button onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography')} disabled={polishingField === 'brain_biography'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                {polishingField === 'brain_biography' ? '...' : <Sparkles size={10} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
+                                        {brainForm.sells?.length >= 5 && (
+                                            <button onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells')} disabled={polishingField === 'brain_sells'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                {polishingField === 'brain_sells' ? '...' : <Sparkles size={10} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
+                                        {brainForm.helps?.length >= 5 && (
+                                            <button onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps')} disabled={polishingField === 'brain_helps'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                {polishingField === 'brain_helps' ? '...' : <Sparkles size={10} />}
+                                            </button>
+                                        )}
+                                    </div>
+
                                     <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                     <button onClick={async () => {
                                         const { data: { user } } = await supabase.auth.getUser();
@@ -1970,6 +2058,23 @@ export default function DashboardPage() {
                                         rows={2}
                                         style={{ width: '100%', minHeight: '80px' }}
                                     />
+                                    {experienciaReal.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(experienciaReal, setExperienciaReal, 'experienciaReal')} 
+                                            disabled={polishingField === 'experienciaReal'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                fontWeight: 700, cursor: polishingField === 'experienciaReal' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
+                                            }}
+                                        >
+                                            {polishingField === 'experienciaReal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                            Mejorar con IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Opinión personal / mensaje clave <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Recomendado)</span></p>
@@ -1979,6 +2084,23 @@ export default function DashboardPage() {
                                         value={opinionPersonal} 
                                         onChange={(e) => setOpinionPersonal(e.target.value)} 
                                     />
+                                    {opinionPersonal.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(opinionPersonal, setOpinionPersonal, 'opinionPersonal')} 
+                                            disabled={polishingField === 'opinionPersonal'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                fontWeight: 700, cursor: polishingField === 'opinionPersonal' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
+                                            }}
+                                        >
+                                            {polishingField === 'opinionPersonal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                            Mejorar con IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Nivel de experiencia / fase en la que estás</p>
@@ -1999,10 +2121,44 @@ export default function DashboardPage() {
                                 <div>
                                     <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Victoria/Fracaso (Opcional)</p>
                                     <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} style={{ fontSize: '0.75rem' }} />
+                                    {victory.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(victory, setVictory, 'victory')} 
+                                            disabled={polishingField === 'victory'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '4px',
+                                                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
+                                                fontWeight: 700, cursor: polishingField === 'victory' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '4px'
+                                            }}
+                                        >
+                                            {polishingField === 'victory' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                            IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular (Opcional)</p>
                                     <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} style={{ fontSize: '0.75rem' }} />
+                                    {opinion.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(opinion, setOpinion, 'opinion')} 
+                                            disabled={polishingField === 'opinion'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '4px',
+                                                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
+                                                fontWeight: 700, cursor: polishingField === 'opinion' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '4px'
+                                            }}
+                                        >
+                                            {polishingField === 'opinion' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                            IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Caso real / Situación (Opcional)</p>
@@ -2134,6 +2290,23 @@ export default function DashboardPage() {
                                         value={businessOffer} 
                                         onChange={(e) => setBusinessOffer(e.target.value)} 
                                     />
+                                    {businessOffer.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer')} 
+                                            disabled={polishingField === 'businessOffer'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                fontWeight: 700, cursor: polishingField === 'businessOffer' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
+                                            }}
+                                        >
+                                            {polishingField === 'businessOffer' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                            Mejorar con IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Precio / Ticket medio (Opcional)</p>
@@ -2163,6 +2336,23 @@ export default function DashboardPage() {
                                         onChange={(e) => setMainPainPoint(e.target.value)} 
                                         rows={3} 
                                     />
+                                    {mainPainPoint.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint')} 
+                                            disabled={polishingField === 'mainPainPoint'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                fontWeight: 700, cursor: polishingField === 'mainPainPoint' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
+                                            }}
+                                        >
+                                            {polishingField === 'mainPainPoint' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                            Mejorar con IA
+                                        </button>
+                                    )}
+
                                 </div>
                             </div>
 
@@ -2222,6 +2412,23 @@ export default function DashboardPage() {
                                         onChange={(e) => setKeyThemes(e.target.value)} 
                                         rows={3} 
                                     />
+                                    {keyThemes.length >= 5 && (
+                                        <button 
+                                            onClick={() => handleImproveField(keyThemes, setKeyThemes, 'keyThemes')} 
+                                            disabled={polishingField === 'keyThemes'}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                fontWeight: 700, cursor: polishingField === 'keyThemes' ? 'default' : 'pointer',
+                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
+                                            }}
+                                        >
+                                            {polishingField === 'keyThemes' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                            Mejorar con IA
+                                        </button>
+                                    )}
+
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Métrica de éxito mensual</p>
