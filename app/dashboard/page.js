@@ -933,10 +933,7 @@ export default function DashboardPage() {
         }
 
         // Pre-check credits: only 3 for the plan itself (scripts generated separately)
-        let postCount = 12;
-        if (planFrequency === '4 publicaciones por semana') postCount = 16;
-        if (planFrequency === '5 publicaciones por semana') postCount = 20;
-        if (planFrequency === '7 publicaciones por semana') postCount = 28;
+        let postCount = 30; // Siempre generar 30 ideas para "Plan de 30 días"
 
         const planCost = 3;
         const available = aiCredits.total - aiCredits.used;
@@ -1062,7 +1059,12 @@ export default function DashboardPage() {
         
         if (slotsToProcess.length === 0) {
             console.log('[Auto] No scripts to generate, skipping to sync.');
-            await handleConfirmAndSync(true); 
+            const { data: dbSlots } = await supabase.from('content_slots').select('id, script_data, has_script, script_id').in('id', selectedIds);
+            const slotsToSync = currentSlots.filter(s => selectedIds.includes(s.id)).map(s => {
+                const dbRef = dbSlots?.find(d => d.id === s.id);
+                return dbRef ? { ...s, ...dbRef } : s;
+            });
+            await handleSendPlanToCalendar(slotsToSync); 
             setIsGeneratingMassive(false);
             return;
         }
@@ -1075,7 +1077,15 @@ export default function DashboardPage() {
         setTimeout(async () => {
             setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Sincronizando con el calendario...' }));
             try {
-                await handleConfirmAndSync(true); // silent sync
+                // Obtenemos los últimos datos de la DB para evitar leer estado obsoleto atrapado en el closure (stale state)
+                const { data: dbSlots } = await supabase.from('content_slots').select('id, script_data, has_script, script_id').in('id', selectedIds);
+                const slotsToSync = currentSlots.filter(s => selectedIds.includes(s.id)).map(s => {
+                    const dbRef = dbSlots?.find(d => d.id === s.id);
+                    return dbRef ? { ...s, ...dbRef } : s;
+                });
+
+                await handleSendPlanToCalendar(slotsToSync); // direct call safely
+                
                 setGenerationProgress({ current: 0, total: 0, status: '' });
                 setIsGeneratingMassive(false);
                 alert('¡MISIÓN CUMPLIDA! 🚀 Tu plan de 30 días ha sido generado, escrito y agendado en tu calendario automáticamente.');
@@ -1177,7 +1187,9 @@ export default function DashboardPage() {
             }
         }
 
-        setIsGeneratingMassive(false);
+        if (!isAuto) {
+            setIsGeneratingMassive(false);
+        }
         setGenerationProgress({
             current: slotsToProcess.length,
             total: slotsToProcess.length,
@@ -3563,7 +3575,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.6</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.7</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
