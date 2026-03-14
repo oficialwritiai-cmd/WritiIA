@@ -1702,14 +1702,30 @@ export default function DashboardPage() {
             today.setHours(0, 0, 0, 0);
 
             // Fetch existing events and scripts to ensure we have all data
-            // Use a broader query for scripts if activeProject is missing
+            // Use a broader query for scripts and library (where guiones live)
             const scriptQuery = supabase.from('scripts').select('*').eq('user_id', user.id);
-            if (activeProject?.id) scriptQuery.eq('project_id', activeProject.id);
+            const libraryQuery = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'guion');
 
-            const [{ data: existingEvents }, { data: allScripts }] = await Promise.all([
+            if (activeProject?.id) {
+                scriptQuery.eq('project_id', activeProject.id);
+                libraryQuery.eq('project_id', activeProject.id);
+            }
+
+            const [{ data: existingEvents }, { data: allScripts }, { data: allLibraryScripts }] = await Promise.all([
                 supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id),
-                scriptQuery
+                scriptQuery,
+                libraryQuery
             ]);
+
+            // Combine both tables for matching
+            const combinedScripts = [
+                ...(allScripts || []),
+                ...(allLibraryScripts || []).map(libs => ({
+                    ...libs,
+                    topic: libs.titulo, // Map titulo to topic for normalization
+                    content: libs.content
+                }))
+            ];
 
             const occupiedDates = new Set(existingEvents?.map(e => e.event_date) || []);
 
@@ -1774,17 +1790,26 @@ export default function DashboardPage() {
 
                 const normalize = (t) => String(t || '').replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\u200D|\uFE0F|[^\w\s\d]/g, '').trim().toLowerCase();
                 const slotTitleNorm = normalize(slot.idea_title);
-                const matchedScript = allScripts?.find(sc => normalize(sc.topic) === slotTitleNorm || normalize(sc.content?.titulo_guion) === slotTitleNorm);
+                
+                // Search in combined sources
+                const matchedScript = combinedScripts?.find(sc => 
+                    normalize(sc.topic) === slotTitleNorm || 
+                    normalize(sc.titulo) === slotTitleNorm ||
+                    normalize(sc.content?.titulo_guion) === slotTitleNorm
+                );
 
                 const sd = slot.script_data || matchedScript?.content;
                 // If sd is a string (legacy/direct prompt), try parsing
                 let parsedSd = sd;
-                if (typeof sd === 'string') {
+                if (typeof sd === 'string' && sd.startsWith('{')) {
                     try { parsedSd = JSON.parse(sd); } catch(e) { parsedSd = { hook: sd }; }
+                } else if (typeof sd === 'string') {
+                    parsedSd = { hook: sd };
                 }
 
                 const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
-                const desArr = Array.isArray(parsedSd?.desarrollo) ? parsedSd.desarrollo : [];
+                const desRaw = parsedSd?.desarrollo || parsedSd?.puntos || [];
+                const desArr = Array.isArray(desRaw) ? desRaw : (desRaw ? [desRaw] : []);
                 const ctaVal = parsedSd?.cta || parsedSd?.cierre || '';
                 const cpPost = parsedSd?.copy_post || {};
                 const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
@@ -3607,7 +3632,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.14</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.15</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
