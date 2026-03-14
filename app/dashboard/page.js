@@ -2743,7 +2743,7 @@ export default function DashboardPage() {
                                     </div>
                                     <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
                                 </div>
-                                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
+                                <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>
                                     {(() => {
                                         const combined = [
                                             ...libIdeas.map(i => ({ ...i, source: 'library', displayTitle: i.titulo })),
@@ -2760,10 +2760,10 @@ export default function DashboardPage() {
                                             return <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No hay ideas guardadas para mostrar.</p>;
                                         }
 
-                                        return combined.slice(0, 15).map(idea => {
+                                        return combined.slice(0, 40).map(idea => {
                                             const isSelected = selectedPlanIdeas.includes(idea.id);
                                             // Fallback for empty titles: use first few words of description
-                                            const finalTitle = idea.displayTitle || (idea.descripcion ? (idea.descripcion.substring(0, 30) + '...') : 'Idea sin título');
+                                            const finalTitle = idea.displayTitle || (idea.descripcion ? (idea.descripcion.substring(0, 40) + '...') : 'Idea sin título');
 
                                             return (
                                                 <div 
@@ -2773,28 +2773,31 @@ export default function DashboardPage() {
                                                         else setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
                                                     }}
                                                     style={{
-                                                        minWidth: '220px', maxWidth: '220px', padding: '12px', borderRadius: '12px', 
-                                                        background: isSelected ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.05)',
-                                                        border: isSelected ? '1px solid #7ECECA' : '1px solid transparent', 
-                                                        cursor: 'pointer', transition: '0.2s', position: 'relative'
+                                                        minWidth: '280px', maxWidth: '280px', padding: '16px', borderRadius: '16px', 
+                                                        background: isSelected ? 'rgba(126, 206, 202, 0.12)' : 'rgba(255,255,255,0.04)',
+                                                        border: isSelected ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)', 
+                                                        cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative',
+                                                        boxShadow: isSelected ? '0 0 20px rgba(126, 206, 202, 0.15)' : 'none',
+                                                        transform: isSelected ? 'translateY(-2px)' : 'none'
                                                     }}
                                                 >
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                                         <span style={{ 
-                                                            fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', 
-                                                            background: idea.source === 'ai' ? 'rgba(157, 0, 255, 0.1)' : 'rgba(126, 206, 202, 0.1)',
-                                                            color: idea.source === 'ai' ? '#9D00FF' : '#7ECECA',
-                                                            fontWeight: 800
+                                                            fontSize: '0.65rem', padding: '4px 10px', borderRadius: '6px', 
+                                                            background: idea.source === 'ai' ? 'rgba(157, 0, 255, 0.15)' : 'rgba(126, 206, 202, 0.15)',
+                                                            color: idea.source === 'ai' ? '#B55DFF' : '#7ECECA',
+                                                            fontWeight: 900,
+                                                            letterSpacing: '0.05em'
                                                         }}>
                                                             {idea.source === 'ai' ? '✨ IA SUGERIDA' : '📁 GUARDADA'}
                                                         </span>
-                                                        {isSelected && <CheckCircle2 size={12} color="#7ECECA" />}
+                                                        {isSelected && <CheckCircle2 size={16} color="#7ECECA" />}
                                                     </div>
-                                                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>
+                                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 900, marginBottom: '8px', lineHeight: '1.2', color: 'white' }}>
                                                         {finalTitle}
                                                     </h4>
-                                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', height: '2.5em', overflow: 'hidden', lineHeight: '1.3' }}>
-                                                        {idea.descripcion || 'Haz click para incluir en tu plan'}
+                                                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', height: '4.2em', overflow: 'hidden', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                                                        {idea.descripcion || 'Haz click para incluir esta idea estratégica en tu plan mensual.'}
                                                     </p>
                                                 </div>
                                             );

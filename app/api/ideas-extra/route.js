@@ -73,15 +73,15 @@ Las ideas deben dividirse en 3 categorías: Autoridad (educar), Viral (entreteni
 Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
 [{ "titulo_idea": "...", "descripcion": "...", "categoria": "..." }]`;
 
-        let userMessage = proactive ? `Genera una estrategia de 12-15 ideas virales basadas en este perfil:\n${brainContext}\n` : `CONTEXTO: ${context}.`;
-
+        let userMessage = proactive ? `Genera una estrategia MASIVA de 30-40 ideas virales y específicas basadas en este perfil:\n${brainContext}\n` : `CONTEXTO: ${context}.`;
+        
         if (!proactive) {
             if (experienceLevel) userMessage += ` NIVEL: ${experienceLevel}.`;
             if (productTicket) userMessage += ` TICKET: ${productTicket}.`;
             if (objections) userMessage += ` OBJECIONES: ${objections}.`;
             if (examples) userMessage += ` EJEMPLOS: ${examples}.`;
             if (brainContext) userMessage += `\nUSA ESTE PERFIL COMO BASE: ${brainContext}`;
-            userMessage += '\nGenera 10-12 ideas originales y virales.';
+            userMessage += '\nGenera 30-35 ideas originales, variadas y virales.';
         }
 
         const { parsed: ideas } = await generateIdeasWithHaiku({
