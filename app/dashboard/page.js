@@ -908,6 +908,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (data.summary) {
                 setBriefAnalysis(data.summary);
+                setTopic(data.summary); // Update topic state to bypass validation in next step
                 setPlanWizardStep(4);
             } else {
                 throw new Error(data.error || 'Error al analizar briefing');
@@ -920,7 +921,9 @@ export default function DashboardPage() {
     };
 
     async function handleGeneratePlan() {
-        if (!topic.trim()) {
+        const finalTopic = topic.trim() || briefAnalysis?.trim();
+        
+        if (!finalTopic) {
             setError('Por favor, describe tu marca y objetivos para el mes.');
             return;
         }
@@ -951,7 +954,7 @@ export default function DashboardPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    description: topic.trim(),
+                    description: finalTopic,
                     platforms: planPlatforms,
                     frequency: planFrequency,
                     focus: planFocus,
