@@ -1008,7 +1008,8 @@ export default function DashboardPage() {
             const slotsWithDates = slots.map((slot, index) => {
                 let scheduledDate = slot.scheduled_date;
                 if (!scheduledDate) {
-                    const slotDate = new Date(currentYear, currentMonth, today.getDate() + index);
+                    // Start from TOMORROW (index + 1)
+                    const slotDate = new Date(currentYear, currentMonth, today.getDate() + index + 1);
                     scheduledDate = slotDate.toISOString().split('T')[0];
                 }
                 return { ...slot, scheduled_date: scheduledDate };
@@ -1016,15 +1017,23 @@ export default function DashboardPage() {
 
             setPlanSlots(slotsWithDates);
 
-            // Show plan immediately - scripts are generated separately
+            // Show plan immediately
             setStep(3);
-            // Select all slots by default
-            setSelectedSlots(new Set(slotsWithDates.map(s => s.id)));
+            
+            // --- AUTOMATION v4.4.0 ---
+            // 1. Select all slots
+            const allIds = slotsWithDates.map(s => s.id);
+            setSelectedSlots(new Set(allIds));
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
-            // Refresh credits in header
-            window.dispatchEvent(new CustomEvent('refresh-profile'));
+            // 2. Trigger Batch Script Generation automatically
+            setTimeout(() => {
+                handleAutoBatchGenerateAndSync(slotsWithDates, allIds);
+            }, 800);
+
+            // Refresh credits
             fetchCredits(profile.id);
+            window.dispatchEvent(new CustomEvent('refresh-profile'));
 
         } catch (err) {
             setError(err.message);
@@ -1040,19 +1049,43 @@ export default function DashboardPage() {
             return;
         }
 
-        // Credit check
-        const available = aiCredits.total - aiCredits.used;
-        const estimatedCost = slotsToProcess.length; // 1 credit per script
-        if (available < estimatedCost) {
-            setError(`Créditos insuficientes. Necesitas ~${estimatedCost} créditos para ${slotsToProcess.length} guiones y tienes ${available}.`);
-            return;
-        }
+        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas? Esto usará ~${slotsToProcess.length} créditos.`)) return;
 
-        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas? Esto usará ~${estimatedCost} créditos.`)) return;
+        await runBatchGeneration(slotsToProcess);
+    }
+
+    const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds) => {
+        const slotsToProcess = currentSlots.filter(s => selectedIds.includes(s.id) && !s.has_script);
+        if (slotsToProcess.length === 0) return;
 
         setIsGeneratingMassive(true);
-        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando generación masiva...' });
+        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando automatización: Generando guiones...' });
+        
+        const success = await runBatchGeneration(slotsToProcess, true);
+        
+        if (success) {
+            setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Sincronizando con el calendario...' }));
+            setTimeout(async () => {
+                await handleConfirmAndSync(true); // silent sync
+                setGenerationProgress({ current: 0, total: 0, status: '' });
+                setIsGeneratingMassive(false);
+                alert('¡PROCESO COMPLETADO! Plan mensual generado, guiones creados y sincronizados con el calendario automáticamente. 🚀');
+            }, 1000);
+        } else {
+            setIsGeneratingMassive(false);
+        }
+    }
 
+    const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
+        // Credit check
+        const available = aiCredits.total - aiCredits.used;
+        const estimatedCost = slotsToProcess.length;
+        if (available < estimatedCost) {
+            setError(`Créditos insuficientes. Necesitas ~${estimatedCost} créditos para ${slotsToProcess.length} guiones.`);
+            return false;
+        }
+
+        setIsGeneratingMassive(true);
         let successCount = 0;
 
         for (let i = 0; i < slotsToProcess.length; i++) {

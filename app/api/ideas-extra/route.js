@@ -71,10 +71,11 @@ Debes basarte profundamente en el perfil (BIO) y productos del usuario para que 
 Las ideas deben dividirse en 3 categorías: Autoridad (educar), Viral (entretenimiento/curiosidad) e Historia (conexión).
 
 IMPORTANTE: 
-1. La "descripcion" debe ser detallada (mínimo 2-3 frases) explicando por qué la idea es buena y qué ángulo usar. NO la dejes vacía.
-2. El "titulo_idea" debe ser corto y llamativo.
+1. CADA IDEA debe tener una "descripcion" detallada (mínimo 3 frases) explicando la narrativa, el gancho visual y por qué funcionará. NUNCA la dejes vacía.
+2. El "titulo_idea" debe ser corto, magnético y profesional.
+3. No te detengas hasta completar la cantidad solicitada.
 
-Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
+Responde ÚNICAMENTE con un array JSON válido de objetos:
 [{ "titulo_idea": "...", "descripcion": "...", "categoria": "..." }]`;
 
         let userMessage = proactive ? `Genera una estrategia MASIVA de 30-40 ideas virales y específicas basadas en este perfil:\n${brainContext}\n` : `CONTEXTO: ${context}.`;
