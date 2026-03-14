@@ -153,10 +153,46 @@ export default function CalendarPage() {
         setTempTitle(event.title || '');
         setTempStatus(event.status || 'idea');
         setTempPlatform(event.platform || 'General');
-        setTempNotes(event.script_full_text || event.notes || '');
+        
+        let loadedNotes = event.script_full_text || event.notes || '';
         const loadedColor = event.color || 'purple';
         setTempColor(loadedColor);
         setIsPanelOpen(true);
+
+        // EXTRA ROBUST FALLBACK (v4.4.14): If notes are empty but it's marked as having a script, try fetching it.
+        if (!loadedNotes && event.has_script) {
+            setLoadingScript(true);
+            try {
+                let libData = null;
+                if (event.reference_id) {
+                    const { data } = await supabase.from('library').select('*').eq('id', event.reference_id).single();
+                    libData = data;
+                }
+                if (!libData) {
+                    const { data } = await supabase.from('library').select('*').eq('user_id', event.user_id).ilike('titulo', event.title).single();
+                    libData = data;
+                }
+                
+                if (libData) {
+                    const content = libData.content;
+                    const hook = content?.hook || content?.gancho || '';
+                    const des = Array.isArray(content?.desarrollo) ? content.desarrollo : [];
+                    const cta = content?.cta || content?.cierre || '';
+                    loadedNotes = `GANCHO:\n${hook}\n\nDESARROLLO:\n${des.join('\n')}\n\nCTA:\n${cta}`;
+                    setTempNotes(loadedNotes);
+                    setLinkedScript(libData);
+                } else {
+                    setTempNotes('');
+                }
+            } catch (err) {
+                console.warn("[v4.4.14 Fallback] Could not recover script:", err);
+                setTempNotes('');
+            } finally {
+                setLoadingScript(false);
+            }
+        } else {
+            setTempNotes(loadedNotes);
+        }
 
 
         // Fetch linked script if exists

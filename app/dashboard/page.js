@@ -1702,9 +1702,13 @@ export default function DashboardPage() {
             today.setHours(0, 0, 0, 0);
 
             // Fetch existing events and scripts to ensure we have all data
+            // Use a broader query for scripts if activeProject is missing
+            const scriptQuery = supabase.from('scripts').select('*').eq('user_id', user.id);
+            if (activeProject?.id) scriptQuery.eq('project_id', activeProject.id);
+
             const [{ data: existingEvents }, { data: allScripts }] = await Promise.all([
                 supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id),
-                supabase.from('scripts').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id)
+                scriptQuery
             ]);
 
             const occupiedDates = new Set(existingEvents?.map(e => e.event_date) || []);
@@ -1768,7 +1772,11 @@ export default function DashboardPage() {
                     if (savedIdea?.id) refId = savedIdea.id;
                 }
 
-                const sd = slot.script_data || allScripts?.find(sc => sc.topic === slot.idea_title)?.content;
+                const normalize = (t) => String(t || '').replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\u200D|\uFE0F|[^\w\s\d]/g, '').trim().toLowerCase();
+                const slotTitleNorm = normalize(slot.idea_title);
+                const matchedScript = allScripts?.find(sc => normalize(sc.topic) === slotTitleNorm || normalize(sc.content?.titulo_guion) === slotTitleNorm);
+
+                const sd = slot.script_data || matchedScript?.content;
                 // If sd is a string (legacy/direct prompt), try parsing
                 let parsedSd = sd;
                 if (typeof sd === 'string') {
@@ -3599,7 +3607,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.13</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.14</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
