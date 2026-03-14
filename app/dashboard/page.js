@@ -3541,44 +3541,50 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v2.8.4</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.3</span>
                                 </h2>
-                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Revisa tus ideas, selecciona las que quieras y genera guiones automáticamente.</p>
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                    {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
+                                </p>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                {selectedSlots.size > 0 && (
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        className="btn-secondary"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,0,0,0.3)', color: '#ff4d4d' }}
-                                    >
-                                        <X size={16} /> Eliminar ({selectedSlots.size})
-                                    </button>
+                                {!isGeneratingMassive && (
+                                    <>
+                                        {selectedSlots.size > 0 && (
+                                            <button
+                                                onClick={handleBulkDelete}
+                                                className="btn-secondary"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,0,0,0.3)', color: '#ff4d4d' }}
+                                            >
+                                                <X size={16} /> Eliminar ({selectedSlots.size})
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={handleBatchGenerateScripts}
+                                            disabled={selectedSlots.size === 0}
+                                            className="btn-primary"
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                background: 'linear-gradient(135deg, #7ECECA, #4db8b2)',
+                                                opacity: selectedSlots.size === 0 ? 0.7 : 1,
+                                                fontWeight: 800,
+                                                boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)'
+                                            }}
+                                        >
+                                            <Sparkles size={16} />
+                                            {`Analizar y Planificar (${planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script).length})`}
+                                        </button>
+                                        <button
+                                            onClick={handleConfirmAndSync}
+                                            disabled={sendingToCalendar || selectedSlots.size === 0}
+                                            className="btn-secondary"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
+                                        >
+                                            {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                            {sendingToCalendar ? 'Sincronizando...' : `Sincronizar Calendario (${selectedSlots.size})`}
+                                        </button>
+                                    </>
                                 )}
-                                <button
-                                    onClick={handleBatchGenerateScripts}
-                                    disabled={isGeneratingMassive || selectedSlots.size === 0}
-                                    className="btn-primary"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                        background: 'linear-gradient(135deg, #7ECECA, #4db8b2)',
-                                        opacity: (isGeneratingMassive || selectedSlots.size === 0) ? 0.7 : 1,
-                                        fontWeight: 800,
-                                        boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)'
-                                    }}
-                                >
-                                    {isGeneratingMassive ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                                    {isGeneratingMassive ? 'Generando...' : `Analizar y Planificar (${planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script).length})`}
-                                </button>
-                                <button
-                                    onClick={handleConfirmAndSync}
-                                    disabled={sendingToCalendar || selectedSlots.size === 0}
-                                    className="btn-secondary"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
-                                >
-                                    {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                                    {sendingToCalendar ? 'Sincronizando...' : `Sincronizar Calendario (${selectedSlots.size})`}
-                                </button>
                                 <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
                             </div>
                         </div>
