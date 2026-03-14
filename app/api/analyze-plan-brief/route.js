@@ -41,7 +41,7 @@ Plataformas: ${Array.isArray(platforms) ? platforms.join(', ') : platforms}
 
 Genera un resumen ejecutivo de estrategia (2-3 líneas) que valide este enfoque.`;
 
-        const { text: summary } = await generateIdeasWithHaiku({
+        const { content: summary } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
             userMessage,

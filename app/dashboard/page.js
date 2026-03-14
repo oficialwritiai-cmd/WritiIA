@@ -331,6 +331,7 @@ export default function DashboardPage() {
         setTopic('');
         setIdeas('');
         setLibIdeas([]); // Clear library ideas too
+        setRecommendedIdeas([]); // Clear recommended ideas
         loadData();
     }, [activeProject]);
 
@@ -2736,26 +2737,69 @@ export default function DashboardPage() {
                             {/* Integrated Idea Bank Selection */}
                             <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Añadir ideas de tu banco (Opcional)</h3>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Añadir ideas de tu banco (Opcional)</h3>
+                                        {loadingRecommended && <Loader2 className="animate-spin" size={14} color="var(--text-muted)" />}
+                                    </div>
                                     <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
-                                    {(libIdeas.length > 0) ? libIdeas.slice(0, 10).map(idea => (
-                                        <div 
-                                            key={idea.id} 
-                                            onClick={() => {
-                                                if (selectedPlanIdeas.includes(idea.id)) setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
-                                                else setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
-                                            }}
-                                            style={{
-                                                minWidth: '200px', padding: '12px', borderRadius: '12px', background: selectedPlanIdeas.includes(idea.id) ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.05)',
-                                                border: selectedPlanIdeas.includes(idea.id) ? '1px solid #7ECECA' : '1px solid transparent', cursor: 'pointer', transition: '0.2s'
-                                            }}
-                                        >
-                                            <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{idea.titulo || 'Idea'}</h4>
-                                            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', height: '2.4em', overflow: 'hidden' }}>Haz click para incluir</p>
-                                        </div>
-                                    )) : <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No hay ideas guardadas para mostrar.</p>}
+                                    {(() => {
+                                        const combined = [
+                                            ...libIdeas.map(i => ({ ...i, source: 'library', displayTitle: i.titulo })),
+                                            ...recommendedIdeas.map((i, idx) => ({ 
+                                                ...i, 
+                                                id: `rec-${idx}`, 
+                                                source: 'ai', 
+                                                displayTitle: i.titulo_idea || i.titulo,
+                                                descripcion: i.descripcion || i.content?.descripcion 
+                                            }))
+                                        ];
+
+                                        if (combined.length === 0 && !loadingRecommended) {
+                                            return <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No hay ideas guardadas para mostrar.</p>;
+                                        }
+
+                                        return combined.slice(0, 15).map(idea => {
+                                            const isSelected = selectedPlanIdeas.includes(idea.id);
+                                            // Fallback for empty titles: use first few words of description
+                                            const finalTitle = idea.displayTitle || (idea.descripcion ? (idea.descripcion.substring(0, 30) + '...') : 'Idea sin título');
+
+                                            return (
+                                                <div 
+                                                    key={idea.id} 
+                                                    onClick={() => {
+                                                        if (isSelected) setSelectedPlanIdeas(selectedPlanIdeas.filter(id => id !== idea.id));
+                                                        else setSelectedPlanIdeas([...selectedPlanIdeas, idea.id]);
+                                                    }}
+                                                    style={{
+                                                        minWidth: '220px', maxWidth: '220px', padding: '12px', borderRadius: '12px', 
+                                                        background: isSelected ? 'rgba(126, 206, 202, 0.1)' : 'rgba(255,255,255,0.05)',
+                                                        border: isSelected ? '1px solid #7ECECA' : '1px solid transparent', 
+                                                        cursor: 'pointer', transition: '0.2s', position: 'relative'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                                        <span style={{ 
+                                                            fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', 
+                                                            background: idea.source === 'ai' ? 'rgba(157, 0, 255, 0.1)' : 'rgba(126, 206, 202, 0.1)',
+                                                            color: idea.source === 'ai' ? '#9D00FF' : '#7ECECA',
+                                                            fontWeight: 800
+                                                        }}>
+                                                            {idea.source === 'ai' ? '✨ IA SUGERIDA' : '📁 GUARDADA'}
+                                                        </span>
+                                                        {isSelected && <CheckCircle2 size={12} color="#7ECECA" />}
+                                                    </div>
+                                                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>
+                                                        {finalTitle}
+                                                    </h4>
+                                                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', height: '2.5em', overflow: 'hidden', lineHeight: '1.3' }}>
+                                                        {idea.descripcion || 'Haz click para incluir en tu plan'}
+                                                    </p>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             </div>
 
