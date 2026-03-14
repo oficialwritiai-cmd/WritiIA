@@ -93,6 +93,7 @@ CADA OBJETO DEL JSON DEBE TENER ESTAS CLAVES:
 - "platform": string (TikTok, Reels, LinkedIn, etc).
 - "content_type": string (educativo, venta, autoridad, comunidad, historia, etc).
 - "idea_title": un título magnético, específico y RELEVANTE PARA EL BRIEFING (OBLIGATORIO).
+- "descripcion_idea": una descripción detallada (2-3 frases) del ángulo y contenido sugerido (OBLIGATORIO).
 - "goal": el objetivo específico del post (alcance, leads, venta, autoridad).
 
 Responde ÚNICAMENTE en formato JSON (un array de objetos).`;
@@ -157,6 +158,7 @@ IMPORTANTE:
                 platform: platform,
                 content_type: type,
                 idea_title: title,
+                idea_description: r.descripcion_idea || r.descripcion || '',
                 goal: goalStr
             };
         });

@@ -2749,17 +2749,21 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>
                                     {(() => {
                                         const combined = [
-                                            ...libIdeas.map(i => ({ 
-                                                ...i, 
-                                                source: 'library', 
-                                                displayTitle: i.titulo || i.title,
-                                                descripcion: i.descripcion || i.description
-                                            })),
+                                            ...libIdeas.map(i => {
+                                                const title = i.titulo || i.title || i.content?.titulo || i.content?.title || i.content?.idea_title || i.content?.titulo_idea;
+                                                const desc = i.descripcion || i.description || i.content?.descripcion || i.content?.description || i.content?.idea_description || i.content?.descripcion_idea;
+                                                return { 
+                                                    ...i, 
+                                                    source: 'library', 
+                                                    displayTitle: title,
+                                                    descripcion: desc
+                                                };
+                                            }),
                                             ...recommendedIdeas.map((i, idx) => ({ 
                                                 ...i, 
                                                 id: `rec-${idx}`, 
                                                 source: 'ai', 
-                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto,
+                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title,
                                                 descripcion: i.descripcion || i.description || i.content?.descripcion 
                                             }))
                                         ];
@@ -2802,7 +2806,7 @@ export default function DashboardPage() {
                                                         {isSelected && <CheckCircle2 size={16} color="#7ECECA" />}
                                                     </div>
                                                     <h4 style={{ fontSize: '0.95rem', fontWeight: 900, marginBottom: '8px', lineHeight: '1.2', color: 'white' }}>
-                                                        {finalTitle && finalTitle !== 'Idea sin título' ? finalTitle : (idea.descripcion ? (idea.descripcion.substring(0, 50) + '...') : 'Idea estratégica')}
+                                                        {idea.displayTitle || (idea.descripcion ? (idea.descripcion.substring(0, 50) + '...') : 'Idea estratégica')}
                                                     </h4>
                                                     <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', height: '4.2em', overflow: 'hidden', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
                                                         {idea.descripcion || 'Haz click para incluir esta idea estratégica en tu plan mensual.'}
