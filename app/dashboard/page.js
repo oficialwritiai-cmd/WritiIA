@@ -990,8 +990,16 @@ export default function DashboardPage() {
                     projectId: activeProject?.id
                 }),
             });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Error al generar el plan mensual.');
+            }
+
             const data = await res.json();
             const slots = data.slots || [];
+            if (slots.length === 0) {
+                throw new Error('La IA no devolvió ideas. Intenta con una descripción más detallada.');
+            }
 
             const today = new Date();
             const currentMonth = today.getMonth();
@@ -1007,13 +1015,6 @@ export default function DashboardPage() {
             });
 
             setPlanSlots(slotsWithDates);
-
-            // Update scheduled dates in DB
-            for (const slot of slotsWithDates) {
-                await supabase.from('content_slots').update({
-                    scheduled_date: slot.scheduled_date
-                }).eq('id', slot.id);
-            }
 
             // Show plan immediately - scripts are generated separately
             setStep(3);
@@ -3668,7 +3669,12 @@ export default function DashboardPage() {
                                                     )}
                                                 </div>
                                                 <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>{slot.idea_title}</h4>
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Enfoque: {slot.content_type}</p>
+                                                {slot.idea_description && (
+                                                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                                                        {slot.idea_description}
+                                                    </p>
+                                                )}
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '6px 0 0 0' }}>Enfoque: {slot.content_type}</p>
                                             </div>
                                         </div>
 
