@@ -11,6 +11,7 @@ export default function AIPolishedTextarea({
     rows = 4
 }) {
     const [isPolishing, setIsPolishing] = useState(false);
+    const [instruction, setInstruction] = useState('');
     const [originalText, setOriginalText] = useState(null);
     const [toast, setToast] = useState(null);
     const supabase = createSupabaseClient();
@@ -21,7 +22,7 @@ export default function AIPolishedTextarea({
     };
 
     const handlePolish = async () => {
-        if (!value || value.length < 20) return;
+        if (!value || value.length < 2) return;
 
         setIsPolishing(true);
         try {
@@ -29,7 +30,11 @@ export default function AIPolishedTextarea({
             const res = await fetch('/api/polish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: value, userId: user?.id }),
+                body: JSON.stringify({ 
+                    text: value, 
+                    userId: user?.id,
+                    instruction: instruction // Pass the custom instruction
+                }),
             });
 
             if (res.status === 402) {
@@ -51,6 +56,7 @@ export default function AIPolishedTextarea({
             onChange({ target: { value: data.polishedText } });
 
             showToast('Texto mejorado ✓', 'success');
+            setInstruction(''); // Clear instruction after use
 
             // Refresh credits balance in header
             window.dispatchEvent(new CustomEvent('refresh-profile'));
@@ -78,10 +84,10 @@ export default function AIPolishedTextarea({
     };
 
     return (
-        <div style={{ position: 'relative', width: '100%' }}>
+        <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <textarea
                 className={className}
-                style={{ ...style, paddingBottom: value.length >= 20 ? '40px' : style.paddingBottom }} // Leave room for button
+                style={{ ...style }} 
                 rows={rows}
                 placeholder={placeholder}
                 value={value}
@@ -89,62 +95,47 @@ export default function AIPolishedTextarea({
                 disabled={isPolishing}
             />
 
-            {/* Polish Button inside the textarea (bottom right) */}
-            {value && value.length >= 20 && !isPolishing && (
-                <button
-                    onClick={handlePolish}
-                    style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        right: '12px',
-                        background: 'transparent',
-                        border: '1px solid #7ECECA',
-                        color: '#7ECECA',
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        transition: '0.2s',
-                        zIndex: 10
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(126, 206, 202, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                    }}
-                >
-                    <Sparkles size={12} /> Mejorar con IA
-                </button>
-            )}
-
-            {/* Loading State inside the textarea */}
-            {isPolishing && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        right: '12px',
-                        background: 'transparent',
-                        border: '1px solid rgba(126, 206, 202, 0.5)',
-                        color: 'rgba(126, 206, 202, 0.8)',
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        zIndex: 10
-                    }}
-                >
-                    <Loader2 size={12} className="animate-spin" /> Mejorando...
+            {/* AI Control Bar */}
+            {value && value.length >= 2 && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input 
+                        className="input-field"
+                        style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                        placeholder="Instrucción (ej: hazlo más profesional...)"
+                        value={instruction}
+                        onChange={(e) => setInstruction(e.target.value)}
+                        disabled={isPolishing}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !isPolishing) {
+                                handlePolish();
+                            }
+                        }}
+                    />
+                    <button
+                        onClick={handlePolish}
+                        disabled={isPolishing}
+                        style={{
+                            background: 'rgba(126, 206, 202, 0.08)',
+                            border: '1px solid rgba(126, 206, 202, 0.2)',
+                            color: '#7ECECA',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            cursor: isPolishing ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: '0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {isPolishing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        {isPolishing ? 'Mejorando...' : (instruction ? 'Aplicar' : 'Mejorar')}
+                    </button>
                 </div>
             )}
+
 
             {/* Undo Button (Outside, below the textarea) */}
             {originalText !== null && (

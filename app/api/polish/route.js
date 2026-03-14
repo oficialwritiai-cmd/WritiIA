@@ -32,7 +32,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, userId, projectId } = validation.data;
+        const { text, userId, projectId, instruction } = validation.data;
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -52,7 +52,8 @@ REGLAS:
 1. NO CAMBIES EL TEMA CENTRAL. Si el usuario habla de "X", mantén "X".
 2. Mejora la redacción para que sea más impactante, use palabras de poder y despierte curiosidad.
 3. Mantén la misma estructura/enfoque que el usuario escribió, solo hazlo sonar como un creador de contenido Pro.
-4. Responde SOLO con el texto mejorado, sin explicaciones ni comillas.`;
+4. Responde SOLO con el texto mejorado, sin explicaciones ni comillas.
+${instruction ? `5. Sigue esta instrucción específica del usuario: "${instruction}"` : ''}`;
 
         const { content: polishedText } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,

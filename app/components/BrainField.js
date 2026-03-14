@@ -112,7 +112,7 @@ export default function BrainField({
     };
 
     const handlePolish = async () => {
-        if (!value || value.length < 10) {
+        if (!value || value.length < 2) {
             showToast('Escribe un poco más para que la IA pueda mejorar.', 'error');
             return;
         }

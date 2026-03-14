@@ -116,7 +116,8 @@ export default function DashboardPage() {
     const [briefAnalysis, setBriefAnalysis] = useState('');
     const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
     const [polishingField, setPolishingField] = useState(null); // Used for Monthly Plan / Script polishing
-
+    const [aiRefineInstructions, setAiRefineInstructions] = useState({}); // { [fieldId]: string }
+    const [showPolishToast, setShowPolishToast] = useState(false);
 
     // Missing states restored
     const [profile, setProfile] = useState(null);
@@ -183,7 +184,7 @@ export default function DashboardPage() {
         }
     };
 
-    const handleImproveField = async (text, setter, fieldId) => {
+    const handleImproveField = async (text, setter, fieldId, instruction = '') => {
         if (!text || text.length < 5) return;
         setPolishingField(fieldId);
         try {
@@ -194,7 +195,8 @@ export default function DashboardPage() {
                 body: JSON.stringify({ 
                     text, 
                     userId: user?.id,
-                    projectId: activeProject?.id 
+                    projectId: activeProject?.id,
+                    instruction: instruction || undefined
                 }),
             });
 
@@ -208,12 +210,12 @@ export default function DashboardPage() {
             const data = await res.json();
             setter(data.polishedText);
             
-            // Notify success
-            setIsSuccessModalOpen(true);
-            setSuccessModalData({ 
-                title: '¡Texto Mejorado!', 
-                message: 'La IA ha profesionalizado tu respuesta manteniendo tu estilo.' 
-            });
+            // Clear instruction after use
+            setAiRefineInstructions(prev => ({ ...prev, [fieldId]: '' }));
+
+            // Notify success with minimalist toast
+            setShowPolishToast(true);
+            setTimeout(() => setShowPolishToast(false), 3000);
 
             // Trigger credit refresh
             window.dispatchEvent(new CustomEvent('refresh-profile'));
@@ -224,6 +226,7 @@ export default function DashboardPage() {
             setPolishingField(null);
         }
     };
+
 
     const { activeProject, projectBrain, refreshBrain } = useProject();
 
@@ -1877,30 +1880,106 @@ export default function DashboardPage() {
                                     </div>
                                     {editingBrain ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <div style={{ position: 'relative' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
                                                 {brainForm.biography?.length >= 5 && (
-                                                    <button onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography_edit')} disabled={polishingField === 'brain_biography_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                        {polishingField === 'brain_biography_edit' ? '...' : <Sparkles size={10} />}
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input 
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                            placeholder="Instrucción IA..."
+                                                            value={aiRefineInstructions['brain_biography_edit'] || ''}
+                                                            onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_biography_edit: e.target.value }))}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !polishingField) {
+                                                                    handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography_edit', aiRefineInstructions['brain_biography_edit']);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography_edit', aiRefineInstructions['brain_biography_edit'])} 
+                                                            disabled={polishingField === 'brain_biography_edit'}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                                fontWeight: 700, cursor: polishingField === 'brain_biography_edit' ? 'default' : 'pointer',
+                                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                color: '#7ECECA', transition: '0.2s'
+                                                            }}
+                                                        >
+                                                            {polishingField === 'brain_biography_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {aiRefineInstructions['brain_biography_edit'] ? 'Aplicar' : 'Mejorar'}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div style={{ position: 'relative' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
                                                 {brainForm.sells?.length >= 5 && (
-                                                    <button onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells_edit')} disabled={polishingField === 'brain_sells_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                        {polishingField === 'brain_sells_edit' ? '...' : <Sparkles size={10} />}
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input 
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                            placeholder="Instrucción IA..."
+                                                            value={aiRefineInstructions['brain_sells_edit'] || ''}
+                                                            onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_sells_edit: e.target.value }))}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !polishingField) {
+                                                                    handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells_edit', aiRefineInstructions['brain_sells_edit']);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells_edit', aiRefineInstructions['brain_sells_edit'])} 
+                                                            disabled={polishingField === 'brain_sells_edit'}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                                fontWeight: 700, cursor: polishingField === 'brain_sells_edit' ? 'default' : 'pointer',
+                                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                color: '#7ECECA', transition: '0.2s'
+                                                            }}
+                                                        >
+                                                            {polishingField === 'brain_sells_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {aiRefineInstructions['brain_sells_edit'] ? 'Aplicar' : 'Mejorar'}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div style={{ position: 'relative' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
                                                 {brainForm.helps?.length >= 5 && (
-                                                    <button onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps_edit')} disabled={polishingField === 'brain_helps_edit'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                        {polishingField === 'brain_helps_edit' ? '...' : <Sparkles size={10} />}
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input 
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                            placeholder="Instrucción IA..."
+                                                            value={aiRefineInstructions['brain_helps_edit'] || ''}
+                                                            onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_helps_edit: e.target.value }))}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !polishingField) {
+                                                                    handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps_edit', aiRefineInstructions['brain_helps_edit']);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps_edit', aiRefineInstructions['brain_helps_edit'])} 
+                                                            disabled={polishingField === 'brain_helps_edit'}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                                fontWeight: 700, cursor: polishingField === 'brain_helps_edit' ? 'default' : 'pointer',
+                                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                color: '#7ECECA', transition: '0.2s'
+                                                            }}
+                                                        >
+                                                            {polishingField === 'brain_helps_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {aiRefineInstructions['brain_helps_edit'] ? 'Aplicar' : 'Mejorar'}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
+
 
                                             <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                             <button onClick={async () => {
@@ -1928,30 +2007,106 @@ export default function DashboardPage() {
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Completa tu perfil para que la IA genere contenido con tu voz única.</p>
-                                    <div style={{ position: 'relative' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <input className="input-field" placeholder="Quién eres en una frase" value={brainForm.biography} onChange={(e) => setBrainForm({ ...brainForm, biography: e.target.value })} />
                                         {brainForm.biography?.length >= 5 && (
-                                            <button onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography')} disabled={polishingField === 'brain_biography'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                {polishingField === 'brain_biography' ? '...' : <Sparkles size={10} />}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción IA..."
+                                                    value={aiRefineInstructions['brain_biography'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_biography: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography', aiRefineInstructions['brain_biography']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(brainForm.biography, (v) => setBrainForm(prev => ({ ...prev, biography: v })), 'brain_biography', aiRefineInstructions['brain_biography'])} 
+                                                    disabled={polishingField === 'brain_biography'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'brain_biography' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'brain_biography' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['brain_biography'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
-                                    <div style={{ position: 'relative' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <input className="input-field" placeholder="Qué vendes" value={brainForm.sells} onChange={(e) => setBrainForm({ ...brainForm, sells: e.target.value })} />
                                         {brainForm.sells?.length >= 5 && (
-                                            <button onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells')} disabled={polishingField === 'brain_sells'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                {polishingField === 'brain_sells' ? '...' : <Sparkles size={10} />}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción IA..."
+                                                    value={aiRefineInstructions['brain_sells'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_sells: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells', aiRefineInstructions['brain_sells']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(brainForm.sells, (v) => setBrainForm(prev => ({ ...prev, sells: v })), 'brain_sells', aiRefineInstructions['brain_sells'])} 
+                                                    disabled={polishingField === 'brain_sells'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'brain_sells' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'brain_sells' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['brain_sells'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
-                                    <div style={{ position: 'relative' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <input className="input-field" placeholder="A quién ayudas" value={brainForm.helps} onChange={(e) => setBrainForm({ ...brainForm, helps: e.target.value })} />
                                         {brainForm.helps?.length >= 5 && (
-                                            <button onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps')} disabled={polishingField === 'brain_helps'} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(126, 206, 202, 0.1)', border: '1px solid #7ECECA', color: '#7ECECA', borderRadius: '4px', padding: '2px 6px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer' }}>
-                                                {polishingField === 'brain_helps' ? '...' : <Sparkles size={10} />}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción IA..."
+                                                    value={aiRefineInstructions['brain_helps'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, brain_helps: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps', aiRefineInstructions['brain_helps']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(brainForm.helps, (v) => setBrainForm(prev => ({ ...prev, helps: v })), 'brain_helps', aiRefineInstructions['brain_helps'])} 
+                                                    disabled={polishingField === 'brain_helps'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'brain_helps' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'brain_helps' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['brain_helps'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
+
 
                                     <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                     <button onClick={async () => {
@@ -2058,22 +2213,39 @@ export default function DashboardPage() {
                                         rows={2}
                                         style={{ width: '100%', minHeight: '80px' }}
                                     />
-                                    {experienciaReal.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(experienciaReal, setExperienciaReal, 'experienciaReal')} 
-                                            disabled={polishingField === 'experienciaReal'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                fontWeight: 700, cursor: polishingField === 'experienciaReal' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
-                                            }}
-                                        >
-                                            {polishingField === 'experienciaReal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                            Mejorar con IA
-                                        </button>
+                                    {experienciaReal.length >= 2 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción (ej: hazlo más emocional...)"
+                                                    value={aiRefineInstructions['experienciaReal'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, experienciaReal: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(experienciaReal, setExperienciaReal, 'experienciaReal', aiRefineInstructions['experienciaReal']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(experienciaReal, setExperienciaReal, 'experienciaReal', aiRefineInstructions['experienciaReal'])} 
+                                                    disabled={polishingField === 'experienciaReal'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'experienciaReal' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'experienciaReal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['experienciaReal'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
@@ -2084,22 +2256,39 @@ export default function DashboardPage() {
                                         value={opinionPersonal} 
                                         onChange={(e) => setOpinionPersonal(e.target.value)} 
                                     />
-                                    {opinionPersonal.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(opinionPersonal, setOpinionPersonal, 'opinionPersonal')} 
-                                            disabled={polishingField === 'opinionPersonal'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                fontWeight: 700, cursor: polishingField === 'opinionPersonal' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
-                                            }}
-                                        >
-                                            {polishingField === 'opinionPersonal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                            Mejorar con IA
-                                        </button>
+                                    {opinionPersonal.length >= 2 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción (ej: hazlo más directo...)"
+                                                    value={aiRefineInstructions['opinionPersonal'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, opinionPersonal: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(opinionPersonal, setOpinionPersonal, 'opinionPersonal', aiRefineInstructions['opinionPersonal']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(opinionPersonal, setOpinionPersonal, 'opinionPersonal', aiRefineInstructions['opinionPersonal'])} 
+                                                    disabled={polishingField === 'opinionPersonal'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'opinionPersonal' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'opinionPersonal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['opinionPersonal'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
@@ -2121,43 +2310,73 @@ export default function DashboardPage() {
                                 <div>
                                     <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Victoria/Fracaso (Opcional)</p>
                                     <input className="input-field" placeholder="1-2 frases" value={victory} onChange={(e) => setVictory(e.target.value)} style={{ fontSize: '0.75rem' }} />
-                                    {victory.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(victory, setVictory, 'victory')} 
-                                            disabled={polishingField === 'victory'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '4px',
-                                                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
-                                                fontWeight: 700, cursor: polishingField === 'victory' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '4px'
-                                            }}
-                                        >
-                                            {polishingField === 'victory' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                                            IA
-                                        </button>
+                                    {victory.length >= 2 && (
+                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
+                                            <input 
+                                                className="input-field"
+                                                style={{ fontSize: '0.6rem', padding: '4px 6px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                placeholder="Instrucción (ej: profesional...)"
+                                                value={aiRefineInstructions['victory'] || ''}
+                                                onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, victory: e.target.value }))}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !polishingField) {
+                                                        handleImproveField(victory, setVictory, 'victory', aiRefineInstructions['victory']);
+                                                    }
+                                                }}
+                                            />
+                                            <button 
+                                                onClick={() => handleImproveField(victory, setVictory, 'victory', aiRefineInstructions['victory'])} 
+                                                disabled={polishingField === 'victory'}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                                    padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
+                                                    fontWeight: 700, cursor: polishingField === 'victory' ? 'default' : 'pointer',
+                                                    background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
+                                                    color: '#7ECECA', transition: '0.2s'
+                                                }}
+                                            >
+                                                {polishingField === 'victory' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                                {aiRefineInstructions['victory'] ? 'Ok' : 'IA'}
+                                            </button>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '8px' }}>Opinión impopular (Opcional)</p>
                                     <input className="input-field" placeholder="Tu opinión controversial" value={opinion} onChange={(e) => setOpinion(e.target.value)} style={{ fontSize: '0.75rem' }} />
-                                    {opinion.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(opinion, setOpinion, 'opinion')} 
-                                            disabled={polishingField === 'opinion'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '4px',
-                                                padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
-                                                fontWeight: 700, cursor: polishingField === 'opinion' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '4px'
-                                            }}
-                                        >
-                                            {polishingField === 'opinion' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                                            IA
-                                        </button>
+                                    {opinion.length >= 2 && (
+                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
+                                            <input 
+                                                className="input-field"
+                                                style={{ fontSize: '0.6rem', padding: '4px 6px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                placeholder="Instrucción..."
+                                                value={aiRefineInstructions['opinion'] || ''}
+                                                onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, opinion: e.target.value }))}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !polishingField) {
+                                                        handleImproveField(opinion, setOpinion, 'opinion', aiRefineInstructions['opinion']);
+                                                    }
+                                                }}
+                                            />
+                                            <button 
+                                                onClick={() => handleImproveField(opinion, setOpinion, 'opinion', aiRefineInstructions['opinion'])} 
+                                                disabled={polishingField === 'opinion'}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                                    padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem',
+                                                    fontWeight: 700, cursor: polishingField === 'opinion' ? 'default' : 'pointer',
+                                                    background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.1)',
+                                                    color: '#7ECECA', transition: '0.2s'
+                                                }}
+                                            >
+                                                {polishingField === 'opinion' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                                {aiRefineInstructions['opinion'] ? 'Ok' : 'IA'}
+                                            </button>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
@@ -2290,22 +2509,42 @@ export default function DashboardPage() {
                                         value={businessOffer} 
                                         onChange={(e) => setBusinessOffer(e.target.value)} 
                                     />
-                                    {businessOffer.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer')} 
-                                            disabled={polishingField === 'businessOffer'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                fontWeight: 700, cursor: polishingField === 'businessOffer' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
-                                            }}
-                                        >
-                                            {polishingField === 'businessOffer' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                            Mejorar con IA
-                                        </button>
+                                    {businessOffer.length >= 2 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción (ej: hazlo más agresivo, añade urgencia...)"
+                                                    value={aiRefineInstructions['businessOffer'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, businessOffer: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer'])} 
+                                                    disabled={polishingField === 'businessOffer'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'businessOffer' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'businessOffer' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['businessOffer'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
+                                            <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0 }}>
+                                                Instrucción opcional o hazlo automático. (1 crédito)
+                                            </p>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
@@ -2336,22 +2575,39 @@ export default function DashboardPage() {
                                         onChange={(e) => setMainPainPoint(e.target.value)} 
                                         rows={3} 
                                     />
-                                    {mainPainPoint.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint')} 
-                                            disabled={polishingField === 'mainPainPoint'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                fontWeight: 700, cursor: polishingField === 'mainPainPoint' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
-                                            }}
-                                        >
-                                            {polishingField === 'mainPainPoint' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                            Mejorar con IA
-                                        </button>
+                                    {mainPainPoint.length >= 2 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción (ej: enfócate en el dolor del tiempo...)"
+                                                    value={aiRefineInstructions['mainPainPoint'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, mainPainPoint: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint'])} 
+                                                    disabled={polishingField === 'mainPainPoint'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'mainPainPoint' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'mainPainPoint' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['mainPainPoint'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
+
 
                                 </div>
                             </div>
@@ -2412,22 +2668,39 @@ export default function DashboardPage() {
                                         onChange={(e) => setKeyThemes(e.target.value)} 
                                         rows={3} 
                                     />
-                                    {keyThemes.length >= 5 && (
-                                        <button 
-                                            onClick={() => handleImproveField(keyThemes, setKeyThemes, 'keyThemes')} 
-                                            disabled={polishingField === 'keyThemes'}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                fontWeight: 700, cursor: polishingField === 'keyThemes' ? 'default' : 'pointer',
-                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA', transition: '0.2s', marginTop: '8px'
-                                            }}
-                                        >
-                                            {polishingField === 'keyThemes' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                            Mejorar con IA
-                                        </button>
+                                    {keyThemes.length >= 2 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <input 
+                                                    className="input-field"
+                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                    placeholder="Instrucción (ej: hazlo más profesional...)"
+                                                    value={aiRefineInstructions['keyThemes'] || ''}
+                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, keyThemes: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !polishingField) {
+                                                            handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes']);
+                                                        }
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={() => handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes'])} 
+                                                    disabled={polishingField === 'keyThemes'}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                        fontWeight: 700, cursor: polishingField === 'keyThemes' ? 'default' : 'pointer',
+                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                        color: '#7ECECA', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {polishingField === 'keyThemes' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {aiRefineInstructions['keyThemes'] ? 'Aplicar' : 'Mejorar'}
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
+
 
                                 </div>
                                 <div>
@@ -3840,6 +4113,28 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
+
+            {/* Minimalist Polish Success Toast */}
+            {showPolishToast && (
+                <div style={{
+                    position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(126, 206, 202, 0.95)', color: 'black', padding: '10px 24px',
+                    borderRadius: '50px', fontWeight: 900, fontSize: '0.85rem', zIndex: 2000,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: '8px',
+                    animation: 'fadeInOut 3s forwards'
+                }}>
+                    <Sparkles size={16} /> ¡Texto mejorado con éxito!
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translate(-50%, 20px); }
+                    15% { opacity: 1; transform: translate(-50%, 0); }
+                    85% { opacity: 1; transform: translate(-50%, 0); }
+                    100% { opacity: 0; transform: translate(-50%, -20px); }
+                }
+            `}</style>
         </div >
     );
 }

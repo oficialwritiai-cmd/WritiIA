@@ -1,5 +1,8 @@
 'use client';
-// Force Build: 2026-03-14 13:15 (v4.3.0 - AI Polish)
+//**
+ * FORCE BUILD: 2026-03-14 13:42:00
+ * Version: v4.3.1
+ */
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
