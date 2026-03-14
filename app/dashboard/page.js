@@ -2750,21 +2750,26 @@ export default function DashboardPage() {
                                     {(() => {
                                         const combined = [
                                             ...libIdeas.map(i => {
-                                                const title = i.titulo || i.title || i.content?.titulo || i.content?.title || i.content?.idea_title || i.content?.titulo_idea;
-                                                const desc = i.descripcion || i.description || i.content?.descripcion || i.content?.description || i.content?.idea_description || i.content?.descripcion_idea;
+                                                const c = i.content || {};
+                                                // Robust Title Search
+                                                const title = i.titulo || i.title || c.titulo || c.titulo_idea || c.titulo_guion || c.titulo_angulo || i.goal || 'Idea estratégica';
+                                                
+                                                // Robust Description Search
+                                                const desc = i.descripcion || i.description || i.script_full_text || c.descripcion || c.description || c.idea_description || c.hook || c.gancho || c.content || '';
+                                                
                                                 return { 
                                                     ...i, 
                                                     source: 'library', 
                                                     displayTitle: title,
-                                                    descripcion: desc
+                                                    descripcion: typeof desc === 'string' ? desc.substring(0, 300) : '' 
                                                 };
                                             }),
                                             ...recommendedIdeas.map((i, idx) => ({ 
                                                 ...i, 
                                                 id: `rec-${idx}`, 
                                                 source: 'ai', 
-                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title,
-                                                descripcion: i.descripcion || i.description || i.content?.descripcion 
+                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title || 'Sugerencia viral',
+                                                descripcion: i.descripcion || i.description || i.idea_description || i.content?.descripcion || ''
                                             }))
                                         ];
 
