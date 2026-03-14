@@ -933,7 +933,10 @@ export default function DashboardPage() {
         }
 
         // Pre-check credits: only 3 for the plan itself (scripts generated separately)
-        let postCount = 30; // Siempre generar 30 ideas para "Plan de 30 días"
+        let postCount = 12;
+        if (planFrequency === '4 publicaciones por semana') postCount = 16;
+        if (planFrequency === '5 publicaciones por semana') postCount = 20;
+        if (planFrequency === '7 publicaciones por semana') postCount = 28;
 
         const planCost = 3;
         const available = aiCredits.total - aiCredits.used;
@@ -3575,7 +3578,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.7</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.8</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
