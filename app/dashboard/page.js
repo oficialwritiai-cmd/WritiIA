@@ -1056,24 +1056,35 @@ export default function DashboardPage() {
 
     const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds) => {
         const slotsToProcess = currentSlots.filter(s => selectedIds.includes(s.id) && !s.has_script);
-        if (slotsToProcess.length === 0) return;
-
+        
         setIsGeneratingMassive(true);
+        setStep(3); // Ensure we are on the plan view
+        
+        if (slotsToProcess.length === 0) {
+            console.log('[Auto] No scripts to generate, skipping to sync.');
+            await handleConfirmAndSync(true); 
+            setIsGeneratingMassive(false);
+            return;
+        }
+
         setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando automatización: Generando guiones...' });
         
         const success = await runBatchGeneration(slotsToProcess, true);
         
-        if (success) {
+        // Wait for state updates to propagate
+        setTimeout(async () => {
             setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Sincronizando con el calendario...' }));
-            setTimeout(async () => {
+            try {
                 await handleConfirmAndSync(true); // silent sync
                 setGenerationProgress({ current: 0, total: 0, status: '' });
                 setIsGeneratingMassive(false);
-                alert('¡PROCESO COMPLETADO! Plan mensual generado, guiones creados y sincronizados con el calendario automáticamente. 🚀');
-            }, 1000);
-        } else {
-            setIsGeneratingMassive(false);
-        }
+                alert('¡MISIÓN CUMPLIDA! 🚀 Tu plan de 30 días ha sido generado, escrito y agendado en tu calendario automáticamente.');
+            } catch (err) {
+                console.error('[Auto] Sync error:', err);
+                setIsGeneratingMassive(false);
+                alert('El plan se generó pero hubo un problema al sincronizar. Por favor, dale al botón "Sincronizar Calendario" manualmente.');
+            }
+        }, 1500);
     }
 
     const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
@@ -1192,6 +1203,8 @@ export default function DashboardPage() {
             slotsToProcess.forEach(s => newExpanded.add(s.id));
             setExpandedSlots(newExpanded);
         }
+
+        return successCount > 0;
     };
 
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
@@ -3550,7 +3563,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.5</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.6</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
