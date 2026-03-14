@@ -181,6 +181,13 @@ h4 {
   box-shadow: 0 0 0 4px rgba(157, 0, 255, 0.15);
 }
 
+.input-field option,
+.select-field option {
+  background-color: var(--bg-card);
+  color: white;
+}
+
+
 /* ── Layout ── */
 .app-layout {
   display: flex;

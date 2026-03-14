@@ -2147,10 +2147,9 @@ export default function DashboardPage() {
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Tipo de audiencia <span style={{color: '#7ECECA'}}>*</span></p>
                                     <select 
-                                        className="input-field" 
+                                        className="select-field" 
                                         value={targetAudienceType} 
                                         onChange={(e) => setTargetAudienceType(e.target.value)}
-                                        style={{background: 'rgba(255,255,255,0.05)', color: 'white'}}
                                     >
                                         {AUDIENCIAS_PLAN.map(a => <option key={a} value={a}>{a}</option>)}
                                     </select>

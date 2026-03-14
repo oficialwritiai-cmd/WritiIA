@@ -707,7 +707,12 @@ export default function AdsPlanPage() {
             {presets.length > 0 && (
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '28px', padding: '16px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                     <Save size={18} color="rgba(255,255,255,0.3)" />
-                    <select value={selectedPresetId} onChange={e => { setSelectedPresetId(e.target.value); if (e.target.value) loadPreset(e.target.value); }} style={{ flex: 1, background: '#0A0A0A', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'white', padding: '10px 14px', fontSize: '0.85rem', outline: 'none' }}>
+                    <select 
+                        className="select-field"
+                        value={selectedPresetId} 
+                        onChange={e => { setSelectedPresetId(e.target.value); if (e.target.value) loadPreset(e.target.value); }} 
+                        style={{ flex: 1, padding: '10px 14px', fontSize: '0.85rem' }}
+                    >
                         <option value="">Cargar preajuste guardado...</option>
                         {presets.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
