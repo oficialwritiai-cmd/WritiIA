@@ -1592,19 +1592,20 @@ export default function DashboardPage() {
 
             if (scriptErr) throw scriptErr;
 
-            const { error: slotErr } = await supabase.from('content_slots').update({
-                has_script: true,
-                script_id: insertedScript.id
-            }).eq('id', slot.id);
-
-            if (slotErr) throw slotErr;
-
             const slotScriptData = {
                 hook: generatedScript.gancho || '',
                 desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
                 cta: generatedScript.cta || generatedScript.cierre || '',
                 copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
             };
+
+            const { error: slotErr } = await supabase.from('content_slots').update({
+                has_script: true,
+                script_id: insertedScript.id,
+                script_data: slotScriptData
+            }).eq('id', slot.id);
+
+            if (slotErr) throw slotErr;
 
             setPlanSlots(planSlots.map(s => {
                 if (s.id === slot.id) return {
@@ -3592,7 +3593,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.11</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.12</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
