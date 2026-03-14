@@ -908,10 +908,10 @@ export default function DashboardPage() {
             const data = await res.json();
             if (data.summary) {
                 setBriefAnalysis(data.summary);
-                setTopic(data.summary); // Update topic state to bypass validation in next step
+                setTopic(data.summary); 
                 setPlanWizardStep(4);
             } else {
-                throw new Error(data.error || 'Error al analizar briefing');
+                throw new Error(data.details || data.error || 'Error al analizar briefing');
             }
         } catch (err) {
             alert('Error: ' + err.message);

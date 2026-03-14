@@ -50,7 +50,10 @@ Genera un resumen ejecutivo de estrategia (2-3 líneas) que valide este enfoque.
         return NextResponse.json({ summary });
 
     } catch (err) {
-        console.error('[analyze-plan-brief] Error:', err?.message);
-        return NextResponse.json({ error: 'Error al analizar el briefing.' }, { status: 500 });
+        console.error('[analyze-plan-brief] Error:', err);
+        return NextResponse.json({ 
+            error: 'Error al analizar el briefing.',
+            details: err?.message || String(err)
+        }, { status: 500 });
     }
 }
