@@ -1701,12 +1701,11 @@ export default function DashboardPage() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Fetch existing events to avoid overlaps and duplicates
-            const { data: existingEvents } = await supabase
-                .from('calendar_events')
-                .select('id, event_date, title, has_script')
-                .eq('user_id', user.id)
-                .eq('project_id', activeProject?.id);
+            // Fetch existing events and scripts to ensure we have all data
+            const [{ data: existingEvents }, { data: allScripts }] = await Promise.all([
+                supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id),
+                supabase.from('scripts').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id)
+            ]);
 
             const occupiedDates = new Set(existingEvents?.map(e => e.event_date) || []);
 
@@ -1734,11 +1733,11 @@ export default function DashboardPage() {
                     attempts++;
                 }
 
-                // Rule 3: Avoid exact duplicates, update if missing script
+                // Rule 3: Avoid exact duplicates, update if missing script or empty notes
                 const existingEvent = existingEvents?.find(e => e.event_date === dateStr && e.title === slot.idea_title);
                 if (existingEvent) {
-                    if (existingEvent.has_script) {
-                        console.log(`[Sync] Skipping exact duplicate (already has script): ${slot.idea_title}`);
+                    if (existingEvent.has_script && (existingEvent.notes || existingEvent.script_full_text)) {
+                        console.log(`[Sync] Skipping exact duplicate (already has script and text): ${slot.idea_title}`);
                         continue; 
                     } else {
                         // We will update this event instead of inserting a new one
@@ -1769,14 +1768,20 @@ export default function DashboardPage() {
                     if (savedIdea?.id) refId = savedIdea.id;
                 }
 
-                const sd = slot.script_data;
-                const hookVal = sd?.hook || sd?.gancho || '';
-                const desArr = Array.isArray(sd?.desarrollo) ? sd.desarrollo : [];
-                const ctaVal = sd?.cta || sd?.cierre || '';
-                const cpPost = sd?.copy_post || {};
+                const sd = slot.script_data || allScripts?.find(sc => sc.topic === slot.idea_title)?.content;
+                // If sd is a string (legacy/direct prompt), try parsing
+                let parsedSd = sd;
+                if (typeof sd === 'string') {
+                    try { parsedSd = JSON.parse(sd); } catch(e) { parsedSd = { hook: sd }; }
+                }
+
+                const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
+                const desArr = Array.isArray(parsedSd?.desarrollo) ? parsedSd.desarrollo : [];
+                const ctaVal = parsedSd?.cta || parsedSd?.cierre || '';
+                const cpPost = parsedSd?.copy_post || {};
                 const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
 
-                const calScriptText = sd ? [
+                const calScriptText = parsedSd ? [
                     slot.idea_title,
                     '', '🎯 GANCHO', hookVal,
                     '', '📝 DESARROLLO', ...desArr.map((d, idx) => `${idx + 1}. ${d}`),
@@ -1785,19 +1790,20 @@ export default function DashboardPage() {
                     htags ? `\nHASHTAGS: ${htags}` : ''
                 ].filter(l => l !== undefined).join('\n') : null;
 
-                const safeCalScriptText = calScriptText || (sd ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${hookVal}\n\nDESARROLLO:\n${desArr.join('\n')}\n\nCTA:\n${ctaVal}` : '');
+                const hasScriptNow = !!(slot.has_script || parsedSd);
+                const safeCalScriptText = calScriptText || (parsedSd ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${hookVal}\n\nDESARROLLO:\n${desArr.join('\n')}\n\nCTA:\n${ctaVal}` : '');
 
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
                     title: slot.idea_title || 'Idea Sin Título',
-                    description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
+                    description: `Tipo: ${slot.content_type || 'idea'}\nObjetivo: ${slot.goal || 'engagement'}\nPlataforma: ${slot.platform || 'General'}`,
                     event_date: dateStr,
-                    type: slot.has_script ? 'guion' : (slot.content_type || 'idea'),
-                    status: slot.has_script ? 'prep' : 'idea',
-                    platform: slot.platform,
+                    type: hasScriptNow ? 'guion' : (slot.content_type || 'idea'),
+                    status: hasScriptNow ? 'prep' : 'idea',
+                    platform: slot.platform || 'General',
                     reference_id: refId,
-                    has_script: slot.has_script || false,
+                    has_script: hasScriptNow,
                     script_full_text: safeCalScriptText || '',
                     notes: safeCalScriptText || '', // Mapeo explícito a notas para texto libre
                     content: null // Obligar a texto libre (sin cajones)
@@ -3593,7 +3599,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.12</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.13</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
