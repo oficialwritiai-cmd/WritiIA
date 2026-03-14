@@ -90,13 +90,14 @@ No generes ideas genéricas. Usa el briefing para crear ángulos de venta, autor
 
 CADA OBJETO DEL JSON DEBE TENER ESTAS CLAVES:
 - "day_number": número del 1 al 30.
-- "platform": string (TikTok, Reels, LinkedIn, etc).
+- "platform": string (TikTok, Reels, Instagram, LinkedIn, etc).
 - "content_type": string (educativo, venta, autoridad, comunidad, historia, etc).
-- "idea_title": un título magnético, específico y RELEVANTE PARA EL BRIEFING (OBLIGATORIO).
+- "idea_title": UN TÍTULO MAGNÉTICO Y ESPECÍFICO (Máximo 10 palabras). Evita títulos genéricos como "Idea de contenido". Sé creativo y directo.
 - "descripcion_idea": una descripción detallada (2-3 frases) del ángulo y contenido sugerido (OBLIGATORIO).
 - "goal": el objetivo específico del post (alcance, leads, venta, autoridad).
 
-Responde ÚNICAMENTE en formato JSON (un array de objetos).`;
+REGLA DE ORO: No repitas títulos. Cada día debe ser un ángulo diferente basado en el briefing.
+Responde ÚNICAMENTE en formato JSON (un array de objetos). NO incluyas texto antes o después del bloque JSON.`;
 
         const userMessage = `
 --- BRIEFING DE CAMPAÑA ---
