@@ -1784,6 +1784,8 @@ export default function DashboardPage() {
                     htags ? `\nHASHTAGS: ${htags}` : ''
                 ].filter(l => l !== undefined).join('\n') : null;
 
+                const safeCalScriptText = calScriptText || (sd ? `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${hookVal}\n\nDESARROLLO:\n${desArr.join('\n')}\n\nCTA:\n${ctaVal}` : '');
+
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
@@ -1795,13 +1797,13 @@ export default function DashboardPage() {
                     platform: slot.platform,
                     reference_id: refId,
                     has_script: slot.has_script || false,
-                    script_full_text: calScriptText,
-                    notes: calScriptText, // Mapeo explícito a notas para texto libre
+                    script_full_text: safeCalScriptText || '',
+                    notes: safeCalScriptText || '', // Mapeo explícito a notas para texto libre
                     content: null // Obligar a texto libre (sin cajones)
                 };
 
                 if (slot.updateExistingEventId) {
-                    // Update existing
+                    // Update existing event that previously didn't have a script
                     await supabase.from('calendar_events').update(eventPayload).eq('id', slot.updateExistingEventId);
                 } else {
                     eventsToInsert.push(eventPayload);
@@ -3590,7 +3592,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.10</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.11</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
