@@ -1791,10 +1791,12 @@ export default function DashboardPage() {
                     description: `Tipo: ${slot.content_type}\nObjetivo: ${slot.goal}\nPlataforma: ${slot.platform}`,
                     event_date: dateStr,
                     type: slot.has_script ? 'guion' : (slot.content_type || 'idea'),
+                    status: slot.has_script ? 'prep' : 'idea',
                     platform: slot.platform,
                     reference_id: refId,
                     has_script: slot.has_script || false,
                     script_full_text: calScriptText,
+                    notes: calScriptText, // Mapeo explícito a notas para texto libre
                     content: null // Obligar a texto libre (sin cajones)
                 };
 
@@ -3588,7 +3590,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.9</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.10</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
