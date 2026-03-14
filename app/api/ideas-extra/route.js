@@ -70,6 +70,10 @@ Tu tarea es generar ideas de contenido altamente específicas, disruptivas y con
 Debes basarte profundamente en el perfil (BIO) y productos del usuario para que las ideas sean coherentes.
 Las ideas deben dividirse en 3 categorías: Autoridad (educar), Viral (entretenimiento/curiosidad) e Historia (conexión).
 
+IMPORTANTE: 
+1. La "descripcion" debe ser detallada (mínimo 2-3 frases) explicando por qué la idea es buena y qué ángulo usar. NO la dejes vacía.
+2. El "titulo_idea" debe ser corto y llamativo.
+
 Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
 [{ "titulo_idea": "...", "descripcion": "...", "categoria": "..." }]`;
 
