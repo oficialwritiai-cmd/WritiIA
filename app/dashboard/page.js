@@ -313,14 +313,14 @@ export default function DashboardPage() {
         }
     };
 
-    const handleConfirmAndSync = async () => {
+    const handleConfirmAndSync = async (isSilent = false) => {
         const slotsToSync = planSlots.filter(s => selectedSlots.has(s.id));
         if (slotsToSync.length === 0) {
-            alert('Selecciona al menos una idea para sincronizar');
+            if (!isSilent) alert('Selecciona al menos una idea para sincronizar');
             return;
         }
         await handleSendPlanToCalendar(slotsToSync);
-        alert('¡Calendario sincronizado con éxito! ✓');
+        if (!isSilent) alert('¡Calendario sincronizado con éxito! ✓');
         // Optionally move to calendar or stay
     };
 
