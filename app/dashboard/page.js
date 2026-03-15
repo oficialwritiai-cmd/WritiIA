@@ -1551,6 +1551,9 @@ export default function DashboardPage() {
         setGeneratingSlotId(slot.id);
 
         try {
+            console.log(`[v4.4.25] Generating script for slot: "${slot.idea_title}" (id=${slot.id})`);
+            console.log(`[v4.4.25] specificDetails sent: "${slot.idea_description}"`);
+
             const res = await fetch('/api/generate-scripts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1562,15 +1565,14 @@ export default function DashboardPage() {
                     count: 1,
                     videoDuration: videoDuration || '60 seg',
                     ideas: `Enfoque: ${slot.content_type}${keyThemes ? `. Temas clave: ${keyThemes}` : ''}`,
-                    specificDetails: slot.idea_description, // v4.4.20: Pass the daily angle
+                    specificDetails: slot.idea_description,
                     userId: profile?.id,
                     projectId: activeProject?.id,
-                    // v4.0.0 Briefing Context
                     businessOffer,
                     targetAudienceType,
                     mainPainPoint,
                     brandMantra,
-                    experienciaReal: experienciaReal || keyThemes, // Fallback if specific story not provided
+                    experienciaReal: experienciaReal || keyThemes,
                     opinionPersonal: opinionPersonal || brandMantra,
                     faseCreador,
                     ctaIdea: ctaIdea || 'Inscríbete o compra ahora'
@@ -1584,25 +1586,42 @@ export default function DashboardPage() {
 
             if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
-            console.log('[Dashboard] Generate script response:', data);
 
             if (!data.scripts || !Array.isArray(data.scripts) || data.scripts.length === 0) {
-                console.error('[Dashboard] No scripts in response:', data);
+                console.error('[v4.4.25] No scripts in response:', data);
                 throw new Error('No se recibió ningún guion. Intenta de nuevo.');
             }
 
             const generatedScript = data.scripts[0];
+            console.log('[v4.4.25] RAW generated script:', JSON.stringify(generatedScript));
 
-            if (!generatedScript) {
-                throw new Error('El guion recibido está vacío. Intenta de nuevo.');
+            const slotScriptData = {
+                hook: generatedScript.gancho || generatedScript.hook || '',
+                gancho: generatedScript.gancho || generatedScript.hook || '',
+                desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo
+                    : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
+                cta: generatedScript.cta || generatedScript.cierre || '',
+                cierre: generatedScript.cierre || generatedScript.cta || '',
+                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+            };
+
+            console.log(`[v4.4.25] slotScriptData for "${slot.idea_title}":`, JSON.stringify(slotScriptData));
+
+            // Validate content before saving
+            const hasContent = (slotScriptData.hook && slotScriptData.hook.trim().length > 10) ||
+                               (slotScriptData.desarrollo.length > 0 && slotScriptData.desarrollo[0]?.trim().length > 10);
+
+            if (!hasContent) {
+                console.warn(`[v4.4.25] Empty script data — AI returned empty fields for "${slot.idea_title}". Using content guard.`);
             }
 
-            console.log('[Dashboard] RECEIVED SCRIPT DATA (v4.4.22):', JSON.stringify(generatedScript, null, 2));
+            const desarrolloStr = slotScriptData.desarrollo.map((d, i) => `${i + 1}. ${d}`).join('\n');
+            const copyTxt = slotScriptData.copy_post?.titulo || slotScriptData.copy_post?.descripcion_larga
+                ? `\n\n📱 COPY:\n${slotScriptData.copy_post.titulo || ''}\n${slotScriptData.copy_post.descripcion_larga || ''}\n\nHashtags: ${Array.isArray(slotScriptData.copy_post.hashtags) ? slotScriptData.copy_post.hashtags.join(' ') : ''}`
+                : '';
+            const fullContent = `🎯 GANCHO\n${slotScriptData.hook}\n\n📝 DESARROLLO\n${desarrolloStr}\n\n🔥 CTA\n${slotScriptData.cta}${copyTxt}`;
 
-            const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.map((d, i) => `${i + 1}. ${d}`).join('\n') : (generatedScript.desarrollo || '');
-            const copyStr = generatedScript.copy_post ? `\n\n📱 COPY:\n${generatedScript.copy_post.titulo}\n${generatedScript.copy_post.descripcion_larga}\n\nHashtags: ${Array.isArray(generatedScript.copy_post.hashtags) ? generatedScript.copy_post.hashtags.join(' ') : ''}` : '';
-            const fullContent = `🎯 GANCHO\n${generatedScript.gancho || ''}\n\n📝 DESARROLLO\n${desarrolloStr}\n\n🔥 CTA\n${generatedScript.cta || ''}${copyStr}`;
-            
+            // Save to scripts table (for library visibility)
             const insertPayload = {
                 user_id: profile.id,
                 content: fullContent,
@@ -1611,58 +1630,43 @@ export default function DashboardPage() {
                 tone: toneBrand || 'Profesional',
                 is_saved: true,
                 project_id: activeProject?.id,
-                // v4.4.21: Ensure structured data is always saved in a metadata field if possible, 
-                // but for now we rely on the slot update below.
             };
-
-            if (slot.scheduled_date) {
-                insertPayload.scheduled_date = slot.scheduled_date;
-            }
+            if (slot.scheduled_date) insertPayload.scheduled_date = slot.scheduled_date;
 
             const { data: insertedScript, error: scriptErr } = await supabase.from('scripts').insert(insertPayload).select().single();
+            if (scriptErr) console.warn('[v4.4.25] scripts insert error:', scriptErr);
 
-            if (scriptErr) throw scriptErr;
+            // Save to library
+            try {
+                await saveToLibrary({
+                    userId: profile.id,
+                    type: 'guion',
+                    platform: slot.platform || 'General',
+                    goal: slot.goal || 'engagement',
+                    titulo: slot.idea_title || 'Guión del Plan',
+                    script_full_text: fullContent,
+                    content: {
+                        video_duration: videoDuration || '60 seg',
+                        hook: slotScriptData.hook,
+                        desarrollo: slotScriptData.desarrollo,
+                        cierre: slotScriptData.cta,
+                        cta: slotScriptData.cta,
+                        copy_post: slotScriptData.copy_post
+                    },
+                    tags: ['guion', slot.platform, 'plan-mensual'].filter(Boolean),
+                    projectId: activeProject?.id
+                });
+                console.log(`[v4.4.25] Saved to library: "${slot.idea_title}"`);
+            } catch (libSaveErr) {
+                console.warn('[v4.4.25] Library save error (non-fatal):', libSaveErr);
+            }
 
-            // v4.4.22: Explicitly save to LIBRARY to ensure it shows up in "Biblioteca -> Guiones"
-            const libPayload = {
-                user_id: profile.id,
-                project_id: activeProject?.id,
-                type: 'guion',
-                platform: slot.platform,
-                titulo: slot.idea_title,
-                content: {
-                    ...generatedScript,
-                    titulo_guion: slot.idea_title,
-                    full_text: fullContent
-                },
-                tags: [slot.platform, 'plan-mensual'],
-                status: 'completado'
-            };
-            const { error: libErr } = await supabase.from('library').insert(libPayload);
-            if (libErr) console.warn('[v4.4.22] Error saving to library table:', libErr);
+            // NOTE: We intentionally skip content_slots.update() here because
+            // plan slots have client-side IDs that don't exist in the DB yet.
+            // script_data is returned in memory and used directly by the calendar sync.
 
-            const slotScriptData = {
-                hook: generatedScript.gancho || '',
-                desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
-                cta: generatedScript.cta || generatedScript.cierre || '',
-                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
-            };
-
-            const { error: slotErr } = await supabase.from('content_slots').update({
-                has_script: true,
-                script_id: insertedScript.id,
-                script_data: slotScriptData
-            }).eq('id', slot.id);
-
-            if (slotErr) throw slotErr;
-
-            setPlanSlots(planSlots.map(s => {
-                if (s.id === slot.id) return {
-                    ...s,
-                    has_script: true,
-                    script_id: insertedScript.id,
-                    script_data: slotScriptData
-                };
+            setPlanSlots(prev => prev.map(s => {
+                if (s.id === slot.id) return { ...s, has_script: true, script_id: insertedScript?.id, script_data: slotScriptData };
                 return s;
             }));
 
@@ -1670,7 +1674,7 @@ export default function DashboardPage() {
 
         } catch (err) {
             if (!silent) alert(err.message);
-            console.error('[Dashboard] Error generating script:', err);
+            console.error('[v4.4.25] Error generating script:', err);
             return null;
         } finally {
             setGeneratingSlotId(null);
@@ -3700,7 +3704,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.24</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.25</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
