@@ -1076,28 +1076,29 @@ export default function DashboardPage() {
         
         const success = await runBatchGeneration(slotsToProcess, true);
         
-        // Wait for state updates to propagate
-        setTimeout(async () => {
-            setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Sincronizando con el calendario...' }));
-            try {
-                // Obtenemos los últimos datos de la DB para evitar leer estado obsoleto atrapado en el closure (stale state)
-                const { data: dbSlots } = await supabase.from('content_slots').select('id, script_data, has_script, script_id').in('id', selectedIds);
-                const slotsToSync = currentSlots.filter(s => selectedIds.includes(s.id)).map(s => {
-                    const dbRef = dbSlots?.find(d => d.id === s.id);
-                    return dbRef ? { ...s, ...dbRef } : s;
-                });
+        // RE-FETCH FRESH DATA (Avoid all race conditions)
+        setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Recuperando datos finales...' }));
+        
+        try {
+            const { data: dbSlots } = await supabase.from('content_slots')
+                .select('id, script_data, has_script, script_id, idea_title, content_type, platform, goal')
+                .in('id', selectedIds);
+            
+            // Map db results to full slot objects for the sync logic
+            const slotsToSync = dbSlots || [];
+            
+            setGenerationProgress(prev => ({ ...prev, status: 'Sincronizando con el calendario...' }));
+            await handleSendPlanToCalendar(slotsToSync); 
 
-                await handleSendPlanToCalendar(slotsToSync); // direct call safely
-                
-                setGenerationProgress({ current: 0, total: 0, status: '' });
-                setIsGeneratingMassive(false);
-                alert('¡MISIÓN CUMPLIDA! 🚀 Tu plan de 30 días ha sido generado, escrito y agendado en tu calendario automáticamente.');
-            } catch (err) {
-                console.error('[Auto] Sync error:', err);
-                setIsGeneratingMassive(false);
-                alert('El plan se generó pero hubo un problema al sincronizar. Por favor, dale al botón "Sincronizar Calendario" manualmente.');
-            }
-        }, 1500);
+            setGenerationProgress({ current: 0, total: 0, status: '' });
+            setIsGeneratingMassive(false);
+            alert('¡MISIÓN CUMPLIDA! 🚀 Tu plan de 30 días ha sido generado y agendado.');
+        } catch (err) {
+            console.error('[Auto] Sync error:', err);
+            setIsGeneratingMassive(false);
+            alert('Error en la sincronización final. Intenta sincronizar manualmente.');
+        }
+
     }
 
     const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
@@ -1177,6 +1178,7 @@ export default function DashboardPage() {
                             slot.has_script = true;
                             slot.script_id = result.script?.id;
                             slot.script_data = scriptData;
+                            finalSlots.push(slot);
 
                             await supabase.from('content_slots').update({
                                 has_script: true,
@@ -1210,12 +1212,14 @@ export default function DashboardPage() {
         if (successCount > 0) {
             // Update planSlots state so handleConfirmAndSync sees the scripts
             setPlanSlots(prev => prev.map(slot => {
-                const processed = slotsToProcess.find(s => s.id === slot.id);
+                const processed = finalSlots.find(s => s.id === slot.id);
                 if (processed && processed.has_script) {
                     return { ...slot, has_script: true, script_data: processed.script_data, script_id: processed.script_id };
                 }
                 return slot;
             }));
+
+            return finalSlots;
 
             // Auto-expand all generated slots to show full scripts
             const newExpanded = new Set(expandedSlots);
