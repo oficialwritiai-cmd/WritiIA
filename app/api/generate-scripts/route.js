@@ -163,32 +163,47 @@ INSTRUCCIONES DE IDIOMA:
 - Debes escribir TODO el guion y el copy en idoma: ${projectLanguage === 'en' ? 'INGLÉS' : 'ESPAÑOL'}. Esto es una regla de hierro.
 
 INSTRUCCIONES DE ESTILO (CRÍTICAS):
-1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...", "No te pierdas esta oportunidad..." o "¿Alguna vez has soñado con...?".
-2) SIN REPETICIONES (REGLA DE HIERRO): El GANCHO y los puntos de DESARROLLO deben ser contenido ÚNICO. 
-   ❌ MALA PRÁCTICA: Si el título es "3 formas de usar IA", NO escribas GANCHO: "Aquí tienes 3 formas de usar IA".
-   ✅ BUENA PRÁCTICA: Escribe un gancho paralelo: "La mayoría pierde horas en tareas manuales, pero esto cambia las reglas...".
-   PROHIBIDO usar el título del script como si fuera el gancho o un punto de desarrollo. El texto debe ser fresco, redactado desde cero, y centrado en el OBJETIVO ESPECÍFICO DEL DÍA.
-3) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. 
-4) STORYTELLING: Integra la "Experiencia Real" como el corazón del guion.
-5) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio.
-6) RITMO: Frases simples y fuertes. Evita párrafos de relleno.
+1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...".
+2) SIN REPETICIONES (REGLA DE HIERRO): El GANCHO no puede ser igual al título. ESCRIBE DIFERENTE.
+   ❌ MAL: título="3 formas de usar IA" → gancho="3 formas de usar IA"
+   ✅ BIEN: título="3 formas de usar IA" → gancho="Estaba perdiendo 4 horas al día en tareas que ahora tardo 10 minutos..."
+3) SIN INVENTOS: No inventes logros. Si el creador empieza, actúa como tal.
+4) RITMO: Frases cortas. Sin párrafos de relleno.
 
-OBJETIVO ESPECÍFICO DEL DÍA (MÁXIMA PRIORIDAD):
-${specificDetails || 'Genera una idea creativa basada en el tema central.'}
-Utiliza esta descripción como la base de TODO el contenido del guion. 
+OBJETIVO ESPECÍFICO DEL DÍA (MÁXIMA PRIORIDAD - Escribe SOBRE ESTO):
+${specificDetails || `Explica el tema: ${topic}. Proporciona valor real sobre este tema.`}
 
-REGLA ANTI-ESQUELETO (CRÍTICA):
-- PROHIBIDO devolver campos vacíos en el JSON.
-- Cada sección (gancho, desarrollo, cierre, cta, copy_post) DEBE contener texto real y desarrollado.
-- Si no hay información suficiente, EXPANDE CREATIVAMENTE basándote en el nicho del creador, pero nunca dejes un campo vacío o con solo el título repetido.
-- Mínimo 2 frases por sección.
+REGLA ANTI-ESQUELETO (CRÍTICA - NO NEGOCIABLE):
+- CADA campo del JSON DEBE tener texto real. CAMPO VACÍO = RESPUESTA INVÁLIDA.
+- "gancho" → Mínimo 1 frase impactante, diferente al título.
+- "desarrollo" → Array con mínimo 3 strings, cada uno con 1-3 frases explicando un punto.
+- "cierre" → Mínimo 1 frase de conclusión.
+- "cta" → Mínimo 1 frase con acción (visita, comenta, guarda...).
+- "copy_post.descripcion_larga" → Mínimo 2 frases para usar como caption.
+
+EJEMPLO DE RESPUESTA CORRECTA (copia este formato con contenido REAL):
+[
+  {
+    "titulo_guion": "Cómo uso IA cada mañana para triplicar mi productividad",
+    "video_duration": "60 seg",
+    "gancho": "Pasé de trabajar 12 horas al día a 6, sin sacrificar resultados. Y no fue solo disciplina.",
+    "desarrollo": ["Primero, automaticé mis emails con una IA que redacta por mí en segundos.", "Segundo, uso IA para resumir documentos largos en 3 puntos clave.", "Tercero, tengo un asistente que crea mi contenido de redes basándose en mi estilo."],
+    "cierre": "No se trata de trabajar más, sino de trabajar de forma más inteligente.",
+    "cta": "Comenta 'IA' y te mando los 3 tools que uso gratis.",
+    "copy_post": {
+      "titulo": "Así ahorro 6 horas cada día usando IA",
+      "descripcion_larga": "La IA no es el futuro. Es la diferencia entre crecer y quedarte estancado ahora mismo. Estos son los 3 usos que cambiaron todo para mí.",
+      "hashtags": ["#InteligenciaArtificial", "#ProductividadIA", "#EmprendedorDigital"]
+    }
+  }
+]
 
 ESTRUCTURA DEL GUION:
 1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).
-2. CONTEXTO (2-3 frases): Quién eres y por qué esto importa ahora (basado en fase_creador).
-3. HISTORIA/CASO REAL: Narración de lo que pasó (basado en experiencia_real).
-4. LECCIÓN/OPINIÓN: La idea principal (basada en opinion_personal).
-5. CIERRE + CTA: Acción clara alineada con el objetivo.
+2. CONTEXTO (2-3 frases): Quién eres y por qué esto importa ahora.
+3. DESARROLLO: ${totalItems || 3}-5 puntos desarrollados, cada uno con ejemplos o datos concretos.
+4. CIERRE: Frase de conclusión emocional o reflexión.
+5. CTA: Acción clara alineada con el objetivo.
 
 REGLAS ESPECÍFICAS DE FORMATO:
 - PLATAFORMA: ${platform}
@@ -199,19 +214,19 @@ ${listConstraints}
 ${ctaIdea ? `CTA OBLIGATORIO: El usuario quiere que pidas esto: "${ctaIdea}"` : ''}
 
 GENERA EXACTAMENTE ${count} GUION${count > 1 ? 'ES' : ''} DISTINTOS.
-RESPONDE ÚNICAMENTE con un JSON array válido:
+RESPONDE ÚNICAMENTE con un JSON array válido (sin texto adicional, sin markdown):
 [
   {
-    "titulo_guion": "Título",
+    "titulo_guion": "Título del guion",
     "video_duration": "${videoDuration}",
-    "gancho": "Hook directo",
-    "desarrollo": ["Punto 1 con historia", "Punto 2 con opinión", "..."],
-    "cierre": "Cierre humano",
-    "cta": "Llamada a la acción",
+    "gancho": "[TEXTO REAL - NO VACÍO]",
+    "desarrollo": ["[PUNTO REAL 1]", "[PUNTO REAL 2]", "[PUNTO REAL 3]"],
+    "cierre": "[TEXTO REAL - NO VACÍO]",
+    "cta": "[TEXTO REAL - NO VACÍO]",
     "copy_post": {
-      "titulo": "Título post",
-      "descripcion_larga": "Caption persuasiva",
-      "hashtags": ["#tag1", "..."]
+      "titulo": "[TEXTO REAL]",
+      "descripcion_larga": "[TEXTO REAL - NO VACÍO]",
+      "hashtags": ["#tag1", "#tag2"]
     }
   }
 ]`;
@@ -428,16 +443,37 @@ ${systemPrompt}`;
             return s;
         });
 
-        // Ensure all scripts have required fields
-        scriptsArray = scriptsArray.map(s => ({
-            ...s,
-            titulo_guion: s.titulo_guion || 'Guion Generado',
-            video_duration: s.video_duration || videoDuration,
-            gancho: s.gancho || '',
-            desarrollo: Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo || ''],
-            cierre: s.cierre || '',
-            cta: s.cta || '',
-        }));
+        // Ensure all scripts have required fields - v4.4.23: hard content guard
+        scriptsArray = scriptsArray.map(s => {
+            const hasGancho = s.gancho && s.gancho.trim().length > 10;
+            const hasDesarrollo = Array.isArray(s.desarrollo) && s.desarrollo.some(d => d && d.trim().length > 10);
+            const hasCta = s.cta && s.cta.trim().length > 10;
+
+            // If gancho is empty or is just the title, generate a content-aware fallback
+            const ganchoFinal = hasGancho ? s.gancho
+                : `Hay algo sobre ${topic} que la mayoría no te cuenta, y hoy lo vamos a cambiar.`;
+            
+            const ctaFinal = hasCta ? s.cta
+                : (ctaIdea || `Comenta "${topic.split(' ')[0].toUpperCase()}" y te envío más información. 👇`);
+
+            const desarrolloFinal = hasDesarrollo ? (Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo])
+                : [
+                    `Un primer punto clave sobre ${topic}: esto cambia la forma en que trabajas si lo aplicas hoy.`,
+                    `Segundo punto: la mayoría de creadores y emprendedores cometen este error que les cuesta tiempo y dinero.`,
+                    `Tercer punto: la solución práctica que puedes implementar de inmediato sin necesidad de experiencia previa.`
+                  ];
+
+            return {
+                ...s,
+                titulo_guion: s.titulo_guion || topic || 'Guion Generado',
+                video_duration: s.video_duration || videoDuration,
+                gancho: ganchoFinal,
+                desarrollo: desarrolloFinal,
+                cierre: (s.cierre && s.cierre.trim().length > 10) ? s.cierre : `Empieza hoy, no mañana. El momento perfecto no llega solo.`,
+                cta: ctaFinal,
+                copy_post: s.copy_post || { titulo: topic, descripcion_larga: ganchoFinal, hashtags: [] }
+            };
+        });
 
         console.log(`[generate-scripts] Returning ${scriptsArray.length} scripts for "${topic}" (${videoDuration})`);
         return NextResponse.json({ scripts: scriptsArray });
