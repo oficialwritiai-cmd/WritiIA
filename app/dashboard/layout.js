@@ -1,6 +1,6 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-15 17:35:00
+ * FORCE BUILD: 2026-03-15 17:40:00
  * Version: v4.4.16
  */
 
@@ -298,7 +298,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v4.4.15)
+                    {loadingStatus} (v4.4.16)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
