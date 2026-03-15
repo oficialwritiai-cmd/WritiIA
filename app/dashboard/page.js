@@ -1076,7 +1076,7 @@ export default function DashboardPage() {
         
         const success = await runBatchGeneration(slotsToProcess, true);
         
-        // --- NUCLEAR FIX v4.4.18 (Total Recovery) ---
+        // --- NUCLEAR FIX v4.4.21 (Total Recovery) ---
         setGenerationProgress(prev => ({ ...prev, status: '🚀 Guiones listos. Ejecutando Sincronización Nuclear...' }));
         
         try {
