@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.5.9 (v4.4.15)
+// Calendar Page v2.6.0 (v4.4.16)
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -176,7 +176,7 @@ export default function CalendarPage() {
                 if (libData) {
                     const content = libData.content;
                     const hook = content?.hook || content?.gancho || '';
-                    const des = Array.isArray(content?.desarrollo) ? content.desarrollo : [];
+                    const des = Array.isArray(content?.desarrollo) ? content.desarrollo : (content?.puntos ? content.puntos : []);
                     const cta = content?.cta || content?.cierre || '';
                     loadedNotes = `GANCHO:\n${hook}\n\nDESARROLLO:\n${des.join('\n')}\n\nCTA:\n${cta}`;
                     setTempNotes(loadedNotes);
@@ -723,13 +723,14 @@ export default function CalendarPage() {
                         <textarea
                             className="cal-input-minimal"
                             style={{ 
-                                fontSize: '1.25rem', 
+                                fontSize: '2.2rem', 
                                 fontWeight: 950, 
                                 marginTop: '20px', 
                                 color: 'white',
                                 resize: 'none',
                                 overflow: 'hidden',
-                                minHeight: '40px'
+                                minHeight: '40px',
+                                letterSpacing: '-0.04em'
                             }}
                             placeholder="Título de la publicación..."
                             value={tempTitle}

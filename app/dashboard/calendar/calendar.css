@@ -11,7 +11,7 @@
 }
 
 .cal-container-3col.has-panel {
-    grid-template-columns: 260px 1fr 380px;
+    grid-template-columns: 260px 1fr 600px;
 }
 
 /* Sidebar Left */
@@ -283,10 +283,11 @@
 @keyframes slideInRight {
     from {
         transform: translateX(100%);
+        opacity: 0;
     }
-
     to {
         transform: translateX(0);
+        opacity: 1;
     }
 }
 
@@ -462,7 +463,7 @@
 /* Mobile & Tablet Optimizations */
 @media (max-width: 1280px) {
     .cal-container-3col.has-panel {
-        grid-template-columns: 200px 1fr 320px;
+        grid-template-columns: 200px 1fr 500px;
     }
 }
 

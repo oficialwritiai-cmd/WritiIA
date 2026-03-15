@@ -1174,6 +1174,10 @@ export default function DashboardPage() {
                             refId = libraryItem?.id || null;
                             
                             // Explicitly update slot to reflect it has a script now
+                            slot.has_script = true;
+                            slot.script_id = result.script?.id;
+                            slot.script_data = scriptData;
+
                             await supabase.from('content_slots').update({
                                 has_script: true,
                                 script_id: result.script?.id,
@@ -1208,7 +1212,7 @@ export default function DashboardPage() {
             setPlanSlots(prev => prev.map(slot => {
                 const processed = slotsToProcess.find(s => s.id === slot.id);
                 if (processed && processed.has_script) {
-                    return { ...slot, has_script: true, script_data: processed.script_data };
+                    return { ...slot, has_script: true, script_data: processed.script_data, script_id: processed.script_id };
                 }
                 return slot;
             }));
@@ -1803,8 +1807,13 @@ export default function DashboardPage() {
                 let parsedSd = sd;
                 if (typeof sd === 'string' && sd.startsWith('{')) {
                     try { parsedSd = JSON.parse(sd); } catch(e) { parsedSd = { hook: sd }; }
-                } else if (typeof sd === 'string') {
+                } else if (typeof sd === 'string' && sd.trim().length > 0) {
                     parsedSd = { hook: sd };
+                }
+                
+                // CRITICAL FIX: If parsedSd exists but fields are empty, use slot data as fallback
+                if (parsedSd && !parsedSd.hook && !parsedSd.gancho && !parsedSd.desarrollo) {
+                    parsedSd = { hook: slot.idea_title, desarrollo: [slot.idea_title] };
                 }
 
                 const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
