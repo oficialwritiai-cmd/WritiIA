@@ -175,7 +175,13 @@ INSTRUCCIONES DE ESTILO (CRÍTICAS):
 
 OBJETIVO ESPECÍFICO DEL DÍA (MÁXIMA PRIORIDAD):
 ${specificDetails || 'Genera una idea creativa basada en el tema central.'}
-Utiliza esta descripción como la base de TODO el contenido del guion. Si la descripción dice "Habla sobre el miedo a la IA", el guion debe centrarse en el MIEDO, no solo en la IA en general.
+Utiliza esta descripción como la base de TODO el contenido del guion. 
+
+REGLA ANTI-ESQUELETO (CRÍTICA):
+- PROHIBIDO devolver campos vacíos en el JSON.
+- Cada sección (gancho, desarrollo, cierre, cta, copy_post) DEBE contener texto real y desarrollado.
+- Si no hay información suficiente, EXPANDE CREATIVAMENTE basándote en el nicho del creador, pero nunca dejes un campo vacío o con solo el título repetido.
+- Mínimo 2 frases por sección.
 
 ESTRUCTURA DEL GUION:
 1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).

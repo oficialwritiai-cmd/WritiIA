@@ -1582,6 +1582,8 @@ export default function DashboardPage() {
                 throw new Error('El guion recibido está vacío. Intenta de nuevo.');
             }
 
+            console.log('[Dashboard] RECEIVED SCRIPT DATA (v4.4.22):', JSON.stringify(generatedScript, null, 2));
+
             const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.map((d, i) => `${i + 1}. ${d}`).join('\n') : (generatedScript.desarrollo || '');
             const copyStr = generatedScript.copy_post ? `\n\n📱 COPY:\n${generatedScript.copy_post.titulo}\n${generatedScript.copy_post.descripcion_larga}\n\nHashtags: ${Array.isArray(generatedScript.copy_post.hashtags) ? generatedScript.copy_post.hashtags.join(' ') : ''}` : '';
             const fullContent = `🎯 GANCHO\n${generatedScript.gancho || ''}\n\n📝 DESARROLLO\n${desarrolloStr}\n\n🔥 CTA\n${generatedScript.cta || ''}${copyStr}`;
@@ -1605,6 +1607,24 @@ export default function DashboardPage() {
             const { data: insertedScript, error: scriptErr } = await supabase.from('scripts').insert(insertPayload).select().single();
 
             if (scriptErr) throw scriptErr;
+
+            // v4.4.22: Explicitly save to LIBRARY to ensure it shows up in "Biblioteca -> Guiones"
+            const libPayload = {
+                user_id: profile.id,
+                project_id: activeProject?.id,
+                type: 'guion',
+                platform: slot.platform,
+                titulo: slot.idea_title,
+                content: {
+                    ...generatedScript,
+                    titulo_guion: slot.idea_title,
+                    full_text: fullContent
+                },
+                tags: [slot.platform, 'plan-mensual'],
+                status: 'completado'
+            };
+            const { error: libErr } = await supabase.from('library').insert(libPayload);
+            if (libErr) console.warn('[v4.4.22] Error saving to library table:', libErr);
 
             const slotScriptData = {
                 hook: generatedScript.gancho || '',
@@ -3650,7 +3670,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.21</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.22</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
