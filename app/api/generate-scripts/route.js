@@ -164,14 +164,18 @@ INSTRUCCIONES DE IDIOMA:
 
 INSTRUCCIONES DE ESTILO (CRÍTICAS):
 1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...", "No te pierdas esta oportunidad..." o "¿Alguna vez has soñado con...?".
-2) SIN REPETICIONES: REGLA DE HIERRO: El GANCHO y los puntos de DESARROLLO deben ser contenido ÚNICO. PROHIBIDO usar el título del script como si fuera el gancho o un punto de desarrollo. El texto debe ser fresco, redactado desde cero, y centrado en el OBJETIVO ESPECÍFICO DEL DÍA (proporcionado abajo).
-3) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. Si el creador dice que está "empezando", actúa como tal.
-4) STORYTELLING: Integra la "Experiencia Real" proporcionada como el corazón del guion (en la sección de HISTORIA).
-5) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio, no ser neutro.
+2) SIN REPETICIONES (REGLA DE HIERRO): El GANCHO y los puntos de DESARROLLO deben ser contenido ÚNICO. 
+   ❌ MALA PRÁCTICA: Si el título es "3 formas de usar IA", NO escribas GANCHO: "Aquí tienes 3 formas de usar IA".
+   ✅ BUENA PRÁCTICA: Escribe un gancho paralelo: "La mayoría pierde horas en tareas manuales, pero esto cambia las reglas...".
+   PROHIBIDO usar el título del script como si fuera el gancho o un punto de desarrollo. El texto debe ser fresco, redactado desde cero, y centrado en el OBJETIVO ESPECÍFICO DEL DÍA.
+3) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. 
+4) STORYTELLING: Integra la "Experiencia Real" como el corazón del guion.
+5) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio.
 6) RITMO: Frases simples y fuertes. Evita párrafos de relleno.
 
-OBJETIVO ESPECÍFICO DEL DÍA:
+OBJETIVO ESPECÍFICO DEL DÍA (MÁXIMA PRIORIDAD):
 ${specificDetails || 'Genera una idea creativa basada en el tema central.'}
+Utiliza esta descripción como la base de TODO el contenido del guion. Si la descripción dice "Habla sobre el miedo a la IA", el guion debe centrarse en el MIEDO, no solo en la IA en general.
 
 ESTRUCTURA DEL GUION:
 1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).

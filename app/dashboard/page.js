@@ -1582,8 +1582,10 @@ export default function DashboardPage() {
                 throw new Error('El guion recibido está vacío. Intenta de nuevo.');
             }
 
-            const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.join('\n') : (generatedScript.desarrollo || '');
-            const fullContent = (generatedScript.gancho || '') + '\n\n' + desarrolloStr + '\n\n' + (generatedScript.cta || '');
+            const desarrolloStr = Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo.map((d, i) => `${i + 1}. ${d}`).join('\n') : (generatedScript.desarrollo || '');
+            const copyStr = generatedScript.copy_post ? `\n\n📱 COPY:\n${generatedScript.copy_post.titulo}\n${generatedScript.copy_post.descripcion_larga}\n\nHashtags: ${Array.isArray(generatedScript.copy_post.hashtags) ? generatedScript.copy_post.hashtags.join(' ') : ''}` : '';
+            const fullContent = `🎯 GANCHO\n${generatedScript.gancho || ''}\n\n📝 DESARROLLO\n${desarrolloStr}\n\n🔥 CTA\n${generatedScript.cta || ''}${copyStr}`;
+            
             const insertPayload = {
                 user_id: profile.id,
                 content: fullContent,
@@ -1591,7 +1593,9 @@ export default function DashboardPage() {
                 topic: slot.idea_title,
                 tone: toneBrand || 'Profesional',
                 is_saved: true,
-                project_id: activeProject?.id
+                project_id: activeProject?.id,
+                // v4.4.21: Ensure structured data is always saved in a metadata field if possible, 
+                // but for now we rely on the slot update below.
             };
 
             if (slot.scheduled_date) {
@@ -1817,10 +1821,9 @@ export default function DashboardPage() {
                     parsedSd = { hook: sd };
                 }
                 
-                // CRITICAL FIX: If parsedSd exists but fields are empty, use slot data as fallback
-                if (parsedSd && !parsedSd.hook && !parsedSd.gancho && !parsedSd.desarrollo) {
-                    parsedSd = { hook: slot.idea_title, desarrollo: [slot.idea_title] };
-                }
+                // --- FALLBACK REMOVED v4.4.21 ---
+                // We no longer overwrite with slot.idea_title if data is missing.
+                // This prevents the generic "repetitive" content bug.
 
                 const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
                 const desRaw = parsedSd?.desarrollo || parsedSd?.puntos || [];
@@ -3647,7 +3650,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.20</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.21</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
