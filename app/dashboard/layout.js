@@ -1,6 +1,6 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-15 19:15:00
+ * FORCE BUILD: 2026-03-15 19:26:00
  * Version: v4.4.25
  */
 
@@ -36,6 +36,10 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
+    // v4.4.25: Boot log — visible immediately on page load without requiring any action
+    if (typeof window !== 'undefined') {
+        console.log('%c🚀 WRITIAI Dashboard v4.4.25 LOADED — Structural Fix Active', 'background: #FFD700; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+    }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
