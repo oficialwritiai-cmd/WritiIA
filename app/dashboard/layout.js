@@ -1,6 +1,6 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-15 17:40:00
+ * FORCE BUILD: 2026-03-15 17:42:00
  * Version: v4.4.16
  */
 
@@ -476,7 +476,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v4.4.15
+                            v4.4.16
                         </div>
                     </div>
                 </aside>
@@ -618,7 +618,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.4.15</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.4.16</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
