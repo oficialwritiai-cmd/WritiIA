@@ -164,10 +164,14 @@ INSTRUCCIONES DE IDIOMA:
 
 INSTRUCCIONES DE ESTILO (CRÍTICAS):
 1) HUMANIDAD: El guion debe sonar como una conversación real. PROHIBIDO usar frases como "En este valioso contenido...", "No te pierdas esta oportunidad..." o "¿Alguna vez has soñado con...?".
-2) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. Si el creador dice que está "empezando", actúa como tal.
-3) STORYTELLING: Integra la "Experiencia Real" proporcionada como el corazón del guion (en la sección de HISTORIA).
-4) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio, no ser neutro.
-5) RITMO: Frases simples y fuertes. Evita párrafos de relleno.
+2) SIN REPETICIONES: REGLA DE HIERRO: El GANCHO y los puntos de DESARROLLO deben ser contenido ÚNICO. PROHIBIDO usar el título del script como si fuera el gancho o un punto de desarrollo. El texto debe ser fresco, redactado desde cero, y centrado en el OBJETIVO ESPECÍFICO DEL DÍA (proporcionado abajo).
+3) SIN INVENTOS: NO inventes logros ni datos que no estén en el contexto. Si el creador dice que está "empezando", actúa como tal.
+4) STORYTELLING: Integra la "Experiencia Real" proporcionada como el corazón del guion (en la sección de HISTORIA).
+5) OPINIÓN: Refleja la "Opinión Personal" con firmeza. El contenido debe tener un ángulo propio, no ser neutro.
+6) RITMO: Frases simples y fuertes. Evita párrafos de relleno.
+
+OBJETIVO ESPECÍFICO DEL DÍA:
+${specificDetails || 'Genera una idea creativa basada en el tema central.'}
 
 ESTRUCTURA DEL GUION:
 1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).
