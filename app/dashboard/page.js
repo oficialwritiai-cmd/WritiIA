@@ -1076,27 +1076,27 @@ export default function DashboardPage() {
         
         const success = await runBatchGeneration(slotsToProcess, true);
         
-        // RE-FETCH FRESH DATA (Avoid all race conditions)
-        setGenerationProgress(prev => ({ ...prev, status: '¡Guiones listos! Recuperando datos finales...' }));
+        // --- NUCLEAR FIX v4.4.18 (Total Recovery) ---
+        setGenerationProgress(prev => ({ ...prev, status: '🚀 Guiones listos. Ejecutando Sincronización Nuclear...' }));
         
         try {
-            const { data: dbSlots } = await supabase.from('content_slots')
-                .select('id, script_data, has_script, script_id, idea_title, content_type, platform, goal')
+            // Recoger TODO lo que hay en la DB para este plan (para no perder títulos, plataformas, etc)
+            const { data: dbSlots, error: dbErr } = await supabase.from('content_slots')
+                .select('*')
                 .in('id', selectedIds);
             
-            // Map db results to full slot objects for the sync logic
-            const slotsToSync = dbSlots || [];
-            
-            setGenerationProgress(prev => ({ ...prev, status: 'Sincronizando con el calendario...' }));
-            await handleSendPlanToCalendar(slotsToSync); 
+            if (dbErr) throw dbErr;
 
+            // Enviar los datos completos al calendario
+            await handleSendPlanToCalendar(dbSlots || []); 
+            
             setGenerationProgress({ current: 0, total: 0, status: '' });
             setIsGeneratingMassive(false);
-            alert('¡MISIÓN CUMPLIDA! 🚀 Tu plan de 30 días ha sido generado y agendado.');
+            alert('¡ACCIÓN COMPLETADA! 🚀 Tu plan ha sido generado, guardado en la biblioteca y agendado en el calendario con éxito.');
         } catch (err) {
-            console.error('[Auto] Sync error:', err);
+            console.error('[Nuclear Sync] Fail:', err);
             setIsGeneratingMassive(false);
-            alert('Error en la sincronización final. Intenta sincronizar manualmente.');
+            alert('Sincronización parcial. Revisa tu calendario.');
         }
 
     }
@@ -3645,7 +3645,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.17</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.18</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
