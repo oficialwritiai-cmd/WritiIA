@@ -102,7 +102,7 @@ export default function DashboardPage() {
         if (typeof document !== 'undefined' && !document.getElementById(bannerId)) {
             const banner = document.createElement('div');
             banner.id = bannerId;
-            banner.innerHTML = 'v4.4.29 ACTIVADA';
+            banner.innerHTML = 'v4.4.30 ACTIVADA';
             Object.assign(banner.style, {
                 position: 'fixed', bottom: '10px', left: '10px', padding: '4px 10px',
                 background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold',
@@ -1077,54 +1077,80 @@ export default function DashboardPage() {
         setIsGeneratingMassive(true);
         setStep(3); 
         
-        if (slotsToProcess.length === 0) {
-            console.log('[v4.4.26] No scripts to generate, proceeding with direct sync.');
-            const { data: dbSlots } = await supabase.from('content_slots').select('id, script_data, has_script, script_id').in('id', selectedIds);
-            const slotsToSync = currentSlots.filter(s => selectedIds.includes(s.id)).map(s => {
-                const dbRef = dbSlots?.find(d => String(d.id) === String(s.id));
-                return dbRef ? { ...s, ...dbRef } : s;
-            });
-            await handleSendPlanToCalendar(slotsToSync); 
-            setIsGeneratingMassive(false);
-            return;
+        let finalGeneratedSlots = [];
+        if (slotsToProcess.length > 0) {
+            setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando v4.4.30: Generando guiones...' });
+            finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true);
+        } else {
+            console.log('[v4.4.30] No scripts to generate, proceeding with Deep Sync Fallback.');
         }
-
-        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando v4.4.26: Generando guiones...' });
         
-        // v4.4.26: Use result of generation DIRECTLY
-        const finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true);
-        
-        setGenerationProgress({ current: 0, total: 0, status: '🚀 Sincronizando v4.4.26 con el calendario...' });
+        setGenerationProgress({ current: 0, total: 0, status: '🚀 Sincronizando v4.4.30: Asegurando integridad...' });
 
         try {
-            let slotsForSync;
-            if (Array.isArray(finalGeneratedSlots) && finalGeneratedSlots.length > 0) {
-                // v4.4.26: Mapping via Map for guaranteed O(1) matching with string base IDs
-                const generatedMap = new Map(finalGeneratedSlots.map(s => [String(s.id), s]));
-                slotsForSync = currentSlots
-                    .filter(s => selectedIds.includes(s.id))
-                    .map(s => {
-                        const freshData = generatedMap.get(String(s.id));
-                        return freshData ? { ...s, ...freshData } : s;
-                    });
-                console.log('[v4.4.26] SYNC: Using in-memory results. Count:', slotsForSync.length);
-            } else {
-                console.warn('[v4.4.26] Batch generation returned no data — fall back to DB.');
-                const { data: dbSlots, error: dbErr } = await supabase.from('content_slots').select('*').in('id', selectedIds);
-                if (dbErr) throw dbErr;
-                slotsForSync = dbSlots || [];
+            // STEP 1: Map from generation results
+            const generatedMap = new Map(finalGeneratedSlots.map(s => [String(s.id), s]));
+            let slotsForSync = currentSlots
+                .filter(s => selectedIds.includes(s.id))
+                .map(s => {
+                    const freshData = generatedMap.get(String(s.id));
+                    return freshData ? { ...s, ...freshData } : s;
+                });
+
+            // STEP 2: v4.4.30 Deep Sync Fallback (The "Safety Net")
+            // Search for existing scripts in DB by title for any slot still missing content
+            const slotsMissingData = slotsForSync.filter(s => {
+                const hasRealText = s.script_data?.hook || s.script_data?.gancho || s.script_data?.desarrollo;
+                return !hasRealText;
+            });
+
+            if (slotsMissingData.length > 0) {
+                console.log(`[v4.4.30] Deep Sync Fallback active for ${slotsMissingData.length} slots...`);
+                // Fetch from both sources
+                const [scriptsRes, libraryRes] = await Promise.all([
+                    supabase.from('scripts').select('*').eq('user_id', profile.id),
+                    supabase.from('library').select('*').eq('user_id', profile.id).eq('type', 'guion')
+                ]);
+
+                const globalData = [...(scriptsRes.data || []), ...(libraryRes.data || [])];
+                const normalize = (t) => String(t || '').replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\u200D|\uFE0F|[^\w\s\d]/g, '').trim().toLowerCase();
+
+                slotsForSync = slotsForSync.map(s => {
+                    const hasRealText = s.script_data?.hook || s.script_data?.gancho || s.script_data?.desarrollo;
+                    if (hasRealText) return s;
+
+                    const sTitleNorm = normalize(s.idea_title);
+                    const match = globalData.find(gd => 
+                        normalize(gd.topic) === sTitleNorm || 
+                        normalize(gd.titulo) === sTitleNorm ||
+                        normalize(gd.content?.titulo_guion) === sTitleNorm
+                    );
+
+                    if (match) {
+                        console.log(`[v4.4.30] Deep Match found for "${s.idea_title}"! Recovering content...`);
+                        return { 
+                            ...s, 
+                            script_data: match.content || match, 
+                            has_script: true,
+                            fromFallback: true 
+                        };
+                    }
+                    return s;
+                });
             }
 
-            // v4.4.28: FINAL PASS TO CALENDAR
+            console.log(`[v4.4.30] Final slots prepared for calendar: ${slotsForSync.length}`);
+
+            // STEP 3: FINAL PASS TO CALENDAR
             await handleSendPlanToCalendar(slotsForSync);
             
             setGenerationProgress({ current: 0, total: 0, status: '' });
             setIsGeneratingMassive(false);
-            alert('¡ACCIÓN COMPLETADA v4.4.29! 🚀 Sistema de guiones reparado.');
+            alert('¡COMPLETADO v4.4.30! 🚀 Los guiones han sido rescatados y sincronizados.');
         } catch (err) {
-            console.error('[Nuclear Sync v4.4.26] Fail:', err);
+            console.error('[Nuclear Sync v4.4.30] Fatal:', err);
             setIsGeneratingMassive(false);
-            alert('Error en v4.4.26: ' + err.message);
+            alert('Error crítico v4.4.30: ' + err.message);
         }
     }
 
@@ -1904,7 +1930,7 @@ export default function DashboardPage() {
                     ].filter(l => l !== undefined).join('\n');
                 } else {
                     console.warn(`[v4.4.28] Slot "${slot.idea_title}" has NO real content. Content-aware fallback triggered.`);
-                    calScriptText = `TÍTULO: ${slot.idea_title}\n\n(Guion pendiente de generación en v4.4.28)`;
+                    calScriptText = `TÍTULO: ${slot.idea_title}\n\n(Guion pendiente de generación en v4.4.30)`;
                 }
 
                 const hasScriptNow = !!(slot.has_script || (parsedSd && hasRealContent));
@@ -3716,7 +3742,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.29</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.30</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
