@@ -95,6 +95,22 @@ export default function DashboardPage() {
     const [planWizardStep, setPlanWizardStep] = useState(1);
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
+
+    // v4.4.26: Visible Version Banner to ensure user knows they are on the right code
+    useEffect(() => {
+        const bannerId = 'writi-version-banner';
+        if (typeof document !== 'undefined' && !document.getElementById(bannerId)) {
+            const banner = document.createElement('div');
+            banner.id = bannerId;
+            banner.innerHTML = 'v4.4.26 ACTIVADA';
+            Object.assign(banner.style, {
+                position: 'fixed', bottom: '10px', left: '10px', padding: '4px 10px',
+                background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold',
+                borderRadius: '4px', zIndex: '9999', pointerEvents: 'none', boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+            });
+            document.body.appendChild(banner);
+        }
+    }, []);
     const [expandedSlots, setExpandedSlots] = useState(new Set());
     const [savedPlanSlotIds, setSavedPlanSlotIds] = useState(new Set());
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
@@ -228,7 +244,8 @@ export default function DashboardPage() {
     };
 
 
-    const { activeProject, projectBrain, refreshBrain } = useProject();
+    // Removed duplicate activeProject declaration. Using the one from useProject() hook.
+    const { projectBrain, refreshBrain } = useProject();
 
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
@@ -1058,13 +1075,13 @@ export default function DashboardPage() {
         const slotsToProcess = currentSlots.filter(s => selectedIds.includes(s.id) && !s.has_script);
         
         setIsGeneratingMassive(true);
-        setStep(3); // Ensure we are on the plan view
+        setStep(3); 
         
         if (slotsToProcess.length === 0) {
-            console.log('[Auto] No scripts to generate, skipping to sync.');
+            console.log('[v4.4.26] No scripts to generate, proceeding with direct sync.');
             const { data: dbSlots } = await supabase.from('content_slots').select('id, script_data, has_script, script_id').in('id', selectedIds);
             const slotsToSync = currentSlots.filter(s => selectedIds.includes(s.id)).map(s => {
-                const dbRef = dbSlots?.find(d => d.id === s.id);
+                const dbRef = dbSlots?.find(d => String(d.id) === String(s.id));
                 return dbRef ? { ...s, ...dbRef } : s;
             });
             await handleSendPlanToCalendar(slotsToSync); 
@@ -1072,48 +1089,43 @@ export default function DashboardPage() {
             return;
         }
 
-        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando automatización: Generando guiones...' });
+        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando v4.4.26: Generando guiones...' });
         
-        const success = await runBatchGeneration(slotsToProcess, true);
+        // v4.4.26: Use result of generation DIRECTLY
+        const finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true);
         
-        setGenerationProgress({ current: 0, total: 0, status: '🚀 Guiones listos. Sincronizando con el calendario...' });
+        setGenerationProgress({ current: 0, total: 0, status: '🚀 Sincronizando v4.4.26 con el calendario...' });
 
         try {
-            // v4.4.24: STRUCTURAL FIX — Use in-memory finalSlots instead of DB re-fetch.
-            // Re-fetching from DB introduced a race condition where script_data was still null.
-            // We merge the freshly-generated slots (with full script data) over the original slots.
             let slotsForSync;
-            if (success && Array.isArray(success) && success.length > 0) {
-                // Merge fresh in-memory data over original slots for ones that were generated
-                const generatedMap = new Map(success.map(s => [s.id, s]));
+            if (Array.isArray(finalGeneratedSlots) && finalGeneratedSlots.length > 0) {
+                // v4.4.26: Mapping via Map for guaranteed O(1) matching with string base IDs
+                const generatedMap = new Map(finalGeneratedSlots.map(s => [String(s.id), s]));
                 slotsForSync = currentSlots
                     .filter(s => selectedIds.includes(s.id))
                     .map(s => {
-                        const freshSlot = generatedMap.get(s.id);
-                        return freshSlot ? { ...s, ...freshSlot } : s;
+                        const freshData = generatedMap.get(String(s.id));
+                        return freshData ? { ...s, ...freshData } : s;
                     });
-                console.log('[v4.4.24] Using in-memory slots for calendar sync. Count:', slotsForSync.length);
-                console.log('[v4.4.24] Sample script_data:', JSON.stringify(slotsForSync[0]?.script_data, null, 2));
+                console.log('[v4.4.26] SYNC: Using in-memory results. Count:', slotsForSync.length);
             } else {
-                // Fallback: only fetch from DB if batch generation returned nothing
-                console.warn('[v4.4.24] Batch generation returned no data — falling back to DB re-fetch.');
-                const { data: dbSlots, error: dbErr } = await supabase.from('content_slots')
-                    .select('*').in('id', selectedIds);
+                console.warn('[v4.4.26] Batch generation returned no data — fall back to DB.');
+                const { data: dbSlots, error: dbErr } = await supabase.from('content_slots').select('*').in('id', selectedIds);
                 if (dbErr) throw dbErr;
                 slotsForSync = dbSlots || [];
             }
 
+            // v4.4.26: FINAL PASS TO CALENDAR
             await handleSendPlanToCalendar(slotsForSync);
             
             setGenerationProgress({ current: 0, total: 0, status: '' });
             setIsGeneratingMassive(false);
-            alert('¡ACCIÓN COMPLETADA! 🚀 Tu plan ha sido generado y agendado en el calendario.');
+            alert('¡ACCIÓN COMPLETADA v4.4.26! 🚀 Plan generado y agendado.');
         } catch (err) {
-            console.error('[Nuclear Sync v4.4.24] Fail:', err);
+            console.error('[Nuclear Sync v4.4.26] Fail:', err);
             setIsGeneratingMassive(false);
-            alert('Sincronización parcial. Revisa tu calendario.');
+            alert('Error en v4.4.26: ' + err.message);
         }
-
     }
 
     const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
@@ -1190,25 +1202,23 @@ export default function DashboardPage() {
                             });
                             refId = libraryItem?.id || null;
                             
-                            // Explicitly update slot to reflect it has a script now
+                            // Explicitly update slot to reflect it has a script now (local only for auto-plan)
                             slot.has_script = true;
                             slot.script_id = result.script?.id;
                             slot.script_data = scriptData;
                             finalSlots.push(slot);
 
-                            await supabase.from('content_slots').update({
-                                has_script: true,
-                                script_id: result.script?.id,
-                                script_data: scriptData
-                            }).eq('id', slot.id);
+                            // v4.4.26: Skip DB update for content_slots here because it often fails with temporary IDs
+                            // and the calendar sync uses the in-memory data anyway.
+                            console.log(`[v4.4.26] Slot "${slot.idea_title}" ready in memory.`);
 
                         } catch (libErr) {
-                            console.error('Error saving to library or updating slot:', libErr);
+                            console.error('[v4.4.26] Error in loop:', libErr);
                         }
                     }
                 }
             } catch (e) {
-                console.error(`[BatchGenerate] Error for slot ${slot.id}:`, e);
+                console.error(`[v4.4.26] Batch fail for ${slot.id}:`, e);
             }
         }
 
@@ -1551,8 +1561,8 @@ export default function DashboardPage() {
         setGeneratingSlotId(slot.id);
 
         try {
-            console.log(`[v4.4.25] Generating script for slot: "${slot.idea_title}" (id=${slot.id})`);
-            console.log(`[v4.4.25] specificDetails sent: "${slot.idea_description}"`);
+            console.log(`[v4.4.26] Generating script for slot: "${slot.idea_title}" (id=${slot.id})`);
+            console.log(`[v4.4.26] specificDetails sent: "${slot.idea_description}"`);
 
             const res = await fetch('/api/generate-scripts', {
                 method: 'POST',
@@ -1670,11 +1680,12 @@ export default function DashboardPage() {
                 return s;
             }));
 
+            console.log(`[v4.4.26] FINAL mapping for "${slot.idea_title}":`, JSON.stringify(slotScriptData));
             return { script: insertedScript, script_data: slotScriptData };
 
         } catch (err) {
             if (!silent) alert(err.message);
-            console.error('[v4.4.25] Error generating script:', err);
+            console.error('[v4.4.26] Error generating script:', err);
             return null;
         } finally {
             setGeneratingSlotId(null);
@@ -1871,9 +1882,9 @@ export default function DashboardPage() {
                 const cpPost = parsedSd?.copy_post || {};
                 const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
 
-                // v4.4.24: Diagnostic log — see exactly what data is available per slot
-                console.log(`[v4.4.24 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
-                console.log(`[v4.4.24 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
+                // v4.4.26: Diagnostic log — see exactly what data is available per slot
+                console.log(`[v4.4.26 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
+                console.log(`[v4.4.26 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
 
                 // v4.4.24: GUARD — Only build the script text if we actually have content
                 const hasRealContent = (hookVal && hookVal.trim().length > 10) ||
@@ -1891,7 +1902,7 @@ export default function DashboardPage() {
                         htags ? `\nHASHTAGS: ${htags}` : ''
                     ].filter(l => l !== undefined).join('\n');
                 } else {
-                    console.warn(`[v4.4.24] Slot "${slot.idea_title}" has NO real content — skipping skeleton. Raw script_data:`, slot.script_data);
+                    console.warn(`[v4.4.26] Slot "${slot.idea_title}" has NO real content. Raw script_data:`, slot.script_data);
                     calScriptText = null;
                 }
 
@@ -3704,7 +3715,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.25</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.26</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
