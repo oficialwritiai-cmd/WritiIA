@@ -102,7 +102,7 @@ export default function DashboardPage() {
         if (typeof document !== 'undefined' && !document.getElementById(bannerId)) {
             const banner = document.createElement('div');
             banner.id = bannerId;
-            banner.innerHTML = 'v4.4.26 ACTIVADA';
+            banner.innerHTML = 'v4.4.28 ACTIVADA';
             Object.assign(banner.style, {
                 position: 'fixed', bottom: '10px', left: '10px', padding: '4px 10px',
                 background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold',
@@ -1115,12 +1115,12 @@ export default function DashboardPage() {
                 slotsForSync = dbSlots || [];
             }
 
-            // v4.4.26: FINAL PASS TO CALENDAR
+            // v4.4.28: FINAL PASS TO CALENDAR
             await handleSendPlanToCalendar(slotsForSync);
             
             setGenerationProgress({ current: 0, total: 0, status: '' });
             setIsGeneratingMassive(false);
-            alert('¡ACCIÓN COMPLETADA v4.4.26! 🚀 Plan generado y agendado.');
+            alert('¡ACCIÓN COMPLETADA v4.4.28! 🚀 Sincronización Directa Forzada finalizada.');
         } catch (err) {
             console.error('[Nuclear Sync v4.4.26] Fail:', err);
             setIsGeneratingMassive(false);
@@ -1612,7 +1612,8 @@ export default function DashboardPage() {
                     : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
                 cta: generatedScript.cta || generatedScript.cierre || '',
                 cierre: generatedScript.cierre || generatedScript.cta || '',
-                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] },
+                v: '4.4.28' // Force check
             };
 
             console.log(`[v4.4.25] slotScriptData for "${slot.idea_title}":`, JSON.stringify(slotScriptData));
@@ -1882,14 +1883,14 @@ export default function DashboardPage() {
                 const cpPost = parsedSd?.copy_post || {};
                 const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
 
-                // v4.4.26: Diagnostic log — see exactly what data is available per slot
-                console.log(`[v4.4.26 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
-                console.log(`[v4.4.26 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
+                // v4.4.28: Diagnostic log — see exactly what data is available per slot
+                console.log(`[v4.4.28 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
+                console.log(`[v4.4.28 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
 
-                // v4.4.24: GUARD — Only build the script text if we actually have content
-                const hasRealContent = (hookVal && hookVal.trim().length > 10) ||
-                                       (desArr.length > 0 && desArr.some(d => d && d.trim().length > 10)) ||
-                                       (ctaVal && ctaVal.trim().length > 10);
+                // v4.4.28: GUARD — Only build the script text if we actually have content
+                const hasRealContent = (hookVal && hookVal.trim().length > 5) ||
+                                       (desArr.length > 0 && desArr.some(d => d && d.trim().length > 5)) ||
+                                       (ctaVal && ctaVal.trim().length > 5);
 
                 let calScriptText = null;
                 if (hasRealContent) {
@@ -1902,12 +1903,12 @@ export default function DashboardPage() {
                         htags ? `\nHASHTAGS: ${htags}` : ''
                     ].filter(l => l !== undefined).join('\n');
                 } else {
-                    console.warn(`[v4.4.26] Slot "${slot.idea_title}" has NO real content. Raw script_data:`, slot.script_data);
-                    calScriptText = null;
+                    console.warn(`[v4.4.28] Slot "${slot.idea_title}" has NO real content. Content-aware fallback triggered.`);
+                    calScriptText = `TÍTULO: ${slot.idea_title}\n\n(Guion pendiente de generación en v4.4.28)`;
                 }
 
                 const hasScriptNow = !!(slot.has_script || (parsedSd && hasRealContent));
-                const safeCalScriptText = calScriptText || `TÍTULO: ${slot.idea_title}\n\n(Guion pendiente de generación)`;
+                const safeCalScriptText = calScriptText;
 
                 const eventPayload = {
                     user_id: user.id,
@@ -3715,7 +3716,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.27</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.28</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}

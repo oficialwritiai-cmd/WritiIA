@@ -1,7 +1,7 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-17 13:28:00
- * Version: v4.4.27
+ * FORCE BUILD: 2026-03-17 14:10:00
+ * Version: v4.4.28
  */
 
 import { useState, useEffect } from 'react';
@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v4.4.27: Boot log — visible immediately on page load without requiring any action
+    // v4.4.28: Boot log
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v4.4.27 LOADED — Emergency Fix Active', 'background: #FFD700; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v4.4.28 LOADED — One-Way Force Sync Active', 'background: #FFD700; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -302,7 +302,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v4.4.27)
+                    {loadingStatus} (v4.4.28)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -480,7 +480,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v4.4.27
+                            v4.4.28
                         </div>
                     </div>
                 </aside>
@@ -622,7 +622,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.4.27</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.4.28</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
