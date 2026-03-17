@@ -1051,9 +1051,9 @@ export default function DashboardPage() {
             
             console.log(`[DEBUG] Credits loaded: ${credits.total - credits.used} available (total: ${credits.total})`);
 
-            // 3. Trigger Batch Script Generation automatically
+            // 3. Trigger Batch Script Generation automatically - PASS credits directly to avoid state timing issues
             if (credits.total > 0) {
-                handleAutoBatchGenerateAndSync(slotsWithDates, allIds);
+                await handleAutoBatchGenerateAndSync(slotsWithDates, allIds, credits);
             } else {
                 // No credits - show alert but still show the plan
                 alert('⚠️ CRÉDITOS INSUFICIENTES\n\nNo tienes créditos suficientes para generar guiones automáticamente.\n\nPor favor, compra créditos y luego usa el botón "Analizar y Planificar" para generar los guiones.');
@@ -1075,12 +1075,13 @@ export default function DashboardPage() {
 
         if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas? Esto usará ~${slotsToProcess.length} créditos.`)) return;
 
-        await runBatchGeneration(slotsToProcess);
+        await runBatchGeneration(slotsToProcess, false, aiCredits);
     }
 
-    const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds) => {
-        console.log('[DEBUG handleAutoBatchGenerateAndSync] Starting with slots:', currentSlots.length, 'selectedIds:', selectedIds.length);
+    const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds, creditsObj = null) => {
+        console.log('[DEBUG handleAutoBatchGenerateAndSync] Starting with slots:', currentSlots.length, 'selectedIds:', selectedIds.length, 'credits:', creditsObj);
         
+        const credits = creditsObj || aiCredits;
         const slotsToProcess = currentSlots.filter(s => selectedIds.includes(s.id) && !s.has_script);
         console.log('[DEBUG] Slots to process:', slotsToProcess.length);
         
@@ -1090,7 +1091,7 @@ export default function DashboardPage() {
         let finalGeneratedSlots = [];
         if (slotsToProcess.length > 0) {
             setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando v4.4.30: Generando guiones...' });
-            finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true);
+            finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true, credits);
             console.log('[DEBUG] Batch generation result:', finalGeneratedSlots?.length || 0, 'slots');
         } else {
             console.log('[v4.4.30] No scripts to generate, proceeding with Deep Sync Fallback.');
@@ -1172,11 +1173,12 @@ export default function DashboardPage() {
         }
     }
 
-    const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
-        console.log('[DEBUG runBatchGeneration] Starting with', slotsToProcess.length, 'slots, credits:', aiCredits);
+    const runBatchGeneration = async (slotsToProcess, isAuto = false, creditsObj = null) => {
+        const credits = creditsObj || aiCredits;
+        console.log('[DEBUG runBatchGeneration] Starting with', slotsToProcess.length, 'slots, credits:', credits);
         
         // Credit check
-        const available = aiCredits.total - aiCredits.used;
+        const available = credits.total - credits.used;
         const estimatedCost = slotsToProcess.length;
         
         if (available < estimatedCost) {
