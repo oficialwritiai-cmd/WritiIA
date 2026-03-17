@@ -1310,7 +1310,10 @@ export default function DashboardPage() {
             setExpandedSlots(newExpanded);
         }
 
-        return successCount > 0;
+        if (successCount > 0) {
+            return finalSlots;
+        }
+        return successCount > 0 ? finalSlots : false;
     };
 
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
