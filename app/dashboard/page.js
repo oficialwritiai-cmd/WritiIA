@@ -102,7 +102,7 @@ export default function DashboardPage() {
         if (typeof document !== 'undefined' && !document.getElementById(bannerId)) {
             const banner = document.createElement('div');
             banner.id = bannerId;
-            banner.innerHTML = 'v4.4.28 ACTIVADA';
+            banner.innerHTML = 'v4.4.29 ACTIVADA';
             Object.assign(banner.style, {
                 position: 'fixed', bottom: '10px', left: '10px', padding: '4px 10px',
                 background: '#FFD700', color: '#000', fontSize: '10px', fontWeight: 'bold',
@@ -1120,7 +1120,7 @@ export default function DashboardPage() {
             
             setGenerationProgress({ current: 0, total: 0, status: '' });
             setIsGeneratingMassive(false);
-            alert('¡ACCIÓN COMPLETADA v4.4.28! 🚀 Sincronización Directa Forzada finalizada.');
+            alert('¡ACCIÓN COMPLETADA v4.4.29! 🚀 Sistema de guiones reparado.');
         } catch (err) {
             console.error('[Nuclear Sync v4.4.26] Fail:', err);
             setIsGeneratingMassive(false);
@@ -3716,7 +3716,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.28</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.29</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}

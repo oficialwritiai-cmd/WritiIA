@@ -134,7 +134,7 @@ Para CADA item de la lista, escribe un bloque de desarrollo que:
 `;
 }
 
-function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador }) {
+function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador, projectLanguage }) {
     const parsedItems = parseUserItemList(specificDetails);
     const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
 
@@ -322,7 +322,7 @@ export async function POST(request) {
         const systemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
             count: finalCount, specificDetails, requestedCount, topic, ctaIdea,
-            experienciaReal, opinionPersonal, faseCreador
+            experienciaReal, opinionPersonal, faseCreador, projectLanguage
         });
 
         const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;
@@ -343,7 +343,7 @@ export async function POST(request) {
 
             const retryPrompt = buildSystemPrompt({
                 brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-                count: missing, specificDetails, requestedCount
+                count: missing, specificDetails, requestedCount, projectLanguage
             });
             const retryMsg = `${userMessage} (VARIANTES DISTINTAS a las ya generadas, distintos ángulos)`;
 
