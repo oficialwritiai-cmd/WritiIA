@@ -484,18 +484,20 @@ export default function DashboardPage() {
     const loadingSteps = generationMode === 'single' ? singleLoadingSteps : planLoadingSteps;
 
     async function fetchCredits(userId) {
-        if (!userId) return;
+        if (!userId) return { total: 0, used: 0 };
         const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', userId).single();
         const { data: legacyCreds } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
         const netLegacy = legacyCreds ? (legacyCreds.total_credits - legacyCreds.used_credits) : 0;
 
+        let credits = { total: 0, used: 0 };
         if (profileData && profileData.credits_balance !== null && profileData.credits_balance !== undefined && (profileData.credits_balance > 0 || netLegacy <= 0)) {
-            setAiCredits({ total: profileData.credits_balance, used: 0 });
+            credits = { total: profileData.credits_balance, used: 0 };
         } else if (legacyCreds) {
-            setAiCredits({ total: legacyCreds.total_credits, used: legacyCreds.used_credits });
-        } else {
-            setAiCredits({ total: 0, used: 0 });
+            credits = { total: legacyCreds.total_credits, used: legacyCreds.used_credits };
         }
+        
+        setAiCredits(credits);
+        return credits;
     }
 
     useEffect(() => {
@@ -1043,14 +1045,19 @@ export default function DashboardPage() {
             setSelectedSlots(new Set(allIds));
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
-            // 2. Trigger Batch Script Generation automatically
-            setTimeout(() => {
-                handleAutoBatchGenerateAndSync(slotsWithDates, allIds);
-            }, 800);
-
-            // Refresh credits
-            fetchCredits(profile.id);
+            // 2. Refresh credits FIRST and wait for them to load
+            const credits = await fetchCredits(profile.id);
             window.dispatchEvent(new CustomEvent('refresh-profile'));
+            
+            console.log(`[DEBUG] Credits loaded: ${credits.total - credits.used} available (total: ${credits.total})`);
+
+            // 3. Trigger Batch Script Generation automatically
+            if (credits.total > 0) {
+                handleAutoBatchGenerateAndSync(slotsWithDates, allIds);
+            } else {
+                // No credits - show alert but still show the plan
+                alert('⚠️ CRÉDITOS INSUFICIENTES\n\nNo tienes créditos suficientes para generar guiones automáticamente.\n\nPor favor, compra créditos y luego usa el botón "Analizar y Planificar" para generar los guiones.');
+            }
 
         } catch (err) {
             setError(err.message);
@@ -1072,7 +1079,10 @@ export default function DashboardPage() {
     }
 
     const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds) => {
+        console.log('[DEBUG handleAutoBatchGenerateAndSync] Starting with slots:', currentSlots.length, 'selectedIds:', selectedIds.length);
+        
         const slotsToProcess = currentSlots.filter(s => selectedIds.includes(s.id) && !s.has_script);
+        console.log('[DEBUG] Slots to process:', slotsToProcess.length);
         
         setIsGeneratingMassive(true);
         setStep(3); 
@@ -1081,11 +1091,19 @@ export default function DashboardPage() {
         if (slotsToProcess.length > 0) {
             setGenerationProgress({ current: 0, total: slotsToProcess.length, status: 'Iniciando v4.4.30: Generando guiones...' });
             finalGeneratedSlots = await runBatchGeneration(slotsToProcess, true);
+            console.log('[DEBUG] Batch generation result:', finalGeneratedSlots?.length || 0, 'slots');
         } else {
             console.log('[v4.4.30] No scripts to generate, proceeding with Deep Sync Fallback.');
         }
         
         setGenerationProgress({ current: 0, total: 0, status: '🚀 Sincronizando v4.4.30: Asegurando integridad...' });
+
+        // Handle case where batch generation failed (e.g., no credits)
+        if (!finalGeneratedSlots || !Array.isArray(finalGeneratedSlots)) {
+            console.log('[DEBUG] Batch generation failed or returned false, showing error state');
+            setIsGeneratingMassive(false);
+            return;
+        }
 
         try {
             // STEP 1: Map from generation results
@@ -1155,11 +1173,22 @@ export default function DashboardPage() {
     }
 
     const runBatchGeneration = async (slotsToProcess, isAuto = false) => {
+        console.log('[DEBUG runBatchGeneration] Starting with', slotsToProcess.length, 'slots, credits:', aiCredits);
+        
         // Credit check
         const available = aiCredits.total - aiCredits.used;
         const estimatedCost = slotsToProcess.length;
+        
         if (available < estimatedCost) {
-            setError(`Créditos insuficientes. Necesitas ~${estimatedCost} créditos para ${slotsToProcess.length} guiones.`);
+            const errorMsg = `Créditos insuficientes. Tienes ${available} créditos pero necesitas ~${estimatedCost} para ${slotsToProcess.length} guiones.`;
+            console.error('[DEBUG] Credit check failed:', errorMsg);
+            setError(errorMsg);
+            setIsGeneratingMassive(false);
+            
+            // Show alert to user
+            if (isAuto) {
+                alert(`⚠️ CRÉDITOS INSUFICIENTES\n\n${errorMsg}\n\nPor favor, compra más créditos para generar los guiones automáticamente.`);
+            }
             return false;
         }
 
