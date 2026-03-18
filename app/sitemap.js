@@ -15,6 +15,12 @@ export default function sitemap() {
             priority: 0.8,
         },
         {
+            url: `${baseUrl}/generador-guiones-ia`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.9,
+        },
+        {
             url: `${baseUrl}/login`,
             lastModified: new Date(),
             changeFrequency: 'yearly',
