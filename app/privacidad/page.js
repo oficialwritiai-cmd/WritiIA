@@ -17,14 +17,14 @@ export default function PrivacidadPage() {
                 </Link>
 
                 <h1 style={{ fontSize: '2.5rem', marginBottom: 16, fontWeight: 700, letterSpacing: '-0.02em' }}>Política de Privacidad</h1>
-                <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 48 }}>Última actualización: [FECHA_DE_HOY]</p>
+                <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 48 }}>Última actualización: 18 de Marzo de 2026</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, fontSize: '1rem' }}>
                     
                     <section>
                         <h2 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: 16 }}>1. Identidad del Responsable</h2>
                         <p>
-                            El responsable del tratamiento de los datos recabados a través de esta plataforma es [NOMBRE_DE_TU_SOCIEDAD], con domicilio en [DIRECCIÓN_COMPLETA] y correo de contacto a efectos de privacidad: [EMAIL_DE_PRIVACIDAD].
+                            El responsable del tratamiento de los datos recabados a través de esta plataforma es Writi IA, con domicilio en Barcelona, España y correo de contacto a efectos de privacidad: hi@writi-ai.com.
                         </p>
                     </section>
 
@@ -63,7 +63,7 @@ export default function PrivacidadPage() {
                     <section>
                         <h2 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: 16 }}>6. Tus Derechos como Usuario</h2>
                         <p>
-                            Tienes el derecho a acceder a tus datos personales, rectificarlos, solicitar su portabilidad y exigir su eliminación completa de nuestros sistemas (Derecho al olvido). Tienes pleno control desde el panel de tu cuenta o pudiendo contactar directamente a [EMAIL_SOPORTE].
+                            Tienes el derecho a acceder a tus datos personales, rectificarlos, solicitar su portabilidad y exigir su eliminación completa de nuestros sistemas (Derecho al olvido). Tienes pleno control desde el panel de tu cuenta o pudiendo contactar directamente a hi@writi-ai.com.
                         </p>
                     </section>
                 </div>

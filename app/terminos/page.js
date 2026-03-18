@@ -17,7 +17,7 @@ export default function TerminosPage() {
                 </Link>
 
                 <h1 style={{ fontSize: '2.5rem', marginBottom: 16, fontWeight: 700, letterSpacing: '-0.02em' }}>Términos y Condiciones del Servicio</h1>
-                <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 48 }}>Última actualización: [FECHA_DE_HOY]</p>
+                <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 48 }}>Última actualización: 18 de Marzo de 2026</p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, fontSize: '1rem' }}>
                     
@@ -26,7 +26,7 @@ export default function TerminosPage() {
                         <ul style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <li><strong style={{color: '#fff'}}>Servicio:</strong> La plataforma de software como servicio (SaaS) llamada WRITI.AI, diseñada para la planificación de contenido y generación de guiones con Inteligencia Artificial.</li>
                             <li><strong style={{color: '#fff'}}>Usuario / Cliente:</strong> Cualquier persona que se registre y pague una suscripción para usar el Servicio.</li>
-                            <li><strong style={{color: '#fff'}}>Proveedor:</strong> [NOMBRE_DE_TU_SOCIEDAD_O_TU_NOMBRE], con domicilio en [DIRECCIÓN_COMPLETA] y correo electrónico [EMAIL_SOPORTE].</li>
+                            <li><strong style={{color: '#fff'}}>Proveedor:</strong> Writi IA, con domicilio en Barcelona, España y correo electrónico hi@writi-ai.com.</li>
                         </ul>
                     </section>
 
@@ -57,14 +57,14 @@ export default function TerminosPage() {
                     <section>
                         <h2 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: 16 }}>5. Limitación de Responsabilidad</h2>
                         <p>
-                            WRITI.AI se proporciona 'tal cual' (as-is) y 'según disponibilidad'. En la máxima medida permitida por la ley aplicable, el Proveedor no será responsable por daños indirectos, incidentales, especiales, punitivos o lucro cesante, pérdida de ingresos, pérdida de datos o interrupciones de negocio que surjan del uso o la imposibilidad de uso del Servicio. En cualquier caso, la responsabilidad total y acumulada del Proveedor ante el Cliente por cualquier reclamación relacionada con este contrato no superará, bajo ninguna circunstancia, el monto total pagado por el Cliente al Proveedor durante los [TRES (3)] meses inmediatamente anteriores al evento que dio lugar a la reclamación.
+                            WRITI.AI se proporciona 'tal cual' (as-is) y 'según disponibilidad'. En la máxima medida permitida por la ley aplicable, el Proveedor no será responsable por daños indirectos, incidentales, especiales, punitivos o lucro cesante, pérdida de ingresos, pérdida de datos o interrupciones de negocio que surjan del uso o la imposibilidad de uso del Servicio. En cualquier caso, la responsabilidad total y acumulada del Proveedor ante el Cliente por cualquier reclamación relacionada con este contrato no superará, bajo ninguna circunstancia, el monto total pagado por el Cliente al Proveedor durante los tres (3) meses inmediatamente anteriores al evento que dio lugar a la reclamación.
                         </p>
                     </section>
 
                     <section>
                         <h2 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: 16 }}>6. Portabilidad y Borrado de Datos</h2>
                         <p>
-                            En caso de cancelación de la suscripción, la cuenta del Cliente pasará a estado inactivo al finalizar su ciclo de facturación pagado. El Cliente dispondrá de un plazo de [TREINTA (30)] días naturales tras la fecha de expiración para acceder a su cuenta en modo de solo lectura y exportar sus guiones e ideas. Una vez transcurrido este plazo, el Proveedor se reserva el derecho de eliminar definitivamente y de forma irrecuperable todos los datos, proyectos y configuraciones del Cerebro IA asociados a la cuenta del Cliente, sin obligación de previo aviso ni responsabilidad alguna por la pérdida de dicha información.
+                            En caso de cancelación de la suscripción, la cuenta del Cliente pasará a estado inactivo al finalizar su ciclo de facturación pagado. El Cliente dispondrá de un plazo de treinta (30) días naturales tras la fecha de expiración para acceder a su cuenta en modo de solo lectura y exportar sus guiones e ideas. Una vez transcurrido este plazo, el Proveedor se reserva el derecho de eliminar definitivamente y de forma irrecuperable todos los datos, proyectos y configuraciones del Cerebro IA asociados a la cuenta del Cliente, sin obligación de previo aviso ni responsabilidad alguna por la pérdida de dicha información.
                         </p>
                     </section>
                     
