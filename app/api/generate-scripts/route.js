@@ -264,11 +264,11 @@ export async function POST(request) {
         );
 
         // Credit Check & Charge (Dynamic Cost)
-        const totalCost = getScriptCost(videoDuration, count || 1);
-        const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts', projectId);
-        if (!creditResult.success) {
-            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
-        }
+        // const totalCost = getScriptCost(videoDuration, count || 1);
+        // const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts', projectId);
+        // if (!creditResult.success) {
+        //    return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
+        // }
 
         // Fetch Brand Brain: project-scoped first, fallback to global
         let brandBrain = null;
@@ -479,7 +479,7 @@ ${systemPrompt}`;
         return NextResponse.json({ scripts: scriptsArray });
 
     } catch (err) {
-        console.error('[generate-scripts] Error:', err?.message);
+        console.error('[generate-scripts] Error:', err?.message || err);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
