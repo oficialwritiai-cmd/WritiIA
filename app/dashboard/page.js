@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 18) v4.6.0 - Plan Mensual v2: 1-click per-slot script generation
-export const VERSION = 'v4.6.0';
+// 19) v4.6.1 - Fix Plan Mensual: honest messages, bulk generate v2, rich slot data
+export const VERSION = 'v4.6.1';
 
 
 
@@ -1050,20 +1050,40 @@ export default function DashboardPage() {
 
     // —— BATCH: Analizar y Planificar (FLUJO COMPLETO v4.5.0) ——
     const handleBatchGenerateScripts = async () => {
+        // v4.6.1: Bulk generate using the new 1-click per-slot endpoint
         const slotsToProcess = planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script);
         if (slotsToProcess.length === 0) {
-            alert('Todas las ideas ya tienen guion generado. Usa "Sincronizar Calendario" para enviarlas.');
+            alert('✅ Todas las ideas seleccionadas ya tienen guion. Pulsa "Sincronizar Calendario" para añadirlas.');
             return;
         }
 
-        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} ideas y enviarlos al calendario?\n\nEsto usará ~${slotsToProcess.length} crédito(s). El proceso es automático y puede tardar unos minutos.`)) return;
+        if (!confirm(`¿Generar guiones para ${slotsToProcess.length} idea(s) seleccionada(s)?\n\nEsto usará ~${slotsToProcess.length} crédito(s). El proceso es individual y garantiza contenido completo.`)) return;
 
-        // Refresh credits first to avoid stale state
-        const freshCredits = await fetchCredits(profile.id);
-        console.log('[v4.5.0 Batch] Fresh credits loaded:', freshCredits);
+        setIsGeneratingMassive(true);
+        setGenerationProgress({ current: 0, total: slotsToProcess.length, status: '🚀 Iniciando generación...' });
 
-        // Run FULL AUTO FLOW: generate + calendar sync + redirect
-        await handleAutoBatchGenerateAndSync(planSlots, Array.from(selectedSlots), freshCredits);
+        let successCount = 0;
+        for (let i = 0; i < slotsToProcess.length; i++) {
+            const slot = slotsToProcess[i];
+            setGenerationProgress({
+                current: i + 1,
+                total: slotsToProcess.length,
+                status: `✍️ Generando guión ${i + 1} de ${slotsToProcess.length}: "${slot.idea_title.substring(0, 40)}..."`
+            });
+
+            try {
+                const result = await handleGenerateSlotScript(slot, true);
+                if (result) successCount++;
+            } catch (err) {
+                console.error(`[v4.6.1 Bulk] Failed for slot ${slot.id}:`, err.message);
+            }
+        }
+
+        setIsGeneratingMassive(false);
+        setGenerationProgress({ current: 0, total: 0, status: '' });
+
+        const slotsWithScript = planSlots.filter(s => selectedSlots.has(s.id) && s.has_script).length;
+        alert(`✅ Generación completada: ${successCount} de ${slotsToProcess.length} guión(es) generado(s) correctamente.\n\n${slotsWithScript > 0 ? `${slotsWithScript} idea(s) ya tenían guion.\n\n` : ''}Ahora puedes "Sincronizar Calendario" para añadirlos al calendario.`);
     }
 
     const handleAutoBatchGenerateAndSync = async (currentSlots, selectedIds, creditsObj = null) => {
@@ -1859,22 +1879,40 @@ export default function DashboardPage() {
                 }
 
                 const hasScriptNow = !!(slot.has_script || (parsedSd && hasRealContent));
-                const safeCalScriptText = calScriptText || `TÍTULO: ${slot.idea_title}\n\n(Guion pendiente de generación)`;
+                // v4.6.1: Rich context when no script yet — no placeholders, real idea data
+                const richIdeaContext = [
+                    `📅 IDEA DEL PLAN MENSUAL`,
+                    `TÍTULO: ${slot.idea_title}`,
+                    ``,
+                    slot.idea_description ? `📝 RESUMEN: ${slot.idea_description}` : '',
+                    `🎯 OBJETIVO: ${slot.goal || 'engagement'}`,
+                    `📌 ENFOQUE: ${slot.content_type || 'educativo'}`,
+                    `📱 PLATAFORMA: ${slot.platform || 'General'}`,
+                    ``,
+                    `💡 Para generar el guion completo, abre esta idea en el calendario y pulsa "Crear Guion con IA".`,
+                ].filter(Boolean).join('\n');
+                const safeCalScriptText = calScriptText || richIdeaContext;
 
+                // v4.6.1: Store slot_id as reference_id so calendar can call /api/slots/{id}/generate-script
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
                     title: slot.idea_title || 'Idea Sin Título',
-                    description: `Tipo: ${slot.content_type || 'idea'}\nObjetivo: ${slot.goal || 'engagement'}\nPlataforma: ${slot.platform || 'General'}`,
+                    description: [
+                        slot.idea_description || '',
+                        `Objetivo: ${slot.goal || 'engagement'}`,
+                        `Enfoque: ${slot.content_type || 'educativo'}`,
+                        `Plataforma: ${slot.platform || 'General'}`,
+                    ].filter(Boolean).join(' · '),
                     event_date: dateStr,
-                    type: hasScriptNow ? 'guion' : (slot.content_type || 'idea'),
-                    status: hasScriptNow ? 'prep' : 'idea',
+                    type: hasScriptNow ? 'guion' : 'idea',
+                    status: hasScriptNow ? 'Guion listo' : 'Idea',
                     platform: slot.platform || 'General',
-                    reference_id: refId,
+                    reference_id: slot.id, // Always the content_slot id for /api/slots/{id}/generate-script
                     has_script: hasScriptNow,
                     script_full_text: safeCalScriptText || '',
-                    notes: safeCalScriptText || '', // Mapeo explícito a notas para texto libre
-                    content: null // Obligar a texto libre (sin cajones)
+                    notes: safeCalScriptText || '',
+                    content: null
                 };
 
                 if (slot.updateExistingEventId) {
@@ -1896,7 +1934,17 @@ export default function DashboardPage() {
             setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
             setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Sincronización completa!' });
 
-            alert(`✅ Plan mensual sincronizado: ${slots.length} ideas con sus guiones y copys añadidos.`);
+            // v4.6.1: Honest message — only claim guiones if they actually exist
+            const withScript = slots.filter(s => s.has_script || (s.script_data && (s.script_data.hook || s.script_data.gancho))).length;
+            const withoutScript = slots.length - withScript;
+            const msgLines = [
+                `✅ Plan mensual sincronizado al calendario.`,
+                ``,
+                `📊 Resumen:`,
+                withScript > 0 ? `  • ${withScript} idea(s) con guion completo ✍️` : '',
+                withoutScript > 0 ? `  • ${withoutScript} idea(s) sin guion aún (pulsa "Crear Guion con IA" en cada una del calendario)` : '',
+            ].filter(l => l !== '').join('\n');
+            alert(msgLines);
             router.push('/dashboard/calendar');
 
         } catch (err) {
@@ -3667,10 +3715,10 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.6.0</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.6.1</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-                                    {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
+                                    {isGeneratingMassive ? `✍️ Generando guión ${generationProgress.current} de ${generationProgress.total}...` : 'Genera ideas de 30 días y crea guiones con 1 clic desde cada idea.'}
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
