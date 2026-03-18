@@ -35,6 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 17) v4.5.2 - Force deploy: Anthropic Model Tier Fallback (Sonnet -> Haiku)
+// Build trigger: 162435
 export const VERSION = 'v4.5.2';
 
 
