@@ -13,12 +13,16 @@ import './landing.css';
    ──────────────────────────────────────── */
 const FAQ_DATA = [
     {
-        q: '¿Necesito saber de marketing para usar WRITI?',
-        a: 'No. Solo define tu marca y tu cliente ideal una vez, y la IA genera ideas y guiones alineados con tu negocio automáticamente.',
+        q: '¿Cómo funciona este planificador de contenido con IA?',
+        a: 'WRITI aprende tu voz de marca y objetivo. Luego, te sugiere temáticas, redacta los guiones completos y los sitúa en un calendario mensual automático listo para ejecutar.',
     },
     {
-        q: '¿Los guiones suenan naturales o como ChatGPT genérico?',
-        a: 'WRITI aprende tu voz de marca desde el perfil de Cerebro IA. Cuanto más la usas, más se adapta a tu estilo y nicho.',
+        q: '¿Es el mejor generador de guiones para YouTube y Reels?',
+        a: 'Sí, porque no arroja texto genérico. Se enfoca en la retención: redacta "hooks" poderosos y estructuras probadas para mantener la atención del espectador en videos cortos.',
+    },
+    {
+        q: '¿Puede sustituir a un Social Media Manager?',
+        a: 'WRITI asume la carga pesada de la lluvia de ideas, redacción de los copys y planificación mensual. Es ideal para negocios que gestionan sus propias redes o creadores que quieren multiplicar su producción.',
     },
     {
         q: '¿Funciona para cualquier nicho?',
@@ -27,11 +31,7 @@ const FAQ_DATA = [
     {
         q: '¿Puedo cancelar cuando quiera?',
         a: 'Sí, sin permanencias ni penalizaciones. Cancelas en un clic desde tu configuración.',
-    },
-    {
-        q: '¿Cuántos guiones puedo generar al mes?',
-        a: 'El plan Pro incluye créditos IA mensuales para ideas y guiones ilimitados hasta agotar tus créditos. Puedes comprar créditos extra si los necesitas.',
-    },
+    }
 ];
 
 /* ────────────────────────────────────────
@@ -405,36 +405,59 @@ export default function LandingPage() {
                         <div className="lp-feature-icon-wrap" style={{ background: 'rgba(157,0,255,0.1)', border: '1px solid rgba(157,0,255,0.2)' }}>
                             🎯
                         </div>
-                        <div className="lp-feature-title">Ideas que realmente encajan con tu negocio</div>
-                        <ul className="lp-feature-bullets">
-                            <li>La IA conoce tu nicho, audiencia y objetivos del mes antes de generar</li>
-                            <li>Mezcla formatos (Reels, posts, stories) según tu frecuencia real</li>
-                            <li>Propone temas de alto impacto basados en tendencias de tu sector</li>
-                        </ul>
+                        <h3 className="lp-feature-title">Ideas Virales para tu Nicho</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Olvídate del contenido genérico. El buscador de ideas estratégico analiza tu cliente ideal y te propone temáticas de alto impacto para ganar seguidores.
+                        </p>
                     </div>
 
                     <div className="lp-feature-card">
                         <div className="lp-feature-icon-wrap" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                             ✍️
                         </div>
-                        <div className="lp-feature-title">Guiones listos, no solo bullets genéricos</div>
-                        <ul className="lp-feature-bullets">
-                            <li>Cada guion incluye gancho de los primeros 3 segundos, desarrollo y CTA</li>
-                            <li>Adaptado a tu tono de marca: directo, emocional, educativo o motivador</li>
-                            <li>Listo para grabar: estructura por bloques, fácil de leer en cámara</li>
-                        </ul>
+                        <h3 className="lp-feature-title">Generador de Guiones para Reels y TikToks</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Nuestra IA redacta el gancho (hook) de los primeros 3 segundos, estructura el cuerpo del video y añade el CTA. Todo adaptado a tu tono de marca.
+                        </p>
                     </div>
 
                     <div className="lp-feature-card">
                         <div className="lp-feature-icon-wrap" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
                             📆
                         </div>
-                        <div className="lp-feature-title">Calendario inteligente que reparte todo el mes</div>
-                        <ul className="lp-feature-bullets">
-                            <li>Distribuye automáticamente tus publicaciones por días y plataformas</li>
-                            <li>Puedes arrastrar y reorganizar eventos en el calendario en tiempo real</li>
-                            <li>Ver de un vistazo qué has publicado, qué tienes pendiente y qué falta</li>
-                        </ul>
+                        <h3 className="lp-feature-title">Plan de Contenido Mensual en 1 Clic</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Distribuye automáticamente tus publicaciones (Reels, Stories, Carruseles) en un calendario visual inteligente para que siempre sepas qué publicar.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <div className="lp-divider" />
+
+            {/* ═══ CASOS DE USO ═══ */}
+            <section className="lp-section">
+                <span className="lp-section-label">Para quién es</span>
+                <h2 className="lp-section-title">El asistente de marketing ideal para tu negocio digital</h2>
+                
+                <div className="lp-features" style={{ marginTop: '40px' }}>
+                    <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Creadores de Contenido</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Aumenta tu frecuencia de publicación sin burnout. Genera 30 guiones de contenido orgánico en una tarde y dedícate solo a grabar.
+                        </p>
+                    </div>
+                    <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Coaches y Consultores</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Demuestra tu autoridad. Crea contenido educativo profundo, hilado con inteligencia artificial, para captar leads cualificados y vender tus mentorías.
+                        </p>
+                    </div>
+                    <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Agencias y Community Managers</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                            Gestiona el mes de 10 clientes distintos en tiempo récord. Cada perfil tiene su propio "Cerebro IA" para mantener la voz de marca perfecta.
+                        </p>
                     </div>
                 </div>
             </section>

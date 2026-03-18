@@ -5,8 +5,8 @@
 import './globals.css';
 
 export const metadata = {
-    title: 'WRITI.AI | De Idea a Guion Viral en Segundos',
-    description: 'Genera 5 guiones listos para grabar en 30 segundos. Para creadores y agencias. Prueba gratis sin tarjeta.',
+    title: 'Writi.ai | Planificador de Contenido e Ideas con IA para Creadores',
+    description: 'Crea tu calendario mensual en minutos. WRITI es el generador de contenido con IA que te da ideas virales y escribe los guiones para tus Reels, TikToks y posts.',
 };
 // v14
 export const viewport = {
