@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 17) v4.5.1 - Fix: Anthropic Model Tier Fallback (Sonnet -> Haiku)
-export const VERSION = 'v4.5.1';
+// 17) v4.5.2 - Force deploy: Anthropic Model Tier Fallback (Sonnet -> Haiku)
+export const VERSION = 'v4.5.2';
 
 
 
