@@ -324,8 +324,8 @@ export default function LibraryPage() {
                                         />
                                         <button
                                             onClick={() => {
-                                                setScriptToEdit(item);
-                                                setIsEditorOpen(true);
+                                                const ideaId = item.metadata?.slot_id || item.id;
+                                                router.push(`/dashboard/idea/${ideaId}`);
                                             }}
                                             className="btn-secondary"
                                             style={{ padding: '6px 16px', fontSize: '0.8rem', background: 'rgba(255, 255, 255, 0.05)', color: 'white' }}
