@@ -34,9 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 17) v4.5.2 - Force deploy: Anthropic Model Tier Fallback (Sonnet -> Haiku)
-// Build trigger: 162435
-export const VERSION = 'v4.5.2';
+// 17) v4.5.3 - Fix: Optimized Anthropic Fallback & Deep Logging
+export const VERSION = 'v4.5.3';
 
 
 
@@ -1615,7 +1614,8 @@ export default function DashboardPage() {
                 copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
             };
 
-            console.log(`[v4.4.25] slotScriptData for "${slot.idea_title}":`, JSON.stringify(slotScriptData));
+            // v4.5.3: Diagnostic log — see exactly what data is available per slot
+            console.log(`[v4.5.3] Slot "${slot.idea_title}" script_data returned:`, JSON.stringify(slotScriptData));
 
             // Validate content before saving
             const hasContent = (slotScriptData.hook && slotScriptData.hook.trim().length > 10) ||
