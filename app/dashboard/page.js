@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 17) v4.5.3 - Fix: Optimized Anthropic Fallback & Deep Logging
-export const VERSION = 'v4.5.3';
+// 17) v4.5.4 - Fix: Final Lucide alignment (Loader2/CheckCircle2)
+export const VERSION = 'v4.5.4';
 
 
 
@@ -2118,7 +2118,7 @@ export default function DashboardPage() {
                                                                 color: '#7ECECA', transition: '0.2s'
                                                             }}
                                                         >
-                                                            {polishingField === 'brain_biography_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {polishingField === 'brain_biography_edit' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                             {aiRefineInstructions['brain_biography_edit'] ? 'Aplicar' : 'Mejorar'}
                                                         </button>
                                                     </div>
@@ -2151,7 +2151,7 @@ export default function DashboardPage() {
                                                                 color: '#7ECECA', transition: '0.2s'
                                                             }}
                                                         >
-                                                            {polishingField === 'brain_sells_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {polishingField === 'brain_sells_edit' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                             {aiRefineInstructions['brain_sells_edit'] ? 'Aplicar' : 'Mejorar'}
                                                         </button>
                                                     </div>
@@ -2184,7 +2184,7 @@ export default function DashboardPage() {
                                                                 color: '#7ECECA', transition: '0.2s'
                                                             }}
                                                         >
-                                                            {polishingField === 'brain_helps_edit' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {polishingField === 'brain_helps_edit' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                             {aiRefineInstructions['brain_helps_edit'] ? 'Aplicar' : 'Mejorar'}
                                                         </button>
                                                     </div>
@@ -2245,7 +2245,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'brain_biography' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'brain_biography' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['brain_biography'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2278,7 +2278,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'brain_sells' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'brain_sells' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['brain_sells'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2311,7 +2311,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'brain_helps' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'brain_helps' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['brain_helps'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2450,7 +2450,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'experienciaReal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'experienciaReal' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['experienciaReal'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2493,7 +2493,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'opinionPersonal' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'opinionPersonal' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['opinionPersonal'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2546,7 +2546,7 @@ export default function DashboardPage() {
                                                     color: '#7ECECA', transition: '0.2s'
                                                 }}
                                             >
-                                                {polishingField === 'victory' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                                {polishingField === 'victory' ? <Loader size={10} className="animate-spin" /> : <Sparkles size={10} />}
                                                 {aiRefineInstructions['victory'] ? 'Ok' : 'IA'}
                                             </button>
                                         </div>
@@ -2582,7 +2582,7 @@ export default function DashboardPage() {
                                                     color: '#7ECECA', transition: '0.2s'
                                                 }}
                                             >
-                                                {polishingField === 'opinion' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                                                {polishingField === 'opinion' ? <Loader size={10} className="animate-spin" /> : <Sparkles size={10} />}
                                                 {aiRefineInstructions['opinion'] ? 'Ok' : 'IA'}
                                             </button>
                                         </div>
@@ -2746,7 +2746,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'businessOffer' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'businessOffer' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['businessOffer'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2812,7 +2812,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'mainPainPoint' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'mainPainPoint' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['mainPainPoint'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2905,7 +2905,7 @@ export default function DashboardPage() {
                                                         color: '#7ECECA', transition: '0.2s'
                                                     }}
                                                 >
-                                                    {polishingField === 'keyThemes' ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    {polishingField === 'keyThemes' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                     {aiRefineInstructions['keyThemes'] ? 'Aplicar' : 'Mejorar'}
                                                 </button>
                                             </div>
@@ -2949,7 +2949,7 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Añadir ideas de tu banco (Opcional)</h3>
-                                        {loadingRecommended && <Loader2 className="animate-spin" size={14} color="var(--text-muted)" />}
+                                        {loadingRecommended && <Loader className="animate-spin" size={14} color="var(--text-muted)" />}
                                     </div>
                                     <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
                                 </div>
@@ -3015,7 +3015,7 @@ export default function DashboardPage() {
                                                         }}>
                                                             {idea.source === 'ai' ? '✨ IA SUGERIDA' : '📁 GUARDADA'}
                                                         </span>
-                                                        {isSelected && <CheckCircle2 size={16} color="#7ECECA" />}
+                                                        {isSelected && <CheckCircle size={16} color="#7ECECA" />}
                                                     </div>
                                                     <h4 style={{ fontSize: '0.95rem', fontWeight: 900, marginBottom: '8px', lineHeight: '1.2', color: 'white' }}>
                                                         {idea.displayTitle || (idea.descripcion ? (idea.descripcion.substring(0, 50) + '...') : 'Idea estratégica')}
@@ -3097,7 +3097,7 @@ export default function DashboardPage() {
                             <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                 <button onClick={() => setPlanWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={handleAnalyzeBrief} disabled={isAnalyzingBrief} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>
-                                    {isAnalyzingBrief ? <><Loader2 size={20} className="animate-spin" /> Analizando... </> : 'Analizar con IA para Continuar →'}
+                                    {isAnalyzingBrief ? <><Loader size={20} className="animate-spin" /> Analizando... </> : 'Analizar con IA para Continuar →'}
                                 </button>
                             </div>
                         </div>
@@ -3257,7 +3257,7 @@ export default function DashboardPage() {
                                                     gap: '8px'
                                                 }}
                                             >
-                                                {refiningBlock === activeBlockChat ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                                {refiningBlock === activeBlockChat ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                 Mejorar parte (+1 crédito)
                                             </button>
                                         </div>
@@ -3412,7 +3412,7 @@ export default function DashboardPage() {
                                                             transition: '0.2s'
                                                         }}
                                                     >
-                                                        {refiningBlock === `${i}-gancho` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                                        {refiningBlock === `${i}-gancho` ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                     </button>
                                                 </div>
                                             </div>
@@ -3483,7 +3483,7 @@ export default function DashboardPage() {
                                                                     opacity: 0.6
                                                                 }}
                                                             >
-                                                                {refiningBlock === `${i}-punto${idx + 1}` ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                                                {refiningBlock === `${i}-punto${idx + 1}` ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -3511,7 +3511,7 @@ export default function DashboardPage() {
                                                         cursor: 'pointer'
                                                     }}
                                                 >
-                                                    {refiningBlock === `${i}-cta` ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                                    {refiningBlock === `${i}-cta` ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                 </button>
                                             </div>
                                             <input
@@ -3628,7 +3628,7 @@ export default function DashboardPage() {
                                                     className="btn-action-glass" 
                                                     style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
                                                 >
-                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '📢 Más coloquial'}
+                                                    {refiningBlock === `${i}-full` ? <Loader size={14} className="animate-spin" /> : '📢 Más coloquial'}
                                                 </button>
                                                 <button 
                                                     onClick={() => handlePolishScript(i, 'Hazlo más directo, elimina toda la "motivación barata" y ve al grano con datos u opiniones fuertes.')}
@@ -3636,7 +3636,7 @@ export default function DashboardPage() {
                                                     className="btn-action-glass" 
                                                     style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
                                                 >
-                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '🎯 Más directo / Sin humo'}
+                                                    {refiningBlock === `${i}-full` ? <Loader size={14} className="animate-spin" /> : '🎯 Más directo / Sin humo'}
                                                 </button>
                                                 <button 
                                                     onClick={() => handlePolishScript(i, 'Integra mucho más la historia personal y opinión que proporcioné en el formulario para que no suene a IA.')}
@@ -3644,7 +3644,7 @@ export default function DashboardPage() {
                                                     className="btn-action-glass" 
                                                     style={{ fontSize: '0.75rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
                                                 >
-                                                    {refiningBlock === `${i}-full` ? <Loader2 size={14} className="animate-spin" /> : '👤 Más historia propia'}
+                                                    {refiningBlock === `${i}-full` ? <Loader size={14} className="animate-spin" /> : '👤 Más historia propia'}
                                                 </button>
                                             </div>
                                         </div>
@@ -3663,7 +3663,7 @@ export default function DashboardPage() {
                                             { id: `copy-${i}`, icon: <Copy size={16} />, label: 'Copiar Todo', action: () => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${s.desarrollo.join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, i) },
                                             {
                                                 id: `save-${i}`,
-                                                icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle2 size={16} color="#7ECECA" /> : <Bookmark size={16} />,
+                                                icon: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle size={16} color="#7ECECA" /> : <Bookmark size={16} />,
                                                 label: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar en Biblioteca',
                                                 action: () => handleSaveScript(s)
                                             },
@@ -3753,7 +3753,7 @@ export default function DashboardPage() {
                                             className="btn-secondary"
                                             style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
                                         >
-                                            {sendingToCalendar ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                            {sendingToCalendar ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
                                             {sendingToCalendar ? 'Sincronizando...' : `Sincronizar Calendario (${selectedSlots.size})`}
                                         </button>
                                     </>
@@ -3776,7 +3776,7 @@ export default function DashboardPage() {
                             <div className="premium-card" style={{ padding: '32px', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <Loader2 className="animate-spin" size={20} color="#7ECECA" />
+                                        <Loader className="animate-spin" size={20} color="#7ECECA" />
                                         <h4 style={{ fontWeight: 800 }}>{generationProgress.status}</h4>
                                     </div>
                                     <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{Math.round((generationProgress.current / generationProgress.total) * 100)}%</span>
@@ -3908,7 +3908,7 @@ export default function DashboardPage() {
                                                     className="btn-primary"
                                                     style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1, whiteSpace: 'nowrap' }}
                                                 >
-                                                    {generatingSlotId === slot.id ? <><Loader2 className="animate-spin" size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generando...</> : <><Sparkles size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generar Guión</>}
+                                                    {generatingSlotId === slot.id ? <><Loader className="animate-spin" size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generando...</> : <><Sparkles size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generar Guión</>}
                                                 </button>
                                             ) : (
                                                 <button
@@ -4011,7 +4011,7 @@ export default function DashboardPage() {
                                                                 transition: '0.2s'
                                                             }}
                                                         >
-                                                            {isSaved ? <><CheckCircle2 size={18} /> Guardado en Biblioteca</> : <><Bookmark size={18} /> Guardar en Biblioteca</>}
+                                                            {isSaved ? <><CheckCircle size={18} /> Guardado en Biblioteca</> : <><Bookmark size={18} /> Guardar en Biblioteca</>}
                                                         </button>
                                                         <div style={{ display: 'flex', gap: '10px' }}>
                                                             <button
@@ -4256,7 +4256,7 @@ export default function DashboardPage() {
                                     className="btn-primary"
                                     style={{ flex: 2, opacity: extraIdeasModal.loading ? 0.7 : 1 }}
                                 >
-                                    {extraIdeasModal.loading ? <><Loader2 className="animate-spin" size={16} style={{ marginRight: '8px' }} /> Generando ideas...</> : <>Generar Ideas <Sparkles size={16} style={{ marginLeft: '8px' }} /></>}
+                                    {extraIdeasModal.loading ? <><Loader className="animate-spin" size={16} style={{ marginRight: '8px' }} /> Generando ideas...</> : <>Generar Ideas <Sparkles size={16} style={{ marginLeft: '8px' }} /></>}
                                 </button>
                             </div>
                         </div>
@@ -4307,7 +4307,7 @@ export default function DashboardPage() {
                                                 gap: '6px'
                                             }}
                                         >
-                                            {isSuggestingAI ? <Loader2 className="animate-spin" size={12} /> : <RefreshCcw size={12} />}
+                                            {isSuggestingAI ? <Loader className="animate-spin" size={12} /> : <RefreshCcw size={12} />}
                                             Analizar con IA
                                         </button>
                                     </div>
@@ -4366,7 +4366,7 @@ export default function DashboardPage() {
                                     style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                     disabled={isPlanningLoading}
                                 >
-                                    {isPlanningLoading ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                                    {isPlanningLoading ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
                                     {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
                                 </button>
                             </div>
