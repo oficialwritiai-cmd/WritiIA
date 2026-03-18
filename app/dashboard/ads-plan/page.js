@@ -558,7 +558,7 @@ export default function AdsPlanPage() {
                         <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
                             <Megaphone size={28} color="#7ECECA" />
                             Plan de Ads — {ads.length} Guiones
-                            <span style={{ fontSize: '0.65rem', padding: '3px 10px', background: 'rgba(126,206,202,0.1)', color: '#7ECECA', borderRadius: '6px', border: '1px solid rgba(126,206,202,0.2)' }}>v4.2.0</span>
+                            <span style={{ fontSize: '0.65rem', padding: '3px 10px', background: 'rgba(126,206,202,0.1)', color: '#7ECECA', borderRadius: '6px', border: '1px solid rgba(126,206,202,0.2)' }}>v4.5.2</span>
                         </h2>
                         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', marginTop: '4px' }}>Revisa, edita y guarda tus guiones de anuncios.</p>
                     </div>
@@ -698,7 +698,7 @@ export default function AdsPlanPage() {
                 <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                     <Megaphone size={32} color="#7ECECA" />
                     Plan Ads & Guiones
-                    <span style={{ fontSize: '0.65rem', padding: '3px 10px', background: 'rgba(126,206,202,0.1)', color: '#7ECECA', borderRadius: '6px', border: '1px solid rgba(126,206,202,0.2)' }}>v4.2.0</span>
+                    <span style={{ fontSize: '0.65rem', padding: '3px 10px', background: 'rgba(126,206,202,0.1)', color: '#7ECECA', borderRadius: '6px', border: '1px solid rgba(126,206,202,0.2)' }}>v4.5.2</span>
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>Crea campañas de anuncios completas con guiones, copys y títulos listos para usar.</p>
             </div>

@@ -1875,11 +1875,11 @@ export default function DashboardPage() {
                 const cpPost = parsedSd?.copy_post || {};
                 const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
 
-                // v4.4.24: Diagnostic log — see exactly what data is available per slot
-                console.log(`[v4.4.24 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
-                console.log(`[v4.4.24 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
+                // v4.5.2: Diagnostic log — see exactly what data is available per slot
+                console.log(`[v4.5.2 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
+                console.log(`[v4.5.2 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
 
-                // v4.4.24: GUARD — Only build the script text if we actually have content
+                // v4.5.2: GUARD — Only build the script text if we actually have content
                 const hasRealContent = (hookVal && hookVal.trim().length > 10) ||
                                        (desArr.length > 0 && desArr.some(d => d && d.trim().length > 10)) ||
                                        (ctaVal && ctaVal.trim().length > 10);

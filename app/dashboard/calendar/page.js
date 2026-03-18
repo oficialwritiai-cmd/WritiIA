@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.6.0 (v4.4.21)
+// Calendar Page v2.6.0 (v4.5.2)
 
 export default function CalendarPage() {
     const router = useRouter();
@@ -159,7 +159,7 @@ export default function CalendarPage() {
         setTempColor(loadedColor);
         setIsPanelOpen(true);
 
-        // EXTRA ROBUST FALLBACK (v4.4.14): If notes are empty but it's marked as having a script, try fetching it.
+        // EXTRA ROBUST FALLBACK (v4.5.2): If notes are empty but it's marked as having a script, try fetching it.
         if (!loadedNotes && event.has_script) {
             setLoadingScript(true);
             try {
@@ -185,7 +185,7 @@ export default function CalendarPage() {
                     setTempNotes('');
                 }
             } catch (err) {
-                console.warn("[v4.4.14 Fallback] Could not recover script:", err);
+                console.warn("[v4.5.2 Fallback] Could not recover script:", err);
                 setTempNotes('');
             } finally {
                 setLoadingScript(false);
