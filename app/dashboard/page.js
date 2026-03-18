@@ -1032,7 +1032,9 @@ export default function DashboardPage() {
             // 2. Refresh credits FIRST, then pass them directly to avoid stale state race conditions
             const freshCredits = await fetchCredits(profile.id);
             window.dispatchEvent(new CustomEvent('refresh-profile'));
-            console.log(`[v4.5.0] Fresh credits: ${freshCredits.total - freshCredits.used} available`);
+            if (typeof window !== 'undefined') {
+                console.log(`[v4.5.2] Fresh credits: ${freshCredits.total - freshCredits.used} available`);
+            }
 
             // 3. Trigger FULL AUTO FLOW immediately (no setTimeout)
             if (freshCredits.total > 0) {
@@ -1109,7 +1111,9 @@ export default function DashboardPage() {
             setIsGeneratingMassive(false);
             // Alert is shown by handleSendPlanToCalendar which also redirects to calendar
         } catch (err) {
-            console.error('[v4.5.0 AutoSync] Fatal error:', err);
+            if (typeof window !== 'undefined') {
+                console.error('[v4.5.2 AutoSync] Fatal error:', err);
+            }
             setIsGeneratingMassive(false);
             alert('❌ Error al sincronizar: ' + err.message);
         }
@@ -1246,7 +1250,9 @@ export default function DashboardPage() {
             }));
         }
 
-        console.log(`[v4.5.0] runBatchGeneration DONE. ${successCount}/${slotsToProcess.length} generated. Returning ${finalSlots.length} slots.`);
+        if (typeof window !== 'undefined') {
+            console.log(`[v4.5.2] runBatchGeneration DONE. ${successCount}/${slotsToProcess.length} generated. Returning ${finalSlots.length} slots.`);
+        }
         return finalSlots; // ALWAYS return array — never return false or true
     };
 
