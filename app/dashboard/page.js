@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 17) v4.5.4 - Fix: Final Lucide alignment (Loader2/CheckCircle2)
-export const VERSION = 'v4.5.4';
+// 18) v4.6.0 - Plan Mensual v2: 1-click per-slot script generation
+export const VERSION = 'v4.6.0';
 
 
 
@@ -1559,137 +1559,90 @@ export default function DashboardPage() {
     const handleGenerateSlotScript = async (slot, silent = false) => {
         setGeneratingSlotId(slot.id);
 
-        try {
-            console.log(`[v4.4.25] Generating script for slot: "${slot.idea_title}" (id=${slot.id})`);
-            console.log(`[v4.4.25] specificDetails sent: "${slot.idea_description}"`);
+        // v4.6.0: Update visual state immediately
+        setPlanSlots(prev => prev.map(s =>
+            s.id === slot.id ? { ...s, slot_status: 'script_generating' } : s
+        ));
 
-            const res = await fetch('/api/generate-scripts', {
+        try {
+            console.log(`[v4.6.0] Generating script for slot: "${slot.idea_title}" (id=${slot.id})`);
+
+            const res = await fetch(`/api/slots/${slot.id}/generate-script`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    topic: slot.idea_title,
-                    platform: slot.platform,
-                    tone: toneBrand || 'Profesional',
-                    goal: slot.goal,
-                    count: 1,
-                    videoDuration: videoDuration || '60 seg',
-                    ideas: `Enfoque: ${slot.content_type}${keyThemes ? `. Temas clave: ${keyThemes}` : ''}`,
-                    specificDetails: slot.idea_description,
                     userId: profile?.id,
-                    projectId: activeProject?.id,
-                    businessOffer,
-                    targetAudienceType,
-                    mainPainPoint,
-                    brandMantra,
-                    experienciaReal: experienciaReal || keyThemes,
-                    opinionPersonal: opinionPersonal || brandMantra,
-                    faseCreador,
-                    ctaIdea: ctaIdea || 'Inscríbete o compra ahora'
+                    platform: slot.platform || 'Reels',
+                    videoDuration: videoDuration || '60 seg',
+                    focus: slot.content_type || 'autoridad',
+                    ctaIdea: ctaIdea || null,
                 }),
             });
 
             if (res.status === 402) {
                 window.dispatchEvent(new CustomEvent('show-no-credits'));
+                setPlanSlots(prev => prev.map(s =>
+                    s.id === slot.id ? { ...s, slot_status: 'idea_only' } : s
+                ));
                 return null;
             }
 
-            if (!res.ok) throw new Error('Error al generar el guión individual');
             const data = await res.json();
 
-            if (!data.scripts || !Array.isArray(data.scripts) || data.scripts.length === 0) {
-                console.error('[v4.4.25] No scripts in response:', data);
-                throw new Error('No se recibió ningún guion. Intenta de nuevo.');
+            if (!res.ok || !data.ok) {
+                console.error('[v4.6.0] Script generation failed:', data);
+                setPlanSlots(prev => prev.map(s =>
+                    s.id === slot.id ? { ...s, slot_status: 'script_error' } : s
+                ));
+                if (!silent) alert(data.error || 'Error al generar el guión. Inténtalo de nuevo.');
+                return null;
             }
 
-            const generatedScript = data.scripts[0];
-            console.log('[v4.4.25] RAW generated script:', JSON.stringify(generatedScript));
+            const script = data.script;
+            console.log('[v4.6.0] Script generated successfully:', script?.title);
 
+            // Build local script_data for immediate display (no page reload needed)
             const slotScriptData = {
-                hook: generatedScript.gancho || generatedScript.hook || '',
-                gancho: generatedScript.gancho || generatedScript.hook || '',
-                desarrollo: Array.isArray(generatedScript.desarrollo) ? generatedScript.desarrollo
-                    : (generatedScript.desarrollo ? [generatedScript.desarrollo] : []),
-                cta: generatedScript.cta || generatedScript.cierre || '',
-                cierre: generatedScript.cierre || generatedScript.cta || '',
-                copy_post: generatedScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                hook: script.hook || '',
+                gancho: script.hook || '',
+                desarrollo: Array.isArray(script.structure)
+                    ? script.structure.map(p => `${p.point}: ${p.detail}`)
+                    : [],
+                cta: script.cta || '',
+                cierre: script.cta || '',
+                copy_post: script.post_copy || { headline: '', body: '', hashtags: [] },
+                notes: script.notes || '',
             };
 
-            // v4.5.3: Diagnostic log — see exactly what data is available per slot
-            console.log(`[v4.5.3] Slot "${slot.idea_title}" script_data returned:`, JSON.stringify(slotScriptData));
-
-            // Validate content before saving
-            const hasContent = (slotScriptData.hook && slotScriptData.hook.trim().length > 10) ||
-                               (slotScriptData.desarrollo.length > 0 && slotScriptData.desarrollo[0]?.trim().length > 10);
-
-            if (!hasContent) {
-                console.warn(`[v4.4.25] Empty script data — AI returned empty fields for "${slot.idea_title}". Using content guard.`);
-            }
-
-            const desarrolloStr = slotScriptData.desarrollo.map((d, i) => `${i + 1}. ${d}`).join('\n');
-            const copyTxt = slotScriptData.copy_post?.titulo || slotScriptData.copy_post?.descripcion_larga
-                ? `\n\n📱 COPY:\n${slotScriptData.copy_post.titulo || ''}\n${slotScriptData.copy_post.descripcion_larga || ''}\n\nHashtags: ${Array.isArray(slotScriptData.copy_post.hashtags) ? slotScriptData.copy_post.hashtags.join(' ') : ''}`
-                : '';
-            const fullContent = `🎯 GANCHO\n${slotScriptData.hook}\n\n📝 DESARROLLO\n${desarrolloStr}\n\n🔥 CTA\n${slotScriptData.cta}${copyTxt}`;
-
-            // Save to scripts table (for library visibility)
-            const insertPayload = {
-                user_id: profile.id,
-                content: fullContent,
-                platform: slot.platform,
-                topic: slot.idea_title,
-                tone: toneBrand || 'Profesional',
-                is_saved: true,
-                project_id: activeProject?.id,
-            };
-            if (slot.scheduled_date) insertPayload.scheduled_date = slot.scheduled_date;
-
-            const { data: insertedScript, error: scriptErr } = await supabase.from('scripts').insert(insertPayload).select().single();
-            if (scriptErr) console.warn('[v4.4.25] scripts insert error:', scriptErr);
-
-            // Save to library
-            try {
-                await saveToLibrary({
-                    userId: profile.id,
-                    type: 'guion',
-                    platform: slot.platform || 'General',
-                    goal: slot.goal || 'engagement',
-                    titulo: slot.idea_title || 'Guión del Plan',
-                    script_full_text: fullContent,
-                    content: {
-                        video_duration: videoDuration || '60 seg',
-                        hook: slotScriptData.hook,
-                        desarrollo: slotScriptData.desarrollo,
-                        cierre: slotScriptData.cta,
-                        cta: slotScriptData.cta,
-                        copy_post: slotScriptData.copy_post
-                    },
-                    tags: ['guion', slot.platform, 'plan-mensual'].filter(Boolean),
-                    projectId: activeProject?.id
-                });
-                console.log(`[v4.4.25] Saved to library: "${slot.idea_title}"`);
-            } catch (libSaveErr) {
-                console.warn('[v4.4.25] Library save error (non-fatal):', libSaveErr);
-            }
-
-            // NOTE: We intentionally skip content_slots.update() here because
-            // plan slots have client-side IDs that don't exist in the DB yet.
-            // script_data is returned in memory and used directly by the calendar sync.
-
+            // Update React state for immediate visual feedback
             setPlanSlots(prev => prev.map(s => {
-                if (s.id === slot.id) return { ...s, has_script: true, script_id: insertedScript?.id, script_data: slotScriptData };
+                if (s.id === slot.id) {
+                    return {
+                        ...s,
+                        has_script: true,
+                        slot_status: 'script_ready',
+                        script_id: script.id || null,
+                        script_data: slotScriptData,
+                    };
+                }
                 return s;
             }));
 
-            return { script: insertedScript, script_data: slotScriptData };
+            return { script, script_data: slotScriptData };
 
         } catch (err) {
             if (!silent) alert(err.message);
-            console.error('[v4.4.25] Error generating script:', err);
+            console.error('[v4.6.0] Error generating script:', err);
+            setPlanSlots(prev => prev.map(s =>
+                s.id === slot.id ? { ...s, slot_status: 'script_error' } : s
+            ));
             return null;
         } finally {
             setGeneratingSlotId(null);
         }
     };
+
+
 
     const handleScheduleSlot = async (slotId, dateValue) => {
         try {
@@ -3714,7 +3667,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.4.25</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.6.0</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? '🚀 Automatización en curso: Generando guiones y sincronizando...' : 'Todo tu contenido generado, escrito y agendado automáticamente.'}
