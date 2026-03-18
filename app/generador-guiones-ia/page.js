@@ -659,9 +659,9 @@ export default function LandingPage() {
                     <p>© 2026 WRITI. Todos los derechos reservados.</p>
                 </div>
                 <div className="lp-footer-links">
-                    <a href="#">Privacidad</a>
-                    <a href="#">Términos</a>
-                    <a href="#">Contacto</a>
+                    <Link href="/privacidad">Privacidad</Link>
+                    <Link href="/terminos">Términos</Link>
+                    <a href="mailto:hi@writi-ai.com">Contacto</a>
                 </div>
             </footer>
 
