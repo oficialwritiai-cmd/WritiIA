@@ -301,16 +301,14 @@ export default function IdeaPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sesión de usuario no encontrada.');
 
-            // 1. Preparar datos del guion
+            // 1. Preparar datos del guion (v5.1.4)
             const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
                 const lines = block.split('\n');
                 const firstLine = lines[0] || '';
-                // Intentar separar "Punto: Detalle" o simplemente usar la primera línea como título
-                const [pointTitle, ...rest] = firstLine.includes(':') ? firstLine.split(':') : [firstLine, ''];
-                return { 
-                    point: pointTitle.replace(/^\d+\.\s*/, '').trim() || `Sección ${i + 1}`, 
-                    detail: (rest.join(':').trim() + '\n' + lines.slice(1).join('\n')).trim() || firstLine 
-                };
+                const hasColon = firstLine.includes(':') && firstLine.length < 80;
+                const point = hasColon ? firstLine.split(':')[0].replace(/^\d+\.\s*/, '').trim() : `Sección ${i + 1}`;
+                const detail = hasColon ? (firstLine.split(':').slice(1).join(':').trim() + '\n' + lines.slice(1).join('\n')).trim() : block.trim();
+                return { point, detail: detail || firstLine };
             });
 
             const postCopy = { 
@@ -340,22 +338,27 @@ export default function IdeaPage() {
                 notes
             ].filter(Boolean).join('\n');
 
-            let currentScriptId = script?.id || slot?.script_id;
-            const realSlotId = sourceType === 'library' ? (slot?.metadata?.slot_id || null) : slot?.id;
-            const realLibraryId = sourceType === 'library' ? slot?.id : (slot?.metadata?.library_id || null);
-
             const commonScriptData = {
                 hook,
-                desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
+                desarrollo: structureArr.map(s => s.point.startsWith('Sección') ? s.detail : `${s.point}: ${s.detail}`),
                 cta: ctaText,
                 copy_post: postCopy,
                 notes,
                 titulo_guion: title,
-                descripcion: description
+                descripcion: description,
+                // v5.1.4: Mapeo extendido para máxima compatibilidad con componentes legacy
+                gancho: hook,
+                hook_principal: hook,
+                cierre: ctaText,
+                titulo_idea: title,
+                full_text: fullContentText
             };
 
-            // 2. Sincronizar tabla 'scripts'
+            let currentScriptId = script?.id || slot?.script_id;
             let finalScriptId = currentScriptId;
+            const realSlotId = sourceType === 'library' ? (slot?.metadata?.slot_id || null) : slot?.id;
+            const realLibraryId = sourceType === 'library' ? slot?.id : (slot?.metadata?.library_id || null);
+
             const scriptTableUpdates = {
                 title,
                 hook,
@@ -368,6 +371,7 @@ export default function IdeaPage() {
                 updated_at: new Date().toISOString()
             };
 
+            // 2. Sincronizar tabla 'scripts'
             if (finalScriptId) {
                 await supabase.from('scripts').update(scriptTableUpdates).eq('id', finalScriptId);
             } else if (realSlotId && sourceType !== 'library') {
@@ -435,7 +439,6 @@ export default function IdeaPage() {
                     script_full_text: fullContentText,
                     content: {
                         ...commonScriptData,
-                        // Añadimos campos específicos que la biblioteca suele esperar
                         titulo_guion: title,
                         descripcion: description,
                         cierre: ctaText
@@ -450,12 +453,15 @@ export default function IdeaPage() {
                 }
             }
 
+            // Force Refresh
+            router.refresh();
+
             // Visual feedback
             setSaving(false);
             const btn = document.getElementById('btn-save-notion');
             if (btn) {
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '✅ Guardado v5.1.3';
+                btn.innerHTML = '✅ Guardado v5.1.4';
                 btn.style.color = '#10B981';
                 setTimeout(() => {
                     if (btn) {
