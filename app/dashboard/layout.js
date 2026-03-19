@@ -1,7 +1,7 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-19 11:35:00
- * Version: v4.9.1
+ * FORCE BUILD: 2026-03-19 12:55:00
+ * Version: v4.9.5
  */
 
 import { useState, useEffect } from 'react';
@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v4.9.1: Dynamic Idea Bank + SEO Hooks + Total Isolation
+    // v4.9.5: Authorization Fix + Security Audit
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v4.9.1 LOADED — DYNAMIC IDEAS LIVE', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v4.9.5 LOADED — SECURITY PATCH ACTIVE', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -312,7 +312,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v4.9.1)
+                    {loadingStatus} (v4.9.5)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -490,7 +490,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v4.9.1
+                            v4.9.5
                         </div>                    </div>
                 </aside>
 
@@ -641,7 +641,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.9.1</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.9.5</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
