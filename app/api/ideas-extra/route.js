@@ -13,9 +13,9 @@ const limiter = rateLimit({
 
 export async function POST(request) {
     try {
-        const session = await getServerSession();
-        if (!session) return unauthorized();
-        const verifiedUserId = session.userId;
+        const { user, supabase: sessionSupabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+        const verifiedUserId = user.id;
 
         const ip = (request.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
 
@@ -48,7 +48,7 @@ export async function POST(request) {
 
         // Verify project access
         if (projectId) {
-            const hasAccess = await verifyProjectAccess(verifiedUserId, projectId);
+            const hasAccess = await verifyProjectAccess(sessionSupabase, projectId, verifiedUserId);
             if (!hasAccess) return forbidden();
         }
 

@@ -274,11 +274,11 @@ export async function POST(request) {
         const verifiedUserId = user.id;
 
         // Credit Check & Charge (Dynamic Cost)
-        // const totalCost = getScriptCost(videoDuration, count || 1);
-        // const creditResult = await chargeCredits(supabase, userId, totalCost, 'generate_scripts', projectId);
-        // if (!creditResult.success) {
-        //    return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
-        // }
+        const totalCost = getScriptCost(videoDuration, count || 1);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, totalCost, 'generate_scripts', projectId);
+        if (!creditResult.success) {
+            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
+        }
 
         // Fetch Brand Brain: project-scoped first, fallback to global
         let brandBrain = null;
@@ -294,7 +294,7 @@ export async function POST(request) {
         }
 
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
         }
 

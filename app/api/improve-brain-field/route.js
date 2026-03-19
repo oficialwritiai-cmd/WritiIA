@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 export const maxDuration = 60; // Allow more time for AI generation
@@ -8,14 +9,14 @@ export const maxDuration = 60; // Allow more time for AI generation
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { fieldKey, currentText, instruction, brainContext, userId } = body;
+        const { fieldKey, currentText, instruction, brainContext } = body;
+
+        const { user, supabase: sessionSupabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+        const verifiedUserId = user.id;
 
         if (!currentText) {
             return NextResponse.json({ error: 'Falta el texto actual.' }, { status: 400 });
-        }
-
-        if (!userId) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
         }
 
         const supabase = createClient(
@@ -24,7 +25,7 @@ export async function POST(req) {
         );
 
         // 2. Charge credits
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'improve_brain_field');
+        const creditResult = await chargeCredits(sessionSupabase, verifiedUserId, CREDIT_COSTS.POLISH, 'improve_brain_field');
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
