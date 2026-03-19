@@ -1053,7 +1053,7 @@ export default function DashboardPage() {
 
     // —— BATCH: Analizar y Planificar (FLUJO COMPLETO v4.5.0) ——
     const handleBatchGenerateScripts = async () => {
-        // v4.6.1: Bulk generate using the new 1-click per-slot endpoint
+        // v4.9.1: Bulk generate using the new 1-click per-slot endpoint
         const slotsToProcess = planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script);
         if (slotsToProcess.length === 0) {
             alert('✅ Todas las ideas seleccionadas ya tienen guion. Pulsa "Sincronizar Calendario" para añadirlas.');
@@ -1078,7 +1078,7 @@ export default function DashboardPage() {
                 const result = await handleGenerateSlotScript(slot, true);
                 if (result) successCount++;
             } catch (err) {
-                console.error(`[v4.6.1 Bulk] Failed for slot ${slot.id}:`, err.message);
+                console.error(`[v4.9.1 Bulk] Failed for slot ${slot.id}:`, err.message);
             }
         }
 
@@ -1867,7 +1867,7 @@ export default function DashboardPage() {
                 }
 
                 const hasScriptNow = !!(slot.has_script || (parsedSd && hasRealContent));
-                // v4.6.1: Rich context when no script yet — no placeholders, real idea data
+                // v4.9.1: Rich context when no script yet — no placeholders, real idea data
                 const richIdeaContext = [
                     `📅 IDEA DEL PLAN MENSUAL`,
                     `TÍTULO: ${slot.idea_title}`,
@@ -1881,7 +1881,7 @@ export default function DashboardPage() {
                 ].filter(Boolean).join('\n');
                 const safeCalScriptText = calScriptText || richIdeaContext;
 
-                // v4.6.1: Store slot_id as reference_id so calendar can call /api/slots/{id}/generate-script
+                // v4.9.1: Store slot_id as reference_id so calendar can call /api/slots/{id}/generate-script
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
@@ -1922,7 +1922,7 @@ export default function DashboardPage() {
             setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
             setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Sincronización completa!' });
 
-            // v4.6.1: Honest message — only claim guiones if they actually exist
+            // v4.9.1: Honest message — only claim guiones if they actually exist
             const withScript = slots.filter(s => s.has_script || (s.script_data && (s.script_data.hook || s.script_data.gancho))).length;
             const withoutScript = slots.length - withScript;
             const msgLines = [
@@ -3765,7 +3765,7 @@ export default function DashboardPage() {
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.6.1</span>
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.9.1</span>
                                 </h2>
                                 <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
                                     {isGeneratingMassive ? `✍️ Generando guión ${generationProgress.current} de ${generationProgress.total}...` : 'Genera ideas de 30 días y crea guiones con 1 clic desde cada idea.'}
