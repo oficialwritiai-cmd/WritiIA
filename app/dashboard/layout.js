@@ -1,7 +1,7 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-19 13:00:00
- * Version: v4.9.6
+ * FORCE BUILD: 2026-03-19 13:05:00
+ * Version: v4.9.7
  */
 
 import { useState, useEffect } from 'react';
@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v4.9.6: Mobile Scroll Fix + Grid Optimization
+    // v4.9.7: Total Mobile Reset + Global Scroll Fix
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v4.9.6 LOADED — MOBILE SCROLL FIX', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v4.9.7 LOADED — TOTAL MOBILE RESET', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -312,7 +312,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v4.9.6)
+                    {loadingStatus} (v4.9.7)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -490,7 +490,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v4.9.6
+                            v4.9.7
                         </div>                    </div>
                 </aside>
 
@@ -641,7 +641,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.9.6</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFD700', fontWeight: 900, marginRight: '8px' }}>v4.9.7</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -944,13 +944,15 @@ export default function DashboardLayout({ children }) {
                 
                 @media (max-width: 768px) {
                     .app-layout { 
+                        position: relative !important;
                         display: block !important; 
                         height: auto !important; 
-                        min-height: 100vh;
+                        min-height: 100vh !important;
                         overflow: visible !important; 
                     }
                     .sidebar { display: none !important; }
                     .main-wrapper { 
+                        position: relative !important;
                         display: block !important; 
                         width: 100% !important; 
                         max-width: 100% !important; 
@@ -958,6 +960,7 @@ export default function DashboardLayout({ children }) {
                         overflow: visible !important; 
                     }
                     .main-content { 
+                        position: relative !important;
                         display: block !important;
                         padding: 16px !important; 
                         width: 100% !important; 

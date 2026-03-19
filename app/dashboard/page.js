@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 20) v4.9.6 - Mobile Scroll Fix + Grid Optimization
-export const VERSION = 'v4.9.6';
+// 20) v4.9.7 - Total Mobile Reset + Global Scroll Fix
+export const VERSION = 'v4.9.7';
 
 
 
