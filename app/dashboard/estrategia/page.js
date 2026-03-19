@@ -255,9 +255,15 @@ export default function EstrategiaPage() {
         setError('');
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/estrategia/generate-ideas', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     ...form,
                     userId: profile?.id,
@@ -503,15 +509,18 @@ export default function EstrategiaPage() {
 
         setIsAnalyzingPlan(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No hay sesión');
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
             const res = await fetch('/api/estrategia/analyze-and-plan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     selectedIdeas,
-                    userId: user.id,
+                    userId,
                     projectId: activeProject?.id
                 })
             });
@@ -673,10 +682,16 @@ export default function EstrategiaPage() {
 
         setExporting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const { data: { user } } = await supabase.auth.getUser();
             const res = await fetch('/api/export/ideas', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     items: ideasToExport, // Send the full objects, not just 'ids' which might be "1"
                     userId: user.id
@@ -719,9 +734,15 @@ export default function EstrategiaPage() {
 
             // 1. Get AI suggested schedule
             setSyncProgress(prev => ({ ...prev, text: '📅 Calculando fechas óptimas...' }));
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const scheduleRes = await fetch('/api/calendar/plan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     items: selectedIdeasForPlan,
                     userId: user.id,
@@ -765,9 +786,15 @@ export default function EstrategiaPage() {
                 let scriptFullText = idea.descripcion || '';
 
                 try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token;
+
                     const scriptRes = await fetch('/api/generate-scripts', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
                         body: JSON.stringify({
                             topic: `${idea.titulo_idea || idea.titulo || ''} - ${idea.descripcion || ''}`,
                             platform: idea.plataforma || 'General',

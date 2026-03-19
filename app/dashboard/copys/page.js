@@ -75,9 +75,15 @@ export default function CopysPage() {
         setApiError(null);
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/generate-copys', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     text: baseText,
                     platform,
@@ -124,10 +130,16 @@ export default function CopysPage() {
         setRefiningTarget({ type, index });
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             // Reusing existing refine API, mapping concepts
             const res = await fetch('/api/refine', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     text: currentText,
                     type: type === 'descripciones' ? 'desarrollo' : (type === 'titulos' ? 'titulo' : 'gancho'), 
@@ -177,6 +189,9 @@ export default function CopysPage() {
 
         setIsBulkRefining(type);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const currentTexts = results[type];
             const inputTexts = type === 'hashtags_groups' 
                 ? currentTexts.map(g => Array.isArray(g) ? g.join(' ') : g)
@@ -184,7 +199,10 @@ export default function CopysPage() {
 
             const response = await fetch('/api/refine', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     texts: inputTexts,
                     type,

@@ -107,9 +107,15 @@ export default function IdeasViralesPage() {
         setIdeas([]);
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/generate-ideas', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     context: contextInfo.trim(),
                     platforms: selectedPlatforms,
@@ -198,13 +204,18 @@ export default function IdeasViralesPage() {
 
         setExporting(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/export/ideas', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     items: ideas,
-                    userId: user.id
+                    userId: session?.user?.id
                 })
             });
 

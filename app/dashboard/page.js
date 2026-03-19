@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 20) v4.9.7 - Total Mobile Reset + Global Scroll Fix
-export const VERSION = 'v4.9.7';
+// 20) v4.9.8 - Authorization JWT Fix
+export const VERSION = 'v4.9.8';
 
 
 
@@ -158,15 +158,20 @@ export default function DashboardPage() {
         setScriptFeedback(prev => ({ ...prev, [idx]: type }));
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/train-brain', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     feedback: type === 'like' ? 'Me gusta mucho este estilo y estructura.' : 'No me gusta este enfoque, cámbialo.',
                     scriptContext: scriptText,
                     projectId: activeProject?.id,
-                    userId: user.id,
+                    userId: session?.user?.id,
                     type: type === 'like' ? 'Positivo' : 'Negativo'
                 })
             });
@@ -187,13 +192,18 @@ export default function DashboardPage() {
         if (!text || text.length < 5) return;
         setPolishingField(fieldId);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/polish', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ 
                     text, 
-                    userId: user?.id,
+                    userId: session?.user?.id,
                     projectId: activeProject?.id,
                     instruction: instruction || undefined
                 }),
@@ -522,9 +532,15 @@ export default function DashboardPage() {
         setLoadingRecommended(true);
         setRecommendedIdeas([]); // Clear previous to show new ones
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/ideas-extra', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     userId: profile.id,
                     projectId: activeProject.id,
@@ -657,9 +673,15 @@ export default function DashboardPage() {
             };
             console.log('[Dashboard] Sending request:', requestBody);
 
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/generate-scripts', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(requestBody),
             });
 
@@ -751,9 +773,15 @@ export default function DashboardPage() {
         else if (blockType === 'cta') text = script.cta || '';
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/refine', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     text,
                     type: blockType.includes('punto') ? 'desarrollo' : blockType,
@@ -823,9 +851,15 @@ export default function DashboardPage() {
         ];
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/refine', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     texts: parts,
                     type: 'full_script',
@@ -893,9 +927,15 @@ export default function DashboardPage() {
         }
         setIsAnalyzingBrief(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/analyze-plan-brief', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     businessOffer,
                     targetAudience,
@@ -956,9 +996,15 @@ export default function DashboardPage() {
         setError('');
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/generate-plan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     description: finalTopic,
                     platforms: planPlatforms,

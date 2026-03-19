@@ -269,10 +269,16 @@ export default function AsistentePage() {
         }
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
             const res = await fetch('/api/assistant/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     userId,
                     projectId: activeProject?.id || null,
