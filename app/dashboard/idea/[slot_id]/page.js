@@ -431,25 +431,50 @@ export default function IdeaPage() {
             }
 
             // 5. Sincronizar Biblioteca (library)
-            if (realLibraryId || (realSlotId && sourceType !== 'library')) {
-                const libUpdates = {
-                    titulo: title,
-                    platform,
-                    goal,
-                    script_full_text: fullContentText,
-                    content: {
-                        ...commonScriptData,
-                        titulo_guion: title,
-                        descripcion: description,
-                        cierre: ctaText
-                    },
-                    updated_at: new Date().toISOString()
-                };
+            let libIdToUpdate = realLibraryId;
+            
+            // Si venimos de un slot y no sabemos el ID de biblioteca, lo buscamos explícitamente
+            if (!libIdToUpdate && realSlotId) {
+                const { data: libData, error: findErr } = await supabase
+                    .from('library')
+                    .select('id')
+                    .eq('metadata->>slot_id', realSlotId)
+                    .maybeSingle();
+                
+                if (libData) libIdToUpdate = libData.id;
+                if (findErr) console.error('[v5.1.5] Buscando Library ID Error:', findErr);
+            }
 
-                if (realLibraryId) {
-                    await supabase.from('library').update(libUpdates).eq('id', realLibraryId);
-                } else {
-                    await supabase.from('library').update(libUpdates).filter('metadata->>slot_id', 'eq', realSlotId);
+            const libUpdates = {
+                titulo: title,
+                platform,
+                goal,
+                script_full_text: fullContentText,
+                content: {
+                    ...commonScriptData,
+                    titulo_guion: title,
+                    descripcion: description,
+                    cierre: ctaText
+                },
+                updated_at: new Date().toISOString()
+            };
+
+            if (libIdToUpdate) {
+                const { error: e4 } = await supabase.from('library').update(libUpdates).eq('id', libIdToUpdate);
+                if (e4) {
+                    console.error('[v5.1.5] Sync Library Error:', e4);
+                }
+            } else if (realSlotId) {
+                // Si no existe, lo creamos para garantizar que aparezca en el historial
+                const { error: e5 } = await supabase.from('library').insert({
+                    user_id: user.id,
+                    project_id: slot?.project_id || null,
+                    type: 'guion',
+                    ...libUpdates,
+                    metadata: { slot_id: realSlotId }
+                });
+                if (e5) {
+                    console.error('[v5.1.5] Insert Library Error:', e5);
                 }
             }
 
@@ -461,7 +486,7 @@ export default function IdeaPage() {
             const btn = document.getElementById('btn-save-notion');
             if (btn) {
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '✅ Guardado v5.1.4';
+                btn.innerHTML = '✅ Guardado v5.1.5';
                 btn.style.color = '#10B981';
                 setTimeout(() => {
                     if (btn) {
