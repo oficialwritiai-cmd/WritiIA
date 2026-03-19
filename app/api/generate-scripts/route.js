@@ -212,7 +212,7 @@ REGLAS ESPECÍFICAS DE FORMATO:
 ${duracionRules}
 ${listConstraints}
 
-${ctaIdea ? `CTA OBLIGATORIO: El usuario quiere que pidas esto: "${ctaIdea}"` : ''}
+${ctaIdea ? `CTA OBLIGATORIO: El usuario quiere que pidas esto: "${ctaIdea}"` : 'CTA SUGERIDO: El usuario no ha definido un CTA. Sugiere uno creativo y directo alineado con el objetivo (DMs, seguidor, compartir, etc.) que se sienta natural.'}
 
 GENERA EXACTAMENTE ${count} GUION${count > 1 ? 'ES' : ''} DISTINTOS.
 RESPONDE ÚNICAMENTE con un JSON array válido (sin texto adicional, sin markdown):

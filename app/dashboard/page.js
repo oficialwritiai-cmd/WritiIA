@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v4.9.8';
+export const VERSION = 'v5.0.0';
 
 
 
@@ -65,7 +65,7 @@ export default function DashboardPage() {
     const [ctaIdea, setCtaIdea] = useState('');
     const [experienciaReal, setExperienciaReal] = useState('');
     const [opinionPersonal, setOpinionPersonal] = useState('');
-    const [faseCreador, setFaseCreador] = useState('Lanzando mi primera app / Empezando');
+    const [faseCreador, setFaseCreador] = useState('Tengo algo de audiencia pero aún crezco');
     // Mini-chat state per script: { [scriptIndex]: { text, loading, error } }
     const [scriptChats, setScriptChats] = useState({});
     const [activeBlockChat, setActiveBlockChat] = useState(null); // 'i-blockType'
@@ -628,10 +628,6 @@ export default function DashboardPage() {
             return;
         }
 
-        if (wizardStep === 3 && generationMode === 'single' && !ctaIdea.trim()) {
-            setError('Por favor, indica una idea para el CTA.');
-            return;
-        }
 
         if (!hasBrain && wizardStep < 2) {
             setError('Por favor, completa el Paso 1 (Marca Personal) antes de generar.');
@@ -1519,7 +1515,16 @@ export default function DashboardPage() {
                 type: 'Post',
                 platform: script.platform || platform || 'General',
                 status: 'prep',
-                script_id: libraryItem?.id || null 
+                script_id: libraryItem?.id || null,
+                has_script: true,
+                script_full_text: fullText,
+                content: {
+                    video_duration: script.video_duration || videoDuration || '60 seg',
+                    hook: script.hook || script.gancho || '',
+                    desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                    cierre: script.cta || '',
+                    copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                }
             });
 
             if (calErr) throw calErr;
@@ -1527,7 +1532,9 @@ export default function DashboardPage() {
             setPlanningIdx(null);
             setSuccessModalData({
                 title: '¡Planificado con éxito! ✅',
-                message: `Tu contenido ha sido agendado para el ${new Date(plannedDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}.`
+                message: `Tu contenido ha sido agendado para el ${new Date(plannedDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}.`,
+                actionLabel: 'Ver en el Calendario',
+                actionRedirect: '/dashboard/calendar'
             });
             setIsSuccessModalOpen(true);
             
@@ -2546,10 +2553,10 @@ export default function DashboardPage() {
                                         onChange={(e) => setFaseCreador(e.target.value)}
                                         style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: 'white' }}
                                     >
-                                        <option value="Lanzando mi primera app / Empezando">Lanzando mi primera app / Empezando</option>
-                                        <option value="Tengo mis primeros clientes / Creciendo">Tengo mis primeros clientes / Creciendo</option>
-                                        <option value="Experticia consolidada (+2 años)">Experticia consolidada (+2 años)</option>
-                                        <option value="Referente en mi nicho">Referente en mi nicho</option>
+                                        <option value="Estoy empezando a crear contenido">Estoy empezando a crear contenido</option>
+                                        <option value="Tengo algo de audiencia pero aún crezco">Tengo algo de audiencia pero aún crezco</option>
+                                        <option value="Creo contenido de forma constante desde hace +1 año">Creo contenido de forma constante desde hace +1 año</option>
+                                        <option value="Soy referente / tengo audiencia consolidada">Soy referente / tengo audiencia consolidada</option>
                                     </select>
                                 </div>
                             </div>
@@ -2634,12 +2641,12 @@ export default function DashboardPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Idea para el CTA <span style={{ color: '#FF4D4D' }}>*</span></p>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Idea para el CTA <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional - la IA sugerirá uno si lo dejas vacío)</span></p>
                                         <VoiceDictation onResult={(text) => setCtaIdea(prev => prev ? `${prev} ${text}` : text)} />
                                     </div>
                                     <input
                                         className="input-field"
-                                        placeholder="Ej: Que comenten la palabra 'IA', que vayan al link de mi bio, que me pidan una demo..."
+                                        placeholder="Ej: Que comenten la palabra 'IA', que vayan al link de mi bio... (O deja vacío para sugerencia IA)"
                                         value={ctaIdea}
                                         onChange={(e) => setCtaIdea(e.target.value)}
                                         style={{ width: '100%', boxSizing: 'border-box' }}
@@ -3753,49 +3760,114 @@ export default function DashboardPage() {
                                     {/* INLINE PLANNER */}
                                     {planningIdx === i && (
                                         <div className="planner-inline-container" style={{
-                                            padding: '24px 32px',
-                                            background: 'rgba(126, 206, 202, 0.05)',
-                                            borderTop: '1px solid rgba(126, 206, 202, 0.1)',
-                                            animation: 'slideDown 0.3s ease-out'
+                                            padding: '28px 32px',
+                                            background: 'rgba(126, 206, 202, 0.04)',
+                                            borderTop: '1px solid rgba(126, 206, 202, 0.12)',
+                                            animation: 'slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            borderRadius: '0 0 24px 24px'
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                                                <CalendarDays size={20} color="#7ECECA" />
-                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Planificar este contenido</h4>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{ padding: '8px', background: 'rgba(126, 206, 202, 0.1)', borderRadius: '10px' }}>
+                                                        <CalendarDays size={20} color="#7ECECA" />
+                                                    </div>
+                                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 900, margin: 0, color: '#fff' }}>Planificar Publicación</h4>
+                                                </div>
+                                                <button 
+                                                    onClick={handleAISuggestion}
+                                                    disabled={isSuggestingAI}
+                                                    className="btn-premium-glow"
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        fontSize: '0.8rem',
+                                                        borderRadius: '100px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        border: '1px solid #7ECECA',
+                                                        background: 'rgba(126, 206, 202, 0.1)',
+                                                        color: '#7ECECA',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {isSuggestingAI ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                                    {isSuggestingAI ? 'Analizando...' : 'Sugerir con IA'}
+                                                </button>
                                             </div>
 
-                                            <div className="planner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                            {suggestedReasoning && (
+                                                <div style={{ 
+                                                    marginBottom: '20px', 
+                                                    padding: '12px 16px', 
+                                                    background: 'rgba(126, 206, 202, 0.05)', 
+                                                    border: '1px solid rgba(126, 206, 202, 0.2)', 
+                                                    borderRadius: '12px',
+                                                    fontSize: '0.8rem',
+                                                    color: 'rgba(255,255,255,0.7)',
+                                                    lineHeight: '1.4',
+                                                    display: 'flex',
+                                                    gap: '10px'
+                                                }}>
+                                                    <AlertCircle size={16} color="#7ECECA" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                                    <span><strong>Estrategia sugerida:</strong> {suggestedReasoning}</span>
+                                                </div>
+                                            )}
+
+                                            <div style={{ 
+                                                display: 'grid', 
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                                                gap: '20px', 
+                                                marginBottom: '28px' 
+                                            }}>
                                                 <div>
-                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FECHA DE PUBLICACIÓN</label>
+                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.6)', fontWeight: 800, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>FECHA DE PUBLICACIÓN</label>
                                                     <input
                                                         type="date"
                                                         className="input-field"
                                                         value={plannedDate}
                                                         onChange={e => setPlannedDate(e.target.value)}
-                                                        style={{ fontSize: '0.9rem', width: '100%' }}
+                                                        style={{ fontSize: '0.95rem', width: '100%', padding: '12px 16px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>HORA RECOMENDADA</label>
+                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.6)', fontWeight: 800, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>HORA ÓPTIMA</label>
                                                     <input
                                                         type="time"
                                                         className="input-field"
                                                         value={plannedTime}
                                                         onChange={e => setPlannedTime(e.target.value)}
-                                                        style={{ fontSize: '0.9rem', width: '100%' }}
+                                                        style={{ fontSize: '0.95rem', width: '100%', padding: '12px 16px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'flex', gap: '12px' }}>
-                                                <button onClick={() => setPlanningIdx(null)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                            <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                                                <button 
+                                                    onClick={() => setPlanningIdx(null)} 
+                                                    className="btn-secondary" 
+                                                    style={{ flex: 1, height: '48px', opacity: 0.6 }}
+                                                >
+                                                    Cancelar
+                                                </button>
                                                 <button
                                                     onClick={handleConfirmPlanning}
-                                                    className="btn-primary"
-                                                    style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                    className="btn-primary btn-premium-glow"
+                                                    style={{ 
+                                                        flex: 2, 
+                                                        height: '48px', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center', 
+                                                        gap: '10px',
+                                                        background: 'var(--accent-gradient)',
+                                                        color: '#000',
+                                                        fontWeight: 900,
+                                                        fontSize: '0.95rem'
+                                                    }}
                                                     disabled={isPlanningLoading}
                                                 >
-                                                    {isPlanningLoading ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
+                                                    {isPlanningLoading ? <Loader className="animate-spin" size={18} /> : <CheckCircle size={18} />}
+                                                    {isPlanningLoading ? 'Programando...' : 'Confirmar Planificación'}
                                                 </button>
                                             </div>
                                         </div>
