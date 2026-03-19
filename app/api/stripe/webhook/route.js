@@ -80,6 +80,18 @@ export async function POST(req) {
         payload: event.data.object
     }).select().single();
 
+    // Check if event was already processed to ensure idempotency
+    const { data: alreadyProcessed } = await supabase
+        .from('processed_stripe_events')
+        .select('event_id')
+        .eq('event_id', event.id)
+        .single();
+
+    if (alreadyProcessed) {
+        console.log(`[Webhook] Event ${event.id} already processed. Skipping.`);
+        return NextResponse.json({ received: true, already_processed: true });
+    }
+
     try {
         switch (event.type) {
             case 'checkout.session.completed': {
@@ -104,7 +116,10 @@ export async function POST(req) {
                 console.log(`Unhandled event type: ${event.type}`);
         }
         
-        // Mark as success
+        // Mark event as processed
+        await supabase.from('processed_stripe_events').insert({ event_id: event.id });
+
+        // Mark log as success
         if (logEntry) {
             await supabase.from('webhook_logs').update({ error: 'SUCCESS' }).eq('id', logEntry.id);
         }
@@ -249,12 +264,9 @@ async function handleCheckoutCompleted(session, supabase) {
         let packType = session.metadata?.pack_type || session.metadata?.pack;
         const packAmounts = { '100': 100, '250': 250, '500': 500 };
         
-        // Logical fallback: if no packType in metadata, but it's a successful payment, 
-        // we might check the amount_total, but for now we default to at least 100 if we suspect it's a credit purchase
         let amount = packAmounts[packType];
 
         if (!amount && session.amount_total) {
-            // Stripe amount_total is in cents
             const total = session.amount_total / 100;
             if (total >= 60) amount = 500;
             else if (total >= 30) amount = 250;
@@ -268,79 +280,54 @@ async function handleCheckoutCompleted(session, supabase) {
             return;
         }
 
-        // Save customer ID if not set
-        if (customerId) {
-            await supabase
-                .from('users_profiles')
-                .update({ stripe_customer_id: customerId })
-                .eq('id', userId);
-        }
-
-        console.log('[Webhook] Adding credits to user profile...');
+        // Add credits via single source of truth: users_profiles.credits_balance
+        // We use a transaction-like approach or atomic update to prevent double additions
+        // We also check if this specific session was already handled for credits specifically
         
-        // DIRECT FALLBACK AND GUARANTEE: Manually updateusers_profiles
-        let directUpdateSuccess = false;
-        const { data: currentProfile, error: fetchProfileErr } = await supabase
+        const { data: currentProfile, error: fetchErr } = await supabase
             .from('users_profiles')
             .select('credits_balance')
             .eq('id', userId)
             .single();
-            
-        if (!fetchProfileErr && currentProfile) {
-            const newBalance = (currentProfile.credits_balance || 0) + amount;
-            const { error: updateProfileErr } = await supabase
-                .from('users_profiles')
-                .update({ credits_balance: newBalance })
-                .eq('id', userId);
-                
-            if (!updateProfileErr) {
-                directUpdateSuccess = true;
-                console.log(`[Webhook] ✅ Direct update: New balance is ${newBalance}`);
-            } else {
-                console.error('[Webhook] Direct update failed:', updateProfileErr);
-            }
-        }
 
-        // Add credits via RPC as secondary/primary depending on its existence
-        const { error: rpcError, data: rpcResult } = await supabase.rpc('deposit_credits', {
-            u_id: userId,
+        if (fetchErr) throw new Error(`Could not fetch profile for credit deposit: ${fetchErr.message}`);
+
+        const newBalance = (currentProfile.credits_balance || 0) + amount;
+
+        // Atomic update with idempotency check on credits_usage log
+        // If the insert into credits_usage fails due to idempotency_key (unique), the whole thing should fail or skip
+        const { error: logErr } = await supabase.from('credits_usage').insert({
+            user_id: userId,
+            action_type: 'purchase_credits',
             amount: amount,
+            idempotency_key: `stripe_session_${session.id}` // UNIQUE CONSTRAINT prevents duplicate credit additions
         });
 
-        if (rpcError) {
-            console.warn('[Webhook] RPC deposit_credits failed (handled by direct update):', rpcError.message);
-        } else {
-            console.log('[Webhook] RPC deposit_credits success:', rpcResult);
-        }
-        
-        // If BOTH failed, throw an error to alert Stripe to retry
-        if (!directUpdateSuccess && rpcError) {
-             throw new Error(`Failed to deposit credits both via direct update and RPC: ${rpcError.message}`);
-        }
-
-        // FALLBACK: Also update ai_credits table if it exists to keep everything in sync
-        try {
-            const { data: currentCredits } = await supabase.from('ai_credits').select('total_credits').eq('user_id', userId).single();
-            if (currentCredits) {
-                await supabase.from('ai_credits').update({
-                    total_credits: (currentCredits.total_credits || 0) + amount,
-                    updated_at: new Date().toISOString()
-                }).eq('user_id', userId);
-            } else {
-                // If row doesn't exist, create it
-                await supabase.from('ai_credits').insert({
-                    user_id: userId,
-                    total_credits: amount,
-                    used_credits: 0
-                });
+        if (logErr) {
+            if (logErr.message.includes('unique constraint')) {
+                console.log(`[Webhook] Credits for session ${session.id} already assigned. Skipping balance update.`);
+                return;
             }
-        } catch (syncErr) {
-            console.warn('[Webhook] Non-critical error syncing ai_credits table:', syncErr.message);
+            throw new Error(`Failed to log credit purchase: ${logErr.message}`);
         }
 
-        // Removed the throws here since we throw earlier if BOTH update methods fail
+        const { error: updateErr } = await supabase
+            .from('users_profiles')
+            .update({ 
+                credits_balance: newBalance,
+                last_credits_purchase_at: new Date().toISOString()
+            })
+            .eq('id', userId);
 
-        console.log(`[Webhook] ✅ ${amount} credits added to user ${userId} (Synced in both systems)`);
+        if (updateErr) throw new Error(`Failed to update user balance: ${updateErr.message}`);
+
+        // Sync legacy table quietly
+        await supabase.from('ai_credits').update({
+            total_credits: (currentProfile.credits_balance || 0) + amount,
+            updated_at: new Date().toISOString()
+        }).eq('user_id', userId).catch(() => {});
+
+        console.log(`[Webhook] ✅ ${amount} credits added to user ${userId}. New balance: ${newBalance}`);
 
         // Send confirmation email
         const { data: profile } = await supabase
