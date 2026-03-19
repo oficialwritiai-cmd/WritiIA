@@ -1,45 +1,44 @@
-// app/api/projects/[project_id]/export/route.js
-// Export Monthly Plan (Ideas + Scripts) to CSV for Google Sheets/Excel
-// Version: v4.9.0
-
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 export async function GET(request, { params }) {
     const { project_id } = params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
 
-    if (!userId || !project_id) {
-        return NextResponse.json({ error: 'Faltan parámetros (userId/project_id)' }, { status: 400 });
+    if (!project_id) {
+        return NextResponse.json({ error: 'Faltan parámetros (project_id)' }, { status: 400 });
     }
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-
     try {
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        const hasAccess = await verifyProjectAccess(supabase, project_id, user.id);
+        if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+
+        const verifiedUserId = user.id;
+
         // 1. Fetch all slots for this project
         const { data: slots, error: slotsErr } = await supabase
             .from('content_slots')
             .select('*')
             .eq('project_id', project_id)
-            .eq('user_id', userId)
+            .eq('user_id', verifiedUserId)
             .order('day_number', { ascending: true });
 
         if (slotsErr) throw slotsErr;
 
-        // 2. Fetch all scripts for these slots to get full details
+        // 2. Fetch all scripts for these slots
         const { data: scripts, error: scriptsErr } = await supabase
             .from('scripts')
             .select('*')
             .eq('project_id', project_id)
-            .eq('user_id', userId);
+            .eq('user_id', verifiedUserId);
 
         if (scriptsErr) throw scriptsErr;
 
-        // Map scripts by ID for easy access
         const scriptsMap = {};
         (scripts || []).forEach(s => {
             scriptsMap[s.id] = s;
@@ -47,27 +46,16 @@ export async function GET(request, { params }) {
 
         // 3. Generate CSV
         const headers = [
-            'Día',
-            'Fecha',
-            'Plataforma',
-            'Estado',
-            'Título/Idea',
-            'Objetivo',
-            'Hook/Gancho',
-            'Estructura/Guion',
-            'CTA',
-            'Post Copy',
-            'Notas'
+            'Día', 'Fecha', 'Plataforma', 'Estado', 'Título/Idea', 'Objetivo',
+            'Hook/Gancho', 'Estructura/Guion', 'CTA', 'Post Copy', 'Notas'
         ];
 
         const rows = (slots || []).map(slot => {
             const script = slot.script_id ? scriptsMap[slot.script_id] : null;
             
-            // Clean strings for CSV (remove newlines, escape quotes)
             const clean = (val) => {
-                if (!val) return '';
+                if (!val) return '""';
                 let str = String(val);
-                // Si es un objeto (como structure o post_copy), lo aplanamos a texto
                 if (typeof val === 'object') {
                     if (Array.isArray(val)) {
                         str = val.map(item => item.point ? `${item.point}: ${item.detail}` : item).join(' | ');
@@ -87,10 +75,10 @@ export async function GET(request, { params }) {
                 : (slot.script_data?.copy_post ? `${slot.script_data.copy_post.headline || ''} | ${slot.script_data.copy_post.body || ''}` : '');
 
             return [
-                slot.day_number || '',
-                slot.scheduled_date || '',
-                slot.platform || '',
-                slot.slot_status || 'idea_only',
+                slot.day_number || '""',
+                slot.scheduled_date || '""',
+                slot.platform || '""',
+                slot.slot_status || '""',
                 clean(slot.idea_title),
                 clean(slot.goal),
                 clean(script?.hook || slot.script_data?.hook || ''),
@@ -103,7 +91,6 @@ export async function GET(request, { params }) {
 
         const csvContent = [headers.join(','), ...rows].join('\n');
 
-        // 4. Return as downloadable file
         return new Response(csvContent, {
             headers: {
                 'Content-Type': 'text/csv; charset=utf-8',

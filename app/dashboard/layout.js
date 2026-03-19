@@ -1,7 +1,7 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-19 11:20:00
- * Version: v4.9.0
+ * FORCE BUILD: 2026-03-19 11:35:00
+ * Version: v4.9.1
  */
 
 import { useState, useEffect } from 'react';
@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v4.9.0: Plan Mensual v2 — 1-click per-slot generation + Total Isolation (Security Audit)
+    // v4.9.1: Dynamic Idea Bank + SEO Hooks + Total Isolation
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v4.9.0 LOADED — TOTAL ISOLATION LIVE', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v4.9.1 LOADED — DYNAMIC IDEAS LIVE', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);

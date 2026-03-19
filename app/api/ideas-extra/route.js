@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import { IdeasExtraSchema } from '@/lib/validations';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
+import { createClient } from '@supabase/supabase-js';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -12,6 +13,10 @@ const limiter = rateLimit({
 
 export async function POST(request) {
     try {
+        const session = await getServerSession();
+        if (!session) return unauthorized();
+        const verifiedUserId = session.userId;
+
         const ip = (request.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
 
         let body;
@@ -23,8 +28,8 @@ export async function POST(request) {
 
         const resObj = new NextResponse();
         try {
-            const rlKey = buildRateLimitKey(ip, body?.userId);
-            await limiter.check(resObj, 10, rlKey);
+            const rlKey = buildRateLimitKey(ip, verifiedUserId);
+            await limiter.check(resObj, 15, rlKey);
         } catch {
             return NextResponse.json(
                 { error: 'Demasiadas solicitudes.' },
@@ -35,17 +40,24 @@ export async function POST(request) {
         // Validate with Zod
         const validation = IdeasExtraSchema.safeParse(body);
         if (!validation.success) {
+            console.error('[ideas-extra] Validation error:', validation.error.format());
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, experienceLevel, productTicket, objections, examples, userId, projectId, proactive } = validation.data;
+        const { context, experienceLevel, productTicket, objections, examples, projectId, proactive, businessOffer, targetAudience, mainPainPoint } = validation.data;
+
+        // Verify project access
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(verifiedUserId, projectId);
+            if (!hasAccess) return forbidden();
+        }
 
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
-        // Fetch project brain if proactive or if metadata is missing
+        // Fetch project brain for deep personalization
         let brainContext = '';
         if (projectId) {
             const { data: brain } = await supabase
@@ -60,33 +72,44 @@ export async function POST(request) {
         }
 
         // Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IDEAS_EXTRA, 'ideas_extra', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.IDEAS_EXTRA, 'ideas_extra', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        const systemPrompt = `Eres el mejor estratega de contenido viral del mundo.
-Tu tarea es generar ideas de contenido altamente específicas, disruptivas y con alto potencial viral.
-Debes basarte profundamente en el perfil (BIO) y productos del usuario para que las ideas sean coherentes.
-Las ideas deben dividirse en 3 categorías: Autoridad (educar), Viral (entretenimiento/curiosidad) e Historia (conexión).
+        const systemPrompt = `Eres un ANALIZADOR DE VIRALIDAD y estratega SEO de élite. 
+Tu misión es generar ideas de contenido que no solo atraigan clics, sino que posicionen al usuario como una autoridad.
 
-IMPORTANTE: 
-1. CADA IDEA debe tener una "descripcion" detallada (mínimo 3 frases) explicando la narrativa, el gancho visual y por qué funcionará. NUNCA la dejes vacía.
-2. El "titulo_idea" debe ser corto, magnético y profesional.
-3. No te detengas hasta completar la cantidad solicitada.
+REGLAS DE ORO:
+1. TÍTULOS MAGNÉTICOS (HOOKS): Cada título debe ser un "gancho" directo. No uses títulos genéricos como "Cómo vender más". Usa: "El error de $10,000 que el 90% de los emprendedores comete".
+2. VARIEDAD ESTRATÉGICA: Alterna entre formatos:
+   - Storytime (Historias personales/casos reales)
+   - Listas / Tutoriales rápidos (3 pasos para...)
+   - Antes vs Después (Transformaciones)
+   - Romper Mitos (Verdades incómodas del nicho)
+   - Detrás de cámaras / Curiosidad
+3. OPTIMIZACIÓN SEO: Incluye palabras clave de alto volumen de búsqueda de forma natural.
+4. DESCRIPCIÓN DETALLADA: Explica exactamente de qué tratará el video/post, qué gancho visual usar al inicio y cuál es el valor diferencial.
 
-Responde ÚNICAMENTE con un array JSON válido de objetos:
-[{ "titulo_idea": "...", "descripcion": "...", "categoria": "..." }]`;
+Responde ÚNICAMENTE con un array JSON válido:
+[{ "titulo_idea": "GANCHO MAGNÉTICO", "descripcion": "EXPLICACIÓN DETALLADA DE LA NARRATIVA Y FORMATO", "categoria": "Autoridad|Viral|Historia|Venta" }]`;
 
-        let userMessage = proactive ? `Genera una estrategia MASIVA de 30-40 ideas virales y específicas basadas en este perfil:\n${brainContext}\n` : `CONTEXTO: ${context}.`;
+        let userMessage = `GENERACIÓN DINÁMICA DE IDEAS PERSONALIZADAS.
+PERFIL DEL NEGOCIO:
+${brainContext}
+
+CONTEXTO ADICIONAL DEL PROYECTO:
+- Oferta Principal: ${businessOffer || 'Basada en perfil'}
+- Audiencia Objetivo: ${targetAudience || 'Basada en perfil'}
+- Dolor Principal (Pain Point): ${mainPainPoint || 'Basada en perfil'}
+
+${proactive ? 'Genera una selección MASIVA de 35-40 ideas disruptivas y ultrasegmentadas.' : `Contexto específico: ${context}. Genera 30 ideas sobre este nicho.`}`;
         
         if (!proactive) {
             if (experienceLevel) userMessage += ` NIVEL: ${experienceLevel}.`;
             if (productTicket) userMessage += ` TICKET: ${productTicket}.`;
             if (objections) userMessage += ` OBJECIONES: ${objections}.`;
             if (examples) userMessage += ` EJEMPLOS: ${examples}.`;
-            if (brainContext) userMessage += `\nUSA ESTE PERFIL COMO BASE: ${brainContext}`;
-            userMessage += '\nGenera 30-35 ideas originales, variadas y virales.';
         }
 
         const { parsed: ideas } = await generateIdeasWithHaiku({

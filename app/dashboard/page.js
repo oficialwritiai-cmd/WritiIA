@@ -34,8 +34,8 @@ const AUDIENCIAS_PLAN = ['Emprendedores', 'Coaches/Mentores', 'Dueños de negoci
 const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas', 'Más Ventas (Producto/Servicio)', 'Posicionamiento / Autoridad'];
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
-// 19) v4.6.1 - Fix Plan Mensual: honest messages, bulk generate v2, rich slot data
-export const VERSION = 'v4.6.1';
+// 20) v4.9.1 - Dynamic Idea Bank: SEO, Hooks, and Branding contextualization
+export const VERSION = 'v4.9.1';
 
 
 
@@ -528,7 +528,10 @@ export default function DashboardPage() {
                     userId: profile.id,
                     projectId: activeProject.id,
                     proactive: true,
-                    context: 'Generación proactiva basada en cerebro' // Dummy context for validation
+                    context: 'Generación proactiva basada en cerebro',
+                    businessOffer: businessOffer,
+                    targetAudience: targetAudience,
+                    mainPainPoint: mainPainPoint
                 })
             });
             const data = await res.json();
@@ -2935,7 +2938,18 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Añadir ideas de tu banco (Opcional)</h3>
-                                        {loadingRecommended && <Loader className="animate-spin" size={14} color="var(--text-muted)" />}
+                                        <button 
+                                            onClick={fetchProactiveIdeas} 
+                                            disabled={loadingRecommended}
+                                            style={{ 
+                                                background: 'transparent', border: 'none', color: '#7ECECA', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px'
+                                            }}
+                                            title="Generar nuevas ideas personalizadas"
+                                        >
+                                            <RefreshCcw size={14} className={loadingRecommended ? "animate-spin" : ""} />
+                                        </button>
+                                        {loadingRecommended && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mapeando nicho...</span>}
                                     </div>
                                     <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
                                 </div>
