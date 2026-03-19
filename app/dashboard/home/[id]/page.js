@@ -33,6 +33,7 @@ export default function ProjectDetailPage() {
             .select('*')
             .eq('id', id)
             .eq('user_id', user.id)
+            .eq('is_deleted', false)
             .single();
 
         if (data) {
@@ -69,7 +70,9 @@ export default function ProjectDetailPage() {
 
     async function handleDelete() {
         if (!confirm('¿Estás seguro de eliminar este proyecto? Esta acción no se puede deshacer.')) return;
-        await supabase.from('projects').delete().eq('id', id);
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('projects').update({ is_deleted: true }).eq('id', id).eq('user_id', user?.id || null);
+        await supabase.from('activity_logs').insert({ user_id: user.id, project_id: id, action: 'deleted' });
         router.push('/dashboard/home');
     }
 

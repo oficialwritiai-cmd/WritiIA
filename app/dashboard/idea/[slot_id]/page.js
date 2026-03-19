@@ -210,6 +210,43 @@ export default function IdeaPage() {
                 }
             }
         } else {
+            // 3. Fallback: library (Single Script / Generator)
+            const { data: libData } = await supabase
+                .from('library')
+                .select('*')
+                .eq('id', slot_id)
+                .eq('user_id', user.id)
+                .single();
+
+            if (libData) {
+                setSlot(libData);
+                setSourceType('library');
+                
+                const contentObj = libData.content || {};
+                setTitle(libData.titulo || contentObj.titulo_guion || contentObj.titulo_angulo || 'Idea');
+                setDescription(libData.script_full_text || contentObj.descripcion || '');
+                setGoal(libData.goal || '');
+                setContentType(libData.type || '');
+                setPlatform(libData.platform || 'General');
+                setSlotStatus(libData.status || 'idea');
+                
+                setHook(contentObj.hook || contentObj.gancho || '');
+                setCtaText(contentObj.cierre || contentObj.cta || '');
+                if (Array.isArray(contentObj.desarrollo)) {
+                    setStructureText(contentObj.desarrollo.join('\n\n'));
+                } else {
+                    setStructureText(contentObj.desarrollo || '');
+                }
+                if (contentObj.copy_post) {
+                    setPostHeadline(contentObj.copy_post.titulo || '');
+                    setPostBody(contentObj.copy_post.descripcion_larga || '');
+                    setPostHashtags(Array.isArray(contentObj.copy_post.hashtags) ? contentObj.copy_post.hashtags.join(' ') : '');
+                }
+                setNotes(contentObj.notes || '');
+                setLoading(false);
+                return;
+            }
+
             setError('No se encontró esta idea. Puede que haya sido eliminada.');
         }
 
@@ -385,6 +422,29 @@ export default function IdeaPage() {
                 }).eq('reference_id', slot.id);
                 
                 if (calUpdErr) console.warn('No se pudo actualizar el evento del calendario vinculado (puede que no exista).');
+            }
+
+            // 5. Check if source is library and update it
+            if (sourceType === 'library' && slot?.id) {
+                const libUpdates = {
+                    titulo: title,
+                    platform,
+                    goal,
+                    type: contentType || slot.type,
+                    script_full_text: fullContentText,
+                    content: {
+                        ...(slot.content || {}),
+                        titulo_guion: title,
+                        descripcion: description,
+                        hook: hook,
+                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
+                        cierre: ctaText,
+                        copy_post: postCopy,
+                        notes
+                    }
+                };
+                const { error: libUpdErr } = await supabase.from('library').update(libUpdates).eq('id', slot.id);
+                if (libUpdErr) throw libUpdErr;
             }
 
             // Visual feedback

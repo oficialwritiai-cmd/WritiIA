@@ -47,6 +47,7 @@ export default function DashboardHomePage() {
             .from('projects')
             .select('*')
             .eq('user_id', user.id)
+            .eq('is_deleted', false)
             .order('created_at', { ascending: false });
         setProjects(projectsData || []);
         setLoading(false);
@@ -78,6 +79,12 @@ export default function DashboardHomePage() {
             await supabase.from('project_brains').insert({
                 project_id: projectData.id
             });
+            // Audit Log
+            await supabase.from('activity_logs').insert({
+                user_id: user.id,
+                project_id: projectData.id,
+                action: 'created'
+            });
             setNewName('');
             setNewDesc('');
             setShowModal(false);
@@ -93,7 +100,9 @@ export default function DashboardHomePage() {
         e.stopPropagation();
         if (!confirm('¿Eliminar este proyecto?')) return;
         setDeletingId(projectId);
-        await supabase.from('projects').delete().eq('id', projectId);
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('projects').update({ is_deleted: true }).eq('id', projectId).eq('user_id', user?.id || null);
+        await supabase.from('activity_logs').insert({ user_id: user.id, project_id: projectId, action: 'deleted' });
         setProjects(prev => prev.filter(p => p.id !== projectId));
         setDeletingId(null);
     }

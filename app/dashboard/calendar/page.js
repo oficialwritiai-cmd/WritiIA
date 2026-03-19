@@ -488,6 +488,11 @@ export default function CalendarPage() {
 
     const handleCreateScript = () => {
         if (!selectedEvent) return;
+        if (selectedEvent.has_script || linkedScript) {
+            const idToOpen = linkedScript?.id || selectedEvent.reference_id || selectedEvent.id;
+            router.push(`/dashboard/idea/${idToOpen}`);
+            return;
+        }
         const url = `/dashboard?mode=single&topic=${encodeURIComponent(selectedEvent.title)}&platform=${encodeURIComponent(selectedEvent.platform)}&source_event_id=${selectedEvent.id}`;
         router.push(url);
     };
@@ -1030,11 +1035,14 @@ export default function CalendarPage() {
                                     </div>
 
                                     <button
-                                        className="btn-secondary"
-                                        onClick={handleViewInLibrary}
-                                        style={{ marginTop: '10px', width: '100%', borderColor: 'rgba(157, 0, 255, 0.2)', color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}
+                                        className="btn-primary"
+                                        onClick={() => {
+                                            const idToOpen = linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id;
+                                            router.push(`/dashboard/idea/${idToOpen}`);
+                                        }}
+                                        style={{ marginTop: '10px', width: '100%', background: 'rgba(157, 0, 255, 0.15)', borderColor: 'rgba(157, 0, 255, 0.4)', color: 'white', fontSize: '0.85rem', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
-                                        Ver en Biblioteca
+                                        <Edit3 size={16} style={{ marginRight: '8px' }} /> Abrir Editor Completo (Hoja Grande)
                                     </button>
                                 </div>
                             </div>
