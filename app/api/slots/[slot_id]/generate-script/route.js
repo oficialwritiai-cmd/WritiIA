@@ -6,6 +6,7 @@ const RequestSchema = z.object({
     platform: z.string().max(50).optional(),
     videoDuration: z.enum(['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min']).default('60 seg'),
     focus: z.string().max(100).optional().default('autoridad'),
+    instruction: z.string().max(1000).optional().nullable(),
     ctaIdea: z.string().max(500).optional().nullable(),
 });
 
@@ -179,10 +180,10 @@ export async function POST(request, { params }) {
             .update({ slot_status: 'script_generating' })
             .eq('id', slot_id);
 
-        const { platform, videoDuration, focus, ctaIdea } = validation.data;
+        const { platform, videoDuration, focus, ctaIdea, instruction } = validation.data;
         const systemPrompt = buildSystemPrompt(brandBrain);
         const finalPlatform = platform || slot.platform || 'Reels';
-        const userMessage = `Genera el guion para: ${slot.idea_title}. Contexto: ${slot.idea_description || ''}. Plataforma: ${finalPlatform} (${videoDuration}). Enfoque: ${focus}. CTA: ${ctaIdea || ''}`;
+        const userMessage = `Genera el guion para: ${slot.idea_title}. Contexto: ${slot.idea_description || ''}. Plataforma: ${finalPlatform} (${videoDuration}). Enfoque: ${focus}. CTA: ${ctaIdea || ''}.${instruction ? ` INSTRUCCIONES DE MEJORA: ${instruction}` : ''}`;
 
         // ─── 5. Call AI ─────────────────────────────────────────
         let rawText;

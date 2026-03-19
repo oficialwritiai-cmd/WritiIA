@@ -138,6 +138,7 @@ export default function IdeaPage() {
     const [genPlatform, setGenPlatform] = useState('Reels');
     const [genDuration, setGenDuration] = useState('60 seg');
     const [genFocus, setGenFocus] = useState('autoridad');
+    const [genInstruction, setGenInstruction] = useState('');
 
     // ── Load data ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -479,14 +480,21 @@ export default function IdeaPage() {
         setSlotStatus('script_generating');
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No autorizado. Por favor, inicia sesión de nuevo.');
+
             const res = await fetch(`/api/slots/${realSlotId}/generate-script`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
                     userId,
                     platform: genPlatform || platform || 'Reels',
                     videoDuration: genDuration || '60 seg',
                     focus: genFocus || contentType || 'autoridad',
+                    instruction: genInstruction || '',
                 }),
             });
 
@@ -746,6 +754,19 @@ export default function IdeaPage() {
                                 </select>
                             </div>
                         </div>
+
+                        {hasScript && (
+                            <div style={{ marginTop: '16px' }}>
+                                <label style={{ fontSize: '0.72rem', color: '#7ECECA', display: 'block', marginBottom: '6px', fontWeight: 800, textTransform: 'uppercase' }}>✍️ Instrucciones de mejora (Ej: más humor, más corto...)</label>
+                                <input 
+                                    type="text"
+                                    value={genInstruction}
+                                    onChange={e => setGenInstruction(e.target.value)}
+                                    placeholder="¿Qué quieres cambiar del guion actual?"
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(126,206,202,0.3)', borderRadius: '10px', color: 'white', padding: '12px 14px', fontSize: '0.88rem', outline: 'none' }}
+                                />
+                            </div>
+                        )}
                         <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                             <button onClick={handleGenerate} disabled={generating} style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #7ECECA, #4db8b2)', border: 'none', borderRadius: '10px', color: '#0d0d0d', fontWeight: 800, cursor: 'pointer', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                 {generating ? <><span style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Generando guion...</> : '✨ Generar ahora'}
