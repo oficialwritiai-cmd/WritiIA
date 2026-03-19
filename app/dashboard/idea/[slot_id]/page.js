@@ -355,26 +355,38 @@ export default function IdeaPage() {
             };
 
             // 2. Sincronizar tabla 'scripts'
-            if (currentScriptId || realSlotId) {
-                const scriptUpdates = {
-                    title,
-                    hook,
-                    structure: structureArr,
-                    cta: ctaText,
-                    notes,
-                    post_copy: postCopy,
-                    content: fullContentText,
-                    platform,
-                    updated_at: new Date().toISOString()
-                };
-                let sQuery = supabase.from('scripts').update(scriptUpdates);
-                if (currentScriptId) sQuery = sQuery.eq('id', currentScriptId);
-                else sQuery = sQuery.eq('slot_id', realSlotId);
+            let finalScriptId = currentScriptId;
+            const scriptTableUpdates = {
+                title,
+                hook,
+                structure: structureArr,
+                cta: ctaText,
+                notes,
+                post_copy: postCopy,
+                content: fullContentText,
+                platform,
+                updated_at: new Date().toISOString()
+            };
+
+            if (finalScriptId) {
+                await supabase.from('scripts').update(scriptTableUpdates).eq('id', finalScriptId);
+            } else if (realSlotId && sourceType !== 'library') {
+                const { data: newSc, error: scErr } = await supabase.from('scripts').insert({
+                    user_id: user.id,
+                    slot_id: realSlotId,
+                    project_id: slot?.project_id,
+                    tone: slot?.metadata?.tone || slot?.tone || 'cercano',
+                    is_saved: true,
+                    ...scriptTableUpdates
+                }).select().single();
                 
-                await sQuery;
+                if (!scErr && newSc) {
+                    finalScriptId = newSc.id;
+                    setScript(newSc);
+                }
             }
 
-            // 3. Sincronizar Slot (content_slots) -> CRÍTICO PARA PREVISUALIZACIÓN DASHBOARD
+            // 3. Sincronizar Slot (content_slots)
             if (realSlotId) {
                 const slotUpdates = {
                     idea_title: title,
@@ -383,35 +395,34 @@ export default function IdeaPage() {
                     content_type: contentType,
                     platform,
                     scheduled_date: scheduledDate || null,
-                    script_id: currentScriptId,
-                    has_script: !!currentScriptId,
+                    script_id: finalScriptId,
+                    has_script: !!(finalScriptId || sourceType === 'library'),
                     script_data: commonScriptData
                 };
                 await supabase.from('content_slots').update(slotUpdates).eq('id', realSlotId);
             }
 
             // 4. Sincronizar Calendario (calendar_events)
-            if (realSlotId || realLibraryId || currentScriptId) {
+            if (realSlotId || realLibraryId || finalScriptId) {
                 const calUpdates = {
                     title,
                     platform,
                     event_date: scheduledDate || null,
                     status: 'Guion listo',
                     has_script: true,
-                    script_id: currentScriptId,
+                    script_id: finalScriptId,
                     script_full_text: fullContentText,
                     description: description || title,
                     content: commonScriptData
                 };
 
-                let cQuery = supabase.from('calendar_events').update(calUpdates);
                 let orConditions = [];
                 if (realSlotId) orConditions.push(`reference_id.eq.${realSlotId}`);
                 if (realLibraryId) orConditions.push(`reference_id.eq.${realLibraryId}`);
-                if (currentScriptId) orConditions.push(`script_id.eq.${currentScriptId}`);
+                if (finalScriptId) orConditions.push(`script_id.eq.${finalScriptId}`);
                 
                 if (orConditions.length > 0) {
-                    await cQuery.or(orConditions.join(','));
+                    await supabase.from('calendar_events').update(calUpdates).or(orConditions.join(','));
                 }
             }
 
@@ -422,14 +433,19 @@ export default function IdeaPage() {
                     platform,
                     goal,
                     script_full_text: fullContentText,
-                    content: commonScriptData,
+                    content: {
+                        ...commonScriptData,
+                        // Añadimos campos específicos que la biblioteca suele esperar
+                        titulo_guion: title,
+                        descripcion: description,
+                        cierre: ctaText
+                    },
                     updated_at: new Date().toISOString()
                 };
 
                 if (realLibraryId) {
                     await supabase.from('library').update(libUpdates).eq('id', realLibraryId);
                 } else {
-                    // Buscar item en biblioteca que pertenezca a este slot
                     await supabase.from('library').update(libUpdates).filter('metadata->>slot_id', 'eq', realSlotId);
                 }
             }
@@ -439,7 +455,7 @@ export default function IdeaPage() {
             const btn = document.getElementById('btn-save-notion');
             if (btn) {
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '✅ Guardado';
+                btn.innerHTML = '✅ Guardado v5.1.3';
                 btn.style.color = '#10B981';
                 setTimeout(() => {
                     if (btn) {
