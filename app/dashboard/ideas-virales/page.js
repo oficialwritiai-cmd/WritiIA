@@ -383,7 +383,7 @@ export default function IdeasViralesPage() {
                             Exportar Excel
                         </button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px', paddingBottom: '60px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: '24px', paddingBottom: '60px' }}>
                         {ideas.map((idea, idx) => (
                             <div key={idx} className="premium-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px' }}>
                                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
