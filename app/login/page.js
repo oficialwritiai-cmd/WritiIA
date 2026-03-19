@@ -53,7 +53,7 @@ export default function LoginPage() {
 
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+                redirectTo: `${window.location.origin}/dashboard/settings`,
             });
 
             if (error) throw error;
@@ -113,7 +113,7 @@ export default function LoginPage() {
                     password,
                     options: {
                         data: { full_name: email.split('@')[0] },
-                        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                        emailRedirectTo: `${window.location.origin}/dashboard`
                     }
                 });
 

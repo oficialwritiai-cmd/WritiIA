@@ -54,6 +54,15 @@ export async function middleware(req) {
         }
     );
 
+    // PKCE Interceptor: Si viene un código de Supabase (ej. confirmación de email) hacia una ruta protegida
+    // Redirigir al manejador de Auth Callback para intercambiarlo por sesión antes de validarlo.
+    if (req.nextUrl.searchParams.has('code') && req.nextUrl.pathname.startsWith('/dashboard')) {
+        const callbackUrl = req.nextUrl.clone();
+        callbackUrl.pathname = '/auth/callback';
+        callbackUrl.searchParams.set('next', req.nextUrl.pathname);
+        return NextResponse.redirect(callbackUrl);
+    }
+
     // Optimized: Use getUser() for security, as it verifies the token on every request
     const { data: { user } } = await supabase.auth.getUser();
 
