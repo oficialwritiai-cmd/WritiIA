@@ -160,15 +160,31 @@ async function handleCheckoutCompleted(session, supabase) {
             const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
                 email: pending.email,
                 password: pending.password_plan,
-                email_confirm: true // Now that they paid, we confirm the account immediately for better UX
+                email_confirm: false // Requerimos que el usuario confirme su email obligatoriamente
             });
 
             if (authError) {
                 console.error('[Webhook] Error creating user from pending:', authError);
-                // If user already exists (maybe they registered while pago was pending), don't fail everything
+                // If user already exists, it will be handled
                 if (!authError.message.includes('already registered')) throw authError;
             } else {
                 console.log('[Webhook] Successfully created user:', authUser.user.id);
+                // Envía el correo de confirmación obligatoriamente
+                const rawUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://oficialwritiai.vercel.app';
+                const anonClient = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
+                );
+                
+                // Forzar el envío del correo de verificación llamando a resend
+                await anonClient.auth.resend({
+                    type: 'signup',
+                    email: pending.email,
+                    options: {
+                        emailRedirectTo: `${rawUrl}/dashboard`
+                    }
+                }).catch(err => console.error('[Webhook] Failed to resend signup email:', err));
+
                 // Switch userId to the REAL one
                 userId = authUser.user.id;
 

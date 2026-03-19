@@ -108,7 +108,7 @@ export default function LoginPage() {
                 }
 
                 // Sign Up (IMMEDIATE: only for Keys)
-                const { error: signUpError, data: { user } } = await supabase.auth.signUp({
+                const { error: signUpError, data: { user, session } } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -175,6 +175,14 @@ export default function LoginPage() {
                     if (plan === 'pending') {
                     }
                 }
+
+                if (!session && !isMasterKey && hasAccessKey) {
+                    setSuccess('¡Registro exitoso! Por favor, revisa tu email para confirmar y activar tus 7 días gratis.');
+                    setMode('login');
+                    setLoading(false);
+                    return;
+                }
+
                 router.push('/dashboard');
             } else {
                 const { error: signInError, data: { user: signedInUser } } = await supabase.auth.signInWithPassword({
