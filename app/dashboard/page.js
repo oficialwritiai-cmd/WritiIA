@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v5.1.0';
+export const VERSION = 'v5.1.1'; // v5.1.1 (Persistence & Sync Fix)
 
 
 
@@ -386,7 +386,41 @@ export default function DashboardPage() {
             .gte('event_date', start)
             .lte('event_date', end.toISOString().split('T')[0]);
         setEvents(eventData || []);
+
+        // --- v5.1.1: FETCH EXISTING PLAN SLOTS ---
+        if (activeProject) {
+            fetchPlanSlots(user.id, activeProject.id);
+        }
     }
+
+    const fetchPlanSlots = async (userId, projectId) => {
+        try {
+            // Find the latest plan for this project
+            const { data: planData } = await supabase
+                .from('content_plans')
+                .select('id')
+                .eq('project_id', projectId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (planData) {
+                const { data: slots } = await supabase
+                    .from('content_slots')
+                    .select('*')
+                    .eq('plan_id', planData.id)
+                    .order('day_number', { ascending: true });
+                
+                if (slots && slots.length > 0) {
+                    setPlanSlots(slots);
+                    // If we found slots, we should be in Step 3 (Review)
+                    setStep(3);
+                }
+            }
+        } catch (err) {
+            console.warn('[v5.1.1] No existing plan found to load:', err.message);
+        }
+    };
     const fetchPresets = async (userId) => {
         if (!userId) return;
         setLoadingPresets(true);

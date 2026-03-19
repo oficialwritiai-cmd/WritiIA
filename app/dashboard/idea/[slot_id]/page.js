@@ -412,20 +412,40 @@ export default function IdeaPage() {
             }
 
             // 4. Sincronizar Calendario (calendar_events)
-            // Buscamos por reference_id (slot_id)
-            if (slot?.id) {
-                const { error: calUpdErr } = await supabase.from('calendar_events').update({
+            // Buscamos por reference_id (slot_id) o script_id (library_id)
+            if (slot?.id || currentScriptId) {
+                const calUpdates = {
                     title,
                     platform,
                     event_date: scheduledDate || null,
-                    status: currentScriptId ? 'Guion listo' : 'Idea',
-                    has_script: !!currentScriptId,
-                    script_id: currentScriptId, // Sincronizamos el script_id aquí también
+                    status: (currentScriptId || sourceType === 'library') ? 'Guion listo' : 'Idea',
+                    has_script: !!(currentScriptId || sourceType === 'library'),
+                    script_id: currentScriptId,
                     script_full_text: fullContentText,
-                    description: description || title
-                }).eq('reference_id', slot.id);
+                    description: description || title,
+                    content: {
+                        ...(slot?.content || {}),
+                        hook,
+                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
+                        cta: ctaText,
+                        copy_post: postCopy,
+                        notes
+                    }
+                };
+
+                // Actualizar por reference_id o script_id
+                let calQuery = supabase.from('calendar_events').update(calUpdates);
                 
-                if (calUpdErr) console.warn('No se pudo actualizar el evento del calendario vinculado (puede que no exista).');
+                if (slot?.id && currentScriptId) {
+                    calQuery = calQuery.or(`reference_id.eq.${slot.id},script_id.eq.${currentScriptId}`);
+                } else if (slot?.id) {
+                    calQuery = calQuery.eq('reference_id', slot.id);
+                } else {
+                    calQuery = calQuery.eq('script_id', currentScriptId);
+                }
+
+                const { error: calUpdErr } = await calQuery;
+                if (calUpdErr) console.warn('[handleSave] Error syncing calendar_events:', calUpdErr);
             }
 
             // 5. Check if source is library and update it
