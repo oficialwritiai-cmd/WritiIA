@@ -790,6 +790,27 @@ export default function CalendarPage() {
                     </div>
 
                     <div className="cal-panel-body">
+                        {selectedEvent && (
+                            <button
+                                className="btn-primary"
+                                onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
+                                style={{
+                                    width: '100%',
+                                    marginBottom: '20px',
+                                    background: 'rgba(126, 206, 202, 0.1)',
+                                    color: '#7ECECA',
+                                    border: '1px solid rgba(126, 206, 202, 0.3)',
+                                    padding: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '12px',
+                                    fontWeight: 800
+                                }}
+                            >
+                                <Edit3 size={18} style={{ marginRight: '8px' }} /> Abrir Editor Completo (Hoja Grande)
+                            </button>
+                        )}
                         <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div className="cal-prop-row">
                                 <div className="cal-prop-label"><Globe size={16} /> Plataforma</div>

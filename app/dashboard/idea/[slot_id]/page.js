@@ -371,6 +371,7 @@ export default function IdeaPage() {
                     notes,
                     post_copy: postCopy,
                     content: fullContentText,
+                    tone: slot?.metadata?.tone || slot?.tone || 'cercano',
                     is_saved: true,
                     updated_at: new Date().toISOString()
                 }).select().single();
