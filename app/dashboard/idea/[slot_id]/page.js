@@ -342,45 +342,47 @@ export default function IdeaPage() {
 
             let currentScriptId = script?.id || slot?.script_id;
 
-            // 2. Guardar/Actualizar Guion en tabla 'scripts'
-            if (currentScriptId) {
-                const { error: scriptUpdErr } = await supabase.from('scripts').update({
-                    title,
-                    hook,
-                    structure: structureArr,
-                    cta: ctaText,
-                    notes,
-                    post_copy: postCopy,
-                    content: fullContentText,
-                    platform,
-                    updated_at: new Date().toISOString()
-                }).eq('id', currentScriptId);
+            // 2. Guardar/Actualizar Guion en tabla 'scripts' (Solo si no viene de la biblioteca)
+            if (sourceType !== 'library') {
+                if (currentScriptId) {
+                    const { error: scriptUpdErr } = await supabase.from('scripts').update({
+                        title,
+                        hook,
+                        structure: structureArr,
+                        cta: ctaText,
+                        notes,
+                        post_copy: postCopy,
+                        content: fullContentText,
+                        platform,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', currentScriptId);
 
-                if (scriptUpdErr) throw scriptUpdErr;
-            } else if (slot?.id) {
-                // Crear nuevo script
-                const { data: newScript, error: scriptInsErr } = await supabase.from('scripts').insert({
-                    user_id: user.id,
-                    slot_id: slot.id,
-                    project_id: slot.project_id,
-                    platform,
-                    topic: title,
-                    title: title,
-                    hook,
-                    structure: structureArr,
-                    cta: ctaText,
-                    notes,
-                    post_copy: postCopy,
-                    content: fullContentText,
-                    tone: slot?.metadata?.tone || slot?.tone || 'cercano',
-                    is_saved: true,
-                    updated_at: new Date().toISOString()
-                }).select().single();
+                    if (scriptUpdErr) throw scriptUpdErr;
+                } else if (slot?.id) {
+                    // Crear nuevo script
+                    const { data: newScript, error: scriptInsErr } = await supabase.from('scripts').insert({
+                        user_id: user.id,
+                        slot_id: slot.id,
+                        project_id: slot.project_id,
+                        platform,
+                        topic: title,
+                        title: title,
+                        hook,
+                        structure: structureArr,
+                        cta: ctaText,
+                        notes,
+                        post_copy: postCopy,
+                        content: fullContentText,
+                        tone: slot?.metadata?.tone || slot?.tone || 'cercano',
+                        is_saved: true,
+                        updated_at: new Date().toISOString()
+                    }).select().single();
 
-                if (scriptInsErr) throw scriptInsErr;
-                if (newScript) {
-                    currentScriptId = newScript.id;
-                    setScript(newScript);
+                    if (scriptInsErr) throw scriptInsErr;
+                    if (newScript) {
+                        currentScriptId = newScript.id;
+                        setScript(newScript);
+                    }
                 }
             }
 
