@@ -185,51 +185,25 @@ export default function BrainField({
                 but since we want the Sparkles button top right, let's include the header rendering here if provided */}
 
             {label && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {icon && <span style={{ fontSize: '1.4rem' }}>{icon}</span>}
-                        <h3 style={{ fontSize: '1.1rem', margin: 0 }}>{label}</h3>
+                <div className="field-header">
+                    <div className="field-label-group">
+                        {icon && <span className="field-icon">{icon}</span>}
+                        <h3 className="field-title">{label}</h3>
                     </div>
 
-                    <div style={{ position: 'relative' }} ref={menuRef}>
+                    <div className="field-actions" ref={menuRef}>
                         <button
+                            className="improve-btn"
                             onClick={() => setShowMenu(!showMenu)}
                             disabled={isPolishing}
-                            style={{
-                                background: showMenu ? 'rgba(126, 206, 202, 0.2)' : 'transparent',
-                                border: '1px solid #7ECECA',
-                                color: '#7ECECA',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                cursor: isPolishing ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: '0.2s',
-                                opacity: isPolishing ? 0.6 : 1
-                            }}
                         >
                             {isPolishing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                            {isPolishing ? 'Mejorando...' : 'Mejorar con IA'}
+                            <span className="improve-btn-text">{isPolishing ? 'Mejorando...' : 'Mejorar con IA'}</span>
                         </button>
 
                         {/* Mini Chat Popover */}
                         {showMenu && (
-                            <div style={{
-                                position: 'absolute',
-                                top: 'calc(100% + 10px)',
-                                right: 0,
-                                width: '300px',
-                                background: '#1A1A1A',
-                                border: '1px solid var(--border)',
-                                borderRadius: '12px',
-                                padding: '16px',
-                                zIndex: 100,
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                                animation: 'fadeIn 0.2s ease-out'
-                            }}>
+                            <div className="ai-popover">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white' }}>Instrucción a la IA (Opcional)</span>
                                     <button onClick={() => setShowMenu(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><X size={16} /></button>
@@ -239,36 +213,11 @@ export default function BrainField({
                                     onChange={(e) => setInstruction(e.target.value)}
                                     placeholder="Ej: Hazlo más cercano, recorta a 3 frases, usa tono rebelde..."
                                     rows={3}
-                                    style={{
-                                        width: '100%',
-                                        background: '#0D0D0D',
-                                        border: '1px solid #333',
-                                        color: 'white',
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.85rem',
-                                        marginBottom: '12px',
-                                        resize: 'none',
-                                        outline: 'none'
-                                    }}
+                                    className="popover-textarea"
                                 />
                                 <button
                                     onClick={handlePolish}
-                                    style={{
-                                        width: '100%',
-                                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 800,
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px'
-                                    }}
+                                    className="apply-improve-btn"
                                 >
                                     <Sparkles size={16} /> Aplicar Mejora
                                 </button>
@@ -372,6 +321,111 @@ export default function BrainField({
             )}
 
             <style jsx>{`
+                .field-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 16px;
+                }
+                .field-label-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .field-icon {
+                    font-size: 1.4rem;
+                }
+                .field-title {
+                    font-size: 1.1rem;
+                    margin: 0;
+                }
+                .field-actions {
+                    position: relative;
+                }
+                .improve-btn {
+                    background: transparent;
+                    border: 1px solid #7ECECA;
+                    color: #7ECECA;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: 0.2s;
+                }
+                .improve-btn:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+                .ai-popover {
+                    position: absolute;
+                    top: calc(100% + 10px);
+                    right: 0;
+                    width: 300px;
+                    background: #1A1A1A;
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 16px;
+                    z-index: 100;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                    animation: fadeIn 0.2s ease-out;
+                }
+                .popover-textarea {
+                    width: 100%;
+                    background: #0D0D0D;
+                    border: 1px solid #333;
+                    color: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    font-size: 0.85rem;
+                    margin-bottom: 12px;
+                    resize: none;
+                    outline: none;
+                }
+                .apply-improve-btn {
+                    width: 100%;
+                    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+
+                @media (max-width: 768px) {
+                    .field-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 12px;
+                    }
+                    .field-actions {
+                        width: 100%;
+                    }
+                    .improve-btn {
+                        width: 100%;
+                        justify-content: center;
+                        padding: 10px;
+                    }
+                    .ai-popover {
+                        width: calc(100vw - 40px);
+                        right: -10vw; /* Attempt to center or align better */
+                        max-width: 320px;
+                    }
+                    .textarea-field {
+                        min-height: 150px !important;
+                        font-size: 1rem !important;
+                    }
+                }
+
                 @keyframes fadeInOut {
                     0% { opacity: 0; transform: translate(-50%, -40%); }
                     10% { opacity: 1; transform: translate(-50%, -50%); }

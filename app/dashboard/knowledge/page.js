@@ -169,24 +169,17 @@ export default function KnowledgePage() {
     );
 
     return (
-        <div style={{ maxWidth: '1100px', margin: '0 auto', animation: 'fadeIn 0.5s ease-out' }}>
+        <div className="knowledge-container">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                <div>
+            <div className="knowledge-header">
+                <div className="header-info">
                     <h1 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🧠 Cerebro IA</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
                         Proyecto: <strong style={{ color: '#7ECECA' }}>{activeProject.name}</strong> — Entrena a la IA con la identidad de este proyecto.
                     </p>
                     <button
                         onClick={() => setShowWizard(true)}
-                        style={{
-                            marginTop: '12px',
-                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                            color: 'white', border: 'none', padding: '10px 20px',
-                            borderRadius: '8px', fontSize: '0.95rem', fontWeight: 700,
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                        }}
+                        className="wizard-btn"
                     >
                         ✨ Crear mi Cerebro con IA (Rápido)
                     </button>
@@ -202,7 +195,7 @@ export default function KnowledgePage() {
                 </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
+            <div className="knowledge-grid">
                 {[
                     { key: 'niche', label: t('brain.niche'), icon: '🎯', placeholder: 'Ej: Marketing, Cicloturismo, Fitness...' },
                     { key: 'sub_niche', label: t('brain.sub_niche'), icon: '🔍', placeholder: 'Ej: Marketing de afiliados, Rutas por Europa...' },
@@ -211,26 +204,26 @@ export default function KnowledgePage() {
                     { key: 'products_services', label: 'Productos / Servicios', icon: '💼', placeholder: '¿Qué vendes o qué servicios ofreces?' },
                     { key: 'values_tone', label: t('brain.tone'), icon: '✨', placeholder: '¿Qué tono usas? (Ej: Cercano, Rebelde...)' },
                 ].map((sec) => (
-                    <div key={sec.key} className="premium-card" style={{ padding: '24px' }}>
+                    <div key={sec.key} className="premium-card brain-card-item">
                         <BrainField
                             fieldKey={sec.key}
                             label={sec.label}
                             icon={sec.icon}
-                            className="textarea-field"
+                            className="textarea-field brain-textarea"
                             rows={3}
                             placeholder={sec.placeholder}
                             value={brain[sec.key]}
                             onChange={(e) => setBrain({ ...brain, [sec.key]: e.target.value })}
                             brainContext={brain}
-                            style={{ background: 'var(--bg-dark)', border: '1px solid var(--border)', fontSize: '0.95rem' }}
+                            style={{ background: 'var(--bg-dark)', border: '1px solid var(--border)', fontSize: '1rem' }}
                         />
                     </div>
                 ))}
             </div>
 
             {/* AI Learning & Evolution Section */}
-            <div className="premium-card" style={{ padding: '32px', marginBottom: '32px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+            <div className="premium-card brain-learning-card">
+                <div className="learning-header">
                     <div style={{ fontSize: '1.5rem' }}>🚀</div>
                     <div>
                         <h3 style={{ fontSize: '1.3rem', marginBottom: '4px' }}>Algoritmo de Aprendizaje (Log de Entrenamiento)</h3>
@@ -242,13 +235,13 @@ export default function KnowledgePage() {
 
                 <BrainField
                     fieldKey="learning_notes"
-                    className="textarea-field"
+                    className="textarea-field brain-textarea"
                     rows={6}
                     placeholder="Feedback aprendido: 'Evita hablar de precios directamente', 'Usa más storytelling emocional', 'Enfatiza que somos pro-ambiente'..."
                     value={brain.learning_notes}
                     onChange={(e) => setBrain({ ...brain, learning_notes: e.target.value })}
                     brainContext={brain}
-                    style={{ background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', fontSize: '0.95rem', color: '#7ECECA' }}
+                    style={{ background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', fontSize: '1rem', color: '#7ECECA' }}
                 />
             </div>
 
@@ -312,6 +305,76 @@ export default function KnowledgePage() {
             )}
 
             <style jsx>{`
+                .knowledge-container {
+                    maxWidth: 1100px;
+                    margin: 0 auto;
+                    animation: fadeIn 0.5s ease-out;
+                    padding: 20px;
+                }
+                .knowledge-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 40px;
+                    gap: 20px;
+                }
+                .wizard-btn {
+                    margin-top: 12px;
+                    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+                    color: white; border: none; padding: 10px 20px;
+                    borderRadius: 8px; fontSize: 0.95rem; fontWeight: 700;
+                    display: inline-flex; alignItems: center; gap: 8px;
+                    cursor: pointer; boxShadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+                }
+                .knowledge-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 24px;
+                    margin-bottom: 32px;
+                }
+                .brain-card-item {
+                    padding: 24px;
+                }
+                .brain-learning-card {
+                    padding: 32px;
+                    margin-bottom: 32px;
+                    border: 1px solid rgba(126, 206, 202, 0.2);
+                }
+                .learning-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
+
+                @media (max-width: 768px) {
+                    .knowledge-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        text-align: left;
+                    }
+                    .header-info {
+                        width: 100%;
+                    }
+                    #save-brain-btn {
+                        width: 100%;
+                    }
+                    .knowledge-grid {
+                        grid-template-columns: 1fr;
+                        gap: 16px;
+                    }
+                    .brain-card-item {
+                        padding: 20px;
+                    }
+                    .brain-learning-card {
+                        padding: 20px;
+                    }
+                    .learning-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                    }
+                }
+
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes slideUp { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
             `}</style>
