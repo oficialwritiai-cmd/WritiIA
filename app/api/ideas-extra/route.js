@@ -94,7 +94,12 @@ REGLAS DE ORO:
 Responde ÚNICAMENTE con un array JSON válido:
 [{ "titulo_idea": "GANCHO MAGNÉTICO", "descripcion": "EXPLICACIÓN DETALLADA DE LA NARRATIVA Y FORMATO", "categoria": "Autoridad|Viral|Historia|Venta" }]`;
 
-        let userMessage = `GENERACIÓN DINÁMICA DE IDEAS PERSONALIZADAS.
+        const seed = Math.floor(Math.random() * 1000000);
+        const timestamp = new Date().toISOString();
+
+        let userMessage = `GENERACIÓN DINÁMICA DE IDEAS PERSONALIZADAS (REFRESH_ID: ${seed}).
+TIEMPO ACTUAL: ${timestamp}
+
 PERFIL DEL NEGOCIO:
 ${brainContext}
 
@@ -102,6 +107,12 @@ CONTEXTO ADICIONAL DEL PROYECTO:
 - Oferta Principal: ${businessOffer || 'Basada en perfil'}
 - Audiencia Objetivo: ${targetAudience || 'Basada en perfil'}
 - Dolor Principal (Pain Point): ${mainPainPoint || 'Basada en perfil'}
+
+INSTRUCCIÓN CRÍTICA: 
+- No repitas conceptos comunes. 
+- Busca ángulos "contraintuitivos" o "polémicos" que generen conversación.
+- Asegúrate de que cada título sea un GANCHO (HOOK) DE ALTA RETENCIÓN para videos cortos.
+- Usa palabras clave SEO relacionadas con: ${mainPainPoint || 'el nicho del usuario'}.
 
 ${proactive ? 'Genera una selección MASIVA de 35-40 ideas disruptivas y ultrasegmentadas.' : `Contexto específico: ${context}. Genera 30 ideas sobre este nicho.`}`;
         

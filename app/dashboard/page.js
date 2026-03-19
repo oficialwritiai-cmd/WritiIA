@@ -520,6 +520,7 @@ export default function DashboardPage() {
     const fetchProactiveIdeas = async () => {
         if (!profile?.id || !activeProject) return;
         setLoadingRecommended(true);
+        setRecommendedIdeas([]); // Clear previous to show new ones
         try {
             const res = await fetch('/api/ideas-extra', {
                 method: 'POST',
@@ -2955,30 +2956,33 @@ export default function DashboardPage() {
                                 </div>
                                 <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px' }}>
                                     {(() => {
-                                        const combined = [
+                                        // v4.9.1: AI Suggestions come FIRST for actual "dynamic" feel
+                                        let combined = [
+                                            ...recommendedIdeas.map((i, idx) => ({ 
+                                                ...i, 
+                                                id: `rec-${idx}-${Date.now()}`, // Unique ID for cache busting
+                                                source: 'ai', 
+                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title || 'Sugerencia viral',
+                                                descripcion: i.descripcion || i.description || i.idea_description || i.content?.descripcion || ''
+                                            })),
                                             ...libIdeas.map(i => {
                                                 const c = i.content || {};
-                                                // Robust Title Search
                                                 const title = i.titulo || i.title || c.titulo || c.titulo_idea || c.titulo_guion || c.titulo_angulo || i.goal || 'Idea estratégica';
-                                                
-                                                // Robust Description Search
                                                 const desc = i.descripcion || i.description || i.script_full_text || c.descripcion || c.description || c.idea_description || c.hook || c.gancho || c.content || '';
-                                                
                                                 return { 
                                                     ...i, 
                                                     source: 'library', 
                                                     displayTitle: title,
                                                     descripcion: typeof desc === 'string' ? desc.substring(0, 300) : '' 
                                                 };
-                                            }),
-                                            ...recommendedIdeas.map((i, idx) => ({ 
-                                                ...i, 
-                                                id: `rec-${idx}`, 
-                                                source: 'ai', 
-                                                displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title || 'Sugerencia viral',
-                                                descripcion: i.descripcion || i.description || i.idea_description || i.content?.descripcion || ''
-                                            }))
+                                            })
                                         ];
+
+                                        // SHUFFLE only if not currently loading, to avoid layout jump during fetch
+                                        if (combined.length > 0 && !loadingRecommended) {
+                                            // Optional: simple shuffle here or just keep AI first
+                                            // combined = combined.sort(() => Math.random() - 0.5);
+                                        }
 
                                         if (combined.length === 0 && !loadingRecommended) {
                                             return <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No hay ideas guardadas para mostrar.</p>;
