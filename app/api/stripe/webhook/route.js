@@ -181,7 +181,7 @@ async function handleCheckoutCompleted(session, supabase) {
                     type: 'signup',
                     email: pending.email,
                     options: {
-                        emailRedirectTo: `${rawUrl}/dashboard`
+                        emailRedirectTo: `${rawUrl}/auth/callback?next=/dashboard`
                     }
                 }).catch(err => console.error('[Webhook] Failed to resend signup email:', err));
 
