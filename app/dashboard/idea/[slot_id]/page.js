@@ -341,53 +341,41 @@ export default function IdeaPage() {
             ].filter(Boolean).join('\n');
 
             let currentScriptId = script?.id || slot?.script_id;
+            const realSlotId = sourceType === 'library' ? (slot?.metadata?.slot_id || null) : slot?.id;
+            const realLibraryId = sourceType === 'library' ? slot?.id : (slot?.metadata?.library_id || null);
 
-            // 2. Guardar/Actualizar Guion en tabla 'scripts' (Solo si no viene de la biblioteca)
-            if (sourceType !== 'library') {
-                if (currentScriptId) {
-                    const { error: scriptUpdErr } = await supabase.from('scripts').update({
-                        title,
-                        hook,
-                        structure: structureArr,
-                        cta: ctaText,
-                        notes,
-                        post_copy: postCopy,
-                        content: fullContentText,
-                        platform,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', currentScriptId);
+            const commonScriptData = {
+                hook,
+                desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
+                cta: ctaText,
+                copy_post: postCopy,
+                notes,
+                titulo_guion: title,
+                descripcion: description
+            };
 
-                    if (scriptUpdErr) throw scriptUpdErr;
-                } else if (slot?.id) {
-                    // Crear nuevo script
-                    const { data: newScript, error: scriptInsErr } = await supabase.from('scripts').insert({
-                        user_id: user.id,
-                        slot_id: slot.id,
-                        project_id: slot.project_id,
-                        platform,
-                        topic: title,
-                        title: title,
-                        hook,
-                        structure: structureArr,
-                        cta: ctaText,
-                        notes,
-                        post_copy: postCopy,
-                        content: fullContentText,
-                        tone: slot?.metadata?.tone || slot?.tone || 'cercano',
-                        is_saved: true,
-                        updated_at: new Date().toISOString()
-                    }).select().single();
-
-                    if (scriptInsErr) throw scriptInsErr;
-                    if (newScript) {
-                        currentScriptId = newScript.id;
-                        setScript(newScript);
-                    }
-                }
+            // 2. Sincronizar tabla 'scripts'
+            if (currentScriptId || realSlotId) {
+                const scriptUpdates = {
+                    title,
+                    hook,
+                    structure: structureArr,
+                    cta: ctaText,
+                    notes,
+                    post_copy: postCopy,
+                    content: fullContentText,
+                    platform,
+                    updated_at: new Date().toISOString()
+                };
+                let sQuery = supabase.from('scripts').update(scriptUpdates);
+                if (currentScriptId) sQuery = sQuery.eq('id', currentScriptId);
+                else sQuery = sQuery.eq('slot_id', realSlotId);
+                
+                await sQuery;
             }
 
-            // 3. Sincronizar Slot
-            if (slot?.id) {
+            // 3. Sincronizar Slot (content_slots) -> CRÍTICO PARA PREVISUALIZACIÓN DASHBOARD
+            if (realSlotId) {
                 const slotUpdates = {
                     idea_title: title,
                     idea_description: description,
@@ -397,78 +385,53 @@ export default function IdeaPage() {
                     scheduled_date: scheduledDate || null,
                     script_id: currentScriptId,
                     has_script: !!currentScriptId,
-                    slot_status: currentScriptId ? 'script_ready' : slotStatus,
-                    script_data: {
-                        hook,
-                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
-                        cta: ctaText,
-                        copy_post: postCopy,
-                        notes
-                    }
+                    script_data: commonScriptData
                 };
-
-                const { error: slotUpdErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', slot.id);
-                if (slotUpdErr) throw slotUpdErr;
+                await supabase.from('content_slots').update(slotUpdates).eq('id', realSlotId);
             }
 
             // 4. Sincronizar Calendario (calendar_events)
-            // Buscamos por reference_id (slot_id) o script_id (library_id)
-            if (slot?.id || currentScriptId) {
+            if (realSlotId || realLibraryId || currentScriptId) {
                 const calUpdates = {
                     title,
                     platform,
                     event_date: scheduledDate || null,
-                    status: (currentScriptId || sourceType === 'library') ? 'Guion listo' : 'Idea',
-                    has_script: !!(currentScriptId || sourceType === 'library'),
+                    status: 'Guion listo',
+                    has_script: true,
                     script_id: currentScriptId,
                     script_full_text: fullContentText,
                     description: description || title,
-                    content: {
-                        ...(slot?.content || {}),
-                        hook,
-                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
-                        cta: ctaText,
-                        copy_post: postCopy,
-                        notes
-                    }
+                    content: commonScriptData
                 };
 
-                // Actualizar por reference_id o script_id
-                let calQuery = supabase.from('calendar_events').update(calUpdates);
+                let cQuery = supabase.from('calendar_events').update(calUpdates);
+                let orConditions = [];
+                if (realSlotId) orConditions.push(`reference_id.eq.${realSlotId}`);
+                if (realLibraryId) orConditions.push(`reference_id.eq.${realLibraryId}`);
+                if (currentScriptId) orConditions.push(`script_id.eq.${currentScriptId}`);
                 
-                if (slot?.id && currentScriptId) {
-                    calQuery = calQuery.or(`reference_id.eq.${slot.id},script_id.eq.${currentScriptId}`);
-                } else if (slot?.id) {
-                    calQuery = calQuery.eq('reference_id', slot.id);
-                } else {
-                    calQuery = calQuery.eq('script_id', currentScriptId);
+                if (orConditions.length > 0) {
+                    await cQuery.or(orConditions.join(','));
                 }
-
-                const { error: calUpdErr } = await calQuery;
-                if (calUpdErr) console.warn('[handleSave] Error syncing calendar_events:', calUpdErr);
             }
 
-            // 5. Check if source is library and update it
-            if (sourceType === 'library' && slot?.id) {
+            // 5. Sincronizar Biblioteca (library)
+            if (realLibraryId || (realSlotId && sourceType !== 'library')) {
                 const libUpdates = {
                     titulo: title,
                     platform,
                     goal,
-                    type: contentType || slot.type,
                     script_full_text: fullContentText,
-                    content: {
-                        ...(slot.content || {}),
-                        titulo_guion: title,
-                        descripcion: description,
-                        hook: hook,
-                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
-                        cierre: ctaText,
-                        copy_post: postCopy,
-                        notes
-                    }
+                    content: commonScriptData,
+                    updated_at: new Date().toISOString()
                 };
-                const { error: libUpdErr } = await supabase.from('library').update(libUpdates).eq('id', slot.id);
-                if (libUpdErr) throw libUpdErr;
+
+                if (realLibraryId) {
+                    await supabase.from('library').update(libUpdates).eq('id', realLibraryId);
+                } else {
+                    // Buscar item en biblioteca que pertenezca a este slot
+                    await supabase.from('library').update(libUpdates).filter('metadata->>slot_id', 'eq', realSlotId);
+                }
             }
 
             // Visual feedback

@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v5.1.1'; // v5.1.1 (Persistence & Sync Fix)
+export const VERSION = 'v5.1.2'; // v5.1.2 (Cross-Table Sync Fix)
 
 
 
@@ -413,12 +413,15 @@ export default function DashboardPage() {
                 
                 if (slots && slots.length > 0) {
                     setPlanSlots(slots);
-                    // If we found slots, we should be in Step 3 (Review)
-                    setStep(3);
+                    // If we found slots, we should stay in Step 3 if we were already in "plan" mode
+                    // But we don't want to force Step 3 if the user is in the Wizard.
+                    // setStep(prev => (prev === 1 ? 3 : prev)); 
+                    // v5.1.2: Only set step 3 if we are NOT in the middle of a generation/wizard
+                    if (step === 1) setStep(3);
                 }
             }
         } catch (err) {
-            console.warn('[v5.1.1] No existing plan found to load:', err.message);
+            console.warn('[v5.1.2] No existing plan found to load:', err.message);
         }
     };
     const fetchPresets = async (userId) => {
