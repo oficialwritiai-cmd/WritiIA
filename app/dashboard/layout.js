@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v5.0.6: Rediseño Planificación + IA Estratégica
+    // v5.0.7: Rediseño Planificación + IA Estratégica
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v5.0.6 LOADED — PREMIUM FLOW', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v5.0.7 LOADED — PREMIUM FLOW', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -202,40 +202,62 @@ export default function DashboardLayout({ children }) {
     }, []);
 
     const [daysRemaining, setDaysRemaining] = useState(null);
+    const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
         if (!profile) {
             setDaysRemaining(null);
+            setIsExpired(false);
             return;
         }
 
-        const now = new Date();
-        let targetDate = null;
+        const calculateTime = () => {
+            const now = new Date();
+            let targetDate = null;
 
-        if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_ends_at) {
-            targetDate = new Date(profile.trial_ends_at);
-        } else if (profile.plan === 'pro') {
-            if (profile.subscription_period_end) {
-                targetDate = new Date(profile.subscription_period_end);
+            if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_ends_at) {
+                targetDate = new Date(profile.trial_ends_at);
+            } else if (profile.plan === 'pro') {
+                if (profile.subscription_period_end) {
+                    targetDate = new Date(profile.subscription_period_end);
+                } else {
+                    setDaysRemaining('Activa');
+                    setIsExpired(false);
+                    return;
+                }
+            }
+
+            if (targetDate) {
+                const diff = targetDate - now;
+                if (diff <= 0) {
+                    setDaysRemaining('Expirado');
+                    setIsExpired(true);
+                    
+                    // Solo intentar desactivar si no se ha hecho ya
+                    if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_active) {
+                        supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id).then(() => {});
+                    }
+                } else {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    
+                    if (days > 0) {
+                        setDaysRemaining(`${days}d ${hours}h`);
+                    } else {
+                        setDaysRemaining(`${hours}h`);
+                    }
+                    setIsExpired(false);
+                }
             } else {
-                // If it's Pro but no date, it's unlimited / active indefinitely for now
-                setDaysRemaining('Activa');
-                return;
+                setDaysRemaining(null);
+                setIsExpired(false);
             }
-        }
+        };
 
-        if (targetDate) {
-            const diff = targetDate - now;
-            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-            setDaysRemaining(Math.max(0, days));
-
-            // Auto-deactivate trial if expired
-            if ((profile.plan === 'trial' || profile.plan === 'free') && days <= 0 && profile.trial_active) {
-                supabase.from('users_profiles').update({ trial_active: false }).eq('id', profile.id);
-            }
-        } else {
-            setDaysRemaining(null);
-        }
+        calculateTime();
+        // Actualizar cada minuto para que el contador de horas sea fluido
+        const interval = setInterval(calculateTime, 60000);
+        return () => clearInterval(interval);
     }, [profile]);
 
     useEffect(() => {
@@ -256,13 +278,13 @@ export default function DashboardLayout({ children }) {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
-        const isTrialStillActive = profile.trial_active && (daysRemaining === null || daysRemaining > 0);
+        const isTrialStillActive = profile.trial_active && !isExpired;
         const isPending = profile.plan === 'pending';
 
         if ((!hasActivePlan && !isTrialStillActive) || isPending) {
             router.replace('/dashboard/expired');
         }
-    }, [profile, daysRemaining, pathname, loading, router]);
+    }, [profile, isExpired, pathname, loading, router]);
 
     // v4.6.2: Ensure body scroll is recovered when sidebar closes
     useEffect(() => {
@@ -312,7 +334,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v5.0.6)
+                    {loadingStatus} (v5.0.7)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -490,7 +512,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v5.0.6
+                            v5.0.7
                         </div>                    </div>
                 </aside>
 
@@ -641,7 +663,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFB800', fontWeight: 900, marginRight: '8px' }}>v5.0.6</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFB800', fontWeight: 900, marginRight: '8px' }}>v5.0.7</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',
@@ -651,7 +673,7 @@ export default function DashboardLayout({ children }) {
                                         maxWidth: '120px',
                                         margin: 0
                                     }}>
-                                        {user?.email?.split('@')[0] || 'User'}
+                                        {profile?.full_name || profile?.name || user?.email?.split('@')[0] || 'User'}
                                     </p>
                                     <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.4)', transform: isUserMenuOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
                                 </div>
@@ -766,8 +788,8 @@ export default function DashboardLayout({ children }) {
                                     <span style={{ color: '#7ECECA', fontWeight: 900, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                                         {profile?.plan === 'pro' ? t('dashboard.membership_pro') : t('dashboard.free_trial')}
                                     </span>
-                                    <span style={{ color: (typeof daysRemaining === 'number' && daysRemaining <= 2) ? '#FF4D4D' : '#FFD700', fontSize: '0.75rem', fontWeight: 800 }}>
-                                        {daysRemaining !== null ? (typeof daysRemaining === 'number' ? t('dashboard.days_remaining', { days: daysRemaining }) : daysRemaining) : '...'}
+                                    <span style={{ color: (isExpired || (typeof daysRemaining === 'string' && daysRemaining.includes('h') && !daysRemaining.includes('d'))) ? '#FF4D4D' : '#FFD700', fontSize: '0.75rem', fontWeight: 800 }}>
+                                        {daysRemaining !== null ? daysRemaining : '...'}
                                     </span>
                                 </div>
                             </div>
@@ -889,8 +911,8 @@ export default function DashboardLayout({ children }) {
                                 </h2>
                                 <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
                                     Necesitas créditos o un plan activo para usar las funciones de IA.
-                                    {profile?.is_trial_active && daysRemaining > 0 && (
-                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {daysRemaining} días de prueba gratis!</span></>
+                                    {profile?.is_trial_active && !isExpired && (
+                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {daysRemaining} de prueba gratis!</span></>
                                     )}
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
