@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 const limiter = rateLimit({
@@ -28,16 +28,27 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
         }
 
-        const { text, platform, goal, userId, projectId, sections } = body;
+        const { text, platform, goal, projectId, sections } = body;
 
-        if (!text || !platform || !userId) {
-            return NextResponse.json({ error: 'Faltan campos requeridos (text, platform, userId).' }, { status: 400 });
+        if (!text || !platform) {
+            return NextResponse.json({ error: 'Faltan campos requeridos (text, platform).' }, { status: 400 });
         }
 
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Credit Check & Charge (1 credit for copy generation)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_HOOKS_ONLY || 1, 'generate_copys', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_HOOKS_ONLY || 1, 'generate_copys', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -49,7 +60,7 @@ export async function POST(request) {
             brandBrain = data;
         }
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
         }
 
@@ -78,7 +89,7 @@ idioma: ESPAÑOL (Responde SIEMPRE en español).
 
 REGLA DE ORO (FIDELIDAD TOTAL AL TEMA):
 - TU RESPUESTA DEBE BASARSE EXCLUSIVAMENTE EN EL "TEMA/IDEA/GUION" PROPORCIONADO POR EL USUARIO.
-- NO INVENTES RESULTADOS: Si el usuario dice "estoy creando", "estoy empezando" o "mi proceso", los copys deben ser sobre el PROCESO, no sobre haber alcanzado ya el éxito (ej: no digas "conseguí 100k" si no está en el texto).
+- NO INVENTES RESULTADOS: Si el usuario dice "estoy creando", "estoy empezando" o "mi proceso", los copys deben ser sobre el PROCESO, no sobre haber alcanzado ya el éxito.
 - NO INVENTES DATOS: Queda terminantemente prohibido inventar estadísticas, número de clientes o hitos no mencionados explícitamente.
 - SI EL USUARIO NO DA DETALLES: Mantén los copys enfocados en la curiosidad y el valor del tema propuesto, sin rellenar huecos con información falsa.
 
@@ -130,26 +141,20 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             });
             rawContent = haikuRes.content || '';
             
-            // --- NUCLEAR JSON EXTRACTION (v2.9.2) ---
-            // We ignore the library's 'parsed' field because it forces a different schema.
             const extractJSON = (text) => {
                 try {
-                    // Try to find the LARGEST JSON object in the text
                     const firstBrace = text.indexOf('{');
                     const lastBrace = text.lastIndexOf('}');
                     if (firstBrace !== -1 && lastBrace !== -1) {
                         const jsonStr = text.substring(firstBrace, lastBrace + 1);
                         return JSON.parse(jsonStr);
                     }
-                } catch (e) {
-                    console.error('[Copys IA] Primary extraction failed:', e.message);
-                }
+                } catch (e) {}
                 return null;
             };
 
             result = extractJSON(rawContent);
 
-            // If primary failed, try to pick up the library's version but sanitize it
             if (!result && haikuRes.parsed) {
                 result = Array.isArray(haikuRes.parsed) ? haikuRes.parsed[0] : haikuRes.parsed;
             }
@@ -163,8 +168,6 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             return NextResponse.json({ error: 'La IA devolvió un formato vacío o ilegible. Reintenta por favor.' }, { status: 500 });
         }
 
-        // --- DEEP NORMALIZATION ---
-        // Some AI responses might be nested like { result: { titles: ... } } or { data: { ... } }
         const deepResult = result.result || result.data || result.content || result;
 
         const normalized = {
@@ -175,27 +178,9 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             youtube_tags: deepResult.youtube_tags || deepResult.youtubeTags || []
         };
 
-        // SAFETY: If the AI puts all JSON as a string inside a field (happens with some library fallbacks)
-        const isJsonString = (str) => typeof str === 'string' && (str.startsWith('{') || str.startsWith('['));
-        
-        if (normalized.descriptions.length === 1 && isJsonString(normalized.descriptions[0])) {
-            console.log('[Copys IA] Detected JSON string inside description, re-parsing...');
-            const nested = extractJSON(normalized.descriptions[0]);
-            if (nested) {
-                normalized.titles = nested.titles || nested.titulos || normalized.titles;
-                normalized.hooks = nested.hooks || nested.ganchos || normalized.hooks;
-                normalized.descriptions = nested.descriptions || nested.descripciones || (Array.isArray(nested.desarrollo) ? nested.desarrollo : []);
-            }
-        }
-
-        // Final list cleaner
         const cleanList = (list) => {
             if (!Array.isArray(list)) return [];
-            return list.map(item => {
-                if (typeof item === 'string') return item.trim();
-                if (Array.isArray(item)) return item.join(' ').trim();
-                return String(item);
-            }).filter(i => i && i.length > 3 && !i.startsWith('{'));
+            return list.map(item => String(item).trim()).filter(i => i && i.length > 3 && !i.startsWith('{'));
         };
 
         normalized.titles = cleanList(normalized.titles);
@@ -208,17 +193,6 @@ Por favor, genera el JSON siguiendo las instrucciones del prompt interno.`;
             ? normalized.hashtags_groups.map(group => Array.isArray(group) ? group : [group])
             : [];
 
-        // Check if we have at least SOME content
-        const hasContent = normalized.titles.length > 0 || 
-                          normalized.hooks.length > 0 || 
-                          normalized.descriptions.length > 0;
-
-        if (!hasContent) {
-            console.error('[Copys IA] No valid content after normalization:', result);
-            return NextResponse.json({ error: 'La IA devolvió un formato inválido. Por favor intenta de nuevo.' }, { status: 500 });
-        }
-
-        // Add to stats
         if (projectId) {
             await supabase.rpc('increment_project_stat', { p_project_id: projectId, p_column: 'hooks_generated', p_amount: 1 });
         }

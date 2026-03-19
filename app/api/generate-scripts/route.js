@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { GenerateScriptSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateScriptsWithSonnet, generateScriptsLong } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, getScriptCost } from '@/lib/credits';
 
 const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 });
@@ -258,10 +259,19 @@ export async function POST(request) {
             experienciaReal, opinionPersonal, faseCreador
         } = validation.data;
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify project ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        // Use verified userId from session, not from body if possible
+        const verifiedUserId = user.id;
 
         // Credit Check & Charge (Dynamic Cost)
         // const totalCost = getScriptCost(videoDuration, count || 1);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { improveScriptWithInstruction } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { z } from 'zod';
@@ -20,7 +20,6 @@ const ImproveScriptSchema = z.object({
     topic: z.string().max(500).optional().default(''),
     platform: z.string().max(50).optional().default('Reels'),
     videoDuration: z.string().max(20).optional().default('60 seg'),
-    userId: z.string().uuid('ID de usuario inválido'),
     projectId: z.string().uuid().optional().nullable(),
 });
 
@@ -44,15 +43,23 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { script, instruction, topic, platform, videoDuration, userId, projectId } = validation.data;
+        const { script, instruction, topic, platform, videoDuration, projectId } = validation.data;
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Charge 1 credit per improvement
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.IMPROVE_SCRIPT, 'improve_script', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.IMPROVE_SCRIPT, 'improve_script', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -64,7 +71,7 @@ export async function POST(request) {
             brandBrain = data;
         }
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
         }
 
@@ -72,7 +79,6 @@ export async function POST(request) {
             ? `Contexto del creador:\n- Bio: ${brandBrain.biography || ''}\n- Estilo: ${brandBrain.style_words || ''}\n- Tono: ${brandBrain.values_tone || ''}\n- Audiencia: ${brandBrain.audience || ''}`
             : '';
 
-        // Format current script as readable block for the model
         const scriptBlock = `GANCHO: ${script.gancho}
 
 DESARROLLO:
@@ -82,14 +88,13 @@ CIERRE: ${script.cierre || '(ninguno)'}
 
 CTA: ${script.cta}`;
 
-        // Default improvement if no instruction
         const hasInstruction = instruction && instruction.trim().length > 0;
         const improvementGoal = hasInstruction
             ? `El usuario pide específicamente: "${instruction.trim()}"`
             : `Aplica estas mejoras por defecto:
 - Hazlo más humano y cercano, elimina frases genéricas.
 - Ajusta el contenido para que corresponda exactamente a la duración de ${videoDuration}.
-- Mejora el CTA para que invite a una acción concreta (comentar, guardar, enviar DM, visitar link), NUNCA uses "sígueme" a secas.
+- Mejora el CTA para que invite a una acción concreta, NUNCA uses "sígueme" a secas.
 - Enriquece el desarrollo con datos o ejemplos más específicos.`;
 
         const systemPrompt = `Eres un editor de guiones de video experto en contenido viral para redes sociales.
@@ -103,9 +108,8 @@ ${improvementGoal}
 
 REGLAS ESTRICTAS:
 - NO cambies el tema ni la idea base.
-- El CTA NUNCA puede estar vacío ni ser genérico como "sígueme" sin más.
-- El gancho DEBE mantener impacto visual en los primeros 3 segundos.
-- Devuelve SOLO JSON válido con este formato exacto (sin markdown):
+- El CTA NUNCA puede estar vacío ni ser genérico.
+- Devuelve SOLO JSON válido con este formato exacto:
 {
   "titulo_guion": "...",
   "video_duration": "${videoDuration}",

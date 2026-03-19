@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Plus, FolderOpen, Calendar, X, Loader2, Trash2, Sparkles, ArrowRight } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -18,6 +19,13 @@ export default function DashboardHomePage() {
     const supabase = createSupabaseClient();
     const router = useRouter();
     const { refreshProjects, setActiveProject } = useProject();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get('create') === 'true') {
+            setShowModal(true);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         loadData();

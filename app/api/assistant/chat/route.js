@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits } from '@/lib/credits';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
 
@@ -21,75 +21,61 @@ Este proyecto no tiene Cerebro IA aún. Sugiere amablemente al usuario que lo co
 =================================`;
 
     const modeGuide = {
-        ideas: `
-MODO ACTIVO: IDEAS DE CONTENIDO
-- Genera 3–10 ideas bien explicadas, con título + breve descripción (máximo 3 líneas por idea).
-- Alinea con el Cerebro IA y la etapa real del negocio.
-- Finaliza ofreciendo 1 o 2 siguientes pasos claros en forma de pregunta (ej: "¿Te convierto alguna en guion?").`,
-        titulos: `
-MODO ACTIVO: TÍTULOS Y COPYS
-- Resume 2–3 mejores opciones en lenguaje natural, corto y directo.
-- Entrega el Copy final LISTO PARA PEGAR sin rellenos.`,
-        copys: `
-MODO ACTIVO: TÍTULOS Y COPYS
-- Entrega el copy o descripción *directamente* al grano. Nada de "Aquí tienes tu copia...".
-- Para YouTube: Línea 1 (contexto+beneficio) + 2-3 líneas (proceso/promesa) + Última línea (CTA).`,
-        guion: `
-MODO ACTIVO: GUIONES
-- Hook visual (3 palabras) → Contexto corto → Desarrollo → CTA.
-- Sin introducciones narrativas largas. Directo al texto del guion.`,
-        calendario: `
-MODO ACTIVO: CALENDARIO
-- Sugiere fechas y frecuencia razonables. Directo: "¿Lo agendamos para el jueves?"`,
-        biblioteca: `
-MODO ACTIVO: BIBLIOTECA
-- Mejora textos manteniendo la esencia. Directo al texto reescrito.`,
+        ideas: `MODO ACTIVO: IDEAS DE CONTENIDO - Genera 3–10 ideas bien explicadas.`,
+        titulos: `MODO ACTIVO: TÍTULOS Y COPYS - Resume mejores opciones reales.`,
+        copys: `MODO ACTIVO: TÍTULOS Y COPYS - Entrega el copy directmente al grano.`,
+        guion: `MODO ACTIVO: GUIONES - Hook visual → Contexto → Desarrollo → CTA.`,
+        calendario: `MODO ACTIVO: CALENDARIO - Sugiere fechas y frecuencia razonables.`,
+        biblioteca: `MODO ACTIVO: BIBLIOTECA - Mejora textos manteniendo la esencia.`,
     };
 
     const modeInstruction = mode && modeGuide[mode] ? modeGuide[mode] : '';
-    const userName_str = userName ? `\nHablas con: ${userName}. No repitas su nombre en todos los mensajes.` : '';
+    const userName_str = userName ? `\nHablas con: ${userName}.` : '';
 
-    return `Eres "WRITI JARVIS", el estratega de contenido y marketer experto del usuario.${userName_str}
+    return `Eres "WRITI JARVIS", el estratega de contenido y marketer experto.${userName_str}
 
-REGLAS ESTRICTAS DE PERSONALIDAD (MEJORA JARVIS V3.5):
-1. CERO HUMO NI INVENCIONES: NUNCA asumas logros falsos (ej. "tengo 10,000 clientes" o "mi próspera agencia") si no están explícitos en el Cerebro IA o en el mensaje del usuario. Sé crudo, honesto y real. Entiende la fase real del usuario (ej: si recién lanza, asume fase de lanzamiento).
-2. MUY CORTO Y DIRECTO: Frases cortas, sin relleno. Cero discursos de motivación largos. Elimina para siempre frases basura como "En este valioso contenido aprenderás..." o "No te pierdas esta oportunidad...".
-3. LENGUAJE HUMANO: Habla como un marketer humano enviando un mensaje por Slack a un colega. Natural y al grano.
-4. TEXTOS LISTOS PARA USAR: Si el usuario pide una descripción o copy, entrégalo limpio, listo para copiar y pegar. Sin introducciones.
-   - Formato YouTube ideal: Línea 1 (Contexto+beneficio), Líneas 2-3 (Qué se ve en el vídeo/proceso), Última (CTA+Red social).
-5. DINÁMICA JARVIS PROACTIVA: Al final de tu respuesta, no digas "espero que te sirva". Ofrece 1-2 acciones concretas:
-   - "¿Te preparo ahora el guion del video?"
-   - "¿Quieres 5 títulos alternativos para este ángulo?"
-   - "¿Lo mandamos al calendario de la próxima semana?"
+REGLAS ESTRICTAS:
+1. CERO HUMO: NUNCA asumas logros falsos. Sé real y honesto.
+2. MUY CORTO Y DIRECTO: Frases cortas, sin relleno motivacional.
+3. LENGUAJE HUMANO: Habla como un colega marketer por Slack.
+4. TEXTOS LISTOS PARA USAR: Sin introducciones innecesarias.
+5. PROACTIVO: Ofrece siempre el siguiente paso concreto.
 
-CONTEXTO DEL PROYECTO (USAR COMO VERDAD ABSOLUTA):
+CONTEXTO:
 ${brainContext}
 ${modeInstruction}
-
 IDIOMA: Responde SIEMPRE en el mismo idioma del usuario.`;
 }
 
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { userId, projectId, messages, mode, userName } = body;
+        const { projectId, messages, mode, userName } = body;
 
-        if (!userId || !messages) {
-            return NextResponse.json({ error: 'Faltan datos requeridos.' }, { status: 400 });
+        if (!messages) {
+            return NextResponse.json({ error: 'Faltan datos requeridos (messages).' }, { status: 400 });
         }
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Charge 1 credit per message
-        const creditResult = await chargeCredits(supabase, userId, 1, 'assistant_chat', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, 1, 'assistant_chat', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        // Load Cerebro IA (project-scoped first, fallback global legacy)
+        // Load Cerebro IA
         let brain = null;
         let projectName = null;
         if (projectId) {
@@ -98,43 +84,36 @@ export async function POST(req) {
             const { data: proj } = await supabase.from('projects').select('name').eq('id', projectId).single();
             projectName = proj?.name || null;
         }
+
         if (!brain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brain = data;
         }
 
-        // Build the full Jarvis system prompt
         const systemPrompt = buildJarvisSystemPrompt({ brain, userName, projectName, mode });
 
-        // Build conversation history (last 10 messages)
         const historyMessages = (messages || []).slice(-10);
         const lastMsg = historyMessages[historyMessages.length - 1];
         const userMessage = lastMsg?.content || '';
 
-        // Previous turns as context block
         const previousContext = historyMessages.slice(0, -1).map(m =>
             `${m.role === 'user' ? 'Usuario' : 'JARVIS'}: ${m.content}`
         ).join('\n\n');
 
         const fullUserMessage = previousContext
-            ? `[Historial de conversación]\n${previousContext}\n\n[Mensaje actual del usuario]\n${userMessage}`
+            ? `[Historial]\n${previousContext}\n\n[Mensaje actual]\n${userMessage}`
             : userMessage;
 
-        // Use the existing anthropic lib (handles API key correctly)
         const { content } = await improveBlockWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
             systemPrompt,
             userMessage: fullUserMessage,
         });
 
-        const reply = content || 'No pude generar respuesta. Intenta de nuevo.';
-
-        return NextResponse.json({ reply });
+        return NextResponse.json({ reply: content || 'No pude generar respuesta.' });
 
     } catch (error) {
-        console.error('[assistant/chat] Error:', error?.message || error);
-        return NextResponse.json({
-            error: 'Tuvimos un problema al conectar con la IA. Intenta de nuevo en unos segundos.'
-        }, { status: 500 });
+        console.error('[assistant/chat] Error:', error?.message);
+        return NextResponse.json({ error: 'Error al conectar con la IA.' }, { status: 500 });
     }
 }

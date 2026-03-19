@@ -127,7 +127,6 @@ export default function DashboardPage() {
     const [events, setEvents] = useState([]);
     const [calendarDate, setCalendarDate] = useState('');
     const [loadingPhase, setLoadingPhase] = useState(0);
-    const [isPlannerModalOpen, setIsPlannerModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [successModalData, setSuccessModalData] = useState({ title: '', message: '' });
     const [isPlanningLoading, setIsPlanningLoading] = useState(false);
@@ -141,6 +140,7 @@ export default function DashboardPage() {
     const [plannedDate, setPlannedDate] = useState('');
     const [plannedTime, setPlannedTime] = useState('');
     const [planningScript, setPlanningScript] = useState(null);
+    const [planningIdx, setPlanningIdx] = useState(null);
     const [previousScripts, setPreviousScripts] = useState(null);
     const [presets, setPresets] = useState([]);
     const [loadingPresets, setLoadingPresets] = useState(false);
@@ -1375,40 +1375,32 @@ export default function DashboardPage() {
         }
     };
 
-    const handleOpenPlanner = (script) => {
+    const handleOpenPlannerIdx = (script, idx) => {
         setPlanningScript(script);
-        setSuggestedReasoning(''); // Reset old reasoning
+        setPlanningIdx(idx);
+        setSuggestedReasoning(''); 
 
-        // Advanced date suggestion: avoid existing events
-        const findBestDate = () => {
+        const bestDate = (() => {
             const start = new Date();
-            start.setDate(start.getDate() + 1); // Start from tomorrow
-
-            // Search for the next 30 days
+            start.setDate(start.getDate() + 1); 
             for (let i = 0; i < 30; i++) {
                 const checkDate = new Date(start);
                 checkDate.setDate(start.getDate() + i);
                 const dateStr = checkDate.toISOString().split('T')[0];
-
-                // Check if any event already exists on this day
                 const hasExisting = events && events.some(e => e.event_date === dateStr);
                 if (!hasExisting) return dateStr;
             }
             return start.toISOString().split('T')[0];
-        };
+        })();
 
-        setPlannedDate(findBestDate());
-
-        // Suggest time based on platform
+        setPlannedDate(bestDate);
+        
         let bestTime = '18:00';
         const p = (script.platform || '').toLowerCase();
         if (p.includes('linkedin')) bestTime = '08:30';
         if (p.includes('youtube')) bestTime = '11:00';
         if (p.includes('tiktok') || p.includes('instagram') || p.includes('reels')) bestTime = '20:15';
         setPlannedTime(bestTime);
-
-        setIsPlannerModalOpen(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleAISuggestion = async () => {
@@ -1440,67 +1432,60 @@ export default function DashboardPage() {
     };
 
     const handleConfirmPlanning = async () => {
-        if (!planningScript || !plannedDate) return;
+        if (!planningScript || !plannedDate) return alert('Selecciona una fecha');
         setIsPlanningLoading(true);
-
         try {
-            // 1. First save script to library to get a reference_id
-            let scriptId = planningScript.id;
-            const fullText = formatFullScript(planningScript);
+            const script = planningScript;
+            const fullText = formatFullScript(script);
+            const { data: { user } } = await supabase.auth.getUser();
 
-            // ALways save/update to library to ensure full data (forced save)
-            const savedItem = await saveToLibrary({
-                userId: profile.id,
+            // 1. Save to library first
+            const libraryItem = await saveToLibrary({
+                userId: user.id,
                 type: 'guion',
-                platform: planningScript.platform || platform || 'General',
-                goal: planningScript.goal || goal || 'engagement',
-                titulo: planningScript.titulo_guion || planningScript.titulo_angulo || 'Sin título',
+                platform: script.platform || platform || 'General',
+                goal: script.goal || goal || 'engagement',
+                titulo: script.titulo_guion || script.titulo_angulo || 'Sin título',
                 script_full_text: fullText,
                 content: {
-                    video_duration: planningScript.video_duration || '45-60 seg',
-                    hook: planningScript.hook || planningScript.gancho || '',
-                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : (planningScript.puntos ? planningScript.puntos : []),
-                    cierre: planningScript.cierre || '',
-                    cta: planningScript.cta || planningScript.cierre || '',
-                    copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                    video_duration: script.video_duration || videoDuration || '60 seg',
+                    hook: script.hook || script.gancho || '',
+                    desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                    cierre: script.cta || '',
+                    copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
-                tags: ['guion', planningScript.platform || platform, 'planificado'].filter(Boolean),
+                tags: ['guion', script.platform || platform, 'planificado'].filter(Boolean),
                 projectId: activeProject?.id
             });
-            scriptId = savedItem.id;
 
-            // 2. Insert into calendar_events with 'En preparación' status
+            // 2. Insert into calendar
             const { error: calErr } = await supabase.from('calendar_events').insert({
-                user_id: profile.id,
+                user_id: user.id,
+                project_id: activeProject?.id,
                 event_date: plannedDate,
-                title: planningScript.titulo_guion || 'Guion Planificado',
-                platform: planningScript.platform || platform || 'General',
-                type: 'guion',
-                script_full_text: formatFullScript(planningScript),
-                content: {
-                    video_duration: planningScript.video_duration || '45-60 seg',
-                    hook: planningScript.hook || planningScript.gancho || '',
-                    desarrollo: Array.isArray(planningScript.desarrollo) ? planningScript.desarrollo : (planningScript.puntos ? planningScript.puntos : []),
-                    cierre: planningScript.cierre || '',
-                    cta: planningScript.cta || planningScript.cierre || '',
-                    copy_post: planningScript.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
-                },
-                project_id: activeProject?.id
+                event_time: plannedTime,
+                title: script.titulo_guion || script.titulo_angulo || 'Publicación Planificada',
+                description: `Contenido planificado desde el generador.\n\nGuion: ${script.titulo_guion || ''}`,
+                type: 'Post',
+                platform: script.platform || platform || 'General',
+                status: 'prep',
+                script_id: libraryItem?.id || null 
             });
-
 
             if (calErr) throw calErr;
 
+            setPlanningIdx(null);
             setSuccessModalData({
-                title: '¡Añadido al Calendario! ✅',
-                message: `Tu contenido ha sido agendado correctamente para el ${plannedDate} a las ${plannedTime}. (Estado: En preparación)`,
-                actionLabel: 'Ver Calendario',
-                actionRedirect: '/dashboard/calendar'
+                title: '¡Planificado con éxito! ✅',
+                message: `Tu contenido ha sido agendado para el ${new Date(plannedDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}.`
             });
-            setIsPlannerModalOpen(false);
             setIsSuccessModalOpen(true);
+            
+            // Refresh events
+            const { data: refreshedEvents } = await supabase.from('calendar_events').select('*').eq('user_id', user.id);
+            setEvents(refreshedEvents || []);
         } catch (err) {
-            console.error('Error planning script:', err);
+            console.error('Error in planning:', err);
             alert('Error al planificar: ' + err.message);
         } finally {
             setIsPlanningLoading(false);
@@ -3285,7 +3270,7 @@ export default function DashboardPage() {
                                     </div>
 
                                     {/* Wizard Header */}
-                                    <div style={{
+                                    <div className="card-header-wizard" style={{
                                         padding: '24px 32px 0 32px',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -3385,7 +3370,7 @@ export default function DashboardPage() {
                                     </div>
 
                                     {/* Card Body */}
-                                    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                    <div className="card-body-wizard" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
                                         {/* GANCHO */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -3671,8 +3656,8 @@ export default function DashboardPage() {
                                             {
                                                 id: `plan-${i}`,
                                                 icon: <Calendar size={16} />,
-                                                label: sourceEventId ? 'Guardar en este día del calendario' : 'Planificar Content',
-                                                action: () => sourceEventId ? handleDirectCalendarSave(s) : handleOpenPlanner(s),
+                                                label: sourceEventId ? 'Guardar en este día del calendario' : (planningIdx === i ? 'Cerrar planificador' : 'Planificar Content'),
+                                                action: () => sourceEventId ? handleDirectCalendarSave(s) : (planningIdx === i ? setPlanningIdx(null) : handleOpenPlannerIdx(s, i)),
                                                 premium: true
                                             },
                                         ].map((btn, bidx) => (
@@ -3700,7 +3685,58 @@ export default function DashboardPage() {
                                             </button>
                                         ))}
                                     </div>
-                                </div>
+
+                                    {/* INLINE PLANNER */}
+                                    {planningIdx === i && (
+                                        <div className="planner-inline-container" style={{
+                                            padding: '24px 32px',
+                                            background: 'rgba(126, 206, 202, 0.05)',
+                                            borderTop: '1px solid rgba(126, 206, 202, 0.1)',
+                                            animation: 'slideDown 0.3s ease-out'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                                                <CalendarDays size={20} color="#7ECECA" />
+                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Planificar este contenido</h4>
+                                            </div>
+
+                                            <div className="planner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                                                <div>
+                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FECHA DE PUBLICACIÓN</label>
+                                                    <input
+                                                        type="date"
+                                                        className="input-field"
+                                                        value={plannedDate}
+                                                        onChange={e => setPlannedDate(e.target.value)}
+                                                        style={{ fontSize: '0.9rem', width: '100%' }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>HORA RECOMENDADA</label>
+                                                    <input
+                                                        type="time"
+                                                        className="input-field"
+                                                        value={plannedTime}
+                                                        onChange={e => setPlannedTime(e.target.value)}
+                                                        style={{ fontSize: '0.9rem', width: '100%' }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                <button onClick={() => setPlanningIdx(null)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                                <button
+                                                    onClick={handleConfirmPlanning}
+                                                    className="btn-primary"
+                                                    style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                    disabled={isPlanningLoading}
+                                                >
+                                                    {isPlanningLoading ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
+                                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    </div>
                             ))}
                         </div>
                     </div>
@@ -4265,116 +4301,7 @@ export default function DashboardPage() {
                 )
             }
 
-            {/* MODAL PLANIFICAR */}
-            {isPlannerModalOpen && (
-                <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div className="modal-content" style={{ maxWidth: '450px', width: '100%', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(126, 206, 202, 0.08) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: 0 }} />
-
-                        <div style={{ position: 'relative', zIndex: 1 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '40px', height: '40px', background: 'rgba(126, 206, 202, 0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <CalendarDays size={20} color="#7ECECA" />
-                                    </div>
-                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900 }}>Planificar en Calendario</h3>
-                                </div>
-                                <button onClick={() => setIsPlannerModalOpen(false)} style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer' }}><X size={20} /></button>
-                            </div>
-
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.5 }}>
-                                Hemos analizado tu guion. Esta es la mejor sugerencia para maximizar tu impacto:
-                            </p>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#7ECECA', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            <Sparkles size={14} /> Sugerencia de la IA
-                                        </div>
-                                        <button
-                                            onClick={handleAISuggestion}
-                                            disabled={isSuggestingAI}
-                                            style={{
-                                                background: 'rgba(126, 206, 202, 0.1)',
-                                                border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                color: '#7ECECA',
-                                                fontSize: '0.7rem',
-                                                padding: '4px 10px',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
-                                        >
-                                            {isSuggestingAI ? <Loader className="animate-spin" size={12} /> : <RefreshCcw size={12} />}
-                                            Analizar con IA
-                                        </button>
-                                    </div>
-
-                                    {suggestedReasoning && (
-                                        <div style={{
-                                            background: 'rgba(126, 206, 202, 0.05)',
-                                            padding: '10px 14px',
-                                            borderRadius: '8px',
-                                            fontSize: '0.75rem',
-                                            color: '#7ECECA',
-                                            marginBottom: '16px',
-                                            lineHeight: 1.4,
-                                            borderLeft: '2px solid #7ECECA'
-                                        }}>
-                                            {suggestedReasoning}
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', gap: '12px' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px' }}>FECHA</label>
-                                            <input
-                                                type="date"
-                                                className="input-field"
-                                                value={plannedDate}
-                                                onChange={e => setPlannedDate(e.target.value)}
-                                                style={{ fontSize: '0.9rem', padding: '10px 14px' }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, display: 'block', marginBottom: '6px' }}>HORA</label>
-                                            <input
-                                                type="time"
-                                                className="input-field"
-                                                value={plannedTime}
-                                                onChange={e => setPlannedTime(e.target.value)}
-                                                style={{ fontSize: '0.9rem', padding: '10px 14px' }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '0 8px' }}>
-                                    <div style={{ marginTop: '4px' }}><AlertCircle size={16} color="rgba(255,255,255,0.3)" /></div>
-                                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>
-                                        Esta publicación se añadirá a tu calendario como "En preparación". Podrás cambiar el estado a "Publicado" una vez lo subas.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-                                <button onClick={() => setIsPlannerModalOpen(false)} className="btn-secondary" style={{ flex: 1 }}>Cancelar</button>
-                                <button
-                                    onClick={handleConfirmPlanning}
-                                    className="btn-primary"
-                                    style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                    disabled={isPlanningLoading}
-                                >
-                                    {isPlanningLoading ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                                    {isPlanningLoading ? 'Planificando...' : 'Confirmar Planificación'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* MODAL PLANIFICAR REMOVED AND MOVED TO INLINE */}
             {isNamingModalOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -4416,6 +4343,20 @@ export default function DashboardPage() {
                     15% { opacity: 1; transform: translate(-50%, 0); }
                     85% { opacity: 1; transform: translate(-50%, 0); }
                     100% { opacity: 0; transform: translate(-50%, -20px); }
+                }
+
+                @media (max-width: 768px) {
+                    .scripts-container { padding: 0 16px 100px 16px !important; }
+                    .premium-card { border-radius: 12px !important; }
+                    .card-header-wizard { padding: 16px 20px 0 20px !important; flex-direction: column; align-items: flex-start !important; gap: 16px; }
+                    .card-body-wizard { padding: 20px !important; gap: 24px !important; }
+                    .hook-section, .structure-section, .cta-section, .copy-section { gap: 8px !important; }
+                    .structure-item { flex-direction: column; align-items: flex-start !important; gap: 8px !important; }
+                    .structure-number { width: 30px !important; height: 30px !important; font-size: 0.9rem !important; }
+                    .footer-actions { flex-direction: column; padding: 16px !important; height: auto !important; }
+                    .footer-actions button { width: 100% !important; justify-content: center; }
+                    .planner-inline-container { padding: 16px !important; margin: 10px -20px -20px -20px !important; border-radius: 0 0 12px 12px !important; background: rgba(126, 206, 202, 0.03) !important; border-top: 1px solid rgba(126, 206, 202, 0.1) !important; }
+                    .planner-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
                 }
             `}</style>
         </div >

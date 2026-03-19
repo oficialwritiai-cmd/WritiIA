@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { GenerateIdeasSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
-import { createClient } from '@supabase/supabase-js';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -30,17 +30,27 @@ export async function POST(req) {
         }
 
         const validation = GenerateIdeasSchema.safeParse(body);
-
         if (!validation.success) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, platforms, useSEO, useTikTok, goal, count, userId, projectId } = validation.data;
+        const { context, platforms, goal, count, projectId } = validation.data;
 
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Charge Credits BEFORE AI call
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -52,16 +62,15 @@ export async function POST(req) {
             brandBrain = data;
         }
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
         }
 
-        let brandContextString = '';
-        if (brandBrain) {
-            brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
-        } else {
+        if (!brandBrain) {
             return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
+
+        const brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
 
         const systemPrompt = `Eres un estratega de contenido viral experto.
 ${brandContextString}

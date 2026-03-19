@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -492,6 +492,30 @@ export default function CalendarPage() {
         router.push(url);
     };
 
+    const handleExport = async () => {
+        if (!activeProject) {
+            alert('Por favor, selecciona un proyecto para exportar.');
+            return;
+        }
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Sesión no encontrada');
+
+            const exportUrl = `/api/projects/${activeProject.id}/export?userId=${user.id}`;
+            
+            // Trigger download
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.setAttribute('download', `plan-mensual-${activeProject.name || 'writi'}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            alert('Error al exportar: ' + err.message);
+        }
+    };
+
     // -- Render --
     const renderCalendar = () => {
         const year = currentDate.getFullYear();
@@ -671,6 +695,20 @@ export default function CalendarPage() {
 
                     <div className="cal-header-actions">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="cal-view-btn"
+                                style={{
+                                    background: 'rgba(157, 0, 255, 0.15)',
+                                    border: '1px solid rgba(157, 0, 255, 0.3)',
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    color: '#9D00FF'
+                                }}
+                                onClick={handleExport}
+                                title="Exportar a Google Sheets / Excel (CSV)"
+                            >
+                                <Share2 size={16} /> Exportar Plan
+                            </button>
+
                             <button
                                 className={`cal-view-btn ${isSelectMode ? 'active' : ''}`}
                                 style={{

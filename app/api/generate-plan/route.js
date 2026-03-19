@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { GeneratePlanSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 const limiter = rateLimit({
@@ -30,21 +30,32 @@ export async function POST(request) {
         }
 
         const validation = GeneratePlanSchema.safeParse(body);
-
         if (!validation.success) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
         const { 
-            description, platforms, frequency, focus, userId, selectedIdeas, projectId, postCount,
+            description, platforms, frequency, focus, projectId, postCount,
             businessOffer, targetAudience, targetAudienceType, mainPainPoint,
             monthlyGoals, successMetric, keyThemes, contentStyles,
             howNotToSound, brandMantra, ticketPrice
         } = validation.data;
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Credit Check & Charge (3 credits)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_PLAN, 'generate_plan', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_PLAN, 'generate_plan', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -63,24 +74,23 @@ export async function POST(request) {
         }
 
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
+        }
+
+        if (!brandBrain) {
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
         const projectLanguage = projectData?.language || 'es';
 
-        let brandContextString = '';
-        if (brandBrain) {
-            brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---
+        let brandContextString = `\n--- IDENTIDAD DE MARCA (CEREBRO IA) ---
 Biografía/Identidad: ${brandBrain.biography || 'No especificada'}
 Nicho/Sub-nicho: ${brandBrain.niche || ''} / ${brandBrain.sub_niche || ''}
 Palabras y Estilo: ${brandBrain.style_words || 'No especificado'}
 APRENDIZAJE / FEEDBACK ACUMULADO: ${brandBrain.learning_notes || ''}
 ---------------------------------------\n\nMUY IMPORTANTE: Todo el plan, ideas, títulos y enfoques DEBEN estar 100% alineados y ADAPTADOS a esta Identidad de Marca (Cerebro IA). Eres la voz de esta marca.
 IDIOMA OBLIGATORIO: Debes responder COMPLETAMENTE en idoma: ${projectLanguage === 'en' ? 'INGLÉS' : 'ESPAÑOL'}.`;
-        } else {
-            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
-        }
 
         const systemPrompt = `Eres el Director Creativo de una Agencia de Marketing Web Premium.
 ${brandContextString}
@@ -116,7 +126,7 @@ PLATAFORMAS: ${platforms.join(', ')}
 FRECUENCIA TOTAL: ${frequency}
 POSTS A GENERAR: ${postCount || 30}
 
-${selectedIdeas && selectedIdeas.length > 0 ? `IDEAS ESPECÍFICAS PARA INCLUIR: \n- ${selectedIdeas.join('\n- ')}` : ''}
+${body.selectedIdeas && body.selectedIdeas.length > 0 ? `IDEAS ESPECÍFICAS PARA INCLUIR: \n- ${body.selectedIdeas.join('\n- ')}` : ''}
 
 IMPORTANTE: 
 1. Distribuye el contenido para cumplir con el mix de objetivos (Ventas vs Autoridad vs Educativo).
@@ -131,30 +141,28 @@ IMPORTANTE:
         });
 
         const { data: planData, error: planErr } = await supabase.from('content_plans').insert({
-            user_id: userId,
+            user_id: verifiedUserId,
             month: new Date().getMonth() + 1,
             year: new Date().getFullYear(),
             frequency,
             platforms,
-            focus
+            focus,
+            project_id: projectId
         }).select().single();
 
         if (planErr) throw planErr;
 
         const slotsToInsert = results.map((r, index) => {
-            // Robust mapping: try all common key variations the AI might produce
-            const day = Number(r.day_number || r.dia || r.day || (index + 1));
-            const type = r.content_type || r.tipo_contenido || r.type || 'educativo';
-            const platform = r.platform || r.plataforma || platforms[0] || 'General';
-            const goalStr = r.goal || r.objetivo || focus || 'engagement';
-
-            // Extreme title fallback if AI fails
-            const title = r.idea_title || r.titulo_idea || r.titulo || r.title || r.titulo_angulo ||
-                `${type.charAt(0).toUpperCase() + type.slice(1)} para ${platform} (${goalStr})`;
+            const day = Number(r.day_number || (index + 1));
+            const type = r.content_type || 'educativo';
+            const platform = r.platform || platforms[0] || 'General';
+            const goalStr = r.goal || focus || 'engagement';
+            const title = r.idea_title || `${type.charAt(0).toUpperCase() + type.slice(1)} para ${platform}`;
 
             return {
                 plan_id: planData.id,
-                user_id: userId,
+                user_id: verifiedUserId,
+                project_id: projectId,
                 day_number: day,
                 platform: platform,
                 content_type: type,

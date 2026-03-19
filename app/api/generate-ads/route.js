@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { GenerateAdsSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateScriptsWithSonnet, generateScriptsLong } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 const limiter = rateLimit({
@@ -36,7 +36,7 @@ export async function POST(request) {
         }
 
         const {
-            userId, projectId, quantity,
+            projectId, quantity,
             offer, offerType, objective,
             audience, painPoint,
             differentiator, promise,
@@ -44,10 +44,21 @@ export async function POST(request) {
             platforms
         } = validation.data;
 
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        // ─────────────────────────────────────────────────────────────
+        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // ─────────────────────────────────────────────────────────────
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+
+        const verifiedUserId = user.id;
 
         // Credit Check & Charge
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.GENERATE_ADS, 'generate_ads', projectId);
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_ADS, 'generate_ads', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -66,27 +77,26 @@ export async function POST(request) {
         }
 
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', userId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
             brandBrain = data;
+        }
+
+        if (!brandBrain) {
+            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
         }
 
         const projectLanguage = projectData?.language || 'es';
 
-        let brandContextString = '';
-        if (brandBrain) {
-            brandContextString = `
+        let brandContextString = `
 --- IDENTIDAD DE MARCA (CEREBRO IA) ---
 Biografía/Identidad: ${brandBrain.biography || 'No especificada'}
 Nicho/Sub-nicho: ${brandBrain.niche || ''} / ${brandBrain.sub_niche || ''}
-Qué vende: ${brandBrain.sells || 'No especificado'}
-A quién ayuda: ${brandBrain.helps || 'No especificado'}
 Palabras y Estilo: ${brandBrain.style_words || 'No especificado'}
 APRENDIZAJE / FEEDBACK ACUMULADO: ${brandBrain.learning_notes || 'Sin feedback aún'}
 ---------------------------------------
 
 MUY IMPORTANTE: Todos los anuncios DEBEN estar 100% alineados con esta Identidad de Marca.
 IDIOMA OBLIGATORIO: Responde COMPLETAMENTE en idioma: ${projectLanguage === 'en' ? 'INGLÉS' : 'ESPAÑOL'}.`;
-        }
 
         const stylesText = (adStyles || []).join(', ') || 'Mixto';
         const platformsText = (platforms || []).join(', ') || 'Meta Ads';
@@ -138,7 +148,6 @@ Responde ÚNICAMENTE con el JSON válido. NO incluyas explicaciones ni markdown.
 
         const userMessage = `Genera ${quantity} guiones de anuncios profesionales para la oferta "${offer}" dirigidos a "${audience}". Plataformas: ${platformsText}. Estilos: ${stylesText}. Tono: ${tone}.`;
 
-        // Use longer token limit for large batches
         const generateFn = quantity > 5 ? generateScriptsLong : generateScriptsWithSonnet;
 
         const result = await generateFn({
@@ -147,11 +156,9 @@ Responde ÚNICAMENTE con el JSON válido. NO incluyas explicaciones ni markdown.
             userMessage
         });
 
-        // Normalize parsed results
         let ads = result.parsed || [];
         if (!Array.isArray(ads)) ads = [ads];
 
-        // Ensure each ad has required fields
         ads = ads.map((ad, idx) => ({
             id: `ad-${Date.now()}-${idx}`,
             idea: ad.idea || `Anuncio ${idx + 1}`,

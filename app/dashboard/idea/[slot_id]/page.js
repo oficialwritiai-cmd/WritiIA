@@ -49,11 +49,11 @@ function Badge({ status }) {
 
 function MetaRow({ icon, label, children }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)', minWidth: '110px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="meta-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <span className="meta-label" style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)', minWidth: '110px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {icon} {label}
             </span>
-            <span style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+            <span className="meta-value" style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
                 {children}
             </span>
         </div>
@@ -84,6 +84,7 @@ function EditableBlock({ value, onChange, placeholder, rows = 4, mono = false })
             onChange={e => onChange(e.target.value)}
             placeholder={placeholder}
             rows={rows}
+            className="textarea-field-idea"
             style={{
                 width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '10px', padding: '14px 16px', color: 'white', fontSize: mono ? '0.84rem' : '0.95rem',
@@ -257,60 +258,153 @@ export default function IdeaPage() {
     // ── Save changes ───────────────────────────────────────────────────────
     async function handleSave() {
         setSaving(true);
+        setError(null);
         try {
-            // Update slot
-            if (slot?.id) {
-                await supabase.from('content_slots').update({
-                    idea_title: title,
-                    idea_description: description,
-                    goal, content_type: contentType,
-                    platform, scheduled_date: scheduledDate || null,
-                }).eq('id', slot.id);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Sesión de usuario no encontrada.');
 
-                // Update calendar_event title + description if linked
-                await supabase.from('calendar_events').update({
-                    title, platform, event_date: scheduledDate || null,
-                    description: [description, `Objetivo: ${goal}`, `Enfoque: ${contentType}`, `Plataforma: ${platform}`].filter(Boolean).join(' · '),
-                }).eq('reference_id', slot.id);
+            // 1. Preparar datos del guion
+            const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
+                const lines = block.split('\n');
+                const firstLine = lines[0] || '';
+                // Intentar separar "Punto: Detalle" o simplemente usar la primera línea como título
+                const [pointTitle, ...rest] = firstLine.includes(':') ? firstLine.split(':') : [firstLine, ''];
+                return { 
+                    point: pointTitle.replace(/^\d+\.\s*/, '').trim() || `Sección ${i + 1}`, 
+                    detail: (rest.join(':').trim() + '\n' + lines.slice(1).join('\n')).trim() || firstLine 
+                };
+            });
+
+            const postCopy = { 
+                headline: postHeadline, 
+                body: postBody, 
+                hashtags: postHashtags.split(/\s+/).filter(h => h.trim().length > 0)
+            };
+
+            const fullContentText = [
+                `TÍTULO: ${title}`,
+                '',
+                '🎯 HOOK',
+                hook,
+                '',
+                '📝 ESTRUCTURA',
+                structureText,
+                '',
+                '🔥 CTA',
+                ctaText,
+                '',
+                '📱 POST COPY',
+                postHeadline,
+                postBody,
+                postCopy.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
+                '',
+                '🎬 NOTAS',
+                notes
+            ].filter(Boolean).join('\n');
+
+            let currentScriptId = script?.id || slot?.script_id;
+
+            // 2. Guardar/Actualizar Guion en tabla 'scripts'
+            if (currentScriptId) {
+                const { error: scriptUpdErr } = await supabase.from('scripts').update({
+                    title,
+                    hook,
+                    structure: structureArr,
+                    cta: ctaText,
+                    notes,
+                    post_copy: postCopy,
+                    content: fullContentText,
+                    platform,
+                    updated_at: new Date().toISOString()
+                }).eq('id', currentScriptId);
+
+                if (scriptUpdErr) throw scriptUpdErr;
+            } else if (slot?.id) {
+                // Crear nuevo script
+                const { data: newScript, error: scriptInsErr } = await supabase.from('scripts').insert({
+                    user_id: user.id,
+                    slot_id: slot.id,
+                    project_id: slot.project_id,
+                    platform,
+                    topic: title,
+                    title: title,
+                    hook,
+                    structure: structureArr,
+                    cta: ctaText,
+                    notes,
+                    post_copy: postCopy,
+                    content: fullContentText,
+                    is_saved: true,
+                    updated_at: new Date().toISOString()
+                }).select().single();
+
+                if (scriptInsErr) throw scriptInsErr;
+                if (newScript) {
+                    currentScriptId = newScript.id;
+                    setScript(newScript);
+                }
             }
 
-            // Update or create script
-            if (hook || ctaText || structureText) {
-                const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
-                    const [pointLine, ...rest] = block.split('\n');
-                    return { point: pointLine.replace(/^\d+\.\s*/, '').split(':')[0] || `Sección ${i + 1}`, detail: rest.join('\n') || pointLine };
-                });
-                const postCopy = { headline: postHeadline, body: postBody, hashtags: postHashtags.split(/\s+/).filter(h => h.trim()) };
-
-                if (script?.id) {
-                    await supabase.from('scripts').update({
-                        hook, structure: structureArr, cta: ctaText, notes,
-                        post_copy: postCopy, updated_at: new Date().toISOString(),
-                        content: `TÍTULO: ${title}\n\n🎯 HOOK\n${hook}\n\n📝 ESTRUCTURA\n${structureText}\n\n🔥 CTA\n${ctaText}\n\n📱 POST COPY\n${postHeadline}\n${postBody}\n${postHashtags}`
-                    }).eq('id', script.id);
-                } else if (slot?.id) {
-                    // Create new script and link to slot
-                    const { data: newScript } = await supabase.from('scripts').insert({
-                        user_id: userId, slot_id: slot.id, project_id: slot.project_id,
-                        platform, topic: title, is_saved: true,
-                        hook, structure: structureArr, cta: ctaText, notes, post_copy: postCopy,
-                        content: `TÍTULO: ${title}\n\n🎯 HOOK\n${hook}\n\n📝 ESTRUCTURA\n${structureText}\n\n🔥 CTA\n${ctaText}\n\n📱 POST COPY\n${postHeadline}\n${postBody}\n${postHashtags}`
-                    }).select().single();
-                    if (newScript) {
-                        setScript(newScript);
-                        await supabase.from('content_slots').update({ script_id: newScript.id, has_script: true, slot_status: 'script_ready' }).eq('id', slot.id);
-                        setSlotStatus('script_ready');
+            // 3. Sincronizar Slot
+            if (slot?.id) {
+                const slotUpdates = {
+                    idea_title: title,
+                    idea_description: description,
+                    goal,
+                    content_type: contentType,
+                    platform,
+                    scheduled_date: scheduledDate || null,
+                    script_id: currentScriptId,
+                    has_script: !!currentScriptId,
+                    slot_status: currentScriptId ? 'script_ready' : slotStatus,
+                    script_data: {
+                        hook,
+                        desarrollo: structureArr.map(s => `${s.point}: ${s.detail}`),
+                        cta: ctaText,
+                        copy_post: postCopy,
+                        notes
                     }
-                }
+                };
+
+                const { error: slotUpdErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', slot.id);
+                if (slotUpdErr) throw slotUpdErr;
+            }
+
+            // 4. Sincronizar Calendario (calendar_events)
+            // Buscamos por reference_id (slot_id)
+            if (slot?.id) {
+                const { error: calUpdErr } = await supabase.from('calendar_events').update({
+                    title,
+                    platform,
+                    event_date: scheduledDate || null,
+                    status: currentScriptId ? 'Guion listo' : 'Idea',
+                    has_script: !!currentScriptId,
+                    script_id: currentScriptId, // Sincronizamos el script_id aquí también
+                    script_full_text: fullContentText,
+                    description: description || title
+                }).eq('reference_id', slot.id);
+                
+                if (calUpdErr) console.warn('No se pudo actualizar el evento del calendario vinculado (puede que no exista).');
             }
 
             // Visual feedback
             setSaving(false);
             const btn = document.getElementById('btn-save-notion');
-            if (btn) { btn.textContent = '✅ Guardado'; setTimeout(() => { if (btn) btn.textContent = 'Guardar cambios'; }, 2000); }
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Guardado';
+                btn.style.color = '#10B981';
+                setTimeout(() => {
+                    if (btn) {
+                        btn.innerHTML = originalText;
+                        btn.style.color = '';
+                    }
+                }, 2000);
+            }
         } catch (err) {
             setSaving(false);
-            alert('Error al guardar: ' + err.message);
+            console.error('Error saving script:', err);
+            setError('Error al guardar: ' + err.message);
         }
     }
 
@@ -411,10 +505,24 @@ export default function IdeaPage() {
                 .notion-btn { transition: all 0.18s ease; }
                 .notion-btn:hover { opacity: 0.85; transform: translateY(-1px); }
                 .gen-options-enter { animation: fadeIn 0.2s ease; }
+
+                @media (max-width: 768px) {
+                    .topbar-idea { padding: 10px 16px !important; flex-wrap: wrap; gap: 10px !important; }
+                    .topbar-left { width: 100%; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+                    .topbar-right { width: 100%; justify-content: space-between; gap: 8px !important; }
+                    .main-container { padding: 24px 16px 120px 16px !important; }
+                    .meta-row { flex-direction: column; align-items: flex-start !important; gap: 4px !important; }
+                    .meta-label { min-width: auto !important; }
+                    .meta-value { width: 100%; }
+                    .meta-value select, .meta-value input { width: 100% !important; border: 1px solid rgba(255,255,255,0.1) !important; padding: 8px !important; border-radius: 8px !important; background: rgba(255,255,255,0.02) !important; }
+                    .sticky-footer { flex-wrap: wrap; height: auto !important; padding: 16px !important; bottom: 0; }
+                    .sticky-footer .notion-btn { flex: 1; min-width: 140px !important; font-size: 0.8rem !important; padding: 10px !important; }
+                    .textarea-field-idea { font-size: 16px !important; } /* Evita zoom en iOS */
+                }
             `}</style>
 
             {/* ═══ TOPBAR ════════════════════════════════════════════════════ */}
-            <div style={{
+            <div className="topbar-idea" style={{
                 position: 'sticky', top: 0, zIndex: 100,
                 background: 'rgba(13,13,13,0.92)', backdropFilter: 'blur(16px)',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -422,7 +530,7 @@ export default function IdeaPage() {
                 padding: '12px 24px',
             }}>
                 {/* Left: back + breadcrumb */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button
                         onClick={() => router.back()}
                         className="notion-btn"
@@ -431,12 +539,12 @@ export default function IdeaPage() {
                         ← Volver
                     </button>
                     <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.82rem' }}>Calendario</span>
-                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>/</span>
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title || 'Nueva idea'}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }} className="hide-mobile-mini">/</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="hide-mobile-mini">{title || 'Nueva idea'}</span>
                 </div>
 
                 {/* Right: actions */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className="topbar-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                         onClick={handleCopy}
                         className="notion-btn"
@@ -457,7 +565,7 @@ export default function IdeaPage() {
             </div>
 
             {/* ═══ MAIN CONTENT ══════════════════════════════════════════════ */}
-            <div style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px 120px 32px' }}>
+            <div className="main-container" style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px 120px 32px' }}>
 
                 {/* ── STATUS BADGE ─────────────────────────────────────────────── */}
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -589,7 +697,7 @@ export default function IdeaPage() {
             </div>
 
             {/* ═══ STICKY FOOTER ACTIONS ═════════════════════════════════════ */}
-            <div style={{
+            <div className="sticky-footer" style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
                 background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)',
                 borderTop: '1px solid rgba(255,255,255,0.07)',

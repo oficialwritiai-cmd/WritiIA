@@ -149,8 +149,16 @@ export default function KnowledgePage() {
     };
 
     if (!activeProject) return (
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '60vh', gap: '16px' }}>
-            <p style={{ color: '#888', fontSize: '1rem' }}>Selecciona o crea un proyecto para configurar su Cerebro IA.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '60vh', gap: '24px', textAlign: 'center', padding: '20px' }}>
+            <div style={{ fontSize: '4rem', opacity: 0.5 }}>🏗️</div>
+            <p style={{ color: '#888', fontSize: '1.2rem', maxWidth: '400px' }}>Selecciona o crea un proyecto para configurar su Cerebro IA.</p>
+            <button 
+                onClick={() => window.location.href = '/dashboard/home?create=true'}
+                className="btn-primary"
+                style={{ padding: '12px 32px', borderRadius: '12px', fontWeight: 800 }}
+            >
+                ➕ Crear / Seleccionar Proyecto
+            </button>
         </div>
     );
 

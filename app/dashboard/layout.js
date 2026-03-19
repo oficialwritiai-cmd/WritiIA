@@ -1,7 +1,7 @@
 'use client';
 /**
- * FORCE BUILD: 2026-03-18 18:30:00
- * Version: v4.6.1
+ * FORCE BUILD: 2026-03-19 11:20:00
+ * Version: v4.9.0
  */
 
 import { useState, useEffect } from 'react';
@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v4.6.1: Plan Mensual v2 — 1-click per-slot generation
+    // v4.9.0: Plan Mensual v2 — 1-click per-slot generation + Total Isolation (Security Audit)
     if (typeof window !== 'undefined') {
-        console.log('%c🚀 WRITIAI Dashboard v4.6.1 LOADED — PLAN MENSUAL V2 LIVE', 'background: #4CAF50; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v4.9.0 LOADED — TOTAL ISOLATION LIVE', 'background: #9D00FF; color: #fff; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -263,6 +263,16 @@ export default function DashboardLayout({ children }) {
             router.replace('/dashboard/expired');
         }
     }, [profile, daysRemaining, pathname, loading, router]);
+
+    // v4.6.2: Ensure body scroll is recovered when sidebar closes
+    useEffect(() => {
+        if (sidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        return () => { document.body.style.overflow = 'auto'; };
+    }, [sidebarOpen]);
 
     async function handleCheckoutPlan() {
         if (profile?.plan === 'pro') {
@@ -516,20 +526,30 @@ export default function DashboardLayout({ children }) {
                             style={{
                                 position: 'fixed',
                                 inset: 0,
-                                background: 'rgba(0,0,0,0.8)',
+                                background: 'rgba(0,0,0,0.85)',
                                 zIndex: 999,
-                                display: 'flex'
+                                display: 'flex',
+                                backdropFilter: 'blur(4px)'
                             }}
                             onClick={() => setSidebarOpen(false)}
                         >
-                            <aside onClick={(e) => e.stopPropagation()} style={{
-                                width: '260px',
-                                background: 'var(--bg-sidebar)',
-                                padding: 24,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 20
-                            }}>
+                            <aside 
+                                onClick={(e) => e.stopPropagation()} 
+                                style={{
+                                    width: '280px',
+                                    height: '100%',
+                                    maxHeight: '100dvh',
+                                    background: 'var(--bg-sidebar)',
+                                    padding: '24px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '20px',
+                                    overflowY: 'auto',
+                                    scrollbarWidth: 'none',
+                                    boxShadow: '10px 0 30px rgba(0,0,0,0.5)',
+                                    borderRight: '1px solid rgba(255,255,255,0.05)'
+                                }}
+                            >
                                 <div style={{ marginBottom: 20 }}>
                                     <Link href="/" style={{ textDecoration: 'none' }}>
                                         <Logo mobile={true} />
