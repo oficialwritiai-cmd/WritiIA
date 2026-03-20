@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v5.2.2'; // v5.2.2 (Calendar FK Fix + Non-blocking sync)
+export const VERSION = 'v5.2.3'; // v5.2.3 (Build: 20260320T1127)
 
 
 
