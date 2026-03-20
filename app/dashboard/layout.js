@@ -36,9 +36,9 @@ function LanguageSelector() {
 }
 
 export default function DashboardLayout({ children }) {
-    // v5.1.8: Fix states y UI Guardando
+    // v5.1.9: Fix null value constraint on Calendar
     useEffect(() => {
-        console.log('%c🚀 WRITIAI Dashboard v5.1.8 LOADED — PURE REACT STATE', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v5.1.9 LOADED — PURE REACT STATE', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     });
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -334,7 +334,7 @@ export default function DashboardLayout({ children }) {
             <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                 <div className="emergency-spinner"></div>
                 <p style={{ color: '#FFD700', fontSize: '1rem', fontWeight: 900, animation: 'pulse 2s infinite', letterSpacing: '1px' }}>
-                    {loadingStatus} (v5.1.8)
+                    {loadingStatus} (v5.1.9)
                 </p>
 
                 <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
@@ -512,7 +512,7 @@ export default function DashboardLayout({ children }) {
                             marginTop: '10px',
                             letterSpacing: '0.05em'
                         }}>
-                            v5.1.8
+                            v5.1.9
                         </div>                    </div>
                 </aside>
 
@@ -663,7 +663,7 @@ export default function DashboardLayout({ children }) {
                                     title={t('dashboard.my_account')}
                                 >
                                     <span style={{ fontSize: '0.75rem' }}>👤</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#FFB800', fontWeight: 900, marginRight: '8px' }}>v5.1.8</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#FFB800', fontWeight: 900, marginRight: '8px' }}>v5.1.9</span>
                                     <p className="desktop-only" style={{
                                         fontWeight: 600,
                                         fontSize: '0.85rem',

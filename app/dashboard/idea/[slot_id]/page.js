@@ -418,7 +418,6 @@ export default function IdeaPage() {
                 const calUpdates = {
                     title,
                     platform,
-                    event_date: scheduledDate || null,
                     status: 'Guion listo',
                     has_script: true,
                     script_id: finalScriptId,
@@ -426,6 +425,9 @@ export default function IdeaPage() {
                     description: description || title,
                     content: commonScriptData
                 };
+                if (scheduledDate) {
+                    calUpdates.event_date = scheduledDate;
+                }
 
                 let orConditions = [];
                 if (realSlotId) orConditions.push(`reference_id.eq.${realSlotId}`);
