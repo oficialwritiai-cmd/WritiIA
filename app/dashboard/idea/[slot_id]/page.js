@@ -429,31 +429,33 @@ export default function IdeaPage() {
                 if (e2) throw new Error(`Slot Sync Error: ${e2.message}`);
             }
 
-            // 4. Sincronizar Calendario (calendar_events)
-            if (realSlotId || realLibraryId || finalScriptId) {
-                const calUpdates = {
-                    title,
-                    platform,
-                    status: 'Guion listo',
-                    has_script: true,
-                    script_id: finalScriptId,
-                    script_full_text: fullContentText,
-                    description: description || title,
-                    content: commonScriptData
-                };
-                if (scheduledDate) {
-                    calUpdates.event_date = scheduledDate;
-                }
+            // 4. Sincronizar Calendario (calendar_events) — v5.2.2: non-blocking, no FK issues
+            try {
+                if (realSlotId || realLibraryId) {
+                    const calUpdates = {
+                        title,
+                        platform,
+                        status: 'Guion listo',
+                        has_script: true,
+                        script_full_text: fullContentText,
+                        description: description || title,
+                        content: commonScriptData
+                    };
+                    if (scheduledDate) {
+                        calUpdates.event_date = scheduledDate;
+                    }
 
-                let orConditions = [];
-                if (realSlotId) orConditions.push(`reference_id.eq.${realSlotId}`);
-                if (realLibraryId) orConditions.push(`reference_id.eq.${realLibraryId}`);
-                if (finalScriptId) orConditions.push(`script_id.eq.${finalScriptId}`);
-                
-                if (orConditions.length > 0) {
-                    const { error: e3 } = await supabase.from('calendar_events').update(calUpdates).or(orConditions.join(','));
-                    if (e3) throw new Error(`Calendar Sync Error: ${e3.message}`);
+                    let orConditions = [];
+                    if (realSlotId) orConditions.push(`reference_id.eq.${realSlotId}`);
+                    if (realLibraryId) orConditions.push(`reference_id.eq.${realLibraryId}`);
+                    
+                    if (orConditions.length > 0) {
+                        const { error: e3 } = await supabase.from('calendar_events').update(calUpdates).or(orConditions.join(','));
+                        if (e3) console.error('[v5.2.2] Calendar sync warning:', e3.message);
+                    }
                 }
+            } catch (calErr) {
+                console.error('[v5.2.2] Calendar sync failed (non-blocking):', calErr.message);
             }
 
             // 5. Sincronizar Biblioteca (library)
