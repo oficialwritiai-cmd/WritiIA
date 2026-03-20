@@ -247,6 +247,20 @@ export default function IdeaPage() {
                     setPostHashtags(Array.isArray(contentObj.copy_post.hashtags) ? contentObj.copy_post.hashtags.join(' ') : '');
                 }
                 setNotes(contentObj.notes || '');
+
+                // v5.2.0: Prioritize Scripts table if script_id exists in library
+                if (libData.script_id) {
+                    const { data: scriptData } = await supabase
+                        .from('scripts')
+                        .select('*')
+                        .eq('id', libData.script_id)
+                        .single();
+                    if (scriptData) {
+                        setScript(scriptData);
+                        populateFromScript(scriptData);
+                    }
+                }
+
                 setLoading(false);
                 return;
             }
@@ -281,6 +295,7 @@ export default function IdeaPage() {
     }
 
     function populateFromScript(sc) {
+        if (sc.title) setTitle(sc.title);
         setHook(sc.hook || sc.gancho || '');
         setCtaText(sc.cta || '');
         setNotes(sc.notes || '');
@@ -291,8 +306,8 @@ export default function IdeaPage() {
             setStructureText(typeof sc.content === 'string' ? sc.content : '');
         }
         const pc = sc.post_copy || {};
-        setPostHeadline(pc.headline || '');
-        setPostBody(pc.body || '');
+        setPostHeadline(pc.headline || pc.titulo || '');
+        setPostBody(pc.body || pc.descripcion_larga || '');
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 

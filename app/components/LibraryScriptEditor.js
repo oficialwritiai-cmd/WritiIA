@@ -92,9 +92,45 @@ export default function LibraryScriptEditor({ item, onClose, onSave, supabase, u
 
             if (error) throw error;
 
+            // v5.2.0: Synchronize with the source of truth (scripts table)
+            if (item.script_id) {
+                const scriptUpdate = {
+                    title: titulo,
+                    hook: updatedContent.gancho || updatedContent.hook || '',
+                    cta: updatedContent.cta || updatedContent.cierre || '',
+                    notes: updatedContent.notes || '',
+                    updated_at: new Date().toISOString()
+                };
+
+                // Handle development/structure if present
+                if (updatedContent.desarrollo) {
+                    if (Array.isArray(updatedContent.desarrollo)) {
+                        scriptUpdate.structure = updatedContent.desarrollo.map(d => ({ point: 'Sección', detail: d }));
+                    } else {
+                        scriptUpdate.content = updatedContent.desarrollo;
+                    }
+                }
+
+                // Handle post copy if present
+                if (updatedContent.copy_post) {
+                    scriptUpdate.post_copy = {
+                        headline: updatedContent.copy_post.titulo || updatedContent.copy_post.headline || '',
+                        body: updatedContent.copy_post.descripcion_larga || updatedContent.copy_post.body || '',
+                        hashtags: updatedContent.copy_post.hashtags || []
+                    };
+                }
+
+                const { error: scriptErr } = await supabase
+                    .from('scripts')
+                    .update(scriptUpdate)
+                    .eq('id', item.script_id);
+                
+                if (scriptErr) console.error('[v5.2.0] Script Sync Error:', scriptErr);
+            }
+
             // 2. Sync to Calendar Events
             let calendarText = `GUION:\n\nHOOK: ${updatedContent.gancho || ''}\n\n`;
-            calendarText += `DESARROLLO:\n${Array.isArray(updatedContent.desarrollo) ? updatedContent.desarrollo.join('\\n') : (updatedContent.desarrollo || '')}\n\n`;
+            calendarText += `DESARROLLO:\n${Array.isArray(updatedContent.desarrollo) ? updatedContent.desarrollo.join('\n') : (updatedContent.desarrollo || '')}\n\n`;
             if (updatedContent.cierre) calendarText += `CIERRE: ${updatedContent.cierre}\n\n`;
             calendarText += `CTA: ${updatedContent.cta || ''}\n\n`;
 
