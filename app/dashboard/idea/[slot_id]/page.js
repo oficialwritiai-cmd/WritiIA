@@ -104,6 +104,9 @@ export default function IdeaPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const [saveError, setSaveError] = useState(null);
     const [generating, setGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState(null);
@@ -296,7 +299,8 @@ export default function IdeaPage() {
     // ── Save changes ───────────────────────────────────────────────────────
     async function handleSave() {
         setSaving(true);
-        setError(null);
+        setSaveError(null);
+        setSaveSuccess(false);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sesión de usuario no encontrada.');
@@ -373,7 +377,8 @@ export default function IdeaPage() {
 
             // 2. Sincronizar tabla 'scripts'
             if (finalScriptId) {
-                await supabase.from('scripts').update(scriptTableUpdates).eq('id', finalScriptId);
+                const { error: scErr } = await supabase.from('scripts').update(scriptTableUpdates).eq('id', finalScriptId);
+                if (scErr) throw new Error(`Script Update Error: ${scErr.message}`);
             } else if (realSlotId && sourceType !== 'library') {
                 const { data: newSc, error: scErr } = await supabase.from('scripts').insert({
                     user_id: user.id,
@@ -384,7 +389,8 @@ export default function IdeaPage() {
                     ...scriptTableUpdates
                 }).select().single();
                 
-                if (!scErr && newSc) {
+                if (scErr) throw new Error(`Script Insert Error: ${scErr.message}`);
+                if (newSc) {
                     finalScriptId = newSc.id;
                     setScript(newSc);
                 }
@@ -403,7 +409,8 @@ export default function IdeaPage() {
                     has_script: !!(finalScriptId || sourceType === 'library'),
                     script_data: commonScriptData
                 };
-                await supabase.from('content_slots').update(slotUpdates).eq('id', realSlotId);
+                const { error: e2 } = await supabase.from('content_slots').update(slotUpdates).eq('id', realSlotId);
+                if (e2) throw new Error(`Slot Sync Error: ${e2.message}`);
             }
 
             // 4. Sincronizar Calendario (calendar_events)
@@ -426,7 +433,8 @@ export default function IdeaPage() {
                 if (finalScriptId) orConditions.push(`script_id.eq.${finalScriptId}`);
                 
                 if (orConditions.length > 0) {
-                    await supabase.from('calendar_events').update(calUpdates).or(orConditions.join(','));
+                    const { error: e3 } = await supabase.from('calendar_events').update(calUpdates).or(orConditions.join(','));
+                    if (e3) throw new Error(`Calendar Sync Error: ${e3.message}`);
                 }
             }
 
@@ -461,9 +469,7 @@ export default function IdeaPage() {
 
             if (libIdToUpdate) {
                 const { error: e4 } = await supabase.from('library').update(libUpdates).eq('id', libIdToUpdate);
-                if (e4) {
-                    console.error('[v5.1.5] Sync Library Error:', e4);
-                }
+                if (e4) throw new Error(`Library Update Error: ${e4.message}`);
             } else if (realSlotId) {
                 // Si no existe, lo creamos para garantizar que aparezca en el historial
                 const { error: e5 } = await supabase.from('library').insert({
@@ -473,32 +479,26 @@ export default function IdeaPage() {
                     ...libUpdates,
                     metadata: { slot_id: realSlotId }
                 });
-                if (e5) {
-                    console.error('[v5.1.5] Insert Library Error:', e5);
-                }
+                if (e5) throw new Error(`Library Insert Error: ${e5.message}`);
             }
 
             // Force Refresh
             router.refresh();
 
-            // Visual feedback
+            // Visual feedback via React state
             setSaving(false);
-            const btn = document.getElementById('btn-save-notion');
-            if (btn) {
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '✅ Guardado v5.1.5';
-                btn.style.color = '#10B981';
-                setTimeout(() => {
-                    if (btn) {
-                        btn.innerHTML = originalText;
-                        btn.style.color = '';
-                    }
-                }, 2000);
-            }
+            setSaveSuccess(true);
+            setTimeout(() => {
+                setSaveSuccess(false);
+            }, 3000);
+
         } catch (err) {
             setSaving(false);
             console.error('Error saving script:', err);
-            setError('Error al guardar: ' + err.message);
+            setSaveError(err.message);
+            setTimeout(() => {
+                setSaveError(null);
+            }, 5000);
         }
     }
 
@@ -654,13 +654,12 @@ export default function IdeaPage() {
                         {copied ? '✅ Copiado' : '⧉ Copiar guion'}
                     </button>
                     <button
-                        id="btn-save-notion"
                         onClick={handleSave}
                         disabled={saving}
                         className="notion-btn"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(126,206,202,0.15)', border: '1px solid rgba(126,206,202,0.35)', borderRadius: '8px', color: '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
                     >
-                        {saving ? '💾 Guardando...' : '💾 Guardar cambios'}
+                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v5.1.7' : '💾 Guardar cambios'}
                     </button>
                 </div>
             </div>
@@ -836,13 +835,18 @@ export default function IdeaPage() {
                     }
                 </button>
 
+                {saveError && (
+                    <span style={{ color: '#EF4444', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: '8px' }}>
+                        ⚠️ Error: {saveError}
+                    </span>
+                )}
                 <button
                     onClick={handleSave}
                     disabled={saving}
                     className="notion-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.12)'}`, color: saveSuccess ? '#10B981' : 'rgba(255,255,255,0.85)' }}
                 >
-                    {saving ? '💾 Guardando...' : '💾 Guardar cambios'}
+                    {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v5.1.7' : '💾 Guardar cambios'}
                 </button>
 
                 <button
