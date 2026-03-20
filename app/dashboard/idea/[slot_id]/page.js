@@ -394,11 +394,12 @@ export default function IdeaPage() {
             if (finalScriptId) {
                 const { error: scErr } = await supabase.from('scripts').update(scriptTableUpdates).eq('id', finalScriptId);
                 if (scErr) throw new Error(`Script Update Error: ${scErr.message}`);
-            } else if (realSlotId && sourceType !== 'library') {
+            } else {
+                // v5.2.1: Create script entry even from library source — was previously skipped
                 const { data: newSc, error: scErr } = await supabase.from('scripts').insert({
                     user_id: user.id,
-                    slot_id: realSlotId,
-                    project_id: slot?.project_id,
+                    slot_id: realSlotId || null,
+                    project_id: slot?.project_id || null,
                     tone: slot?.metadata?.tone || slot?.tone || 'cercano',
                     is_saved: true,
                     ...scriptTableUpdates
@@ -474,6 +475,7 @@ export default function IdeaPage() {
                 titulo: title,
                 platform,
                 goal,
+                script_id: finalScriptId || null,
                 script_full_text: fullContentText,
                 content: {
                     ...commonScriptData,

@@ -41,6 +41,21 @@ export default function LibraryPage() {
         loadScripts();
     }, [activeProject]);
 
+    // v5.2.1: Re-fetch scripts when user returns to this page (prevents stale cache)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                loadScripts();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', () => loadScripts());
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', () => loadScripts());
+        };
+    }, [activeProject]);
+
     async function loadScripts() {
         setLoading(true);
         try {
