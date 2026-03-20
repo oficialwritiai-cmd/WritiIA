@@ -477,7 +477,6 @@ export default function IdeaPage() {
                 titulo: title,
                 platform,
                 goal,
-                script_id: finalScriptId || null,
                 script_full_text: fullContentText,
                 content: {
                     ...commonScriptData,
