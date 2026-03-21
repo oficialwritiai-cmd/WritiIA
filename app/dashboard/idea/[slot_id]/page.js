@@ -2,7 +2,7 @@
 
 /**
  * WRITIAI – Idea/Guion Page (Notion-style)
- * Version: v6.0.0
+ * Version: v6.1.0
  * Route: /dashboard/idea/[slot_id]
  *
  * Full-screen workspace for a single content idea + script.
@@ -139,16 +139,17 @@ export default function IdeaPage() {
     // Script generation options
     const [showGenOptions, setShowGenOptions] = useState(false);
     
-    // Autosave state (v6.0.0)
+    // Autosave state (v6.1.0)
     const [isAutosaving, setIsAutosaving] = useState(false);
     const [lastSavedHash, setLastSavedHash] = useState('');
+    const [lastSavedTime, setLastSavedTime] = useState(null);
 
     const [genPlatform, setGenPlatform] = useState('Reels');
     const [genDuration, setGenDuration] = useState('60 seg');
     const [genFocus, setGenFocus] = useState('autoridad');
     const [genInstruction, setGenInstruction] = useState('');
 
-    // ── Autosave Effect (v6.0.0) ──────────────────────────────────────────
+    // ── Autosave Effect (v6.1.0) ──────────────────────────────────────────
     useEffect(() => {
         if (loading || generating || saving) return;
 
@@ -160,9 +161,8 @@ export default function IdeaPage() {
         if (currentData === lastSavedHash) return;
 
         const timer = setTimeout(() => {
-            setIsAutosaving(true);
             handleSave(true);
-        }, 3000);
+        }, 5000); // 5s debounce for stability
 
         return () => clearTimeout(timer);
     }, [title, description, goal, contentType, platform, scheduledDate, hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags, loading, generating, saving, lastSavedHash]);
@@ -192,16 +192,17 @@ export default function IdeaPage() {
             setSourceType('slot');
             populateFromSlot(slotData);
 
-            // Load script if exists
+            // v6.1.0: Load script via fresh API fetch
             if (slotData.script_id) {
-                const { data: scriptData } = await supabase
-                    .from('scripts')
-                    .select('*')
-                    .eq('id', slotData.script_id)
-                    .single();
-                if (scriptData) {
-                    setScript(scriptData);
-                    populateFromScript(scriptData);
+                try {
+                    const sRes = await fetch(`/api/scripts/${slotData.script_id}`);
+                    const sResult = await sRes.json();
+                    if (sResult.ok && sResult.data) {
+                        setScript(sResult.data);
+                        populateFromScript(sResult.data);
+                    }
+                } catch (e) {
+                    console.warn('Script fetch error:', e);
                 }
             }
             setLoading(false);
@@ -232,8 +233,14 @@ export default function IdeaPage() {
                     setSlot(refSlot);
                     populateFromSlot(refSlot);
                     if (refSlot.script_id) {
-                        const { data: sc } = await supabase.from('scripts').select('*').eq('id', refSlot.script_id).single();
-                        if (sc) { setScript(sc); populateFromScript(sc); }
+                        try {
+                            const scRes = await fetch(`/api/scripts/${refSlot.script_id}`);
+                            const scResult = await scRes.json();
+                            if (scResult.ok && scResult.data) {
+                                setScript(scResult.data);
+                                populateFromScript(scResult.data);
+                            }
+                        } catch (e) { console.warn('Script fallback fetch error:', e); }
                     }
                 }
             }
@@ -272,17 +279,16 @@ export default function IdeaPage() {
                 }
                 setNotes(contentObj.notes || '');
 
-                // v5.2.0: Prioritize Scripts table if script_id exists in library
+                // v6.1.0: Prioritize Scripts table if script_id exists in library
                 if (libData.script_id) {
-                    const { data: scriptData } = await supabase
-                        .from('scripts')
-                        .select('*')
-                        .eq('id', libData.script_id)
-                        .single();
-                    if (scriptData) {
-                        setScript(scriptData);
-                        populateFromScript(scriptData);
-                    }
+                    try {
+                        const slRes = await fetch(`/api/scripts/${libData.script_id}`);
+                        const slResult = await slRes.json();
+                        if (slResult.ok && slResult.data) {
+                            setScript(slResult.data);
+                            populateFromScript(slResult.data);
+                        }
+                    } catch (e) { console.warn('Lib script fetch error:', e); }
                 }
 
                 setLoading(false);
@@ -335,22 +341,46 @@ export default function IdeaPage() {
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
-    // ── Save changes ─────────────────────────────────────────────────── v5.3.0
+    // ── Core Saving Logic (v6.1.0) ───────────────────────────────────────
+    // saveScript: Sends data to the dedicated API endpoint
+    async function saveScript(scriptId, payload, isAutosave = false) {
+        if (!scriptId) return null;
+        if (isAutosave) setIsAutosaving(true);
+        
+        try {
+            const res = await fetch(`/api/scripts/${scriptId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.ok) {
+                setLastSavedTime(new Date());
+                return result.data;
+            } else {
+                throw new Error(result.error || 'API Error');
+            }
+        } catch (err) {
+            console.error('saveScript Error:', err);
+            throw err;
+        } finally {
+            if (isAutosave) setIsAutosaving(false);
+        }
+    }
+
+    // handleSave: Main orchestration for manual/autosave
     async function handleSave(isAutosave = false) {
-        if (!isAutosave) setSaving(true);
-        setSaveError(null);
-        if (!isAutosave) setSaveSuccess(false);
+        if (!isAutosave) {
+            setSaving(true);
+            setSaveError(null);
+            setSaveSuccess(false);
+        }
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sesión no encontrada');
 
-            // ── 1. Resolve IDs ───────────────────────────────────────
-            const realSlotId = slot?.id || (sourceType === 'slot' ? slot_id : null);
-            const realLibraryId = script?.library_id || slot?.metadata?.library_id || (sourceType === 'event' ? calEvent?.reference_id : null);
-            const libId = realLibraryId;
-
-            // ── 2. Process Content ────────────────────────────────────
+            // 1. Prepare Content Blocks
             const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
                 const lines = block.split('\n');
                 const firstLine = lines[0] || '';
@@ -374,56 +404,51 @@ export default function IdeaPage() {
                 `NOTAS:\n${notes}`
             ].join('\n\n');
 
-            // ── 3. Update/Create SCRIPT (THE SOURCE OF TRUTH) ─────────────────
-            let finalScriptId = script?.id;
-            const scriptPayload = {
-                user_id: user.id,
+            // 2. Build Payload
+            const payload = {
                 title, hook, structure: structureArr, cta: ctaText,
                 notes, post_copy: postCopy, content: fullContentText,
-                platform, updated_at: new Date().toISOString()
+                platform
             };
 
+            // 3. TARGET: SCRIPT TABLE (Source of Truth)
+            let resultScript;
+            let finalScriptId = script?.id;
+
             if (finalScriptId) {
-                await supabase.from('scripts').update(scriptPayload).eq('id', finalScriptId);
+                // UPDATE VIA API
+                resultScript = await saveScript(finalScriptId, payload, isAutosave);
             } else {
-                const { data: newScript } = await supabase.from('scripts').insert({
-                    ...scriptPayload,
-                    library_id: libId
+                // CREATE (Insert via Supabase for now to get the ID, then we switch to patch)
+                const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
+                    ...payload,
+                    user_id: user.id,
+                    project_id: slot?.project_id || calEvent?.project_id
                 }).select().single();
+                
+                if (insErr) throw insErr;
                 if (newScript) {
                     finalScriptId = newScript.id;
                     setScript(newScript);
+                    resultScript = newScript;
                 }
             }
 
-            // ── 4. Sync Metadata (Library, Slot, Calendar) ───────────────────
-            // Best-effort sync - don't let these block the primary save
-            
-            // Library Sync (Metadata only)
-            if (libId) {
-                try {
-                    await supabase.from('library').update({
-                        titulo: title, platform, goal,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', libId);
-                } catch (e) { console.warn('LibSync error:', e); }
-            }
+            // 4. BIT-METADATA ASYNC SYNC (Other tables)
+            // We don't save long text here anymore. Just status/title.
+            const syncMetadata = async () => {
+                const realSlotId = slot?.id || (sourceType === 'slot' ? slot_id : null);
+                const libId = script?.library_id || slot?.metadata?.library_id || (sourceType === 'event' ? calEvent?.reference_id : null);
 
-            // Slot Sync (Metadata only)
-            if (realSlotId) {
-                try {
+                if (libId) {
+                    await supabase.from('library').update({ titulo: title, platform }).eq('id', libId);
+                }
+                if (realSlotId) {
                     await supabase.from('content_slots').update({
-                        idea_title: title, idea_description: description,
-                        goal, content_type: contentType, platform,
-                        scheduled_date: scheduledDate || null,
-                        script_id: finalScriptId,
-                        has_script: !!finalScriptId
+                        idea_title: title, platform, script_id: finalScriptId, has_script: true
                     }).eq('id', realSlotId);
-                } catch (e) { console.warn('SlotSync error:', e); }
-            }
-
-            // Calendar Sync (Metadata only)
-            try {
+                }
+                
                 let orConds = [];
                 if (realSlotId) orConds.push(`reference_id.eq.${realSlotId}`);
                 if (libId) orConds.push(`reference_id.eq.${libId}`);
@@ -432,9 +457,10 @@ export default function IdeaPage() {
                         title, platform, status: 'Guion listo', has_script: true
                     }).or(orConds.join(','));
                 }
-            } catch (e) { console.warn('CalSync error:', e); }
+            };
+            syncMetadata().catch(e => console.warn('SyncMetadata error:', e));
 
-            // ── 5. Finalize ──────────────────────────────────────────
+            // 5. Update Local State
             setLastSavedHash(JSON.stringify({
                 title, description, goal, contentType, platform, scheduledDate,
                 hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
@@ -448,8 +474,7 @@ export default function IdeaPage() {
             console.error('Save failed:', err);
             if (!isAutosave) setSaveError(err.message);
         } finally {
-            setSaving(false);
-            setIsAutosaving(false);
+            if (!isAutosave) setSaving(false);
         }
     }
 
@@ -599,6 +624,20 @@ export default function IdeaPage() {
 
                 {/* Right: actions */}
                 <div className="topbar-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {/* Autosave Indicator */}
+                    <div style={{ marginRight: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isAutosaving ? (
+                            <>
+                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #7ECECA', borderTopColor: 'transparent', animation: 'spin 0.6s linear infinite' }} />
+                                <span style={{ fontSize: '0.72rem', color: '#7ECECA', fontWeight: 600 }}>Autoguardando...</span>
+                            </>
+                        ) : lastSavedTime && (
+                            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
+                                Guardado {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                        )}
+                    </div>
+
                     <button
                         onClick={handleCopy}
                         className="notion-btn"
@@ -607,12 +646,12 @@ export default function IdeaPage() {
                         {copied ? '✅ Copiado' : '⧉ Copiar guion'}
                     </button>
                     <button
-                        onClick={handleSave}
+                        onClick={() => handleSave(false)}
                         disabled={saving}
                         className="notion-btn"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
                     >
-                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v5.1.7' : '💾 Guardar cambios'}
+                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.1.0' : '💾 Guardar cambios'}
                     </button>
                 </div>
             </div>
