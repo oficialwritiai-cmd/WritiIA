@@ -2,7 +2,7 @@
 
 /**
  * WRITIAI – Idea/Guion Page (Notion-style)
- * Version: v4.7.0
+ * Version: v6.0.0
  * Route: /dashboard/idea/[slot_id]
  *
  * Full-screen workspace for a single content idea + script.
@@ -138,10 +138,34 @@ export default function IdeaPage() {
 
     // Script generation options
     const [showGenOptions, setShowGenOptions] = useState(false);
+    
+    // Autosave state (v6.0.0)
+    const [isAutosaving, setIsAutosaving] = useState(false);
+    const [lastSavedHash, setLastSavedHash] = useState('');
+
     const [genPlatform, setGenPlatform] = useState('Reels');
     const [genDuration, setGenDuration] = useState('60 seg');
     const [genFocus, setGenFocus] = useState('autoridad');
     const [genInstruction, setGenInstruction] = useState('');
+
+    // ── Autosave Effect (v6.0.0) ──────────────────────────────────────────
+    useEffect(() => {
+        if (loading || generating || saving) return;
+
+        const currentData = JSON.stringify({
+            title, description, goal, contentType, platform, scheduledDate,
+            hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
+        });
+
+        if (currentData === lastSavedHash) return;
+
+        const timer = setTimeout(() => {
+            setIsAutosaving(true);
+            handleSave(true);
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [title, description, goal, contentType, platform, scheduledDate, hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags, loading, generating, saving, lastSavedHash]);
 
     // ── Load data ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -312,15 +336,21 @@ export default function IdeaPage() {
     }
 
     // ── Save changes ─────────────────────────────────────────────────── v5.3.0
-    async function handleSave() {
-        setSaving(true);
+    async function handleSave(isAutosave = false) {
+        if (!isAutosave) setSaving(true);
         setSaveError(null);
-        setSaveSuccess(false);
+        if (!isAutosave) setSaveSuccess(false);
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Sesión de usuario no encontrada.');
+            if (!user) throw new Error('Sesión no encontrada');
 
-            // ── 1. Preparar datos ────────────────────────────────────
+            // ── 1. Resolve IDs ───────────────────────────────────────
+            const realSlotId = slot?.id || (sourceType === 'slot' ? slot_id : null);
+            const realLibraryId = script?.library_id || slot?.metadata?.library_id || (sourceType === 'event' ? calEvent?.reference_id : null);
+            const libId = realLibraryId;
+
+            // ── 2. Process Content ────────────────────────────────────
             const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
                 const lines = block.split('\n');
                 const firstLine = lines[0] || '';
@@ -337,59 +367,49 @@ export default function IdeaPage() {
             };
 
             const fullContentText = [
-                `TÍTULO: ${title}`, '',
-                '🎯 HOOK', hook, '',
-                '📝 ESTRUCTURA', structureText, '',
-                '🔥 CTA', ctaText, '',
-                '📱 POST COPY', postHeadline, postBody,
-                postCopy.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' '), '',
-                '🎬 NOTAS', notes
-            ].filter(Boolean).join('\n');
+                `HOOK: ${hook}`,
+                `DESARROLLO:\n${structureText}`,
+                `CTA: ${ctaText}`,
+                `POST COPY:\n${postHeadline}\n${postBody}\n${postHashtags}`,
+                `NOTAS:\n${notes}`
+            ].join('\n\n');
 
-            const commonScriptData = {
-                hook, gancho: hook, hook_principal: hook,
-                desarrollo: structureArr.map(s => s.point.startsWith('Sección') ? s.detail : `${s.point}: ${s.detail}`),
-                cta: ctaText, cierre: ctaText,
-                copy_post: postCopy,
-                notes,
-                titulo_guion: title, titulo_idea: title,
-                descripcion: description,
-                full_text: fullContentText
+            // ── 3. Update/Create SCRIPT (THE SOURCE OF TRUTH) ─────────────────
+            let finalScriptId = script?.id;
+            const scriptPayload = {
+                user_id: user.id,
+                title, hook, structure: structureArr, cta: ctaText,
+                notes, post_copy: postCopy, content: fullContentText,
+                platform, updated_at: new Date().toISOString()
             };
 
-            const realSlotId = sourceType === 'library' ? (slot?.metadata?.slot_id || null) : slot?.id;
-            const realLibraryId = sourceType === 'library' ? slot?.id : (slot?.metadata?.library_id || null);
-            let finalScriptId = script?.id || slot?.script_id || null;
-
-            // ── 2. PRIMERO: Actualizar Library (SIEMPRE funciona) ────
-            const libId = realLibraryId || (sourceType === 'library' ? slot?.id : null);
-            if (libId) {
-                const { error: libErr } = await supabase.from('library').update({
-                    titulo: title,
-                    platform,
-                    goal,
-                    script_full_text: fullContentText,
-                    content: { ...commonScriptData, titulo_guion: title, descripcion: description, cierre: ctaText },
-                    updated_at: new Date().toISOString()
-                }).eq('id', libId);
-                if (libErr) throw new Error(`Library Update Error: ${libErr.message}`);
-            }
-
-            // ── 3. Actualizar Scripts (SOLO si ya existe un script_id) ──
             if (finalScriptId) {
-                try {
-                    const { error: scErr } = await supabase.from('scripts').update({
-                        title, hook, structure: structureArr, cta: ctaText,
-                        notes, post_copy: postCopy, content: fullContentText,
-                        platform, updated_at: new Date().toISOString()
-                    }).eq('id', finalScriptId);
-                    if (scErr) console.error('[v5.3.0] Scripts update warning:', scErr.message);
-                } catch (e) {
-                    console.error('[v5.3.0] Scripts update failed:', e.message);
+                await supabase.from('scripts').update(scriptPayload).eq('id', finalScriptId);
+            } else {
+                const { data: newScript } = await supabase.from('scripts').insert({
+                    ...scriptPayload,
+                    library_id: libId
+                }).select().single();
+                if (newScript) {
+                    finalScriptId = newScript.id;
+                    setScript(newScript);
                 }
             }
 
-            // ── 4. Slot sync (best-effort, non-blocking) ────────────
+            // ── 4. Sync Metadata (Library, Slot, Calendar) ───────────────────
+            // Best-effort sync - don't let these block the primary save
+            
+            // Library Sync (Metadata only)
+            if (libId) {
+                try {
+                    await supabase.from('library').update({
+                        titulo: title, platform, goal,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', libId);
+                } catch (e) { console.warn('LibSync error:', e); }
+            }
+
+            // Slot Sync (Metadata only)
             if (realSlotId) {
                 try {
                     await supabase.from('content_slots').update({
@@ -397,61 +417,43 @@ export default function IdeaPage() {
                         goal, content_type: contentType, platform,
                         scheduled_date: scheduledDate || null,
                         script_id: finalScriptId,
-                        has_script: !!finalScriptId,
-                        script_data: commonScriptData
+                        has_script: !!finalScriptId
                     }).eq('id', realSlotId);
-                } catch (e) {
-                    console.error('[v5.3.0] Slot sync failed:', e.message);
-                }
+                } catch (e) { console.warn('SlotSync error:', e); }
             }
 
-            // ── 5. Calendar sync (best-effort, non-blocking) ────────
+            // Calendar Sync (Metadata only)
             try {
                 let orConds = [];
                 if (realSlotId) orConds.push(`reference_id.eq.${realSlotId}`);
-                if (realLibraryId) orConds.push(`reference_id.eq.${realLibraryId}`);
+                if (libId) orConds.push(`reference_id.eq.${libId}`);
                 if (orConds.length > 0) {
-                    const calPayload = {
-                        title, platform, status: 'Guion listo', has_script: true,
-                        script_full_text: fullContentText, description: description || title,
-                        content: commonScriptData
-                    };
-                    if (scheduledDate) calPayload.event_date = scheduledDate;
-                    await supabase.from('calendar_events').update(calPayload).or(orConds.join(','));
+                    await supabase.from('calendar_events').update({
+                        title, platform, status: 'Guion listo', has_script: true
+                    }).or(orConds.join(','));
                 }
-            } catch (e) {
-                console.error('[v5.3.0] Calendar sync failed:', e.message);
+            } catch (e) { console.warn('CalSync error:', e); }
+
+            // ── 5. Finalize ──────────────────────────────────────────
+            setLastSavedHash(JSON.stringify({
+                title, description, goal, contentType, platform, scheduledDate,
+                hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
+            }));
+
+            if (!isAutosave) {
+                setSaveSuccess(true);
+                setTimeout(() => setSaveSuccess(false), 2000);
             }
-
-            // ── 6. Also create library entry if none exists yet ─────
-            if (!libId && realSlotId) {
-                try {
-                    await supabase.from('library').insert({
-                        user_id: user.id,
-                        project_id: slot?.project_id || null,
-                        type: 'guion', titulo: title, platform, goal,
-                        script_full_text: fullContentText,
-                        content: { ...commonScriptData, titulo_guion: title, descripcion: description, cierre: ctaText },
-                        metadata: { slot_id: realSlotId },
-                        updated_at: new Date().toISOString()
-                    });
-                } catch (e) {
-                    console.error('[v5.3.0] Library insert failed:', e.message);
-                }
-            }
-
-            router.refresh();
-            setSaving(false);
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 3000);
-
         } catch (err) {
+            console.error('Save failed:', err);
+            if (!isAutosave) setSaveError(err.message);
+        } finally {
             setSaving(false);
-            console.error('Error saving script:', err);
-            setSaveError(err.message);
-            setTimeout(() => setSaveError(null), 5000);
+            setIsAutosaving(false);
         }
     }
+
+
 
     // ── Generate / Regenerate script ───────────────────────────────────────
     async function handleGenerate() {

@@ -133,7 +133,7 @@ export default function CalendarPage() {
         setIsPanelOpen(true);
     };
 
-    const handleEventClick = async (e, event) => {
+    const handleEventClick = (e, event) => {
         e.stopPropagation();
 
         // Handle Selection Mode or Ctrl/Cmd Click
@@ -145,91 +145,12 @@ export default function CalendarPage() {
                 next.add(event.id);
             }
             setSelectedEvents(next);
-            return; // Don't open panel
+            return;
         }
 
-        setSelectedEvent(event);
-        setSelectedDate(event.event_date);
-        setTempTitle(event.title || '');
-        setTempStatus(event.status || 'idea');
-        setTempPlatform(event.platform || 'General');
-        
-        let loadedNotes = event.script_full_text || event.notes || '';
-        const loadedColor = event.color || 'purple';
-        setTempColor(loadedColor);
-        setIsPanelOpen(true);
-
-        // EXTRA ROBUST FALLBACK (v4.5.2): If notes are empty but it's marked as having a script, try fetching it.
-        if (!loadedNotes && event.has_script) {
-            setLoadingScript(true);
-            try {
-                let libData = null;
-                if (event.reference_id) {
-                    const { data } = await supabase.from('library').select('*').eq('id', event.reference_id).single();
-                    libData = data;
-                }
-                if (!libData) {
-                    const { data } = await supabase.from('library').select('*').eq('user_id', event.user_id).ilike('titulo', event.title).single();
-                    libData = data;
-                }
-                
-                if (libData) {
-                    const content = libData.content;
-                    const hook = content?.hook || content?.gancho || '';
-                    const des = Array.isArray(content?.desarrollo) ? content.desarrollo : (content?.puntos ? content.puntos : []);
-                    const cta = content?.cta || content?.cierre || '';
-                    loadedNotes = `GANCHO:\n${hook}\n\nDESARROLLO:\n${des.join('\n')}\n\nCTA:\n${cta}`;
-                    setTempNotes(loadedNotes);
-                    setLinkedScript(libData);
-                } else {
-                    setTempNotes('');
-                }
-            } catch (err) {
-                console.warn("[v4.5.2 Fallback] Could not recover script:", err);
-                setTempNotes('');
-            } finally {
-                setLoadingScript(false);
-            }
-        } else {
-            setTempNotes(loadedNotes);
-        }
-
-
-        // Fetch linked script if exists
-        if (event.content) {
-            let parsedContent = event.content;
-            if (typeof event.content === 'string') {
-                try {
-                    parsedContent = JSON.parse(event.content);
-                } catch (e) {
-                    console.error("Error parsing event content:", e);
-                    // Fallback to extracting fields if string is not JSON
-                    parsedContent = { hook: event.content };
-                }
-            }
-            setLinkedScript({ content: parsedContent });
-            setLoadingScript(false);
-        } else if (event.reference_id && event.has_script) {
-            setLoadingScript(true);
-            setLinkedScript(null);
-            try {
-                const { data, error } = await supabase
-                    .from('library')
-                    .select('*')
-                    .eq('id', event.reference_id)
-                    .single();
-
-                if (data && !error) {
-                    setLinkedScript(data);
-                }
-            } catch (err) {
-                console.error("Error fetching linked script:", err);
-            } finally {
-                setLoadingScript(false);
-            }
-        } else {
-            setLinkedScript(null);
-        }
+        // v6.0: Redirect directly to Idea Workspace
+        const idToOpen = event.reference_id || event.id;
+        router.push(`/dashboard/idea/${idToOpen}`);
     };
 
     const handleViewInLibrary = () => {
@@ -245,20 +166,6 @@ export default function CalendarPage() {
         const colorValue = tempColor || 'purple';
 
         try {
-            // Build the full script text Document if it's a script/guion
-            let fullScriptText = tempNotes;
-            if (linkedScript && tempStatus !== 'idea') {
-                const content = linkedScript.content || {};
-                const hook = content.hook || content.gancho || '';
-                const des = (Array.isArray(content.desarrollo) ? content.desarrollo :
-                    (Array.isArray(content.puntos) ? content.puntos : [])).join('\n');
-                const cta = content.cta || content.cierre || '';
-                const copy = content.copy_post || {};
-                const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ') : '';
-
-                fullScriptText = `TÍTULO: ${tempTitle}\n\nGANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}\n\nCOPY POST:\n${copy.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtags}`;
-            }
-
             if (selectedEvent && selectedEvent.id) {
                 const updates = {
                     title: tempTitle || 'Sin título',
@@ -266,26 +173,13 @@ export default function CalendarPage() {
                     platform: tempPlatform,
                     notes: tempNotes,
                     event_date: selectedDate,
-                    color: colorValue,
-                    has_script: selectedEvent?.has_script || !!linkedScript,
-                    script_full_text: fullScriptText,
-                    content: linkedScript?.content || selectedEvent?.content || null
+                    color: colorValue
                 };
 
                 const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
                 if (updateErr) throw updateErr;
 
-                // Also update the linked library item if it exists
-                if (selectedEvent.reference_id) {
-                    await supabase.from('library').update({
-                        titulo: tempTitle,
-                        script_full_text: fullScriptText,
-                        platform: tempPlatform,
-                        content: updates.content
-                    }).eq('id', selectedEvent.reference_id);
-                }
-
-                // Immediately update local state
+                // Update local state
                 const newEvents = events.map(ev =>
                     ev.id === selectedEvent.id ? { ...ev, ...updates } : ev
                 );
@@ -300,10 +194,7 @@ export default function CalendarPage() {
                     notes: tempNotes,
                     event_date: selectedDate,
                     type: 'idea',
-                    color: colorValue,
-                    has_script: !!linkedScript,
-                    script_full_text: fullScriptText,
-                    content: linkedScript?.content || null
+                    color: colorValue
                 };
                 const { data: newEv, error: insertErr } = await supabase.from('calendar_events').insert(payload).select().single();
                 if (insertErr) throw insertErr;
@@ -311,7 +202,6 @@ export default function CalendarPage() {
             }
 
             setIsPanelOpen(false);
-            // Reload silently to ensure sync
             setTimeout(() => loadData(), 500);
         } catch (err) {
             console.error('Error saving panel:', err);
