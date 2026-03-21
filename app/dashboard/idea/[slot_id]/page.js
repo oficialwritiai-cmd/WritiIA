@@ -2,7 +2,7 @@
 
 /**
  * WRITIAI – Idea/Guion Page (Notion-style)
- * Version: v6.1.1
+ * Version: v6.2.0 (Deep Fix)
  * Route: /dashboard/idea/[slot_id]
  *
  * Full-screen workspace for a single content idea + script.
@@ -149,21 +149,18 @@ export default function IdeaPage() {
     const [genFocus, setGenFocus] = useState('autoridad');
     const [genInstruction, setGenInstruction] = useState('');
 
-    // ── Autosave Effect (v6.1.0) ──────────────────────────────────────────
+    // ── Autosave Effect (v6.2.0 - DISABLED TEMPORARILY) ──────────────────
     useEffect(() => {
+        /*
         if (loading || generating || saving) return;
-
         const currentData = JSON.stringify({
             title, description, goal, contentType, platform, scheduledDate,
             hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
         });
-
         if (currentData === lastSavedHash) return;
-
         const timer = setTimeout(() => {
             handleSave(true);
-        }, 5000); // 5s debounce for stability
-
+        }, 5000); 
         return () => clearTimeout(timer);
     }, [title, description, goal, contentType, platform, scheduledDate, hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags, loading, generating, saving, lastSavedHash]);
 
@@ -335,29 +332,39 @@ export default function IdeaPage() {
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
-    // ── Core Saving Logic (v6.1.1) ───────────────────────────────────────
-    // saveScript: Direct Supabase update (preserves Auth context for RLS)
+    // ── Core Saving Logic (v6.2.0) ───────────────────────────────────────
+    // saveScript: Uses the dedicated API endpoint with audit logs
     async function saveScript(scriptId, payload, isAutosave = false) {
-        if (!scriptId) return null;
+        if (!scriptId) {
+            console.error('❌ FATAL: Intento de guardar sin scriptId');
+            return null;
+        }
+        
+        console.log('📡 [FRONTEND] AUDITORÍA DE GUARDADO (v6.2.0)');
+        console.log('📍 SCRIPT_ID:', scriptId);
+        console.log('📦 PAYLOAD:', payload);
+
         if (isAutosave) setIsAutosaving(true);
         
         try {
-            const { data, error } = await supabase
-                .from('scripts')
-                .update({
-                    ...payload,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', scriptId)
-                .select()
-                .maybeSingle();
-
-            if (error) throw error;
+            // v6.2.0: Send to backend endpoint for centralized processing
+            const res = await fetch(`/api/scripts/${scriptId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
             
-            setLastSavedTime(new Date());
-            return data;
+            const result = await res.json();
+            console.log('📥 [FRONTEND] RESPUESTA BACKEND:', result);
+
+            if (result.ok) {
+                setLastSavedTime(new Date());
+                return result.data;
+            } else {
+                throw new Error(result.error || 'API Error');
+            }
         } catch (err) {
-            console.error('saveScript Error:', err);
+            console.error('❌ [FRONTEND] ERROR EN GUARDADO:', err);
             throw err;
         } finally {
             if (isAutosave) setIsAutosaving(false);
@@ -412,10 +419,10 @@ export default function IdeaPage() {
             let finalScriptId = script?.id;
 
             if (finalScriptId) {
-                // UPDATE VIA API
+                // UPDATE VIA API (Tracing enabled)
                 resultScript = await saveScript(finalScriptId, payload, isAutosave);
             } else {
-                // CREATE (Insert via Supabase for now to get the ID, then we switch to patch)
+                // CREATE
                 const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
                     ...payload,
                     user_id: user.id,
@@ -430,31 +437,11 @@ export default function IdeaPage() {
                 }
             }
 
-            // 4. BIT-METADATA ASYNC SYNC (Other tables)
-            // We don't save long text here anymore. Just status/title.
-            const syncMetadata = async () => {
-                const realSlotId = slot?.id || (sourceType === 'slot' ? slot_id : null);
-                const libId = script?.library_id || slot?.metadata?.library_id || (sourceType === 'event' ? calEvent?.reference_id : null);
-
-                if (libId) {
-                    await supabase.from('library').update({ titulo: title, platform }).eq('id', libId);
-                }
-                if (realSlotId) {
-                    await supabase.from('content_slots').update({
-                        idea_title: title, platform, script_id: finalScriptId, has_script: true
-                    }).eq('id', realSlotId);
-                }
-                
-                let orConds = [];
-                if (realSlotId) orConds.push(`reference_id.eq.${realSlotId}`);
-                if (libId) orConds.push(`reference_id.eq.${libId}`);
-                if (orConds.length > 0) {
-                    await supabase.from('calendar_events').update({
-                        title, platform, status: 'Guion listo', has_script: true
-                    }).or(orConds.join(','));
-                }
-            };
+            // 4. METADATA SYNC (DISABLED TEMPORARILY FOR DEEP FIX)
+            /*
+            const syncMetadata = async () => { ... };
             syncMetadata().catch(e => console.warn('SyncMetadata error:', e));
+            */
 
             // 5. Update Local State
             setLastSavedHash(JSON.stringify({
@@ -647,7 +634,7 @@ export default function IdeaPage() {
                         className="notion-btn"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
                     >
-                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.1.1' : '💾 Guardar cambios'}
+                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.2.0' : '💾 Guardar cambios'}
                     </button>
                 </div>
             </div>
