@@ -2,7 +2,7 @@
 
 /**
  * WRITIAI – Idea/Guion Page (Notion-style)
- * Version: v6.1.0
+ * Version: v6.1.1
  * Route: /dashboard/idea/[slot_id]
  *
  * Full-screen workspace for a single content idea + script.
@@ -192,17 +192,16 @@ export default function IdeaPage() {
             setSourceType('slot');
             populateFromSlot(slotData);
 
-            // v6.1.0: Load script via fresh API fetch
+            // v6.1.1: Load script via direct Supabase client (Auth aware)
             if (slotData.script_id) {
-                try {
-                    const sRes = await fetch(`/api/scripts/${slotData.script_id}`);
-                    const sResult = await sRes.json();
-                    if (sResult.ok && sResult.data) {
-                        setScript(sResult.data);
-                        populateFromScript(sResult.data);
-                    }
-                } catch (e) {
-                    console.warn('Script fetch error:', e);
+                const { data: scData } = await supabase
+                    .from('scripts')
+                    .select('*')
+                    .eq('id', slotData.script_id)
+                    .maybeSingle();
+                if (scData) {
+                    setScript(scData);
+                    populateFromScript(scData);
                 }
             }
             setLoading(false);
@@ -233,14 +232,8 @@ export default function IdeaPage() {
                     setSlot(refSlot);
                     populateFromSlot(refSlot);
                     if (refSlot.script_id) {
-                        try {
-                            const scRes = await fetch(`/api/scripts/${refSlot.script_id}`);
-                            const scResult = await scRes.json();
-                            if (scResult.ok && scResult.data) {
-                                setScript(scResult.data);
-                                populateFromScript(scResult.data);
-                            }
-                        } catch (e) { console.warn('Script fallback fetch error:', e); }
+                        const { data: sc } = await supabase.from('scripts').select('*').eq('id', refSlot.script_id).maybeSingle();
+                        if (sc) { setScript(sc); populateFromScript(sc); }
                     }
                 }
             }
@@ -279,16 +272,17 @@ export default function IdeaPage() {
                 }
                 setNotes(contentObj.notes || '');
 
-                // v6.1.0: Prioritize Scripts table if script_id exists in library
+                // v6.1.1: Prioritize Scripts table via direct client
                 if (libData.script_id) {
-                    try {
-                        const slRes = await fetch(`/api/scripts/${libData.script_id}`);
-                        const slResult = await slRes.json();
-                        if (slResult.ok && slResult.data) {
-                            setScript(slResult.data);
-                            populateFromScript(slResult.data);
-                        }
-                    } catch (e) { console.warn('Lib script fetch error:', e); }
+                    const { data: scData } = await supabase
+                        .from('scripts')
+                        .select('*')
+                        .eq('id', libData.script_id)
+                        .maybeSingle();
+                    if (scData) {
+                        setScript(scData);
+                        populateFromScript(scData);
+                    }
                 }
 
                 setLoading(false);
@@ -341,25 +335,27 @@ export default function IdeaPage() {
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
-    // ── Core Saving Logic (v6.1.0) ───────────────────────────────────────
-    // saveScript: Sends data to the dedicated API endpoint
+    // ── Core Saving Logic (v6.1.1) ───────────────────────────────────────
+    // saveScript: Direct Supabase update (preserves Auth context for RLS)
     async function saveScript(scriptId, payload, isAutosave = false) {
         if (!scriptId) return null;
         if (isAutosave) setIsAutosaving(true);
         
         try {
-            const res = await fetch(`/api/scripts/${scriptId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (result.ok) {
-                setLastSavedTime(new Date());
-                return result.data;
-            } else {
-                throw new Error(result.error || 'API Error');
-            }
+            const { data, error } = await supabase
+                .from('scripts')
+                .update({
+                    ...payload,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', scriptId)
+                .select()
+                .maybeSingle();
+
+            if (error) throw error;
+            
+            setLastSavedTime(new Date());
+            return data;
         } catch (err) {
             console.error('saveScript Error:', err);
             throw err;
@@ -651,7 +647,7 @@ export default function IdeaPage() {
                         className="notion-btn"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
                     >
-                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.1.0' : '💾 Guardar cambios'}
+                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.1.1' : '💾 Guardar cambios'}
                     </button>
                 </div>
             </div>
