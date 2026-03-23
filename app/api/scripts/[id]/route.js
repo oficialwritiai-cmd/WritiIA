@@ -2,82 +2,100 @@ import { createSupabaseClient } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 /**
- * API Scripts Handler - v6.2.0 (Deep Fix)
- * Handles GET (fetch fresh) and PATCH (partial update) for single scripts with audit logs.
+ * API Scripts Handler - v6.3.0 (Guided Debug)
+ * Handles GET (fetch fresh) and PATCH (partial update) for single scripts with mandatory tracing.
  */
 
 const supabase = createSupabaseClient();
 
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
+
 export async function GET(req, { params }) {
     const { id } = params;
-    console.log('📡 [BACKEND] GET SCRIPT:', id);
+    
     try {
-        const { data, error } = await supabase
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
+        const { data: row, error } = await supabase
             .from('scripts')
             .select('*')
             .eq('id', id)
-            .maybeSingle(); // Safer than .single()
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        // REQUERIMIENTO v6.3.0: Log de carga
+        console.log('GET_SCRIPT', { scriptId: id, userId: user.id, row });
 
         if (error) throw error;
-        if (!data) {
-            console.warn('❌ [BACKEND] SCRIPT NO ENCONTRADO:', id);
-            return NextResponse.json({ error: 'Script not found' }, { status: 404 });
-        }
+        if (!row) return NextResponse.json({ error: 'Script not found' }, { status: 404 });
 
-        return NextResponse.json({ ok: true, data });
+        return NextResponse.json({ ok: true, data: row });
     } catch (err) {
-        console.error('❌ [BACKEND] GET ERROR:', err);
+        console.error('❌ [BACKEND] GET_SCRIPT ERROR:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
 
 export async function PATCH(req, { params }) {
     const { id } = params;
+    
     try {
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const body = await req.json();
         
-        console.log('📡 [BACKEND] AUDITORÍA PATCH (v6.2.0)');
-        console.log('📍 ID:', id);
-        console.log('📦 BODY:', JSON.stringify(body, null, 2));
-
-        // Allowed fields
-        const allowedFields = ['title', 'hook', 'content', 'cta', 'notes', 'post_copy', 'structure', 'platform'];
-        const updateData = {};
-        
-        allowedFields.forEach(field => {
-            if (body[field] !== undefined) {
-                updateData[field] = body[field];
-            }
+        // REQUERIMIENTO v6.3.0: Log de entrada
+        console.log('UPDATE_SCRIPT_REQUEST', {
+            scriptId: id,
+            userId: user.id,
+            body
         });
 
-        if (Object.keys(updateData).length === 0) {
-            return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
-        }
+        // Map allowed fields (simple update as requested)
+        const updateData = {
+            title: body.title,
+            hook: body.hook,
+            content: body.content, // mapping user's "body" to "content"
+            cta: body.cta,
+            post_copy: body.post_copy,
+            notes: body.notes,
+            structure: body.structure,
+            platform: body.platform,
+            updated_at: new Date().toISOString()
+        };
 
-        updateData.updated_at = new Date().toISOString();
+        // Remove undefined fields
+        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-        // EXECUTE UPDATE
-        const { data, error } = await supabase
+        // EXECUTE UPDATE (Strict WHERE clause)
+        const { error: upErr } = await supabase
             .from('scripts')
             .update(updateData)
             .eq('id', id)
-            .select()
-            .maybeSingle();
+            .eq('user_id', user.id);
 
-        if (error) {
-            console.error('❌ [BACKEND] SUPABASE ERROR:', error);
-            throw error;
+        if (upErr) {
+            console.error('❌ [BACKEND] UPDATE_ERROR:', upErr);
+            throw upErr;
         }
 
-        if (!data) {
-            console.error('❌ [BACKEND] UPDATE FAILED: No data returned (RLS or Missing ID)');
-            return NextResponse.json({ error: 'Update failed. Check RLS or ID.' }, { status: 403 });
-        }
+        // REQUERIMIENTO v6.3.0: Verificación inmediata
+        const { data: resultRow, error: selErr } = await supabase
+            .from('scripts')
+            .select('title, hook, content, cta, post_copy, notes')
+            .eq('id', id)
+            .eq('user_id', user.id)
+            .single();
 
-        console.log('✅ [BACKEND] UPDATE EXITOSO');
-        return NextResponse.json({ ok: true, data });
+        if (selErr) console.warn('⚠️ [BACKEND] COULD NOT VERIFY UPDATE:', selErr);
+        
+        console.log('UPDATE_SCRIPT_RESULT', resultRow);
+
+        return NextResponse.json({ ok: true, data: resultRow });
     } catch (err) {
-        console.error('❌ [BACKEND] PATCH ERROR:', err);
+        console.error('❌ [BACKEND] PATCH_SCRIPT_ERROR:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

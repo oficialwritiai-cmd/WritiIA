@@ -2,7 +2,7 @@
 
 /**
  * WRITIAI – Idea/Guion Page (Notion-style)
- * Version: v6.2.0 (Deep Fix)
+ * Version: v6.3.0 (Guided Debug)
  * Route: /dashboard/idea/[slot_id]
  *
  * Full-screen workspace for a single content idea + script.
@@ -189,16 +189,22 @@ export default function IdeaPage() {
             setSourceType('slot');
             populateFromSlot(slotData);
 
-            // v6.1.1: Load script via direct Supabase client (Auth aware)
+            // v6.3.0: Load script via fresh API fetch with Auth
             if (slotData.script_id) {
-                const { data: scData } = await supabase
-                    .from('scripts')
-                    .select('*')
-                    .eq('id', slotData.script_id)
-                    .maybeSingle();
-                if (scData) {
-                    setScript(scData);
-                    populateFromScript(scData);
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token;
+
+                    const sRes = await fetch(`/api/scripts/${slotData.script_id}`, {
+                        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+                    });
+                    const sResult = await sRes.json();
+                    if (sResult.ok && sResult.data) {
+                        setScript(sResult.data);
+                        populateFromScript(sResult.data);
+                    }
+                } catch (e) {
+                    console.warn('Script fetch error:', e);
                 }
             }
             setLoading(false);
@@ -332,30 +338,42 @@ export default function IdeaPage() {
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
-    // ── Core Saving Logic (v6.2.0) ───────────────────────────────────────
-    // saveScript: Uses the dedicated API endpoint with audit logs
+    // ── Core Saving Logic (v6.3.0) ───────────────────────────────────────
+    // saveScript: Uses the dedicated API endpoint with mandatory tracing & Auth
     async function saveScript(scriptId, payload, isAutosave = false) {
         if (!scriptId) {
-            console.error('❌ FATAL: Intento de guardar sin scriptId');
+            console.error('❌ FATAL: SAVE_SCRIPT_PAYLOAD - No scriptId found');
             return null;
         }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         
-        console.log('📡 [FRONTEND] AUDITORÍA DE GUARDADO (v6.2.0)');
-        console.log('📍 SCRIPT_ID:', scriptId);
-        console.log('📦 PAYLOAD:', payload);
+        console.log('SAVE_SCRIPT_PAYLOAD', {
+            scriptId,
+            title: payload.title,
+            hook: payload.hook,
+            body: payload.content,
+            cta: payload.cta,
+            postCopy: payload.post_copy,
+            notes: payload.notes,
+            hasAuth: !!token
+        });
 
         if (isAutosave) setIsAutosaving(true);
         
         try {
-            // v6.2.0: Send to backend endpoint for centralized processing
             const res = await fetch(`/api/scripts/${scriptId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
                 body: JSON.stringify(payload)
             });
             
             const result = await res.json();
-            console.log('📥 [FRONTEND] RESPUESTA BACKEND:', result);
+            console.log('📥 [FRONTEND] API RESPONSE:', result);
 
             if (result.ok) {
                 setLastSavedTime(new Date());
@@ -364,7 +382,7 @@ export default function IdeaPage() {
                 throw new Error(result.error || 'API Error');
             }
         } catch (err) {
-            console.error('❌ [FRONTEND] ERROR EN GUARDADO:', err);
+            console.error('❌ [FRONTEND] SAVE ERROR:', err);
             throw err;
         } finally {
             if (isAutosave) setIsAutosaving(false);
@@ -415,12 +433,11 @@ export default function IdeaPage() {
             };
 
             // 3. TARGET: SCRIPT TABLE (Source of Truth)
-            let resultScript;
             let finalScriptId = script?.id;
 
             if (finalScriptId) {
                 // UPDATE VIA API (Tracing enabled)
-                resultScript = await saveScript(finalScriptId, payload, isAutosave);
+                await saveScript(finalScriptId, payload, isAutosave);
             } else {
                 // CREATE
                 const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
@@ -433,7 +450,6 @@ export default function IdeaPage() {
                 if (newScript) {
                     finalScriptId = newScript.id;
                     setScript(newScript);
-                    resultScript = newScript;
                 }
             }
 
@@ -634,7 +650,7 @@ export default function IdeaPage() {
                         className="notion-btn"
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
                     >
-                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.2.0' : '💾 Guardar cambios'}
+                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.3.0' : '💾 Guardar cambios'}
                     </button>
                 </div>
             </div>
@@ -821,7 +837,7 @@ export default function IdeaPage() {
                     className="notion-btn"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.12)'}`, color: saveSuccess ? '#10B981' : 'rgba(255,255,255,0.85)' }}
                 >
-                    {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v5.1.7' : '💾 Guardar cambios'}
+                    {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.3.0' : '💾 Guardar cambios'}
                 </button>
 
                 <button
