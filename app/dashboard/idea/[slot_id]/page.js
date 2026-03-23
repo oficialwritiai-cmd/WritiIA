@@ -328,58 +328,24 @@ export default function IdeaPage() {
     }
 
     async function handleGenerate() {
-        const realSlotId = slot?.id;
-        if (!realSlotId) { 
-            const params = new URLSearchParams();
-            params.set('mode', 'single');
-            params.set('topic', `${title}\n${description}`);
-            params.set('platform', genPlatform || platform || 'Reels');
-            params.set('goal', goal || 'Viralidad pura');
+        const params = new URLSearchParams();
+        params.set('mode', 'single');
+        params.set('topic', `${title}\n${description}`);
+        params.set('platform', genPlatform || platform || 'Reels');
+        params.set('goal', goal || 'Viralidad pura');
+
+        if (slot?.id) {
+            params.set('source_type', 'content_slots');
+            params.set('source_reference_id', slot.id);
+        } else if (calEvent?.id) {
             params.set('source_type', 'calendar_events');
+            params.set('source_reference_id', calEvent.id);
+        } else {
+            params.set('source_type', 'library'); // Fallback or another type
             params.set('source_reference_id', slot_id);
-            router.push(`/dashboard?${params.toString()}`);
-            return;
         }
-        setGenerating(true);
-        setShowGenOptions(false);
-        setSlotStatus('script_generating');
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('No autorizado');
-            const res = await fetch(`/api/slots/${realSlotId}/generate-script`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-                body: JSON.stringify({
-                    userId: user?.id,
-                    platform: genPlatform || platform || 'Reels',
-                    videoDuration: genDuration || '60 seg',
-                    focus: genFocus || contentType || 'autoridad',
-                    instruction: genInstruction || '',
-                }),
-            });
-            if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); setSlotStatus('idea_only'); return; }
-            const data = await res.json();
-            if (!res.ok || !data.ok) { alert(data.error || 'Error al generar el guion.'); setSlotStatus('script_error'); return; }
-            const sc = data.script;
-            setScript(sc);
-            setHook(sc.hook || '');
-            setCtaText(sc.cta || '');
-            setNotes(sc.notes || '');
-            if (Array.isArray(sc.structure)) {
-                setStructureText(sc.structure.map((p, i) => `${i + 1}. ${p.point}: ${p.detail}`).join('\n\n'));
-            }
-            const pc = sc.post_copy || {};
-            setPostHeadline(pc.headline || '');
-            setPostBody(pc.body || '');
-            setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.join(' ') : '');
-            setSlotStatus('script_ready');
-        } catch (err) {
-            console.error('Generate error:', err);
-            alert('Error de red: ' + err.message);
-            setSlotStatus('script_error');
-        } finally {
-            setGenerating(false);
-        }
+
+        router.push(`/dashboard?${params.toString()}`);
     }
 
     function handleCopy() {
