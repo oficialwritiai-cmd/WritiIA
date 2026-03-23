@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v2.6.0 (v4.5.2)
+// Calendar Page v6.7.0 (Sync & Multi-Event Fix)
 
 export default function CalendarPage() {
     const router = useRouter();

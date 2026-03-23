@@ -415,7 +415,7 @@ export default function IdeaPage() {
                     {isAutosaving && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>Autoguardando...</span>}
                     {lastSavedTime && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>Guardado {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                     <button onClick={() => handleSave(false)} disabled={saving} className="notion-btn" style={{ background: saveSuccess ? '#10B981' : '#7ECECA', color: '#0d0d0d', padding: '8px 20px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
-                        {saving ? 'Guardando...' : saveSuccess ? '✓ Guardado' : 'Guardar v6.3.3'}
+                        {saving ? 'Guardando...' : saveSuccess ? '✓ Guardado' : 'Guardar v6.7.0'}
                     </button>
                 </div>
             </div>
