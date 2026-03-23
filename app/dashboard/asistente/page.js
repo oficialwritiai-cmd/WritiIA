@@ -502,19 +502,32 @@ export default function AsistentePage() {
                     height: 100%;
                     display: flex;
                     flex-direction: column;
-                    transition: all 0.3s ease;
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                     z-index: 100;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                }
+                .sidebar.closed {
+                    width: 0;
+                    border-right: none;
+                    opacity: 0;
+                    pointer-events: none;
                 }
                 @media (max-width: 768px) {
                     .sidebar {
                         position: absolute;
                         left: -280px;
-                        top: 0;
-                        bottom: 0;
+                        width: 280px;
+                        opacity: 1;
+                        pointer-events: auto;
                     }
                     .sidebar.open {
                         left: 0;
                         box-shadow: 20px 0 50px rgba(0,0,0,0.8);
+                    }
+                    .sidebar.closed {
+                        width: 280px;
+                        left: -280px;
                     }
                     .chat-container {
                         padding-bottom: 120px !important;
@@ -551,6 +564,10 @@ export default function AsistentePage() {
                     padding: 24px;
                     background: linear-gradient(to top, #0a0a0a 80%, transparent);
                     z-index: 50;
+                    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .input-container.wide {
+                    left: 0;
                 }
                 @media (max-width: 768px) {
                     .input-container {
@@ -561,7 +578,7 @@ export default function AsistentePage() {
                 }
             `}</style>
             
-            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+            <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                 <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
                     <button 
                         onClick={startNewChat}
@@ -666,7 +683,7 @@ export default function AsistentePage() {
                     )}
                 </div>
 
-                <div className="input-container">
+                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`}>
                     <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
                         <div style={{
                             display: 'flex', alignItems: 'flex-end',
