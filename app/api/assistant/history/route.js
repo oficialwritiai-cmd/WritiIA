@@ -69,10 +69,28 @@ export async function POST(req) {
             }
         }
 
+        // ─── History Trimming (v8.3.0) ───────────────────
+        // Prevent DB bloat by keeping only essential context + recent messages
+        let processedMessages = messages;
+        if (messages.length > 60) {
+            const firstPart = messages.slice(0, 5);
+            const lastPart = messages.slice(-35);
+            processedMessages = [
+                ...firstPart,
+                { 
+                    id: 'trim-' + Date.now(), 
+                    role: 'assistant', 
+                    content: '[Contexto optimizado: Nico mantiene el foco en tu proyecto y los últimos mensajes para mayor velocidad. ⚡]',
+                    timestamp: new Date().toISOString()
+                },
+                ...lastPart
+            ];
+        }
+
         const record = {
             user_id: userId,
             project_id: projectId || null,
-            messages,
+            messages: processedMessages,
             title: conversationTitle || 'Conversación sin título',
             updated_at: new Date().toISOString()
         };

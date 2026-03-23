@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.0.0 (Jarvis + Multi-Chat History)
+// Asistente IA (Chat Pro) — v8.3.0 (Nico + Optimized History)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -95,7 +95,7 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
             {!isUser && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>✨</div>
-                    <span style={{ fontSize: '0.85rem', color: '#888', fontWeight: 600 }}>WRITI JARVIS</span>
+                    <span style={{ fontSize: '0.85rem', color: '#888', fontWeight: 600 }}>NICO IA</span>
                 </div>
             )}
 
@@ -204,6 +204,18 @@ export default function AsistentePage() {
     const textareaRef = useRef(null);
     const supabase = createSupabaseClient();
     const { activeProject } = useProject();
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeys = (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+            if (e.key.toLowerCase() === 'h') {
+                setIsSidebarOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, []);
 
     // Get userId and Profile once
     useEffect(() => {
@@ -573,7 +585,7 @@ export default function AsistentePage() {
                     </div>
 
                     <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
-                        Writi Jarvis v8.0.0
+                        Writi Nico v8.3.0
                     </div>
                 </div>
             </div>
@@ -583,11 +595,17 @@ export default function AsistentePage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button 
                             onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
-                            style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            style={{ 
+                                background: isSidebarOpen ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.05)', 
+                                border: 'none', color: isSidebarOpen ? '#7ECECA' : 'white', 
+                                padding: '8px', borderRadius: '8px', cursor: 'pointer', 
+                                display: 'flex', alignItems: 'center', transition: '0.3s'
+                            }}
+                            title="Ver historial (Atajo: H)"
                         >
                             <Menu size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Asistente IA</h2>
+                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
                     </div>
                 </div>
 
@@ -602,7 +620,7 @@ export default function AsistentePage() {
                             }} />
                             
                             <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: '0 0 12px', textAlign: 'center' }}>
-                                Hola{userName ? `, ${userName}` : ''} 👋
+                                Hola{userName ? `, ${userName}` : ''}, soy Nico 👋
                             </h1>
                             <p style={{ color: '#888', fontSize: '1.05rem', margin: '0 0 48px', textAlign: 'center' }}>
                                 Dime qué necesitas con tu contenido y yo me encargo.
@@ -694,7 +712,7 @@ export default function AsistentePage() {
                             </div>
                         </div>
                         <p style={{ textAlign: 'center', fontSize: '0.65rem', color: '#444', marginTop: '10px' }}>
-                            Writi Jarvis socio de marketing · 0.5 créditos por mensaje
+                            Nico socio de marketing · Ilimitado
                         </p>
                     </div>
                 </div>

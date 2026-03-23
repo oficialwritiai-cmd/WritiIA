@@ -34,7 +34,7 @@ Este proyecto no tiene Cerebro IA aún. Sugiere amablemente al usuario que lo co
     const modeInstruction = mode && modeGuide[mode] ? modeGuide[mode] : '';
     const userName_str = userName ? `\nHablas con: ${userName}.` : '';
 
-    return `Eres "JARVIS", el socio de marketing y amigo cercano de ${userName || 'tu usuario'}.
+    return `Eres "NICO", el socio de marketing y amigo cercano de ${userName || 'tu usuario'}.
 
 TU PERSONALIDAD:
 - Eres un estratega de contenido brillante, pero hablas como un colega de confianza.
@@ -46,6 +46,10 @@ REGLAS DE ORO:
 1. FOCO TOTAL: Solo hablas de marketing, guiones, estrategia y contenido.
 2. CERO HUMO: Sé honesto. Si algo no funcionará, dilo con tacto pero con firmeza.
 3. LISTO PARA USAR: Las respuestas deben ser prácticas. Menos charla, más valor.
+
+CONSTRUCCIÓN DE CONTEXTO:
+- Siempre tienes acceso al "Cerebro IA" del proyecto para que tus sugerencias sean 100% personalizadas.
+- Nunca pierdes el hilo de la conversación actual.
 
 CONTEXTO DEL NEGOCIO:
 ${brainContext}
@@ -74,17 +78,14 @@ export async function POST(req) {
             if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
         }
 
-        const verifiedUserId = user.id;
-
-        // ─── Rate Limiting (v8.0.0) ───────────────────────────
-        // Use service role for internal stats management
+        // Rate Limiting (Check stats only, but charge is 0 for Nico)
         const serviceSupabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
         const limitResult = await checkAssistantLimit(serviceSupabase, user.id);
         
         if (!limitResult.allowed) {
             const msg = limitResult.reason === 'DAILY_CAP_REACHED' 
-                ? 'Has alcanzado el límite diario de la IA. Vuelve mañana para seguir creando.'
-                : `Has enviado muchos mensajes. Por favor, descansa ${limitResult.waitMinutes} min y volvemos a tope.`;
+                ? 'Has alcanzado el límite diario. Vuelve mañana para seguir creando con Nico.'
+                : `Has enviado muchos mensajes. Nico está tomando un café, vuelve en ${limitResult.waitMinutes} min.`;
             
             return NextResponse.json({ 
                 error: msg, 
@@ -92,11 +93,8 @@ export async function POST(req) {
             }, { status: 429 });
         }
 
-        // Charge credits (0.5 per message as per CREDIT_COSTS)
-        const creditResult = await chargeCredits(supabase, user.id, CREDIT_COSTS.ASSISTANT_CHAT, 'assistant_chat', projectId);
-        if (!creditResult.success) {
-            return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
-        }
+        // Charge credits (v8.2.0 - Free mode)
+        await chargeCredits(supabase, user.id, CREDIT_COSTS.ASSISTANT_CHAT, 'assistant_chat', projectId);
 
         // Load Cerebro IA
         let brain = null;
@@ -109,22 +107,22 @@ export async function POST(req) {
         }
 
         if (!brain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
             brain = data;
         }
 
         const systemPrompt = buildJarvisSystemPrompt({ brain, userName, projectName, mode });
 
-        const historyMessages = (messages || []).slice(-10);
+        const historyMessages = (messages || []).slice(-15); // Increased context window for Nico
         const lastMsg = historyMessages[historyMessages.length - 1];
         const userMessage = lastMsg?.content || '';
 
         const previousContext = historyMessages.slice(0, -1).map(m =>
-            `${m.role === 'user' ? 'Usuario' : 'JARVIS'}: ${m.content}`
+            `${m.role === 'user' ? 'Usuario' : 'NICO'}: ${m.content}`
         ).join('\n\n');
 
         const fullUserMessage = previousContext
-            ? `[Historial]\n${previousContext}\n\n[Mensaje actual]\n${userMessage}`
+            ? `[Historial Reciente]\n${previousContext}\n\n[Mensaje actual de ${userName || 'Usuario'}]\n${userMessage}`
             : userMessage;
 
         const { content } = await improveBlockWithHaiku({
@@ -133,8 +131,7 @@ export async function POST(req) {
             userMessage: fullUserMessage,
         });
 
-        // Update usage stats (increment message count and track tokens)
-        const tokenEstimate = (content?.length || 0) / 4; // Simple heuristic
+        const tokenEstimate = (content?.length || 0) / 4;
         await incrementAssistantUsage(serviceSupabase, user.id, Math.ceil(tokenEstimate));
 
         return NextResponse.json({ reply: content || 'No pude generar respuesta.' });
