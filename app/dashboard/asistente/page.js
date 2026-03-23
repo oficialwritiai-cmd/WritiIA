@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.5.0 (Nico Definitive Toggle + Overlay)
+// Asistente IA (Chat Pro) — v8.6.0 (Definitive Mobile Sidebar Fix + Fixed Positioning)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -515,11 +515,16 @@ export default function AsistentePage() {
                 }
                 @media (max-width: 768px) {
                     .sidebar {
-                        position: absolute;
+                        position: fixed;
+                        top: 0;
+                        bottom: 0;
                         left: -280px;
                         width: 280px;
                         opacity: 1;
                         pointer-events: auto;
+                        z-index: 2000;
+                        background: #111;
+                        height: 100vh;
                     }
                     .sidebar.open {
                         left: 0;
@@ -751,7 +756,7 @@ export default function AsistentePage() {
                 {isSidebarOpen && window.innerWidth < 768 && (
                     <div 
                         onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 90, animation: 'msgFadeIn 0.3s' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 1900, animation: 'msgFadeIn 0.3s' }}
                     />
                 )}
             </div>
