@@ -92,7 +92,7 @@ export default function CalendarPage() {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            // Load events for the current month
+            // Load events for the current month range (standard calendar events)
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
             const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -108,23 +108,43 @@ export default function CalendarPage() {
             }
 
             const { data: eventData } = await eventQuery;
-            setEvents(eventData || []);
-            setSelectedEvents(new Set()); // Reset selection on change
 
-            // Also load library items for the import dropdown or list
-            let libQuery = supabase
-                .from('library')
+            // NEW: Also load content_slots (legacy/AI-generated plans)
+            let slotsQuery = supabase
+                .from('content_slots')
                 .select('*')
-                .eq('user_id', user.id);
+                .eq('user_id', user.id)
+                .gte('scheduled_date', firstDay)
+                .lte('scheduled_date', lastDay);
 
             if (activeProject) {
-                libQuery = libQuery.eq('project_id', activeProject.id);
+                slotsQuery = slotsQuery.eq('project_id', activeProject.id);
             }
+            const { data: slotData } = await slotsQuery;
 
-            const { data: libData } = await libQuery
-                .order('created_at', { ascending: false })
-                .limit(50);
+            // Merge and normalize: content_slots -> calendar_events format
+            const normalizedSlots = (slotData || []).map(slot => ({
+                id: slot.id,
+                user_id: slot.user_id,
+                project_id: slot.project_id,
+                event_date: slot.scheduled_date,
+                title: slot.title || 'Idea de Contenido',
+                notes: slot.description || '',
+                platform: slot.platform || 'General',
+                status: slot.status || 'idea',
+                start_time: slot.start_time || '09:00', // Default if missing
+                end_time: slot.end_time || '10:00',
+                is_slot: true // Marker to distinguish
+            }));
 
+            const combinedEvents = [...(eventData || []), ...normalizedSlots];
+            setEvents(combinedEvents);
+            setSelectedEvents(new Set()); 
+
+            // Also load library items...
+            let libQuery = supabase.from('library').select('*').eq('user_id', user.id);
+            if (activeProject) libQuery = libQuery.eq('project_id', activeProject.id);
+            const { data: libData } = await libQuery.order('created_at', { ascending: false }).limit(50);
             setLibraryItems(libData || []);
         }
         setLoading(false);
@@ -132,6 +152,10 @@ export default function CalendarPage() {
 
     // -- Event Handlers --
     const handleDayClick = (dateStr) => {
+        if (selectedDate === dateStr && isMobile) {
+            // Already selected on mobile? Open panel to create/edit
+            setIsPanelOpen(true);
+        }
         setSelectedDate(dateStr);
         setSelectedEvent(null);
         setTempTitle('');
@@ -145,8 +169,8 @@ export default function CalendarPage() {
     };
 
     const handleEventClick = (e, event) => {
-        e.stopPropagation();
-
+        if (e) e.stopPropagation();
+        
         // Handle Selection Mode or Ctrl/Cmd Click
         if (isSelectMode || (e && (e.ctrlKey || e.metaKey))) {
             const next = new Set(selectedEvents);
@@ -159,13 +183,13 @@ export default function CalendarPage() {
             return;
         }
 
-        // Populating form for the panel (v6.4.0 added start/end time)
+        // Populating form for the panel (v6.6.0 support slot fallback)
         setSelectedEvent(event);
-        setSelectedDate(event.event_date);
+        setSelectedDate(event.event_date || event.scheduled_date);
         setTempTitle(event.title || '');
         setTempStatus(event.status || 'idea');
         setTempPlatform(event.platform || 'General');
-        setTempNotes(event.notes || '');
+        setTempNotes(event.notes || event.description || '');
         setTempColor(event.color || 'purple');
         setTempStartTime(event.start_time || '09:00');
         setTempEndTime(event.end_time || '10:00');
@@ -186,26 +210,61 @@ export default function CalendarPage() {
 
         try {
             if (selectedEvent && selectedEvent.id) {
-                const updates = {
-                    title: tempTitle || 'Sin título',
-                    status: tempStatus,
-                    platform: tempPlatform,
-                    notes: tempNotes,
-                    event_date: selectedDate,
-                    color: colorValue,
-                    start_time: tempStartTime,
-                    end_time: tempEndTime
-                };
+                // Detectar si el evento es un slot (content_slots) o un evento regular (calendar_events)
+                const isSlot = selectedEvent.is_slot === true;
 
-                const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
-                if (updateErr) throw updateErr;
+                if (isSlot) {
+                    // Actualizar en content_slots
+                    const slotUpdates = {
+                        title: tempTitle || 'Sin título',
+                        status: tempStatus,
+                        platform: tempPlatform,
+                        description: tempNotes,
+                        scheduled_date: selectedDate,
+                        start_time: tempStartTime,
+                        end_time: tempEndTime
+                    };
 
-                // Update local state
-                const newEvents = events.map(ev =>
-                    ev.id === selectedEvent.id ? { ...ev, ...updates } : ev
-                );
-                setEvents([...newEvents]);
+                    const { error: updateErr } = await supabase
+                        .from('content_slots')
+                        .update(slotUpdates)
+                        .eq('id', selectedEvent.id);
+                    if (updateErr) throw updateErr;
+
+                    // Update local state
+                    const newEvents = events.map(ev =>
+                        ev.id === selectedEvent.id ? {
+                            ...ev,
+                            ...slotUpdates,
+                            event_date: selectedDate,
+                            notes: tempNotes
+                        } : ev
+                    );
+                    setEvents([...newEvents]);
+                } else {
+                    // Actualizar en calendar_events
+                    const updates = {
+                        title: tempTitle || 'Sin título',
+                        status: tempStatus,
+                        platform: tempPlatform,
+                        notes: tempNotes,
+                        event_date: selectedDate,
+                        color: colorValue,
+                        start_time: tempStartTime,
+                        end_time: tempEndTime
+                    };
+
+                    const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
+                    if (updateErr) throw updateErr;
+
+                    // Update local state
+                    const newEvents = events.map(ev =>
+                        ev.id === selectedEvent.id ? { ...ev, ...updates } : ev
+                    );
+                    setEvents([...newEvents]);
+                }
             } else {
+                // Crear nuevo evento en calendar_events
                 const payload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
@@ -235,7 +294,17 @@ export default function CalendarPage() {
 
     const handleDeleteEvent = async (id) => {
         if (!confirm('¿Eliminar este evento?')) return;
-        await supabase.from('calendar_events').delete().eq('id', id);
+
+        // Encontrar el evento para determinar de qué tabla eliminar
+        const eventToDelete = events.find(e => e.id === id);
+        const isSlot = eventToDelete?.is_slot === true;
+
+        if (isSlot) {
+            await supabase.from('content_slots').delete().eq('id', id);
+        } else {
+            await supabase.from('calendar_events').delete().eq('id', id);
+        }
+
         setIsPanelOpen(false);
         setContextMenu(null);
         loadData();
@@ -317,8 +386,29 @@ export default function CalendarPage() {
         if (ids.length === 0) return;
 
         try {
-            const { error: err } = await supabase.from('calendar_events').delete().in('id', ids);
-            if (err) throw err;
+            // Separar IDs por tipo de tabla
+            const slotIds = [];
+            const eventIds = [];
+
+            ids.forEach(id => {
+                const ev = events.find(e => e.id === id);
+                if (ev?.is_slot) {
+                    slotIds.push(id);
+                } else {
+                    eventIds.push(id);
+                }
+            });
+
+            // Eliminar de ambas tablas según corresponda
+            if (slotIds.length > 0) {
+                const { error: slotErr } = await supabase.from('content_slots').delete().in('id', slotIds);
+                if (slotErr) throw slotErr;
+            }
+            if (eventIds.length > 0) {
+                const { error: eventErr } = await supabase.from('calendar_events').delete().in('id', eventIds);
+                if (eventErr) throw eventErr;
+            }
+
             setEvents(events.filter(ev => !selectedEvents.has(ev.id)));
             setSelectedEvents(new Set());
             setIsPanelOpen(false);
@@ -531,13 +621,32 @@ export default function CalendarPage() {
             const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const isSelected = selectedDate === dateStr;
             const isToday = new Date().toISOString().split('T')[0] === dateStr;
-            const hasEvents = events.some(e => e.event_date === dateStr);
+            const dayEvents = events.filter(e => e.event_date === dateStr);
+            const hasEvents = dayEvents.length > 0;
 
             days.push(
-                <div 
-                    key={i} 
+                <div
+                    key={i}
                     className={`cal-mobile-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
-                    onClick={() => setSelectedDate(dateStr)}
+                    onClick={() => {
+                        if (hasEvents) {
+                            // Si tiene eventos, abrir directamente el primero o crear uno nuevo
+                            if (dayEvents.length === 1) {
+                                // Un solo evento: abrirlo directamente
+                                handleEventClick(null, dayEvents[0]);
+                            } else {
+                                // Múltiples eventos: si ya está seleccionado, crear nuevo; si no, seleccionar
+                                if (isSelected) {
+                                    handleDayClick(dateStr);
+                                } else {
+                                    setSelectedDate(dateStr);
+                                }
+                            }
+                        } else {
+                            // Sin eventos: abrir panel para crear
+                            handleDayClick(dateStr);
+                        }
+                    }}
                 >
                     <div className="day-num-circle">{i}</div>
                     {hasEvents && <div className="event-dot" />}
@@ -556,41 +665,94 @@ export default function CalendarPage() {
     };
 
     const renderMobileAgenda = () => {
-        const hours = [];
-        for (let h = 5; h <= 23; h++) {
-            hours.push(String(h).padStart(2, '0') + ':00');
+        // Vista semanal: mostrar 7 días desde la fecha actual del calendario
+        // Vista mensual: mostrar solo el día seleccionado
+        const dateList = [];
+        if (viewMode === 'week') {
+            // Usar currentDate como base para mostrar la semana del mes en el que estamos navegando
+            const baseDate = selectedDate
+                ? new Date(selectedDate + 'T12:00:00')
+                : new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() || 1);
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(baseDate);
+                d.setDate(baseDate.getDate() + i);
+                dateList.push(d.toISOString().split('T')[0]);
+            }
+        } else {
+            const dStr = selectedDate || new Date().toISOString().split('T')[0];
+            dateList.push(dStr);
         }
 
-        const dailyEvents = events.filter(e => e.event_date === selectedDate);
-
         return (
-            <div className="cal-mobile-agenda">
-                {hours.map(hour => {
-                    const hValue = parseInt(hour.split(':')[0]);
-                    const hourEvents = dailyEvents.filter(e => {
-                        if (!e.start_time) return false;
-                        const [eh] = e.start_time.split(':');
-                        return parseInt(eh) === hValue;
-                    });
+            <div className="cal-mobile-agenda" style={{ flex: 1, overflowY: 'auto', background: '#050505', padding: '10px 15px' }}>
+                {dateList.map(dateStr => {
+                    const d = new Date(dateStr + 'T12:00:00');
+                    const dayName = d.toLocaleDateString('es-ES', { weekday: 'long' });
+                    const dayNum = d.getDate();
+                    const monthName = d.toLocaleDateString('es-ES', { month: 'short' });
+                    const isToday = new Date().toISOString().split('T')[0] === dateStr;
+
+                    const dayEvents = events.filter(ev => (ev.event_date || ev.scheduled_date) === dateStr);
 
                     return (
-                        <div key={hour} className="agenda-hour-row">
-                            <div className="hour-label">{hour}</div>
-                            <div className="hour-content" onClick={() => {
-                                handleDayClick(selectedDate);
-                                setTempStartTime(`${hour}`);
-                                setTempEndTime(`${String(hValue+1).padStart(2, '0')}:00`);
-                            }}>
-                                {hourEvents.map(ev => (
-                                    <div 
-                                        key={ev.id} 
-                                        className={`agenda-event-card theme-${ev.color || 'purple'}`}
-                                        onClick={(e) => handleEventClick(e, ev)}
+                        <div key={dateStr} style={{ marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: isToday ? '#9D00FF' : '#7ECECA' }}>{dayNum}</div>
+                                <div style={{ textTransform: 'capitalize', fontSize: '0.8rem' }}>
+                                    <div style={{ color: '#fff', fontWeight: 700 }}>{dayName}</div>
+                                    <div style={{ opacity: 0.6, color: '#888' }}>{monthName}</div>
+                                </div>
+                                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
+                                <button
+                                    onClick={() => handleDayClick(dateStr)}
+                                    style={{ background: 'rgba(126,206,202,0.1)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#7ECECA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+
+                            <div className="mobile-hourly-agenda" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {dayEvents.length > 0 ? (
+                                    dayEvents.sort((a,b) => (a.start_time||'09:00').localeCompare(b.start_time||'09:00')).map(event => (
+                                        <div
+                                            key={event.id}
+                                            className={`mobile-event-card-wide status-${event.status || 'idea'}`}
+                                            onClick={(e) => handleEventClick(e, event)}
+                                            style={{
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                background: 'rgba(255,255,255,0.02)',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                borderLeft: `4px solid ${event.color === 'purple' ? '#9D00FF' : event.color === 'pink' ? '#EC4899' : event.color === 'blue' ? '#3B82F6' : event.color === 'green' ? '#10B981' : event.color === 'yellow' ? '#F59E0B' : event.color === 'red' ? '#EF4444' : '#6B7280'}`
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ fontSize: '0.65rem', color: '#7ECECA', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    {event.platform || 'General'}
+                                                </span>
+                                                <span style={{ fontSize: '0.65rem', color: '#666', fontWeight: 700 }}>
+                                                    {event.start_time?.substring(0,5) || '09:00'} - {event.end_time?.substring(0,5) || '10:00'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'white' }}>
+                                                {event.title}
+                                            </div>
+                                            {(event.notes || event.description) && (
+                                                <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {event.notes || event.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div
+                                        onClick={() => handleDayClick(dateStr)}
+                                        style={{ padding: '20px', textAlign: 'center', color: '#444', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '12px', fontSize: '0.8rem', cursor: 'pointer' }}
                                     >
-                                        <div className="event-card-title">{ev.title}</div>
-                                        <div className="event-card-time">{ev.start_time?.substring(0,5)} - {ev.end_time?.substring(0,5)}</div>
+                                        Sin planes para este día.
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     );
@@ -730,7 +892,21 @@ export default function CalendarPage() {
                         <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)', margin: '0 20px' }} />
                         <div className="cal-nav-controls">
                             <button className="cal-ctrl-btn" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}><ChevronLeft size={20} /></button>
-                            <button className="cal-ctrl-btn" onClick={() => setCurrentDate(new Date())} style={{ fontSize: '0.85rem', padding: '0 12px' }}>Hoy</button>
+                            <button
+                                className="cal-ctrl-btn"
+                                onClick={() => {
+                                    const today = new Date();
+                                    const todayStr = today.toISOString().split('T')[0];
+                                    setCurrentDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+                                    setSelectedDate(todayStr);
+                                    setIsPanelOpen(false);
+                                    setSelectedEvent(null);
+                                    loadData();
+                                }}
+                                style={{ fontSize: '0.85rem', padding: '0 12px' }}
+                            >
+                                Hoy
+                            </button>
                             <button className="cal-ctrl-btn" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}><ChevronRight size={20} /></button>
                         </div>
                     </div>
