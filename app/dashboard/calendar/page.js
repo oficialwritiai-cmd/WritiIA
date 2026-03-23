@@ -57,6 +57,11 @@ export default function CalendarPage() {
     const [tempPlatform, setTempPlatform] = useState('General');
     const [tempNotes, setTempNotes] = useState('');
     const [tempColor, setTempColor] = useState('purple');
+    const [tempStartTime, setTempStartTime] = useState('09:00');
+    const [tempEndTime, setTempEndTime] = useState('10:00');
+
+    // Mobile States
+    const [isMobile, setIsMobile] = useState(false);
 
     const THEME_COLORS = [
         { id: 'purple', hex: '#9D00FF', name: 'Morado' },
@@ -73,6 +78,14 @@ export default function CalendarPage() {
     // -- Lifecycle --
     useEffect(() => {
         loadData();
+        
+        // Mobile detection
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, [currentDate, activeProject]);
 
     async function loadData() {
@@ -92,8 +105,6 @@ export default function CalendarPage() {
 
             if (activeProject) {
                 eventQuery = eventQuery.eq('project_id', activeProject.id);
-            } else {
-                eventQuery = eventQuery.is('project_id', null);
             }
 
             const { data: eventData } = await eventQuery;
@@ -108,8 +119,6 @@ export default function CalendarPage() {
 
             if (activeProject) {
                 libQuery = libQuery.eq('project_id', activeProject.id);
-            } else {
-                libQuery = libQuery.is('project_id', null);
             }
 
             const { data: libData } = await libQuery
@@ -130,6 +139,8 @@ export default function CalendarPage() {
         setTempPlatform('General');
         setTempNotes('');
         setTempColor('purple');
+        setTempStartTime('09:00');
+        setTempEndTime('10:00');
         setIsPanelOpen(true);
     };
 
@@ -137,7 +148,7 @@ export default function CalendarPage() {
         e.stopPropagation();
 
         // Handle Selection Mode or Ctrl/Cmd Click
-        if (isSelectMode || e.ctrlKey || e.metaKey) {
+        if (isSelectMode || (e && (e.ctrlKey || e.metaKey))) {
             const next = new Set(selectedEvents);
             if (next.has(event.id)) {
                 next.delete(event.id);
@@ -148,9 +159,17 @@ export default function CalendarPage() {
             return;
         }
 
-        // v6.0: Redirect directly to Idea Workspace
-        const idToOpen = event.reference_id || event.id;
-        router.push(`/dashboard/idea/${idToOpen}`);
+        // Populating form for the panel (v6.4.0 added start/end time)
+        setSelectedEvent(event);
+        setSelectedDate(event.event_date);
+        setTempTitle(event.title || '');
+        setTempStatus(event.status || 'idea');
+        setTempPlatform(event.platform || 'General');
+        setTempNotes(event.notes || '');
+        setTempColor(event.color || 'purple');
+        setTempStartTime(event.start_time || '09:00');
+        setTempEndTime(event.end_time || '10:00');
+        setIsPanelOpen(true);
     };
 
     const handleViewInLibrary = () => {
@@ -173,7 +192,9 @@ export default function CalendarPage() {
                     platform: tempPlatform,
                     notes: tempNotes,
                     event_date: selectedDate,
-                    color: colorValue
+                    color: colorValue,
+                    start_time: tempStartTime,
+                    end_time: tempEndTime
                 };
 
                 const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
@@ -194,7 +215,9 @@ export default function CalendarPage() {
                     notes: tempNotes,
                     event_date: selectedDate,
                     type: 'idea',
-                    color: colorValue
+                    color: colorValue,
+                    start_time: tempStartTime,
+                    end_time: tempEndTime
                 };
                 const { data: newEv, error: insertErr } = await supabase.from('calendar_events').insert(payload).select().single();
                 if (insertErr) throw insertErr;
@@ -388,26 +411,24 @@ export default function CalendarPage() {
     };
 
     const handleExport = async () => {
-        if (!activeProject) {
-            alert('Por favor, selecciona un proyecto para exportar.');
-            return;
-        }
-
+        setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sesión no encontrada');
 
-            const exportUrl = `/api/projects/${activeProject.id}/export?userId=${user.id}`;
+            const exportUrl = `/api/calendar/export?projectId=${activeProject?.id || 'global'}&userId=${user.id}`;
             
             // Trigger download
             const link = document.createElement('a');
             link.href = exportUrl;
-            link.setAttribute('download', `plan-mensual-${activeProject.name || 'writi'}.csv`);
+            link.setAttribute('download', `plan-writi-${activeProject?.name || 'global'}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         } catch (err) {
             alert('Error al exportar: ' + err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -494,6 +515,88 @@ export default function CalendarPage() {
         }
 
         return <div className="cal-monthly-grid">{cells}</div>;
+    };
+
+    // -- Mobile Rendering (v6.4.0) --
+    const renderMobileMonthGrid = () => {
+        const days = [];
+        const start = firstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth());
+        const total = daysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+
+        for (let i = 0; i < start; i++) {
+            days.push(<div key={`empty-${i}`} className="cal-mobile-day empty" />);
+        }
+
+        for (let i = 1; i <= total; i++) {
+            const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const isSelected = selectedDate === dateStr;
+            const isToday = new Date().toISOString().split('T')[0] === dateStr;
+            const hasEvents = events.some(e => e.event_date === dateStr);
+
+            days.push(
+                <div 
+                    key={i} 
+                    className={`cal-mobile-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+                    onClick={() => setSelectedDate(dateStr)}
+                >
+                    <div className="day-num-circle">{i}</div>
+                    {hasEvents && <div className="event-dot" />}
+                </div>
+            );
+        }
+
+        return (
+            <div className="cal-mobile-month-grid">
+                {['D', 'L', 'M', 'X', 'J', 'V', 'S'].map(d => (
+                    <div key={d} className="cal-mobile-day-header">{d}</div>
+                ))}
+                {days}
+            </div>
+        );
+    };
+
+    const renderMobileAgenda = () => {
+        const hours = [];
+        for (let h = 5; h <= 23; h++) {
+            hours.push(String(h).padStart(2, '0') + ':00');
+        }
+
+        const dailyEvents = events.filter(e => e.event_date === selectedDate);
+
+        return (
+            <div className="cal-mobile-agenda">
+                {hours.map(hour => {
+                    const hValue = parseInt(hour.split(':')[0]);
+                    const hourEvents = dailyEvents.filter(e => {
+                        if (!e.start_time) return false;
+                        const [eh] = e.start_time.split(':');
+                        return parseInt(eh) === hValue;
+                    });
+
+                    return (
+                        <div key={hour} className="agenda-hour-row">
+                            <div className="hour-label">{hour}</div>
+                            <div className="hour-content" onClick={() => {
+                                handleDayClick(selectedDate);
+                                setTempStartTime(`${hour}`);
+                                setTempEndTime(`${String(hValue+1).padStart(2, '0')}:00`);
+                            }}>
+                                {hourEvents.map(ev => (
+                                    <div 
+                                        key={ev.id} 
+                                        className={`agenda-event-card theme-${ev.color || 'purple'}`}
+                                        onClick={(e) => handleEventClick(e, ev)}
+                                    >
+                                        <div className="event-card-title">{ev.title}</div>
+                                        <div className="event-card-time">{ev.start_time?.substring(0,5)} - {ev.end_time?.substring(0,5)}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
     };
 
     return (
@@ -636,6 +739,23 @@ export default function CalendarPage() {
                 <div className="cal-grid-wrapper">
                     {loading ? (
                         <div className="cal-loading">Sincronizando calendario...</div>
+                    ) : isMobile ? (
+                        <div className="cal-mobile-v2">
+                            {viewMode === 'month' && (
+                                <div className="mobile-month-section">
+                                    {renderMobileMonthGrid()}
+                                </div>
+                            )}
+                            <div className="mobile-agenda-section">
+                                <div className="agenda-day-header">
+                                    {viewMode === 'week' ? 'Vista Semanal (Agenda de 7 días)' : (selectedDate ? new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(selectedDate + 'T00:00:00')) : 'Selecciona un día')}
+                                </div>
+                                {renderMobileAgenda()}
+                            </div>
+                            <button className="mobile-fab" onClick={() => handleDayClick(selectedDate)}>
+                                <Plus size={28} />
+                            </button>
+                        </div>
                     ) : renderCalendar()}
                 </div>
             </main>
@@ -729,6 +849,14 @@ export default function CalendarPage() {
                                         <option value="rec">En grabación</option>
                                         <option value="pub">Publicado</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div className="cal-prop-row">
+                                <div className="cal-prop-label"><Clock size={16} /> Horario</div>
+                                <div className="cal-prop-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input type="time" className="cal-input-minimal" value={tempStartTime} onChange={e => setTempStartTime(e.target.value)} />
+                                    <span style={{ color: '#555' }}>-</span>
+                                    <input type="time" className="cal-input-minimal" value={tempEndTime} onChange={e => setTempEndTime(e.target.value)} />
                                 </div>
                             </div>
                             <div className="cal-prop-row">
