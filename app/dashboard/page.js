@@ -146,7 +146,8 @@ export default function DashboardPage() {
     const [loadingPresets, setLoadingPresets] = useState(false);
     const [isNamingModalOpen, setIsNamingModalOpen] = useState(false);
     const [newPresetName, setNewPresetName] = useState('');
-    const [sourceEventId, setSourceEventId] = useState(null);
+    const [sourceType, setSourceType] = useState(null);
+    const [sourceReferenceId, setSourceReferenceId] = useState(null);
     const [scriptFeedback, setScriptFeedback] = useState({}); // { [scriptIdx]: 'like' | 'dislike' }
 
     const handleFeedback = async (idx, type) => {
@@ -549,7 +550,8 @@ export default function DashboardPage() {
                 const forceCount = countParam ? parseInt(countParam) : null;
 
                 const savedDescription = params.get('description');
-                const savedSourceEventId = params.get('source_event_id');
+                const savedSourceType = params.get('source_type');
+                const savedSourceReferenceId = params.get('source_reference_id');
 
                 if (topicParam) setTopic(topicParam);
                 if (platformParam) setPlatform(platformParam);
@@ -557,7 +559,8 @@ export default function DashboardPage() {
                 if (savedDescription) setIdeas(savedDescription);
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
-                if (savedSourceEventId) setSourceEventId(savedSourceEventId);
+                if (savedSourceType) setSourceType(savedSourceType);
+                if (savedSourceReferenceId) setSourceReferenceId(savedSourceReferenceId);
             }
         }
     }, [supabase, router]);
@@ -632,13 +635,15 @@ export default function DashboardPage() {
                 const savedPlatform = params.get('platform');
                 const savedGoal = params.get('goal');
                 const savedDescription = params.get('description');
-                const savedSourceEventId = params.get('source_event_id');
+                const savedSourceType = params.get('source_type');
+                const savedSourceReferenceId = params.get('source_reference_id');
 
                 if (savedTopic) setTopic(savedTopic);
                 if (savedPlatform) setPlatform(savedPlatform);
                 if (savedGoal) setGoal(savedGoal);
                 if (savedDescription) setIdeas(savedDescription);
-                if (savedSourceEventId) setSourceEventId(savedSourceEventId);
+                if (savedSourceType) setSourceType(savedSourceType);
+                if (savedSourceReferenceId) setSourceReferenceId(savedSourceReferenceId);
 
                 setGenerationMode('single');
                 setWizardStep(3); // Land on Step 3 (Detalle: Topic, Tono, Generar)
@@ -1595,13 +1600,14 @@ export default function DashboardPage() {
         }
     };
 
-    const handleDirectCalendarSave = async (script) => {
-        if (!sourceEventId || !profile?.id) return;
+    const handleDirectSourceSave = async (script) => {
+        if (!sourceReferenceId || !sourceType || !profile?.id) return;
         setIsPlanningLoading(true);
 
         try {
             const fullText = formatFullScript(script);
 
+            // Siempre guardamos una copia primaria en la biblioteca del usuario
             const savedItem = await saveToLibrary({
                 userId: profile.id,
                 type: 'guion',
@@ -1617,17 +1623,16 @@ export default function DashboardPage() {
                     cta: script.cta || '',
                     copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
-                tags: ['guion', script.platform || platform, 'calendario-update'].filter(Boolean),
+                tags: ['guion', script.platform || platform, 'update-origen'].filter(Boolean),
                 projectId: activeProject?.id
             });
 
-            const { error: updateErr } = await supabase
-                .from('calendar_events')
-                .update({
+            if (sourceType === 'calendar_events') {
+                const { error: updateErr } = await supabase.from('calendar_events').update({
                     has_script: true,
+                    script_id: savedItem.id,
                     script_full_text: fullText,
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
-                    reference_id: savedItem.id,
                     content: {
                         video_duration: script.video_duration || '45-60 seg',
                         hook: script.hook || script.gancho || '',
@@ -1636,21 +1641,60 @@ export default function DashboardPage() {
                         cta: script.cta || '',
                         copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                     }
-                })
-                .eq('id', sourceEventId);
-
-            if (updateErr) throw updateErr;
+                }).eq('id', sourceReferenceId);
+                if (updateErr) throw updateErr;
+            } else if (sourceType === 'content_slots') {
+                const { error: slotErr } = await supabase.from('content_slots').update({ has_script: true, script_id: savedItem.id }).eq('id', sourceReferenceId);
+                if (slotErr) throw slotErr;
+                
+                // Tambien insertar/actualizar en tabla scripts por retrocompatibilidad
+                const { data: existingScript } = await supabase.from('scripts').select('id').eq('slot_id', sourceReferenceId).maybeSingle();
+                if (existingScript) {
+                    await supabase.from('scripts').update({
+                        title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                        content: fullText,
+                        hook: script.hook || script.gancho || '',
+                        cta: script.cta || '',
+                        structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : []
+                    }).eq('id', existingScript.id);
+                } else {
+                    await supabase.from('scripts').insert({
+                        slot_id: sourceReferenceId,
+                        user_id: profile.id,
+                        title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                        content: fullText,
+                        hook: script.hook || script.gancho || '',
+                        cta: script.cta || '',
+                        structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : []
+                    });
+                }
+            } else if (sourceType === 'library') {
+                 const { error: libErr } = await supabase.from('library').update({
+                    type: 'guion',
+                    script_full_text: fullText,
+                    titulo: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                    content: {
+                        video_duration: script.video_duration || '45-60 seg',
+                        hook: script.hook || script.gancho || '',
+                        desarrollo: Array.isArray(script.desarrollo) ? script.desarrollo : [],
+                        cierre: script.cierre || '',
+                        cta: script.cta || '',
+                        copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
+                    }
+                 }).eq('id', sourceReferenceId);
+                 if (libErr) throw libErr;
+            }
 
             setSuccessModalData({
-                title: '¡Actualizado en el Calendario! ✅',
-                message: `El guion ha sido guardado y vinculado directamente a tu idea del calendario.`,
-                actionLabel: 'Volver al Calendario',
-                actionRedirect: '/dashboard/calendar'
+                title: '¡Guardado en el Origen! ✅',
+                message: `El guion ha sido vinculado y guardado en la idea original de donde provienes.`,
+                actionLabel: 'Volver atrás',
+                actionRedirect: `/dashboard/idea/${sourceReferenceId}`
             });
             setIsSuccessModalOpen(true);
         } catch (err) {
-            console.error('Error in handleDirectCalendarSave:', err);
-            alert('Error al guardar en el calendario: ' + err.message);
+            console.error('Error in handleDirectSourceSave:', err);
+            alert('Error al guardar en el origen: ' + err.message);
         } finally {
             setIsPlanningLoading(false);
         }
@@ -3772,8 +3816,8 @@ export default function DashboardPage() {
                                             {
                                                 id: `plan-${i}`,
                                                 icon: <Calendar size={16} />,
-                                                label: sourceEventId ? 'Guardar en este día del calendario' : (planningIdx === i ? 'Cerrar planificador' : 'Planificar Content'),
-                                                action: () => sourceEventId ? handleDirectCalendarSave(s) : (planningIdx === i ? setPlanningIdx(null) : handleOpenPlannerIdx(s, i)),
+                                                label: sourceReferenceId ? 'Guardar en Idea Original' : (planningIdx === i ? 'Cerrar planificador' : 'Planificar Content'),
+                                                action: () => sourceReferenceId ? handleDirectSourceSave(s) : (planningIdx === i ? setPlanningIdx(null) : handleOpenPlannerIdx(s, i)),
                                                 premium: true
                                             },
                                         ].map((btn, bidx) => (
