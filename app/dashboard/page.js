@@ -2780,6 +2780,24 @@ export default function DashboardPage() {
                                 />
                             </div>
                             <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración estimada del vídeo</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {['60 seg', '90 seg', '3 min', '5 min', '10 min'].map(d => (
+                                        <button 
+                                            key={d} 
+                                            onClick={() => setVideoDuration(d)} 
+                                            style={{ 
+                                                padding: '8px 14px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', 
+                                                background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)', 
+                                                color: videoDuration === d ? 'black' : 'white', fontWeight: 700, transition: 'all 0.2s' 
+                                            }}
+                                        >
+                                            {d}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
                                 <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de guiones</p>
                                 <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#7ECECA' }} />
                                 <p style={{ textAlign: 'center', marginTop: '8px', fontWeight: 700, color: '#7ECECA' }}>{quantity} guiones</p>
@@ -3229,6 +3247,25 @@ export default function DashboardPage() {
                                             <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración base de los vídeos</p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    {['60 seg', '90 seg', '3 min', '5 min', '10 min'].map(d => (
+                                        <button 
+                                            key={d} 
+                                            onClick={() => setVideoDuration(d)} 
+                                            style={{ 
+                                                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', 
+                                                background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)', 
+                                                color: videoDuration === d ? 'black' : 'white', fontWeight: 700, transition: 'all 0.2s' 
+                                            }}
+                                        >
+                                            {d}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

@@ -20,6 +20,7 @@ const WORDS_PER_DURATION = {
     '2 min': 340,    // ~170 wpm
     '3 min': 510,    // ~170 wpm
     '5 min': 850,    // ~170 wpm
+    '10 min': 1700,  // ~170 wpm
 };
 
 // Minimum acceptable ratio before we trigger an expansion call (Strict)
@@ -149,7 +150,9 @@ function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, 
         ? `- DURACIÓN: ${videoDuration} → UN gancho potente, ${totalItems || 3} puntos de desarrollo (1-2 frases cada uno), CTA rápido.`
         : videoDuration === '90 seg' || videoDuration === '2 min'
             ? `- DURACIÓN: ${videoDuration} → Gancho, ${totalItems || 5} bloques de desarrollo (2-3 frases c/u), cierre emocional, CTA.`
-            : `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA.`;
+            : videoDuration === '3 min' || videoDuration === '5 min'
+                ? `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA.`
+                : `- DURACIÓN: ${videoDuration} (Formato muy largo/Podcast) → Estructura de Guion de 10 min completo. Intro profunda, ${totalItems || 10} bloques de desarrollo detallados con casos de estudio, resumen intermedio, conclusión y CTA extendido.`;
 
     const listConstraints = buildListConstraints(parsedItems, totalItems);
 
