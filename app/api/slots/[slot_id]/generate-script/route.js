@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import { z } from 'zod';
 
 const RequestSchema = z.object({
@@ -184,6 +185,15 @@ export async function POST(request, { params }) {
         const systemPrompt = buildSystemPrompt(brandBrain);
         const finalPlatform = platform || slot.platform || 'Reels';
         const userMessage = `Genera el guion para: ${slot.idea_title}. Contexto: ${slot.idea_description || ''}. Plataforma: ${finalPlatform} (${videoDuration}). Enfoque: ${focus}. CTA: ${ctaIdea || ''}.${instruction ? ` INSTRUCCIONES DE MEJORA: ${instruction}` : ''}`;
+
+        // ─── 4. Charge Credits BEFORE calling AI ─────────────────────────────
+        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_SCRIPT_SLOT, 'generate_script_slot', slot.project_id);
+        if (!creditResult.success) {
+            return NextResponse.json({
+                error: 'No tienes créditos suficientes para generar este guion. Compra más créditos para continuar.',
+                code: 'INSUFFICIENT_CREDITS',
+            }, { status: 402 });
+        }
 
         // ─── 5. Call AI ─────────────────────────────────────────
         let rawText;

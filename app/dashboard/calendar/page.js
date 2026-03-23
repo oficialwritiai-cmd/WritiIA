@@ -62,6 +62,9 @@ export default function CalendarPage() {
 
     // Mobile States
     const [isMobile, setIsMobile] = useState(false);
+    const [weekOffset, setWeekOffset] = useState(0); // Offset in weeks for the mobile week view
+    const touchStartX = useRef(null);
+    const touchStartY = useRef(null);
 
     const THEME_COLORS = [
         { id: 'purple', hex: '#9D00FF', name: 'Morado' },
@@ -726,18 +729,18 @@ export default function CalendarPage() {
     };
 
     const renderMobileAgenda = () => {
-        // Vista semanal: mostrar 7 días desde la fecha actual del calendario
-        // Vista mensual: mostrar solo el día seleccionado
+        // Vista semanal: mostrar 7 días basados en weekOffset relativo a hoy
         const dateList = [];
         if (viewMode === 'week') {
-            // Usar currentDate como base para mostrar la semana del mes en el que estamos navegando
-            const baseDate = selectedDate
-                ? new Date(selectedDate + 'T12:00:00')
-                : new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() || 1);
+            // Base: lunes de la semana actual, ajustado por weekOffset
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0=domingo
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + weekOffset * 7);
 
             for (let i = 0; i < 7; i++) {
-                const d = new Date(baseDate);
-                d.setDate(baseDate.getDate() + i);
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
                 dateList.push(d.toISOString().split('T')[0]);
             }
         } else {
@@ -745,8 +748,59 @@ export default function CalendarPage() {
             dateList.push(dStr);
         }
 
+        // Touch handlers for swipe left/right to change week
+        const handleTouchStart = (e) => {
+            touchStartX.current = e.touches[0].clientX;
+            touchStartY.current = e.touches[0].clientY;
+        };
+
+        const handleTouchEnd = (e) => {
+            if (touchStartX.current === null) return;
+            const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+            const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+            // Only process horizontal swipes (ignore vertical scrolls)
+            if (Math.abs(deltaX) > 50 && deltaY < 80) {
+                if (deltaX < 0) {
+                    // Swipe left → next week
+                    setWeekOffset(prev => prev + 1);
+                } else {
+                    // Swipe right → previous week
+                    setWeekOffset(prev => prev - 1);
+                }
+            }
+            touchStartX.current = null;
+            touchStartY.current = null;
+        };
+
+        const weekLabel = viewMode === 'week' && dateList.length === 7
+            ? `${new Date(dateList[0]).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} – ${new Date(dateList[6]).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`
+            : null;
+
         return (
-            <div className="cal-mobile-agenda" style={{ flex: 1, overflowY: 'auto', background: '#050505', padding: '10px 15px' }}>
+            <div
+                className="cal-mobile-agenda"
+                style={{ flex: 1, overflowY: 'auto', background: '#050505', padding: '10px 15px', touchAction: 'pan-y' }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {/* Week navigation header */}
+                {viewMode === 'week' && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '8px' }}>
+                        <button
+                            onClick={() => setWeekOffset(prev => prev - 1)}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: '1rem' }}
+                        >
+                            ‹
+                        </button>
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', flex: 1 }}>{weekLabel}</span>
+                        <button
+                            onClick={() => setWeekOffset(prev => prev + 1)}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: '1rem' }}
+                        >
+                            ›
+                        </button>
+                    </div>
+                )}
                 {dateList.map(dateStr => {
                     const d = new Date(dateStr + 'T12:00:00');
                     const dayName = d.toLocaleDateString('es-ES', { weekday: 'long' });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { sendPlanActivationEmail, sendCreditsEmail } from '@/lib/email';
+import { PRO_MONTHLY_CREDITS, TRIAL_INITIAL_CREDITS } from '@/lib/credits';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,23 @@ export async function POST(req) {
             case 'checkout.session.completed': {
                 const session = event.data.object;
                 await handleCheckoutCompleted(session, supabase);
+                break;
+            }
+
+            // ── Monthly Renewal: reset credits ──
+            case 'invoice.paid': {
+                const invoice = event.data.object;
+                // Only handle subscription invoices (not one-time purchases)
+                if (invoice.subscription) {
+                    await handleInvoicePaid(invoice, supabase);
+                }
+                break;
+            }
+
+            // ── Payment Failed: enter grace period ──
+            case 'invoice.payment_failed': {
+                const invoice = event.data.object;
+                await handleInvoicePaymentFailed(invoice, supabase);
                 break;
             }
 
@@ -246,6 +264,9 @@ async function handleCheckoutCompleted(session, supabase) {
                 stripe_customer_id: customerId,
                 subscription_period_end: periodEnd,
                 trial_active: false,
+                credits_balance: PRO_MONTHLY_CREDITS,  // Assign monthly credits on first activation
+                payment_failure_count: 0,
+                grace_period_started_at: null,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
@@ -255,7 +276,18 @@ async function handleCheckoutCompleted(session, supabase) {
             throw error;
         }
 
-        console.log(`[Webhook] ✅ Plan Pro activated for user ${userId} until ${periodEnd}`);
+        // Log the activation in credits_usage
+        await supabase.from('credits_usage').insert({
+            user_id: userId,
+            action_type: 'plan_activation',
+            amount: PRO_MONTHLY_CREDITS,
+            idempotency_key: `plan_activation_${session.id}`,
+        }).catch(err => {
+            if (!err.message?.includes('unique')) console.error('[Webhook] credits_usage log error:', err);
+        });
+
+        console.log(`[Webhook] ✅ Plan Pro activated for user ${userId} until ${periodEnd}. Credits: ${PRO_MONTHLY_CREDITS}`);
+
 
         // Send confirmation email
         const { data: profile } = await supabase
@@ -439,4 +471,114 @@ async function handleSubscriptionUpdated(subscription, supabase) {
     }
 
     console.log(`[Webhook] ✅ Subscription status updated to '${status}' for user ${profile.id}`);
+}
+
+// ─────────────────────────────────────────────
+// Invoice Paid — Monthly Renewal: Reset Credits
+// ─────────────────────────────────────────────
+async function handleInvoicePaid(invoice, supabase) {
+    const customerId = invoice.customer;
+    console.log('[Webhook] invoice.paid for customer:', customerId);
+
+    // Find user by stripe_customer_id
+    const { data: profile, error: findError } = await supabase
+        .from('users_profiles')
+        .select('id, credits_balance')
+        .eq('stripe_customer_id', customerId)
+        .single();
+
+    if (findError || !profile) {
+        console.error('[Webhook] invoice.paid: Could not find user for customer:', customerId);
+        return;
+    }
+
+    const periodEnd = invoice.lines?.data?.[0]?.period?.end
+        ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+        : null;
+
+    // Reset credits to monthly quota
+    const { error } = await supabase
+        .from('users_profiles')
+        .update({
+            credits_balance: PRO_MONTHLY_CREDITS,
+            subscription_status: 'active',
+            payment_failure_count: 0,
+            grace_period_started_at: null,
+            subscription_period_end: periodEnd,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id);
+
+    if (error) {
+        console.error('[Webhook] invoice.paid: Error updating credits:', error);
+        throw error;
+    }
+
+    // Log the renewal in credits_usage for auditability
+    await supabase.from('credits_usage').insert({
+        user_id: profile.id,
+        action_type: 'monthly_renewal',
+        amount: PRO_MONTHLY_CREDITS,
+        idempotency_key: `invoice_paid_${invoice.id}`,
+    }).catch(err => {
+        // If idempotency duplicate, it means we already processed — safe to ignore
+        if (!err.message?.includes('unique')) console.error('[Webhook] invoice.paid: log error:', err);
+    });
+
+    console.log(`[Webhook] ✅ Monthly credits reset to ${PRO_MONTHLY_CREDITS} for user ${profile.id}`);
+}
+
+// ─────────────────────────────────────────────
+// Invoice Payment Failed — Grace Period Logic
+// ─────────────────────────────────────────────
+async function handleInvoicePaymentFailed(invoice, supabase) {
+    const customerId = invoice.customer;
+    const attemptCount = invoice.attempt_count || 1;
+    console.log(`[Webhook] invoice.payment_failed for customer: ${customerId}, attempt: ${attemptCount}`);
+
+    const { data: profile, error: findError } = await supabase
+        .from('users_profiles')
+        .select('id, payment_failure_count, grace_period_started_at')
+        .eq('stripe_customer_id', customerId)
+        .single();
+
+    if (findError || !profile) {
+        console.error('[Webhook] payment_failed: Could not find user for customer:', customerId);
+        return;
+    }
+
+    const newFailureCount = (profile.payment_failure_count || 0) + 1;
+    const graceStarted = profile.grace_period_started_at ? new Date(profile.grace_period_started_at) : new Date();
+    const daysSinceGrace = (Date.now() - graceStarted.getTime()) / (1000 * 60 * 60 * 24);
+
+    // Determine new status:
+    // After 3 failures OR more than 7 days in grace: pause the account
+    let newStatus = 'grace';
+    if (newFailureCount >= 3 || daysSinceGrace > 7) {
+        newStatus = 'paused';
+        console.warn(`[Webhook] User ${profile.id} exceeded grace limits. Moving to paused.`);
+    }
+
+    const updateData = {
+        subscription_status: newStatus,
+        payment_failure_count: newFailureCount,
+        updated_at: new Date().toISOString(),
+    };
+
+    // Only set grace_period_started_at on first failure
+    if (!profile.grace_period_started_at && newStatus === 'grace') {
+        updateData.grace_period_started_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+        .from('users_profiles')
+        .update(updateData)
+        .eq('id', profile.id);
+
+    if (error) {
+        console.error('[Webhook] payment_failed: Error updating user status:', error);
+        throw error;
+    }
+
+    console.log(`[Webhook] ✅ User ${profile.id} → status: ${newStatus} (failure #${newFailureCount})`);
 }
