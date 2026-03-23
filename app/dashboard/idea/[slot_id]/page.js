@@ -221,8 +221,8 @@ export default function IdeaPage() {
     }
 
     function populateFromSlot(sl) {
-        setTitle(sl.title || '');
-        setDescription(sl.description || '');
+        setTitle(sl.title || sl.idea_title || '');
+        setDescription(sl.description || sl.idea_description || '');
         setGoal(sl.goal || '');
         setContentType(sl.content_type || '');
         setPlatform(sl.platform || 'Reels');
