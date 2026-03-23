@@ -1934,14 +1934,9 @@ export default function DashboardPage() {
                     targetDate = new Date(today);
                 }
 
-                // Rule 2: No overlaps (look for next free slot)
+                // Rule 2: Overlaps are now ALLOWED (v4.9.4)
                 let dateStr = targetDate.toISOString().split('T')[0];
-                let attempts = 0;
-                while (occupiedDates.has(dateStr) && attempts < 60) {
-                    targetDate.setDate(targetDate.getDate() + 1);
-                    dateStr = targetDate.toISOString().split('T')[0];
-                    attempts++;
-                }
+                console.log(`[v4.9.4 CALENDAR] Syncing "${slot.idea_title}" to date ${dateStr} (Overlaps allowed)`);
 
                 // Rule 3: Avoid exact duplicates, update if missing script or empty notes
                 const existingEvent = existingEvents?.find(e => e.event_date === dateStr && e.title === slot.idea_title);

@@ -713,7 +713,14 @@ export default function CalendarPage() {
                     }}
                 >
                     <div className="day-num-circle">{i}</div>
-                    {hasEvents && <div className="event-dot" />}
+                    {dayEvents.length > 0 && (
+                        <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '4px' }}>
+                            {dayEvents.slice(0, 3).map((_, idx) => (
+                                <div key={idx} className="event-dot" style={{ position: 'static' }} />
+                            ))}
+                            {dayEvents.length > 3 && <span style={{ fontSize: '0.6rem', color: '#9D00FF', marginTop: '-3px' }}>+</span>}
+                        </div>
+                    )}
                 </div>
             );
         }
