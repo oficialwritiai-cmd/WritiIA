@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.3.0 (Nico + Optimized History)
+// Asistente IA (Chat Pro) — v8.5.0 (Nico Definitive Toggle + Overlay)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -745,6 +745,14 @@ export default function AsistentePage() {
                     }}>
                         {toast.msg}
                     </div>
+                )}
+
+                {/* Mobile Overlay */}
+                {isSidebarOpen && window.innerWidth < 768 && (
+                    <div 
+                        onClick={() => setIsSidebarOpen(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 90, animation: 'msgFadeIn 0.3s' }}
+                    />
                 )}
             </div>
         </div>
