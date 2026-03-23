@@ -1628,9 +1628,29 @@ export default function DashboardPage() {
             });
 
             if (sourceType === 'calendar_events') {
+                // Also insert into scripts table for history/versions
+                const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
+                    user_id: profile.id,
+                    project_id: activeProject?.id,
+                    title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                    content: fullText,
+                    hook: script.hook || script.gancho || '',
+                    cta: script.cta || '',
+                    structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : [],
+                    post_copy: script.copy_post || {},
+                    video_duration: script.video_duration || '60 seg',
+                    focus: script.focus || 'autoridad',
+                    source_type: 'calendar_events',
+                    source_reference_id: sourceReferenceId
+                }).select('id').single();
+
+                if (insErr) {
+                   console.warn('Error creating history entry in scripts:', insErr);
+                }
+
                 const { error: updateErr } = await supabase.from('calendar_events').update({
                     has_script: true,
-                    script_id: savedItem.id,
+                    script_id: savedItem.id, // We keep pointing to library for retrocompat
                     script_full_text: fullText,
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
                     content: {
@@ -1644,30 +1664,32 @@ export default function DashboardPage() {
                 }).eq('id', sourceReferenceId);
                 if (updateErr) throw updateErr;
             } else if (sourceType === 'content_slots') {
-                const { error: slotErr } = await supabase.from('content_slots').update({ has_script: true, script_id: savedItem.id }).eq('id', sourceReferenceId);
-                if (slotErr) throw slotErr;
+                // ALWAYS insert new to keep history (sessions)
+                const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
+                    slot_id: sourceReferenceId,
+                    user_id: profile.id,
+                    project_id: activeProject?.id,
+                    title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
+                    content: fullText,
+                    hook: script.hook || script.gancho || '',
+                    cta: script.cta || '',
+                    structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : [],
+                    post_copy: script.copy_post || {},
+                    video_duration: script.video_duration || '60 seg',
+                    focus: script.focus || 'autoridad',
+                    source_type: 'content_slots',
+                    source_reference_id: sourceReferenceId
+                }).select('id').single();
+
+                if (insErr) throw insErr;
                 
-                // Tambien insertar/actualizar en tabla scripts por retrocompatibilidad
-                const { data: existingScript } = await supabase.from('scripts').select('id').eq('slot_id', sourceReferenceId).maybeSingle();
-                if (existingScript) {
-                    await supabase.from('scripts').update({
-                        title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
-                        content: fullText,
-                        hook: script.hook || script.gancho || '',
-                        cta: script.cta || '',
-                        structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : []
-                    }).eq('id', existingScript.id);
-                } else {
-                    await supabase.from('scripts').insert({
-                        slot_id: sourceReferenceId,
-                        user_id: profile.id,
-                        title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
-                        content: fullText,
-                        hook: script.hook || script.gancho || '',
-                        cta: script.cta || '',
-                        structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : []
-                    });
-                }
+                // NOW update content_slots with the CORRECT script ID (from scripts table, not library)
+                const { error: slotErr } = await supabase.from('content_slots').update({ 
+                    has_script: true, 
+                    script_id: newScript.id 
+                }).eq('id', sourceReferenceId);
+                
+                if (slotErr) throw slotErr;
             } else if (sourceType === 'library') {
                  const { error: libErr } = await supabase.from('library').update({
                     type: 'guion',

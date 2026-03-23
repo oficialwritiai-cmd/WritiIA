@@ -142,6 +142,8 @@ export default function IdeaPage() {
 
     // Status
     const [slotStatus, setSlotStatus] = useState('idea_only');
+    const [versions, setVersions] = useState([]);
+    const [currentVersionIdx, setCurrentVersionIdx] = useState(0);
     const [lastSavedTime, setLastSavedTime] = useState(null);
     const [lastSavedHash, setLastSavedHash] = useState('');
     const [copied, setCopied] = useState(false);
@@ -177,6 +179,9 @@ export default function IdeaPage() {
                 if (s.slot_id) {
                     const { data: sl } = await supabase.from('content_slots').select('*').eq('id', s.slot_id).single();
                     if (sl) { setSlot(sl); populateFromSlot(sl); }
+                    // Fetch versions
+                    const { data: v } = await supabase.from('scripts').select('*').eq('slot_id', s.slot_id).order('created_at', { ascending: false });
+                    if (v) setVersions(v);
                 }
             } else {
                 // Try Content Slots
@@ -184,16 +189,30 @@ export default function IdeaPage() {
                 if (sl) {
                     setSlot(sl);
                     populateFromSlot(sl);
-                    const { data: s } = await supabase.from('scripts').select('*').eq('slot_id', sl.id).maybeSingle();
-                    if (s) { setScript(s); populateFromScript(s); setSlotStatus('script_ready'); }
+                    const { data: v } = await supabase.from('scripts').select('*').eq('slot_id', sl.id).order('created_at', { ascending: false });
+                    if (v && v.length > 0) {
+                        setVersions(v);
+                        setScript(v[0]);
+                        populateFromScript(v[0]);
+                        setSlotStatus('script_ready');
+                    }
                 } else {
                     // Try Calendar Events
                     const { data: ev } = await supabase.from('calendar_events').select('*').eq('id', slot_id).maybeSingle();
                     if (ev) {
                         setCalEvent(ev);
                         populateFromCalendar(ev);
-                        const { data: s } = await supabase.from('scripts').select('*').eq('id', ev.script_id).maybeSingle();
-                        if (s) { setScript(s); populateFromScript(s); setSlotStatus('script_ready'); }
+                        // For calendar, scripts might be in 'library' or 'scripts' table
+                        const { data: v } = await supabase.from('scripts').select('*').eq('source_reference_id', ev.id).order('created_at', { ascending: false });
+                        if (v && v.length > 0) {
+                            setVersions(v);
+                            setScript(v[0]);
+                            populateFromScript(v[0]);
+                            setSlotStatus('script_ready');
+                        } else if (ev.script_id) {
+                            const { data: s } = await supabase.from('scripts').select('*').eq('id', ev.script_id).maybeSingle();
+                            if (s) { setScript(s); populateFromScript(s); setSlotStatus('script_ready'); }
+                        }
                     } else {
                         // FALLBACK v6.3.1: Library
                         const { data: libItem } = await supabase.from('library').select('*').eq('id', slot_id).maybeSingle();
@@ -422,6 +441,32 @@ export default function IdeaPage() {
                     </div>
                 ) : (
                     <div className="script-editor-container">
+                        {versions.length > 1 && (
+                            <div style={{ marginBottom: '32px', background: 'rgba(126,206,202,0.05)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(126,206,202,0.1)' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Historial de Versiones</div>
+                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                    {versions.map((v, idx) => (
+                                        <button 
+                                            key={v.id} 
+                                            onClick={() => {
+                                                setScript(v);
+                                                populateFromScript(v);
+                                                setCurrentVersionIdx(idx);
+                                            }}
+                                            style={{
+                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', whiteSpace: 'nowrap', cursor: 'pointer',
+                                                background: currentVersionIdx === idx ? '#7ECECA' : 'rgba(255,255,255,0.03)',
+                                                color: currentVersionIdx === idx ? '#0d0d0d' : 'rgba(255,255,255,0.5)',
+                                                border: currentVersionIdx === idx ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.1)',
+                                                fontWeight: 600, transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            Sesión {versions.length - idx} <span style={{ opacity: 0.6, marginLeft: '4px', fontSize: '0.65rem' }}>{new Date(v.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit' })}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         <Section emoji="🎯" title="Gancho / Hook" color="#F59E0B">
                             <EditableBlock value={hook} onChange={setHook} placeholder="Escribe el gancho..." rows={2} />
                         </Section>
