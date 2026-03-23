@@ -7,7 +7,6 @@
  *
  * Full-screen workspace for a single content idea + script.
  * Loads from content_slots + scripts tables.
- * If slot_id is a calendar_events.id, falls back to that.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,8 +30,6 @@ const STATUS_CONFIG = {
     prep: { label: 'En preparación', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
     rec: { label: 'Grabando', color: '#9D00FF', bg: 'rgba(157,0,255,0.12)' },
     pub: { label: 'Publicado', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
-    'Guion listo': { label: 'Guion listo', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
-    'Idea': { label: 'Idea', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
 };
 
 function Badge({ status }) {
@@ -108,26 +105,26 @@ export default function IdeaPage() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [generating, setGenerating] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [isAutosave, setIsAutosave] = useState(false);
+    const [isAutosaving, setIsAutosaving] = useState(false);
     const [error, setError] = useState(null);
-    const [userId, setUserId] = useState(null);
 
-    // Source data
+    // Core Data
     const [slot, setSlot] = useState(null);
     const [script, setScript] = useState(null);
-    const [calEvent, setCalEvent] = useState(null); // fallback if no slot
-    const [sourceType, setSourceType] = useState('slot'); // 'slot' | 'event'
+    const [calEvent, setCalEvent] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const [user, setUser] = useState(null);
 
-    // Editable fields — idea
+    // Form State
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [goal, setGoal] = useState('');
     const [contentType, setContentType] = useState('');
-    const [platform, setPlatform] = useState('General');
+    const [platform, setPlatform] = useState('Reels');
     const [scheduledDate, setScheduledDate] = useState('');
-    const [slotStatus, setSlotStatus] = useState('idea_only');
 
-    // Editable fields — script
+    // Script Logic
     const [hook, setHook] = useState('');
     const [structureText, setStructureText] = useState('');
     const [ctaText, setCtaText] = useState('');
@@ -136,189 +133,107 @@ export default function IdeaPage() {
     const [postBody, setPostBody] = useState('');
     const [postHashtags, setPostHashtags] = useState('');
 
-    // Script generation options
+    // Generation UI Options
     const [showGenOptions, setShowGenOptions] = useState(false);
-    
-    // Autosave state (v6.1.0)
-    const [isAutosaving, setIsAutosaving] = useState(false);
-    const [lastSavedHash, setLastSavedHash] = useState('');
-    const [lastSavedTime, setLastSavedTime] = useState(null);
-
-    const [genPlatform, setGenPlatform] = useState('Reels');
+    const [genPlatform, setGenPlatform] = useState('');
     const [genDuration, setGenDuration] = useState('60 seg');
-    const [genFocus, setGenFocus] = useState('autoridad');
+    const [genFocus, setGenFocus] = useState('');
     const [genInstruction, setGenInstruction] = useState('');
 
-    // ── Autosave Effect (v6.2.0 - DISABLED TEMPORARILY) ──────────────────
-    useEffect(() => {
-        /*
-        if (loading || generating || saving) return;
-        const currentData = JSON.stringify({
-            title, description, goal, contentType, platform, scheduledDate,
-            hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
-        });
-        if (currentData === lastSavedHash) return;
-        const timer = setTimeout(() => {
-            handleSave(true);
-        }, 5000); 
-        return () => clearTimeout(timer);
-    }, [title, description, goal, contentType, platform, scheduledDate, hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags, loading, generating, saving, lastSavedHash]);
+    // Status
+    const [slotStatus, setSlotStatus] = useState('idea_only');
+    const [lastSavedTime, setLastSavedTime] = useState(null);
+    const [lastSavedHash, setLastSavedHash] = useState('');
+    const [copied, setCopied] = useState(false);
 
-    // ── Load data ──────────────────────────────────────────────────────────
     useEffect(() => {
         if (!slot_id) return;
-        load();
+        loadFullIdea();
     }, [slot_id]);
 
-    async function load() {
+    async function loadFullIdea() {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.push('/login'); return; }
-        setUserId(user.id);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { router.push('/login'); return; }
+            setUser(user);
+            setUserId(user.id);
 
-        // 1. Try content_slots
-        const { data: slotData } = await supabase
-            .from('content_slots')
-            .select('*')
-            .eq('id', slot_id)
-            .eq('user_id', user.id)
-            .single();
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            
+            console.log('GET_SCRIPT', { scriptId: slot_id, hasAuth: !!token });
 
-        if (slotData) {
-            setSlot(slotData);
-            setSourceType('slot');
-            populateFromSlot(slotData);
-
-            // v6.3.0: Load script via fresh API fetch with Auth
-            if (slotData.script_id) {
-                try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const token = session?.access_token;
-
-                    const sRes = await fetch(`/api/scripts/${slotData.script_id}`, {
-                        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-                    });
-                    const sResult = await sRes.json();
-                    if (sResult.ok && sResult.data) {
-                        setScript(sResult.data);
-                        populateFromScript(sResult.data);
-                    }
-                } catch (e) {
-                    console.warn('Script fetch error:', e);
+            const res = await fetch(`/api/scripts/${slot_id}`, {
+                headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+            });
+            const scriptRes = await res.json();
+            
+            if (scriptRes.ok && scriptRes.data) {
+                const s = scriptRes.data;
+                setScript(s);
+                populateFromScript(s);
+                setSlotStatus('script_ready');
+                if (s.slot_id) {
+                    const { data: sl } = await supabase.from('content_slots').select('*').eq('id', s.slot_id).single();
+                    if (sl) { setSlot(sl); populateFromSlot(sl); }
                 }
-            }
-            setLoading(false);
-            return;
-        }
-
-        // 2. Fallback: calendar_events
-        const { data: evData } = await supabase
-            .from('calendar_events')
-            .select('*')
-            .eq('id', slot_id)
-            .eq('user_id', user.id)
-            .single();
-
-        if (evData) {
-            setCalEvent(evData);
-            setSourceType('event');
-            populateFromCalEvent(evData);
-
-            // Try to get slot via reference_id
-            if (evData.reference_id) {
-                const { data: refSlot } = await supabase
-                    .from('content_slots')
-                    .select('*')
-                    .eq('id', evData.reference_id)
-                    .single();
-                if (refSlot) {
-                    setSlot(refSlot);
-                    populateFromSlot(refSlot);
-                    if (refSlot.script_id) {
-                        const { data: sc } = await supabase.from('scripts').select('*').eq('id', refSlot.script_id).maybeSingle();
-                        if (sc) { setScript(sc); populateFromScript(sc); }
-                    }
-                }
-            }
-        } else {
-            // 3. Fallback: library (Single Script / Generator)
-            const { data: libData } = await supabase
-                .from('library')
-                .select('*')
-                .eq('id', slot_id)
-                .eq('user_id', user.id)
-                .single();
-
-            if (libData) {
-                setSlot(libData);
-                setSourceType('library');
-                
-                const contentObj = libData.content || {};
-                setTitle(libData.titulo || contentObj.titulo_guion || contentObj.titulo_angulo || 'Idea');
-                setDescription(libData.script_full_text || contentObj.descripcion || '');
-                setGoal(libData.goal || '');
-                setContentType(libData.type || '');
-                setPlatform(libData.platform || 'General');
-                setSlotStatus(libData.status || 'idea');
-                
-                setHook(contentObj.hook || contentObj.gancho || '');
-                setCtaText(contentObj.cierre || contentObj.cta || '');
-                if (Array.isArray(contentObj.desarrollo)) {
-                    setStructureText(contentObj.desarrollo.join('\n\n'));
+            } else {
+                // Try Content Slots
+                const { data: sl } = await supabase.from('content_slots').select('*').eq('id', slot_id).single();
+                if (sl) {
+                    setSlot(sl);
+                    populateFromSlot(sl);
+                    const { data: s } = await supabase.from('scripts').select('*').eq('slot_id', sl.id).maybeSingle();
+                    if (s) { setScript(s); populateFromScript(s); setSlotStatus('script_ready'); }
                 } else {
-                    setStructureText(contentObj.desarrollo || '');
-                }
-                if (contentObj.copy_post) {
-                    setPostHeadline(contentObj.copy_post.titulo || '');
-                    setPostBody(contentObj.copy_post.descripcion_larga || '');
-                    setPostHashtags(Array.isArray(contentObj.copy_post.hashtags) ? contentObj.copy_post.hashtags.join(' ') : '');
-                }
-                setNotes(contentObj.notes || '');
-
-                // v6.1.1: Prioritize Scripts table via direct client
-                if (libData.script_id) {
-                    const { data: scData } = await supabase
-                        .from('scripts')
-                        .select('*')
-                        .eq('id', libData.script_id)
-                        .maybeSingle();
-                    if (scData) {
-                        setScript(scData);
-                        populateFromScript(scData);
+                    // Try Calendar Events
+                    const { data: ev } = await supabase.from('calendar_events').select('*').eq('id', slot_id).maybeSingle();
+                    if (ev) {
+                        setCalEvent(ev);
+                        populateFromCalendar(ev);
+                        const { data: s } = await supabase.from('scripts').select('*').eq('id', ev.script_id).maybeSingle();
+                        if (s) { setScript(s); populateFromScript(s); setSlotStatus('script_ready'); }
+                    } else {
+                        // FALLBACK v6.3.1: Library
+                        const { data: libItem } = await supabase.from('library').select('*').eq('id', slot_id).maybeSingle();
+                        if (libItem) {
+                            populateFromLibrary(libItem);
+                            setSlotStatus('script_ready');
+                        } else {
+                            throw new Error('No se encontró la idea o el guion.');
+                        }
                     }
                 }
-
-                setLoading(false);
-                return;
             }
 
-            setError('No se encontró esta idea. Puede que haya sido eliminada.');
+            setLastSavedHash(JSON.stringify({
+                title, description, goal, contentType, platform, scheduledDate,
+                hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
+            }));
+
+        } catch (err) {
+            console.error('Error loading idea:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     }
 
-    function populateFromSlot(s) {
-        setTitle(s.idea_title || '');
-        setDescription(s.idea_description || '');
-        setGoal(s.goal || '');
-        setContentType(s.content_type || '');
-        setPlatform(s.platform || 'General');
-        setScheduledDate(s.scheduled_date || '');
-        setSlotStatus(s.slot_status || (s.has_script ? 'script_ready' : 'idea_only'));
-        setGenPlatform(s.platform || 'Reels');
+    function populateFromSlot(sl) {
+        setTitle(sl.title || '');
+        setDescription(sl.description || '');
+        setGoal(sl.goal || '');
+        setContentType(sl.content_type || '');
+        setPlatform(sl.platform || 'Reels');
+        setScheduledDate(sl.scheduled_date || '');
     }
 
-    function populateFromCalEvent(ev) {
+    function populateFromCalendar(ev) {
         setTitle(ev.title || '');
-        setDescription(ev.description || ev.notes || '');
+        setDescription(ev.description || '');
         setPlatform(ev.platform || 'General');
         setScheduledDate(ev.event_date || '');
-        setSlotStatus(ev.status || 'idea');
-        setGenPlatform(ev.platform || 'Reels');
-        if (ev.notes && !ev.has_script) {
-            setHook(ev.notes);
-        }
     }
 
     function populateFromScript(sc) {
@@ -326,11 +241,12 @@ export default function IdeaPage() {
         setHook(sc.hook || sc.gancho || '');
         setCtaText(sc.cta || '');
         setNotes(sc.notes || '');
-        // Build structure text from structure JSONB or legacy content
         if (Array.isArray(sc.structure) && sc.structure.length > 0) {
             setStructureText(sc.structure.map((p, i) => `${i + 1}. ${p.point || ''}: ${p.detail || ''}`).join('\n\n'));
         } else if (sc.content) {
             setStructureText(typeof sc.content === 'string' ? sc.content : '');
+        } else if (sc.full_text) {
+             setStructureText(sc.full_text);
         }
         const pc = sc.post_copy || {};
         setPostHeadline(pc.headline || pc.titulo || '');
@@ -338,137 +254,71 @@ export default function IdeaPage() {
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
-    // ── Core Saving Logic (v6.3.0) ───────────────────────────────────────
-    // saveScript: Uses the dedicated API endpoint with mandatory tracing & Auth
-    async function saveScript(scriptId, payload, isAutosave = false) {
-        if (!scriptId) {
-            console.error('❌ FATAL: SAVE_SCRIPT_PAYLOAD - No scriptId found');
-            return null;
+    function populateFromLibrary(item) {
+        setTitle(item.titulo || item.title || '');
+        setPlatform(item.platform || 'General');
+        const c = item.content || {};
+        setHook(c.hook || c.gancho || c.hook_principal || '');
+        setCtaText(c.cta || c.cierre || '');
+        setNotes(c.notes || '');
+        if (c.full_text) {
+            setStructureText(c.full_text);
+        } else if (Array.isArray(c.desarrollo)) {
+            setStructureText(c.desarrollo.join('\n\n'));
         }
+        if (c.copy_post) {
+            setPostHeadline(c.copy_post.headline || '');
+            setPostBody(c.copy_post.body || '');
+            const ht = c.copy_post.hashtags;
+            setPostHashtags(Array.isArray(ht) ? ht.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (ht || ''));
+        }
+    }
 
+    async function saveScript(scriptId, payload, isAutosave = false) {
+        if (!scriptId) return null;
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        
-        console.log('SAVE_SCRIPT_PAYLOAD', {
-            scriptId,
-            title: payload.title,
-            hook: payload.hook,
-            body: payload.content,
-            cta: payload.cta,
-            postCopy: payload.post_copy,
-            notes: payload.notes,
-            hasAuth: !!token
-        });
-
+        console.log('SAVE_SCRIPT_PAYLOAD', { scriptId, title: payload.title, body: payload.content, hasAuth: !!token });
         if (isAutosave) setIsAutosaving(true);
-        
         try {
             const res = await fetch(`/api/scripts/${scriptId}`, {
                 method: 'PATCH',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' },
                 body: JSON.stringify(payload)
             });
-            
             const result = await res.json();
-            console.log('📥 [FRONTEND] API RESPONSE:', result);
-
-            if (result.ok) {
-                setLastSavedTime(new Date());
-                return result.data;
-            } else {
-                throw new Error(result.error || 'API Error');
-            }
+            if (result.ok) { setLastSavedTime(new Date()); return result.data; }
+            throw new Error(result.error || 'API Error');
         } catch (err) {
-            console.error('❌ [FRONTEND] SAVE ERROR:', err);
+            console.error('SAVE ERROR:', err);
             throw err;
         } finally {
             if (isAutosave) setIsAutosaving(false);
         }
     }
 
-    // handleSave: Main orchestration for manual/autosave
     async function handleSave(isAutosave = false) {
-        if (!isAutosave) {
-            setSaving(true);
-            setSaveError(null);
-            setSaveSuccess(false);
-        }
-
+        if (!isAutosave) { setSaving(true); setSaveError(null); setSaveSuccess(false); }
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Sesión no encontrada');
-
-            // 1. Prepare Content Blocks
             const structureArr = structureText.split('\n\n').filter(Boolean).map((block, i) => {
                 const lines = block.split('\n');
                 const firstLine = lines[0] || '';
                 const hasColon = firstLine.includes(':') && firstLine.length < 80;
-                const point = hasColon ? firstLine.split(':')[0].replace(/^\d+\.\s*/, '').trim() : `Sección ${i + 1}`;
+                const point = hasColon ? firstLine.split(':')[0].replace(/^\d+\.\s*/, '').trim() : 'Sección ' + (i + 1);
                 const detail = hasColon ? (firstLine.split(':').slice(1).join(':').trim() + '\n' + lines.slice(1).join('\n')).trim() : block.trim();
                 return { point, detail: detail || firstLine };
             });
-
-            const postCopy = { 
-                headline: postHeadline, 
-                body: postBody, 
-                hashtags: postHashtags.split(/\s+/).filter(h => h.trim().length > 0)
-            };
-
-            const fullContentText = [
-                `HOOK: ${hook}`,
-                `DESARROLLO:\n${structureText}`,
-                `CTA: ${ctaText}`,
-                `POST COPY:\n${postHeadline}\n${postBody}\n${postHashtags}`,
-                `NOTAS:\n${notes}`
-            ].join('\n\n');
-
-            // 2. Build Payload
-            const payload = {
-                title, hook, structure: structureArr, cta: ctaText,
-                notes, post_copy: postCopy, content: fullContentText,
-                platform
-            };
-
-            // 3. TARGET: SCRIPT TABLE (Source of Truth)
-            let finalScriptId = script?.id;
-
-            if (finalScriptId) {
-                // UPDATE VIA API (Tracing enabled)
-                await saveScript(finalScriptId, payload, isAutosave);
-            } else {
-                // CREATE
-                const { data: newScript, error: insErr } = await supabase.from('scripts').insert({
-                    ...payload,
-                    user_id: user.id,
-                    project_id: slot?.project_id || calEvent?.project_id
-                }).select().single();
-                
-                if (insErr) throw insErr;
-                if (newScript) {
-                    finalScriptId = newScript.id;
-                    setScript(newScript);
-                }
-            }
-
-            // 4. METADATA SYNC (DISABLED TEMPORARILY FOR DEEP FIX)
-            /*
-            const syncMetadata = async () => { ... };
-            syncMetadata().catch(e => console.warn('SyncMetadata error:', e));
-            */
-
-            // 5. Update Local State
-            setLastSavedHash(JSON.stringify({
-                title, description, goal, contentType, platform, scheduledDate,
-                hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags
-            }));
-
-            if (!isAutosave) {
-                setSaveSuccess(true);
-                setTimeout(() => setSaveSuccess(false), 2000);
-            }
+            const postCopy = { headline: postHeadline, body: postBody, hashtags: postHashtags.split(/\s+/).filter(h => h.trim().length > 0) };
+            const fullContentText = [`HOOK: ${hook}`, `DESARROLLO:\n${structureText}`, `CTA: ${ctaText}`, `POST COPY:\n${postHeadline}\n${postBody}\n${postHashtags}`, `NOTAS:\n${notes}`].join('\n\n');
+            const payload = { title, hook, structure: structureArr, cta: ctaText, notes, post_copy: postCopy, content: fullContentText, platform };
+            // v6.3.1: Ensure we use the slot_id from the URL as the primary identifier if no script row exists yet
+            const finalScriptId = script?.id || slot_id;
+            const updatedScript = await saveScript(finalScriptId, payload, isAutosave);
+            if (updatedScript) setScript(updatedScript);
+            setLastSavedHash(JSON.stringify({ title, description, goal, contentType, platform, scheduledDate, hook, structureText, ctaText, notes, postHeadline, postBody, postHashtags }));
+            if (!isAutosave) { setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 2000); }
         } catch (err) {
             console.error('Save failed:', err);
             if (!isAutosave) setSaveError(err.message);
@@ -477,41 +327,29 @@ export default function IdeaPage() {
         }
     }
 
-
-
-    // ── Generate / Regenerate script ───────────────────────────────────────
     async function handleGenerate() {
         const realSlotId = slot?.id;
-        if (!realSlotId) { alert('Esta idea no tiene slot vinculado. Solo se pueden generar guiones desde ideas del Plan Mensual.'); return; }
-
+        if (!realSlotId) { alert('No slot vinculado.'); return; }
         setGenerating(true);
         setShowGenOptions(false);
         setSlotStatus('script_generating');
-
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('No autorizado. Por favor, inicia sesión de nuevo.');
-
+            if (!session) throw new Error('No autorizado');
             const res = await fetch(`/api/slots/${realSlotId}/generate-script`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
                 body: JSON.stringify({
-                    userId,
+                    userId: user?.id,
                     platform: genPlatform || platform || 'Reels',
                     videoDuration: genDuration || '60 seg',
                     focus: genFocus || contentType || 'autoridad',
                     instruction: genInstruction || '',
                 }),
             });
-
             if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); setSlotStatus('idea_only'); return; }
-
             const data = await res.json();
             if (!res.ok || !data.ok) { alert(data.error || 'Error al generar el guion.'); setSlotStatus('script_error'); return; }
-
             const sc = data.script;
             setScript(sc);
             setHook(sc.hook || '');
@@ -526,6 +364,7 @@ export default function IdeaPage() {
             setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.join(' ') : '');
             setSlotStatus('script_ready');
         } catch (err) {
+            console.error('Generate error:', err);
             alert('Error de red: ' + err.message);
             setSlotStatus('script_error');
         } finally {
@@ -533,7 +372,6 @@ export default function IdeaPage() {
         }
     }
 
-    // ── Copy script ────────────────────────────────────────────────────────
     function handleCopy() {
         const text = [
             `📋 ${title}`,
@@ -550,7 +388,6 @@ export default function IdeaPage() {
         setTimeout(() => setCopied(false), 2500);
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────
     if (loading) return (
         <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #7ECECA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
@@ -571,280 +408,72 @@ export default function IdeaPage() {
 
     return (
         <div style={{ minHeight: '100vh', background: '#0d0d0d', color: 'white', fontFamily: "'Inter', -apple-system, sans-serif" }}>
-            <style>{`
-                * { box-sizing: border-box; }
-                textarea { font-family: inherit; color-scheme: dark; }
-                input { color-scheme: dark; }
-                ::-webkit-scrollbar { width: 6px; }
-                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-                @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-                .notion-editable:hover { background: rgba(255,255,255,0.03) !important; }
-                .notion-btn { transition: all 0.18s ease; }
-                .notion-btn:hover { opacity: 0.85; transform: translateY(-1px); }
-                .gen-options-enter { animation: fadeIn 0.2s ease; }
-
-                @media (max-width: 768px) {
-                    .topbar-idea { padding: 10px 16px !important; flex-wrap: wrap; gap: 10px !important; }
-                    .topbar-left { width: 100%; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
-                    .topbar-right { width: 100%; justify-content: space-between; gap: 8px !important; }
-                    .main-container { padding: 24px 16px 120px 16px !important; }
-                    .meta-row { flex-direction: column; align-items: flex-start !important; gap: 4px !important; }
-                    .meta-label { min-width: auto !important; }
-                    .meta-value { width: 100%; }
-                    .meta-value select, .meta-value input { width: 100% !important; border: 1px solid rgba(255,255,255,0.1) !important; padding: 8px !important; border-radius: 8px !important; background: rgba(255,255,255,0.02) !important; }
-                    .sticky-footer { flex-wrap: wrap; height: auto !important; padding: 16px !important; bottom: 0; }
-                    .sticky-footer .notion-btn { flex: 1; min-width: 140px !important; font-size: 0.8rem !important; padding: 10px !important; }
-                    .textarea-field-idea { font-size: 16px !important; } /* Evita zoom en iOS */
-                }
-            `}</style>
-
-            {/* ═══ TOPBAR ════════════════════════════════════════════════════ */}
-            <div className="topbar-idea" style={{
-                position: 'sticky', top: 0, zIndex: 100,
-                background: 'rgba(13,13,13,0.92)', backdropFilter: 'blur(16px)',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 24px',
-            }}>
-                {/* Left: back + breadcrumb */}
-                <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button
-                        onClick={() => router.back()}
-                        className="notion-btn"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', padding: '6px 14px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
-                    >
-                        ← Volver
-                    </button>
-                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.82rem' }}>Calendario</span>
-                    <span style={{ color: 'rgba(255,255,255,0.2)' }} className="hide-mobile-mini">/</span>
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="hide-mobile-mini">{title || 'Nueva idea'}</span>
-                </div>
-
-                {/* Right: actions */}
-                <div className="topbar-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {/* Autosave Indicator */}
-                    <div style={{ marginRight: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {isAutosaving ? (
-                            <>
-                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #7ECECA', borderTopColor: 'transparent', animation: 'spin 0.6s linear infinite' }} />
-                                <span style={{ fontSize: '0.72rem', color: '#7ECECA', fontWeight: 600 }}>Autoguardando...</span>
-                            </>
-                        ) : lastSavedTime && (
-                            <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>
-                                Guardado {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </span>
-                        )}
+            <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(13,13,13,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>←</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.2rem' }}>{platformEmoji}</span>
+                        <input value={title} onChange={e => setTitle(e.target.value)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '0.95rem', fontWeight: 600, outline: 'none', width: '300px' }} placeholder="Título de la idea..." />
                     </div>
-
-                    <button
-                        onClick={handleCopy}
-                        className="notion-btn"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', padding: '7px 14px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
-                    >
-                        {copied ? '✅ Copiado' : '⧉ Copiar guion'}
-                    </button>
-                    <button
-                        onClick={() => handleSave(false)}
-                        disabled={saving}
-                        className="notion-btn"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(126,206,202,0.15)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(126,206,202,0.35)'}`, borderRadius: '8px', color: saveSuccess ? '#10B981' : '#7ECECA', padding: '7px 16px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700 }}
-                    >
-                        {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.3.0' : '💾 Guardar cambios'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {isAutosaving && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>Autoguardando...</span>}
+                    {lastSavedTime && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>Guardado {lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                    <button onClick={() => handleSave(false)} disabled={saving} className="notion-btn" style={{ background: saveSuccess ? '#10B981' : '#7ECECA', color: '#0d0d0d', padding: '8px 20px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                        {saving ? 'Guardando...' : saveSuccess ? '✓ Guardado' : 'Guardar v6.3.0'}
                     </button>
                 </div>
             </div>
 
-            {/* ═══ MAIN CONTENT ══════════════════════════════════════════════ */}
-            <div className="main-container" style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px 120px 32px' }}>
-
-                {/* ── STATUS BADGE ─────────────────────────────────────────────── */}
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <Badge status={slotStatus} />
-                    {platform && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            {platformEmoji} {platform}
-                        </span>
-                    )}
-                    {scheduledDate && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                            📅 {new Date(scheduledDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </span>
-                    )}
-                </div>
-
-                {/* ── TITLE ──────────────────────────────────────────────────────── */}
-                <textarea
-                    value={title}
-                    onChange={e => { setTitle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                    placeholder="Título de la idea..."
-                    rows={1}
-                    style={{
-                        width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                        fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontWeight: 900, color: 'white',
-                        lineHeight: 1.2, letterSpacing: '-0.03em', resize: 'none', overflow: 'hidden',
-                        marginBottom: '32px', padding: '0', fontFamily: 'inherit',
-                    }}
-                    onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                />
-
-                {/* ── METADATA BLOCK ─────────────────────────────────────────────── */}
-                <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '14px', padding: '8px 20px', marginBottom: '36px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <MetaRow icon="📱" label="Plataforma">
-                        <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem', fontWeight: 500, cursor: 'pointer', outline: 'none' }}>
-                            {['General', 'Reels', 'TikTok', 'Instagram', 'YouTube', 'YouTube Shorts', 'LinkedIn', 'Twitter', 'X', 'Podcast'].map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                    </MetaRow>
-                    <MetaRow icon="📅" label="Fecha">
-                        <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem', fontWeight: 500, cursor: 'pointer', outline: 'none' }} />
-                    </MetaRow>
-                    <MetaRow icon="🎯" label="Objetivo">
-                        <input value={goal} onChange={e => setGoal(e.target.value)} placeholder="engagement, leads, ventas..." style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem', fontWeight: 500, width: '100%', outline: 'none' }} />
-                    </MetaRow>
-                    <MetaRow icon="📌" label="Enfoque">
-                        <input value={contentType} onChange={e => setContentType(e.target.value)} placeholder="educativo, storytelling, tutorial..." style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.85)', fontSize: '0.88rem', fontWeight: 500, width: '100%', outline: 'none' }} />
-                    </MetaRow>
-                    <MetaRow icon="🔖" label="Estado">
+            <main style={{ maxWidth: '850px', margin: '0 auto', padding: '40px 24px 100px' }}>
+                <div style={{ marginBottom: '48px', background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                         <Badge status={slotStatus} />
-                    </MetaRow>
+                    </div>
+                    <MetaRow icon="🎯" label="Objetivo">{goal || 'Sin objetivo definido'}</MetaRow>
+                    <MetaRow icon="📱" label="Plataforma">{platform}</MetaRow>
+                    <MetaRow icon="🎬" label="Tipo">{contentType}</MetaRow>
+                    <MetaRow icon="📅" label="Programado">{scheduledDate ? new Date(scheduledDate).toLocaleDateString() : 'No programado'}</MetaRow>
                 </div>
 
-                {/* ── IDEA BLOCK ─────────────────────────────────────────────────── */}
-                <Section emoji="💡" title="Resumen de la idea" color="#F59E0B">
-                    <EditableBlock value={description} onChange={setDescription} placeholder="Describe la idea en 2-3 frases. Qué aprenderá el espectador, qué historia contarás, qué problema resuelves..." rows={3} />
-                </Section>
-
-                {/* ── DIVIDER ──────────────────────────────────────────────────────── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '12px 0 32px' }}>
-                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Guion</span>
-                    <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-                </div>
-
-                {/* ── SCRIPT BLOCK ───────────────────────────────────────────────── */}
-                {hasScript ? (
-                    <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                        <Section emoji="🎯" title="Hook / Gancho" color="#FFD700">
-                            <EditableBlock value={hook} onChange={setHook} placeholder="Frase de apertura que engancha en los primeros 5 segundos..." rows={2} />
-                        </Section>
-                        <Section emoji="📝" title="Desarrollo / Estructura" color="#7ECECA">
-                            <EditableBlock value={structureText} onChange={setStructureText} placeholder="1. Punto clave: Explicación...\n\n2. Ejemplo o caso real...\n\n3. Solución práctica..." rows={8} mono />
-                        </Section>
-                        <Section emoji="🔥" title="CTA" color="#EF4444">
-                            <EditableBlock value={ctaText} onChange={setCtaText} placeholder="Instrucción final al espectador. ¿Qué quieres que haga?" rows={2} />
-                        </Section>
-                        <Section emoji="📱" title="Post Copy" color="#9D00FF">
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <EditableBlock value={postHeadline} onChange={setPostHeadline} placeholder="Primera línea del post (gancho de texto)..." rows={1} />
-                                <EditableBlock value={postBody} onChange={setPostBody} placeholder="Cuerpo del post para redes sociales..." rows={4} />
-                                <EditableBlock value={postHashtags} onChange={setPostHashtags} placeholder="#hashtag1 #hashtag2 #hashtag3" rows={1} mono />
-                            </div>
-                        </Section>
-                        <Section emoji="🎬" title="Notas de grabación" color="#6B7280">
-                            <EditableBlock value={notes} onChange={setNotes} placeholder="Plano recomendado, b-roll, momentos de énfasis, transiciones..." rows={3} />
-                        </Section>
+                {!hasScript && slotStatus !== 'script_generating' ? (
+                    <div style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(126,206,202,0.03)', borderRadius: '24px', border: '2px dashed rgba(126,206,202,0.15)' }}>
+                        <span style={{ fontSize: '3rem', display: 'block', marginBottom: '20px' }}>✍️</span>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '12px' }}>¿Empezamos con el guion?</h2>
+                        <button onClick={() => setShowGenOptions(true)} style={{ background: '#7ECECA', color: '#0d0d0d', padding: '14px 32px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+                            Generar Guion Mágico ✨
+                        </button>
                     </div>
                 ) : (
-                    <div style={{ textAlign: 'center', padding: '48px 24px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.08)' }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>✍️</div>
-                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem', marginBottom: '6px', fontWeight: 600 }}>Todavía no hay guion para esta idea</p>
-                        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', marginBottom: '24px' }}>Genera un guion completo con IA en 1 clic.</p>
+                    <div className="script-editor-container">
+                        <Section emoji="🎯" title="Gancho / Hook" color="#F59E0B">
+                            <EditableBlock value={hook} onChange={setHook} placeholder="Escribe el gancho..." rows={2} />
+                        </Section>
+                        <Section emoji="📝" title="Estructura y Desarrollo" color="#7ECECA">
+                            <EditableBlock value={structureText} onChange={setStructureText} placeholder="Desarrollo..." rows={12} />
+                        </Section>
+                        <Section emoji="🔥" title="Llamada a la Acción (CTA)" color="#10B981">
+                            <EditableBlock value={ctaText} onChange={setCtaText} placeholder="CTA..." rows={2} />
+                        </Section>
+                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '40px 0' }} />
+                        <Section emoji="📱" title="Post Copy y Hashtags" color="#3B82F6">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <input value={postHeadline} onChange={e => setPostHeadline(e.target.value)} placeholder="Título..." style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '12px 16px', color: 'white', outline: 'none' }} />
+                                <EditableBlock value={postBody} onChange={setPostBody} placeholder="Cuerpo..." rows={5} />
+                                <input value={postHashtags} onChange={e => setPostHashtags(e.target.value)} placeholder="#hashtags" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '12px 16px', color: 'white', outline: 'none' }} />
+                            </div>
+                        </Section>
+                        <Section emoji="🎬" title="Notas" color="rgba(255,255,255,0.3)">
+                            <EditableBlock value={notes} onChange={setNotes} placeholder="Notas..." rows={3} mono />
+                        </Section>
                     </div>
                 )}
+            </main>
 
-                {/* ── GENERATE OPTIONS PANEL ─────────────────────────────────────── */}
-                {showGenOptions && (
-                    <div className="gen-options-enter" style={{ background: 'rgba(126,206,202,0.06)', border: '1px solid rgba(126,206,202,0.2)', borderRadius: '14px', padding: '20px', marginTop: '20px' }}>
-                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#7ECECA', marginBottom: '16px' }}>⚙️ Opciones de generación</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                            <div>
-                                <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase' }}>Plataforma</label>
-                                <select value={genPlatform} onChange={e => setGenPlatform(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', padding: '8px 10px', fontSize: '0.85rem', outline: 'none' }}>
-                                    {['Reels', 'TikTok', 'YouTube', 'LinkedIn', 'Podcast', 'General'].map(p => <option key={p} value={p}>{p}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase' }}>Duración</label>
-                                <select value={genDuration} onChange={e => setGenDuration(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', padding: '8px 10px', fontSize: '0.85rem', outline: 'none' }}>
-                                    {['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min'].map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase' }}>Enfoque IA</label>
-                                <select value={genFocus} onChange={e => setGenFocus(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', padding: '8px 10px', fontSize: '0.85rem', outline: 'none' }}>
-                                    {['autoridad', 'ventas', 'comunidad', 'educativo', 'entretenimiento', 'storytelling'].map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        {hasScript && (
-                            <div style={{ marginTop: '16px' }}>
-                                <label style={{ fontSize: '0.72rem', color: '#7ECECA', display: 'block', marginBottom: '6px', fontWeight: 800, textTransform: 'uppercase' }}>✍️ Instrucciones de mejora (Ej: más humor, más corto...)</label>
-                                <input 
-                                    type="text"
-                                    value={genInstruction}
-                                    onChange={e => setGenInstruction(e.target.value)}
-                                    placeholder="¿Qué quieres cambiar del guion actual?"
-                                    style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(126,206,202,0.3)', borderRadius: '10px', color: 'white', padding: '12px 14px', fontSize: '0.88rem', outline: 'none' }}
-                                />
-                            </div>
-                        )}
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                            <button onClick={handleGenerate} disabled={generating} style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #7ECECA, #4db8b2)', border: 'none', borderRadius: '10px', color: '#0d0d0d', fontWeight: 800, cursor: 'pointer', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                {generating ? <><span style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#000', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Generando guion...</> : '✨ Generar ahora'}
-                            </button>
-                            <button onClick={() => setShowGenOptions(false)} style={{ padding: '11px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '0.85rem' }}>Cancelar</button>
-                        </div>
-                    </div>
-                )}
-
-            </div>
-
-            {/* ═══ STICKY FOOTER ACTIONS ═════════════════════════════════════ */}
-            <div className="sticky-footer" style={{
-                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-                background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)',
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '12px', padding: '14px 24px',
-            }}>
-                <button
-                    onClick={() => { if (!showGenOptions) setShowGenOptions(true); else handleGenerate(); }}
-                    disabled={generating}
-                    className="notion-btn"
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', border: 'none',
-                        background: generating ? 'rgba(126,206,202,0.2)' : 'linear-gradient(135deg, #7ECECA, #4db8b2)',
-                        color: generating ? '#7ECECA' : '#0d0d0d',
-                        minWidth: '220px', justifyContent: 'center',
-                    }}
-                >
-                    {generating
-                        ? <><span style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(126,206,202,0.4)', borderTopColor: '#7ECECA', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Generando guion...</>
-                        : hasScript ? '✨ Regenerar guion con IA' : '✨ Crear Guion con IA'
-                    }
-                </button>
-
-                {saveError && (
-                    <span style={{ color: '#EF4444', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: '8px' }}>
-                        ⚠️ Error: {saveError}
-                    </span>
-                )}
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="notion-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: saveSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.06)', border: `1px solid ${saveSuccess ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.12)'}`, color: saveSuccess ? '#10B981' : 'rgba(255,255,255,0.85)' }}
-                >
-                    {saving ? '💾 Guardando...' : saveSuccess ? '✅ Guardado v6.3.0' : '💾 Guardar cambios'}
-                </button>
-
-                <button
-                    onClick={handleCopy}
-                    className="notion-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}
-                >
+            <div style={{ position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '12px', background: 'rgba(20,20,20,0.8)', backdropFilter: 'blur(16px)', padding: '8px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100 }}>
+                <button onClick={() => setShowGenOptions(true)} style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(126,206,202,0.1)', border: '1px solid rgba(126,206,202,0.2)', color: '#7ECECA', cursor: 'pointer' }}>✨ Regenerar</button>
+                <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: 'auto' }} />
+                <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>
                     {copied ? '✅' : '⧉'} {copied ? 'Copiado' : 'Copiar guion'}
                 </button>
             </div>

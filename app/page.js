@@ -88,6 +88,7 @@ export default function LandingPage() {
 
     // Check session
     useEffect(() => {
+        console.log('🚀 WRITI.AI_v6.3.1_STABLE');
         setMounted(true);
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) setUser(session.user);

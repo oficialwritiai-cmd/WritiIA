@@ -3,7 +3,7 @@
 // 'unsafe-eval' has been REMOVED — it was unnecessary and widened XSS attack surface.
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' data: https://fonts.gstatic.com;
     img-src 'self' blob: data: https:;

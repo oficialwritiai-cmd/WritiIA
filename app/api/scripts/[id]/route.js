@@ -69,12 +69,14 @@ export async function PATCH(req, { params }) {
         // Remove undefined fields
         Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-        // EXECUTE UPDATE (Strict WHERE clause)
+        // USE UPSERT v6.3.1 (To allow saving new scripts from library IDs)
         const { error: upErr } = await supabase
             .from('scripts')
-            .update(updateData)
-            .eq('id', id)
-            .eq('user_id', user.id);
+            .upsert({
+                id: id,
+                user_id: user.id,
+                ...updateData
+            });
 
         if (upErr) {
             console.error('❌ [BACKEND] UPDATE_ERROR:', upErr);
