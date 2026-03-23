@@ -548,15 +548,16 @@ export default function DashboardPage() {
                 const countParam = params.get('count');
                 const forceCount = countParam ? parseInt(countParam) : null;
 
-                console.log('[Dashboard] URL params:', { topic: topicParam, platform: platformParam, goal: goalParam, count: countParam });
+                const savedDescription = params.get('description');
+                const savedSourceEventId = params.get('source_event_id');
 
-                if (topicParam) setTopic(decodeURIComponent(topicParam));
-                if (platformParam) setPlatform(decodeURIComponent(platformParam));
-                if (goalParam) setGoal(decodeURIComponent(goalParam));
-                if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
+                if (topicParam) setTopic(topicParam);
+                if (platformParam) setPlatform(platformParam);
+                if (goalParam) setGoal(goalParam);
+                if (savedDescription) setIdeas(savedDescription);
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
-                if (params.get('source_event_id')) setSourceEventId(params.get('source_event_id'));
+                if (savedSourceEventId) setSourceEventId(savedSourceEventId);
             }
         }
     }, [supabase, router]);
@@ -630,12 +631,14 @@ export default function DashboardPage() {
                 const savedTopic = params.get('topic');
                 const savedPlatform = params.get('platform');
                 const savedGoal = params.get('goal');
+                const savedDescription = params.get('description');
+                const savedSourceEventId = params.get('source_event_id');
 
-                if (savedTopic) setTopic(decodeURIComponent(savedTopic));
-                if (savedPlatform) setPlatform(decodeURIComponent(savedPlatform));
-                if (savedGoal) setGoal(decodeURIComponent(savedGoal));
-                if (params.get('description')) setIdeas(decodeURIComponent(params.get('description')));
-                if (params.get('source_event_id')) setSourceEventId(params.get('source_event_id'));
+                if (savedTopic) setTopic(savedTopic);
+                if (savedPlatform) setPlatform(savedPlatform);
+                if (savedGoal) setGoal(savedGoal);
+                if (savedDescription) setIdeas(savedDescription);
+                if (savedSourceEventId) setSourceEventId(savedSourceEventId);
 
                 setGenerationMode('single');
                 setWizardStep(3); // Land on Step 3 (Detalle: Topic, Tono, Generar)
