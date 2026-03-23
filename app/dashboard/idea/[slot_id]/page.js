@@ -450,7 +450,7 @@ export default function IdeaPage() {
                     <div style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(126,206,202,0.03)', borderRadius: '24px', border: '2px dashed rgba(126,206,202,0.15)' }}>
                         <span style={{ fontSize: '3rem', display: 'block', marginBottom: '20px' }}>✍️</span>
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '12px' }}>¿Empezamos con el guion?</h2>
-                        <button onClick={() => setShowGenOptions(true)} style={{ background: '#7ECECA', color: '#0d0d0d', padding: '14px 32px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
+                        <button onClick={handleGenerate} style={{ background: '#7ECECA', color: '#0d0d0d', padding: '14px 32px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
                             Generar Guion Mágico ✨
                         </button>
                     </div>
@@ -481,7 +481,7 @@ export default function IdeaPage() {
             </main>
 
             <div style={{ position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '12px', background: 'rgba(20,20,20,0.8)', backdropFilter: 'blur(16px)', padding: '8px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', zIndex: 100 }}>
-                <button onClick={() => setShowGenOptions(true)} style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(126,206,202,0.1)', border: '1px solid rgba(126,206,202,0.2)', color: '#7ECECA', cursor: 'pointer' }}>✨ Regenerar</button>
+                <button onClick={handleGenerate} style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600, background: 'rgba(126,206,202,0.1)', border: '1px solid rgba(126,206,202,0.2)', color: '#7ECECA', cursor: 'pointer' }}>✨ Regenerar</button>
                 <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: 'auto' }} />
                 <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>
                     {copied ? '✅' : '⧉'} {copied ? 'Copiado' : 'Copiar guion'}
