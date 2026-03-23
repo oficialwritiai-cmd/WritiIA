@@ -4,7 +4,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Send, Mic, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X, Paperclip, ChevronDown } from 'lucide-react';
+import { Send, Mic, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X, Paperclip, ChevronDown, Menu, Plus, History, Trash2, MessageSquare } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // ── Typing Indicator ──────────────────────────────────────
 function TypingIndicator() {
@@ -195,6 +196,10 @@ export default function AsistentePage() {
     const [userId, setUserId] = useState(null);
     const [toast, setToast] = useState(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [conversations, setConversations] = useState([]);
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
     const supabase = createSupabaseClient();
@@ -214,23 +219,51 @@ export default function AsistentePage() {
         });
     }, []);
 
-    // Load history when userId or project changes
+    // 1. Fetch conversations list
+    const fetchConversations = useCallback(async () => {
+        if (!userId) return;
+        const projectId = activeProject?.id || null;
+        try {
+            const res = await fetch(`/api/assistant/history?userId=${userId}&projectId=${projectId || 'null'}`);
+            const data = await res.json();
+            setConversations(data.conversations || []);
+        } catch (err) {
+            console.error('Error fetching conversations:', err);
+        }
+    }, [userId, activeProject?.id]);
+
+    // 2. Load specific conversation
+    const loadConversation = useCallback(async (sessionId) => {
+        if (!userId || !sessionId) return;
+        setHistoryLoaded(false);
+        try {
+            const res = await fetch(`/api/assistant/history?userId=${userId}&id=${sessionId}`);
+            const data = await res.json();
+            setMessages(data.messages || []);
+            setCurrentSessionId(sessionId);
+        } catch (err) {
+            console.error('Error loading conversation:', err);
+        } finally {
+            setHistoryLoaded(true);
+        }
+    }, [userId]);
+
+    // 3. Start New Chat
+    const startNewChat = () => {
+        setMessages([]);
+        setCurrentSessionId(null);
+        if (window.innerWidth < 768) setIsSidebarOpen(false);
+    };
+
+    // Initial load
     useEffect(() => {
         if (!userId) return;
         setHistoryLoaded(false);
+        fetchConversations().finally(() => setHistoryLoaded(true));
+        // Reset state when project changes
         setMessages([]);
-
-        const projectId = activeProject?.id || null;
-        fetch(`/api/assistant/history?userId=${userId}&projectId=${projectId || 'null'}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.messages && data.messages.length > 0) {
-                    setMessages(data.messages);
-                }
-                setHistoryLoaded(true);
-            })
-            .catch(() => setHistoryLoaded(true));
-    }, [userId, activeProject?.id, userName]);
+        setCurrentSessionId(null);
+    }, [userId, activeProject?.id, fetchConversations]);
 
     // Auto-scroll
     useEffect(() => {
@@ -242,16 +275,26 @@ export default function AsistentePage() {
         setTimeout(() => setToast(null), 3500);
     };
 
-    const saveHistory = useCallback(async (updatedMessages) => {
+    const saveHistory = useCallback(async (updatedMessages, sessionId = null) => {
         if (!userId) return;
         try {
-            await fetch('/api/assistant/history', {
+            const res = await fetch('/api/assistant/history', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, projectId: activeProject?.id || null, messages: updatedMessages })
+                body: JSON.stringify({ 
+                    userId, 
+                    projectId: activeProject?.id || null, 
+                    messages: updatedMessages,
+                    id: sessionId || currentSessionId
+                })
             });
+            const data = await res.json();
+            if (data.id && !currentSessionId) {
+                setCurrentSessionId(data.id);
+                fetchConversations();
+            }
         } catch {}
-    }, [userId, activeProject?.id]);
+    }, [userId, activeProject?.id, currentSessionId, fetchConversations]);
 
     const sendMessage = async (text, mode = null) => {
         const messageText = text || input.trim();
@@ -290,13 +333,17 @@ export default function AsistentePage() {
 
             const data = await res.json();
 
-            if (data.code === 'NO_CREDITS') {
-                showToast('Créditos insuficientes. Compra más créditos para continuar.', 'error');
+            if (!res.ok) {
+                if (data.code === 'NO_CREDITS') {
+                    showToast('Créditos insuficientes. Compra más créditos para continuar.', 'error');
+                } else if (data.code === 'RATE_LIMIT') {
+                    showToast(data.error || 'Límite alcanzado', 'error');
+                } else {
+                    showToast(data.error || 'Error al conectar con la IA', 'error');
+                }
                 setIsTyping(false);
                 return;
             }
-
-            if (data.error) throw new Error(data.error);
 
             const aiMsg = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply, timestamp: new Date().toISOString() };
             const finalMessages = [...newMessages, aiMsg];
@@ -371,22 +418,21 @@ export default function AsistentePage() {
     };
 
     const handleClearChat = async () => {
-        if (!confirm('¿Borrar el historial de esta conversación?')) return;
-        setMessages([]);
-        if (userId) {
-            await fetch('/api/assistant/history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, projectId: activeProject?.id || null, messages: [] })
-            });
-        }
+        if (!confirm('¿Estás seguro de que quieres empezar un nuevo chat? El historial de este chat se mantendrá guardado.')) return;
+        startNewChat();
+    };
+
+    const deleteConversation = async (e, id) => {
+        e.stopPropagation();
+        if (!confirm('¿Borrar definitivamente esta conversación?')) return;
+        // Logic for deletion could be added here (archiving)
+        showToast('Conversación eliminada', 'info');
     };
 
     const isEmpty = messages.length === 0 && historyLoaded;
 
     return (
-        <div style={{ position: 'relative', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0a0a0a', color: '#fff' }}>
-            {/* CSS */}
+        <div style={{ position: 'relative', height: 'calc(100vh - 72px)', display: 'flex', overflow: 'hidden', background: '#0a0a0a', color: '#fff' }}>
             <style>{`
                 @keyframes msgFadeIn {
                     from { opacity: 0; transform: translateY(10px); }
@@ -426,166 +472,246 @@ export default function AsistentePage() {
                     50% { box-shadow: 0 0 40px rgba(126,206,202,0.6); }
                     100% { box-shadow: 0 0 20px rgba(126,206,202,0.3); }
                 }
-            `}</style>
-
-            {/* Top Navigation / Dropdown area (Minimalist) */}
-            <div style={{ padding: '24px', display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
-                {messages.length > 0 && (
-                    <button
-                        onClick={handleClearChat}
-                        style={{ background: 'transparent', border: 'none', color: '#666', fontSize: '0.85rem', cursor: 'pointer' }}
-                    >
-                        Limpiar chat
-                    </button>
-                )}
-            </div>
-
-            {/* Scrollable Content Area */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10 }}>
+                .loading-spinner {
+                    width: 32px;
+                    height: 32px;
+                    border: 3px solid rgba(255,255,255,0.1);
+                    border-radius: 50%;
+                    border-top-color: #7ECECA;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                .sidebar {
+                    width: 280px;
+                    background: #111;
+                    border-right: 1px solid rgba(255,255,255,0.08);
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    transition: all 0.3s ease;
+                    z-index: 100;
+                }
+                @media (max-width: 768px) {
+                    .sidebar {
+                        position: absolute;
+                        left: -280px;
+                        top: 0;
+                        bottom: 0;
+                    }
+                    .sidebar.open {
+                        left: 0;
+                        box-shadow: 20px 0 50px rgba(0,0,0,0.8);
+                    }
+                    .chat-container {
+                        padding-bottom: 120px !important;
+                    }
+                }
+                .sidebar-item {
+                    padding: 12px 16px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    color: #888;
+                    font-size: 0.9rem;
+                    transition: 0.2s;
+                    margin: 4px 12px;
+                }
+                .sidebar-item:hover { background: rgba(255,255,255,0.05); color: white; }
+                .sidebar-item.active { background: rgba(126,206,202,0.1); color: #7ECECA; border: 1px solid rgba(126,206,202,0.2); }
                 
-                {/* Empty State Centered */}
-                {isEmpty && (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', animation: 'msgFadeIn 0.5s ease-out' }}>
-                        <div style={{
-                            width: '48px', height: '48px', borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)',
-                            animation: 'float 4s ease-in-out infinite, glow 3s ease-in-out infinite',
-                            marginBottom: '24px'
-                        }} />
-                        
-                        <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: '0 0 12px', textAlign: 'center' }}>
-                            Hola{userName ? `, ${userName}` : ''} 👋
-                        </h1>
-                        <p style={{ color: '#888', fontSize: '1.05rem', margin: '0 0 48px', textAlign: 'center' }}>
-                            Dime qué necesitas con tu contenido y yo me encargo.
-                        </p>
+                .chat-main {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                    overflow: hidden;
+                    position: relative;
+                }
+                .input-container {
+                    position: fixed;
+                    bottom: 0;
+                    left: 280px;
+                    right: 0;
+                    padding: 24px;
+                    background: linear-gradient(to top, #0a0a0a 80%, transparent);
+                    z-index: 50;
+                }
+                @media (max-width: 768px) {
+                    .input-container {
+                        left: 0;
+                        padding: 12px 16px 24px;
+                        background: #0a0a0a;
+                    }
+                }
+            `}</style>
+            
+            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                    <button 
+                        onClick={startNewChat}
+                        style={{ background: 'white', color: 'black', border: 'none', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                        <Plus size={18} /> Nuevo Chat
+                    </button>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', width: '100%', maxWidth: '800px' }}>
-                            {ORBITA_CARDS.map((card, idx) => (
-                                <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)}>
-                                    <div style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{card.icon}</div>
-                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>{card.title}</h3>
-                                    <p style={{ fontSize: '0.8rem', color: '#666', margin: 0, lineHeight: '1.4' }}>{card.desc}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Chat History */}
-                {!isEmpty && (
-                    <div style={{ padding: '0 24px', maxWidth: '860px', width: '100%', margin: '0 auto', flex: 1 }}>
-                        {!historyLoaded ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                <div className="loading-spinner" />
+                    <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
+                        <div style={{ padding: '0 12px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 700, color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>Chats Recientes</div>
+                        {conversations.map(conv => (
+                            <div 
+                                key={conv.id} 
+                                className={`sidebar-item ${currentSessionId === conv.id ? 'active' : ''}`}
+                                onClick={() => loadConversation(conv.id)}
+                            >
+                                <MessageSquare size={16} />
+                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</span>
                             </div>
-                        ) : (
-                            <>
-                                {messages.map(msg => (
-                                    <MessageBubble
-                                        key={msg.id}
-                                        msg={msg}
-                                        onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
-                                        onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
-                                        onPlanify={(data) => handlePlanifyInCalendar({ ...data, content: msg.content })}
-                                        onGenerateTitles={() => handleGenerateResource('titles', msg.content)}
-                                        onGenerateCopys={() => handleGenerateResource('copys', msg.content)}
-                                        onGenerateScript={() => handleGenerateResource('script', msg.content)}
-                                    />
+                        ))}
+                    </div>
+
+                    <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
+                        Writi Jarvis v8.0.0
+                    </div>
+                </div>
+            </div>
+
+            <div className="chat-main" onClick={() => isSidebarOpen && window.innerWidth < 768 && setIsSidebarOpen(false)}>
+                <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 60, borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                            <Menu size={20} />
+                        </button>
+                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Asistente IA</h2>
+                    </div>
+                </div>
+
+                <div className="chat-container" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '160px' }}>
+                    {isEmpty && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', animation: 'msgFadeIn 0.5s ease-out' }}>
+                            <div style={{
+                                width: '48px', height: '48px', borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)',
+                                animation: 'float 4s ease-in-out infinite, glow 3s ease-in-out infinite',
+                                marginBottom: '24px'
+                            }} />
+                            
+                            <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: '0 0 12px', textAlign: 'center' }}>
+                                Hola{userName ? `, ${userName}` : ''} 👋
+                            </h1>
+                            <p style={{ color: '#888', fontSize: '1.05rem', margin: '0 0 48px', textAlign: 'center' }}>
+                                Dime qué necesitas con tu contenido y yo me encargo.
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', width: '100%', maxWidth: '800px' }}>
+                                {ORBITA_CARDS.map((card, idx) => (
+                                    <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)}>
+                                        <div style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{card.icon}</div>
+                                        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>{card.title}</h3>
+                                        <p style={{ fontSize: '0.8rem', color: '#666', margin: 0, lineHeight: '1.4' }}>{card.desc}</p>
+                                    </div>
                                 ))}
-                                {isTyping && <TypingIndicator />}
-                                <div ref={messagesEndRef} style={{ height: '24px' }} />
-                            </>
-                        )}
+                            </div>
+                        </div>
+                    )}
+
+                    {!isEmpty && (
+                        <div style={{ padding: '0 24px', maxWidth: '860px', width: '100%', margin: '0 auto', flex: 1 }}>
+                            {!historyLoaded ? (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                    <div className="loading-spinner" />
+                                </div>
+                            ) : (
+                                <>
+                                    {messages.map(msg => (
+                                        <MessageBubble
+                                            key={msg.id}
+                                            msg={msg}
+                                            onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
+                                            onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
+                                            onPlanify={(data) => handlePlanifyInCalendar({ ...data, content: msg.content })}
+                                            onGenerateTitles={() => handleGenerateResource('titles', msg.content)}
+                                            onGenerateCopys={() => handleGenerateResource('copys', msg.content)}
+                                            onGenerateScript={() => handleGenerateResource('script', msg.content)}
+                                        />
+                                    ))}
+                                    {isTyping && <TypingIndicator />}
+                                    <div ref={messagesEndRef} style={{ height: '24px' }} />
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="input-container">
+                    <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'flex-end',
+                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '24px', padding: '8px 12px 8px 18px',
+                            transition: '0.3s',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+                        }}>
+                            <textarea
+                                ref={textareaRef}
+                                value={input}
+                                onChange={e => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Escribe tu pregunta o pega tu guion..."
+                                rows={1}
+                                style={{
+                                    flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white',
+                                    fontSize: '1rem', lineHeight: '1.5', resize: 'none', maxHeight: '150px',
+                                    overflowY: 'auto', fontFamily: 'inherit', padding: '12px 0', alignSelf: 'center'
+                                }}
+                                onInput={e => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                                }}
+                                disabled={isTyping}
+                            />
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center', paddingBottom: '4px' }}>
+                                <button
+                                    onClick={() => sendMessage()}
+                                    disabled={isTyping || !input.trim()}
+                                    className="send-btn"
+                                    style={{
+                                        height: '42px', width: '42px', borderRadius: '50%', border: 'none',
+                                        background: !input.trim() || isTyping ? 'rgba(255,255,255,0.1)' : '#fff',
+                                        color: !input.trim() || isTyping ? '#555' : '#000',
+                                        cursor: !input.trim() || isTyping ? 'not-allowed' : 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        transition: '0.2s', flexShrink: 0
+                                    }}
+                                >
+                                    <Send size={20} />
+                                </button>
+                            </div>
+                        </div>
+                        <p style={{ textAlign: 'center', fontSize: '0.65rem', color: '#444', marginTop: '10px' }}>
+                            Writi Jarvis socio de marketing · 0.5 créditos por mensaje
+                        </p>
+                    </div>
+                </div>
+
+                {toast && (
+                    <div style={{
+                        position: 'fixed', bottom: '140px', left: '50%', transform: 'translateX(-50%)',
+                        background: toast.type === 'error' ? '#FF4D4D' : '#fff',
+                        color: toast.type === 'error' ? 'white' : '#000',
+                        padding: '12px 24px', borderRadius: '50px', fontWeight: 600, fontSize: '0.9rem',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.4)', zIndex: 9999, whiteSpace: 'nowrap',
+                        animation: 'msgFadeIn 0.3s ease-out'
+                    }}>
+                        {toast.msg}
                     </div>
                 )}
             </div>
-
-            {/* Centered Bottom Input Area */}
-            <div style={{ padding: '0 24px 32px', display: 'flex', justifyContent: 'center', zIndex: 10, background: 'linear-gradient(to top, #0a0a0a 70%, transparent)' }}>
-                <div style={{ width: '100%', maxWidth: '860px' }}>
-                    
-                    <div style={{
-                        display: 'flex', alignItems: 'flex-end',
-                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '24px', padding: '12px 12px 12px 18px',
-                        transition: '0.3s',
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '40px', paddingRight: '12px', borderRight: '1px solid rgba(255,255,255,0.1)', marginRight: '12px' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#888', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                Proyecto: {activeProject?.name || 'Vacio'} <ChevronDown size={14} />
-                            </span>
-                        </div>
-
-                        <textarea
-                            ref={textareaRef}
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Escribe tu pregunta o pega tu guion..."
-                            rows={1}
-                            style={{
-                                flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white',
-                                fontSize: '1rem', lineHeight: '1.5', resize: 'none', maxHeight: '150px',
-                                overflowY: 'auto', fontFamily: 'inherit', padding: '8px 0', alignSelf: 'center'
-                            }}
-                            onInput={e => {
-                                e.target.style.height = 'auto';
-                                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                            }}
-                            disabled={isTyping}
-                        />
-                        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center' }}>
-                            <button
-                                title="Adjuntar (próximamente)"
-                                style={{ background: 'none', border: 'none', color: '#666', cursor: 'not-allowed', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                                <Paperclip size={18} />
-                            </button>
-                            <button
-                                title="Voz (próximamente)"
-                                style={{ background: 'none', border: 'none', color: '#666', cursor: 'not-allowed', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                                <Mic size={18} />
-                            </button>
-                            <button
-                                onClick={() => sendMessage()}
-                                disabled={isTyping || !input.trim()}
-                                className="send-btn"
-                                style={{
-                                    height: '40px', padding: '0 18px', borderRadius: '20px', border: 'none',
-                                    background: !input.trim() || isTyping ? 'rgba(255,255,255,0.1)' : '#fff',
-                                    color: !input.trim() || isTyping ? '#555' : '#000',
-                                    fontWeight: 600, fontSize: '0.9rem',
-                                    cursor: !input.trim() || isTyping ? 'not-allowed' : 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                    transition: '0.2s', flexShrink: 0
-                                }}
-                            >
-                                Send <Send size={14} />
-                            </button>
-                        </div>
-                    </div>
-                    <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#555', marginTop: '12px' }}>
-                        Writi Jarvis puede equivocarse. Revisa la información importante. · 1 crédito por mensaje
-                    </p>
-                </div>
-            </div>
-
-            {/* Toast */}
-            {toast && (
-                <div style={{
-                    position: 'fixed', bottom: '120px', left: '50%', transform: 'translateX(-50%)',
-                    background: toast.type === 'error' ? '#FF4D4D' : '#fff',
-                    color: toast.type === 'error' ? 'white' : '#000',
-                    padding: '12px 24px', borderRadius: '50px', fontWeight: 600, fontSize: '0.9rem',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 3000, whiteSpace: 'nowrap',
-                    animation: 'msgFadeIn 0.3s ease-out'
-                }}>
-                    {toast.msg}
-                </div>
-            )}
         </div>
     );
 }

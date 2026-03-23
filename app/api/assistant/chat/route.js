@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
-import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
-import { chargeCredits } from '@/lib/credits';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
+import { checkAssistantLimit, incrementAssistantUsage } from '@/lib/assistant-limits';
+import { createClient } from '@supabase/supabase-js';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
+import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
@@ -32,18 +34,23 @@ Este proyecto no tiene Cerebro IA aún. Sugiere amablemente al usuario que lo co
     const modeInstruction = mode && modeGuide[mode] ? modeGuide[mode] : '';
     const userName_str = userName ? `\nHablas con: ${userName}.` : '';
 
-    return `Eres "WRITI JARVIS", el estratega de contenido y marketer experto.${userName_str}
+    return `Eres "JARVIS", el socio de marketing y amigo cercano de ${userName || 'tu usuario'}.
 
-REGLAS ESTRICTAS:
-1. CERO HUMO: NUNCA asumas logros falsos. Sé real y honesto.
-2. MUY CORTO Y DIRECTO: Frases cortas, sin relleno motivacional.
-3. LENGUAJE HUMANO: Habla como un colega marketer por Slack.
-4. TEXTOS LISTOS PARA USAR: Sin introducciones innecesarias.
-5. PROACTIVO: Ofrece siempre el siguiente paso concreto.
+TU PERSONALIDAD:
+- Eres un estratega de contenido brillante, pero hablas como un colega de confianza.
+- Tono: Cercano, entusiasta, profesional pero sencillo (sin tecnicismos innecesarios).
+- Proactivo: Si el usuario te pide algo simple, ofrece una mejora o el siguiente paso lógico.
+- Curioso: Haz preguntas de seguimiento si necesitas más contexto para dar un resultado de 10.
 
-CONTEXTO:
+REGLAS DE ORO:
+1. FOCO TOTAL: Solo hablas de marketing, guiones, estrategia y contenido.
+2. CERO HUMO: Sé honesto. Si algo no funcionará, dilo con tacto pero con firmeza.
+3. LISTO PARA USAR: Las respuestas deben ser prácticas. Menos charla, más valor.
+
+CONTEXTO DEL NEGOCIO:
 ${brainContext}
 ${modeInstruction}
+
 IDIOMA: Responde SIEMPRE en el mismo idioma del usuario.`;
 }
 
@@ -69,8 +76,24 @@ export async function POST(req) {
 
         const verifiedUserId = user.id;
 
-        // Charge 1 credit per message
-        const creditResult = await chargeCredits(supabase, verifiedUserId, 1, 'assistant_chat', projectId);
+        // ─── Rate Limiting (v8.0.0) ───────────────────────────
+        // Use service role for internal stats management
+        const serviceSupabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        const limitResult = await checkAssistantLimit(serviceSupabase, user.id);
+        
+        if (!limitResult.allowed) {
+            const msg = limitResult.reason === 'DAILY_CAP_REACHED' 
+                ? 'Has alcanzado el límite diario de la IA. Vuelve mañana para seguir creando.'
+                : `Has enviado muchos mensajes. Por favor, descansa ${limitResult.waitMinutes} min y volvemos a tope.`;
+            
+            return NextResponse.json({ 
+                error: msg, 
+                code: 'RATE_LIMIT' 
+            }, { status: 429 });
+        }
+
+        // Charge credits (0.5 per message as per CREDIT_COSTS)
+        const creditResult = await chargeCredits(supabase, user.id, CREDIT_COSTS.ASSISTANT_CHAT, 'assistant_chat', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
@@ -109,6 +132,10 @@ export async function POST(req) {
             systemPrompt,
             userMessage: fullUserMessage,
         });
+
+        // Update usage stats (increment message count and track tokens)
+        const tokenEstimate = (content?.length || 0) / 4; // Simple heuristic
+        await incrementAssistantUsage(serviceSupabase, user.id, Math.ceil(tokenEstimate));
 
         return NextResponse.json({ reply: content || 'No pude generar respuesta.' });
 
