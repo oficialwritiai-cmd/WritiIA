@@ -78,7 +78,7 @@ export default function CalendarPage() {
     // -- Lifecycle --
     useEffect(() => {
         loadData();
-        
+
         // Mobile detection
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 1024);
@@ -87,6 +87,67 @@ export default function CalendarPage() {
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, [currentDate, activeProject]);
+
+    // Cargar guion vinculado cuando se selecciona un evento
+    useEffect(() => {
+        async function loadLinkedScript() {
+            if (!selectedEvent) {
+                setLinkedScript(null);
+                return;
+            }
+
+            // Verificar si el evento tiene guion vinculado
+            const hasScript = selectedEvent.has_script || selectedEvent.reference_id;
+            if (!hasScript) {
+                setLinkedScript(null);
+                return;
+            }
+
+            setLoadingScript(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // Intentar cargar el guion de la tabla library o scripts
+                const scriptId = selectedEvent.reference_id || selectedEvent.id;
+
+                // Primero buscar en library
+                const { data: libData } = await supabase
+                    .from('library')
+                    .select('*')
+                    .eq('id', scriptId)
+                    .single();
+
+                if (libData) {
+                    setLinkedScript(libData);
+                } else {
+                    // Intentar buscar en content_slots si tiene guion
+                    const { data: slotData } = await supabase
+                        .from('content_slots')
+                        .select('*')
+                        .eq('id', selectedEvent.id)
+                        .single();
+
+                    if (slotData?.script_content) {
+                        setLinkedScript({
+                            id: slotData.id,
+                            content: slotData.script_content,
+                            gancho: slotData.script_content?.hook || slotData.script_content?.gancho,
+                            desarrollo: slotData.script_content?.desarrollo || slotData.script_content?.puntos,
+                            cta: slotData.script_content?.cta || slotData.script_content?.cierre,
+                            copy_post: slotData.copy_content
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading linked script:', err);
+            } finally {
+                setLoadingScript(false);
+            }
+        }
+
+        loadLinkedScript();
+    }, [selectedEvent]);
 
     async function loadData() {
         setLoading(true);
