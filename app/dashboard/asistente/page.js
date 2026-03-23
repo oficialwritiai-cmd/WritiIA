@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v3.5.0 (Jarvis + Orbita Style Redesign)
+// Asistente IA (Chat Pro) — v8.0.0 (Jarvis + Multi-Chat History)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
