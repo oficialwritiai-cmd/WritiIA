@@ -413,11 +413,17 @@ export default function DashboardPage() {
                 
                 if (slots && slots.length > 0) {
                     setPlanSlots(slots);
-                    // If we found slots, we should stay in Step 3 if we were already in "plan" mode
-                    // But we don't want to force Step 3 if the user is in the Wizard.
-                    // setStep(prev => (prev === 1 ? 3 : prev)); 
-                    // v5.1.2: Only set step 3 if we are NOT in the middle of a generation/wizard
-                    if (step === 1) setStep(3);
+                    // v5.1.2: Solo saltar al step 3 si verdaderamente estamos en 'plan' mode
+                    // y no estamos en medio de un form wizard (step === 1).
+                    setGenerationMode(currentMode => {
+                        setStep(currentStep => {
+                            if (currentMode === 'plan' && currentStep === 1) {
+                                return 3;
+                            }
+                            return currentStep;
+                        });
+                        return currentMode;
+                    });
                 }
             }
         } catch (err) {
