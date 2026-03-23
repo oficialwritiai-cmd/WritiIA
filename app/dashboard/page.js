@@ -638,7 +638,7 @@ export default function DashboardPage() {
                 if (params.get('source_event_id')) setSourceEventId(params.get('source_event_id'));
 
                 setGenerationMode('single');
-                setWizardStep(3); // Land on Step 3 (Details/Hooks)
+                setWizardStep(2); // Land on Step 2 (Contexto y Tema)
                 setStep(1); // Stay on form view
 
                 // Do not clear history yet if we need source_event_id in handleSaveScript
