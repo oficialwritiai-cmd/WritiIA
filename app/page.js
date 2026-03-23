@@ -574,29 +574,31 @@ export default function LandingPage() {
             <section id="pricing" className="lp-section">
                 <span className="lp-section-label">Pricing</span>
                 <h2 className="lp-section-title">Un plan. Todo incluido.</h2>
-                <p className="lp-section-sub">Sin sorpresas, sin planes confusos. Accede a todo lo que necesitas para planear tu mes de contenido.</p>
+                <p className="lp-section-sub">Tu cerebro de contenido con IA para tener todo el mes de guiones y calendario listo en minutos</p>
 
                 <div className="lp-pricing-wrap">
                     <div className="lp-pricing-card">
-                        <div className="lp-pricing-badge">PLAN PRO</div>
-                        <div className="lp-pricing-price">$39</div>
+                        <div className="lp-pricing-badge">PLAN PRO (Lanzamiento)</div>
+                        <div className="lp-pricing-price">24,90 €</div>
                         <div className="lp-pricing-period">por mes · facturado mensualmente</div>
-                        <div className="lp-pricing-trial">
-                            <span style={{ color: '#34d399' }}>✓</span>
-                            Prueba gratis 7 días con tu llave de acceso
+                        
+                        <div style={{ marginTop: '12px', background: 'rgba(157,0,255,0.1)', border: '1px solid rgba(157,0,255,0.3)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                            <strong style={{ display: 'block', color: '#c084fc', fontSize: '0.9rem', marginBottom: '4px' }}>Oferta de lanzamiento: hoy 24,90 €/mes.</strong>
+                            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>Más adelante este mismo plan valdrá 39 €/mes.</span>
                         </div>
 
-                        <ul className="lp-pricing-features">
+                        <ul className="lp-pricing-features" style={{ marginTop: '24px' }}>
                             {[
                                 'Ideas estratégicas ilimitadas (dentro de tus créditos)',
                                 'Guiones completos listos para grabar',
-                                'Calendario IA mensual automático',
-                                'Cerebro IA: memoria de tu marca y audiencia',
-                                'Editor de guiones con IA (gancho, desarrollo, CTA)',
+                                'Calendario IA mensual automático tipo Google Calendar',
+                                '“Cerebro IA”: recuerda tu marca, audiencia y estilo',
+                                'Editor de guiones con IA (gancho, desarrollo, CTA, versiones virales...)',
                                 'Biblioteca de guiones con historial completo',
                                 'Drag & drop en el calendario para reorganizar',
                                 'Exportar guiones en texto en 1 clic',
-                                'Créditos IA mensual + compra de créditos extra',
+                                'Créditos IA mensuales + opción de comprar créditos extra',
+                                'Asistente de IA en chat: modifica planes, pide ideas o ajusta formatos'
                             ].map((feat, i) => (
                                 <li key={i}>
                                     <span className="lp-pricing-check">✓</span>
@@ -609,13 +611,18 @@ export default function LandingPage() {
                             onClick={handleStart}
                             className="lp-cta-primary"
                             disabled={loading}
-                            style={{ width: '100%', justifyContent: 'center', padding: '18px 32px', fontSize: '1.05rem' }}
+                            style={{ width: '100%', justifyContent: 'center', padding: '18px 32px', fontSize: '1.05rem', marginTop: '16px' }}
                         >
                             ⚡ {loading ? 'Conectando con Stripe...' : 'Empezar ahora'}
                         </button>
 
-                        <p className="lp-pricing-note">
-                            7 días gratis sin cargo. Cancela cuando quieras.<br />
+                        <div className="lp-pricing-trial" style={{ justifyContent: 'center', marginTop: '16px', border: 'none', padding: 0 }}>
+                            <span style={{ color: '#34d399' }}>✓</span>
+                            Prueba gratis de 7 días
+                        </div>
+
+                        <p className="lp-pricing-note" style={{ marginTop: '16px' }}>
+                            Cancela cuando quieras.<br />
                             Pago 100% seguro vía Stripe 🔒
                         </p>
                     </div>

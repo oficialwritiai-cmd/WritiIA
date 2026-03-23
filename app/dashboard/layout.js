@@ -953,7 +953,7 @@ export default function DashboardLayout({ children }) {
                                         className="btn-primary"
                                         style={{ padding: '16px 32px', fontSize: '1rem', fontWeight: 800, height: 'auto' }}
                                     >
-                                        🎯 Elegir Plan Pro
+                                        🎯 Elegir PLAN PRO (Lanzamiento)
                                     </button>
                                     <button
                                         onClick={() => { setShowNoCreditsModal(false); setIsCreditsModalOpen(true); }}

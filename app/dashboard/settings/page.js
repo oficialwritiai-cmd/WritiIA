@@ -204,20 +204,22 @@ export default function SettingsPage() {
                 <div className="settings-section">
                     <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '16px', color: 'rgba(255,255,255,0.4)' }}>SUSCRIPCIÓN</h2>
                     <div className="premium-card" style={{ padding: '40px', textAlign: 'center', background: 'rgba(126, 206, 202, 0.03)', border: '1px solid #7ECECA20' }}>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7ECECA', marginBottom: '8px' }}>Plan Pro</h3>
+                        <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7ECECA', marginBottom: '8px' }}>PLAN PRO (Lanzamiento)</h3>
                         <div style={{ marginBottom: '24px' }}>
-                            <span style={{ fontSize: '3rem', fontWeight: 900 }}>€39</span>
+                            <span style={{ fontSize: '3rem', fontWeight: 900 }}>24,90 €</span>
                             <span style={{ color: 'var(--text-secondary)' }}>/mes</span>
                         </div>
-                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '32px' }}>
-                            Precio de lanzamiento. Subirá a €49/mes para nuevos usuarios.
-                        </p>
+                        <div style={{ marginBottom: '32px', display: 'inline-block', background: 'rgba(157,0,255,0.1)', border: '1px solid rgba(157,0,255,0.3)', padding: '12px 24px', borderRadius: '8px' }}>
+                            <strong style={{ color: '#c084fc', fontSize: '0.9rem', display: 'block' }}>Oferta de lanzamiento: hoy 24,90 €/mes.</strong>
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>Más adelante este mismo plan valdrá 39 €/mes.</span>
+                        </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginBottom: '32px' }}>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>40 guiones avanzados/mes</strong> (200 créditos IA)</div>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Todas las plataformas:</strong> Reels, TikTok, Shorts, LinkedIn, X</div>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Cerebro IA</strong> — memoria de tu voz de marca</div>
-                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Biblioteca + Calendario</strong> — organiza tu contenido</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Ideas estratégicas ilimitadas</strong> (con tus créditos)</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Guiones completos listos para grabar</strong></div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Calendario IA automático</strong> con Drag & Drop</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>“Cerebro IA”</strong> — memoria de tu marca y estilo</div>
+                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.9rem' }}>✓ <strong>Asistente IA en el chat</strong> para planes y dudas</div>
                         </div>
 
                         {periodEnd && (
@@ -237,9 +239,9 @@ export default function SettingsPage() {
                             {planLoading ? (
                                 <><Loader2 size={20} className="animate-spin" /> Redirigiendo a Stripe...</>
                             ) : plan === 'pro' ? (
-                                '✅ Plan Pro Activo'
+                                '✅ PLAN PRO (Lanzamiento) Activo'
                             ) : (
-                                'Empezar ahora por €39/mes →'
+                                'Empezar ahora por 24,90 €/mes →'
                             )}
                         </button>
                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '16px' }}>

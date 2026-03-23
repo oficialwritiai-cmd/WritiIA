@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 // Product ID for Writi Plan Pro (monthly subscription)
-const PLAN_PRO_PRODUCT_ID = 'prod_U5UwL2r9WiYZXS';
+const PLAN_PRO_PRODUCT_ID = 'prod_UCYvpgtHDqmkqX';
 
 export async function POST(request) {
     try {
