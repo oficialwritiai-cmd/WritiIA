@@ -779,7 +779,7 @@ export default function CalendarPage() {
         return (
             <div
                 className="cal-mobile-agenda"
-                style={{ flex: 1, overflowY: 'auto', background: '#050505', padding: '10px 15px', touchAction: 'pan-y' }}
+                style={{ flex: 1, overflowY: 'auto', background: '#050505', padding: '10px 15px 120px 15px', touchAction: 'pan-y' }}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

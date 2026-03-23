@@ -329,7 +329,17 @@ export default function IdeaPage() {
 
     async function handleGenerate() {
         const realSlotId = slot?.id;
-        if (!realSlotId) { alert('No slot vinculado.'); return; }
+        if (!realSlotId) { 
+            const params = new URLSearchParams();
+            params.set('mode', 'single');
+            params.set('topic', `${title}\n${description}`);
+            params.set('platform', genPlatform || platform || 'Reels');
+            params.set('goal', goal || 'Viralidad pura');
+            params.set('source_type', 'calendar_events');
+            params.set('source_reference_id', slot_id);
+            router.push(`/dashboard?${params.toString()}`);
+            return;
+        }
         setGenerating(true);
         setShowGenOptions(false);
         setSlotStatus('script_generating');
