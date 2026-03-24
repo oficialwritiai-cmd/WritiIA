@@ -588,6 +588,9 @@ export default function AsistentePage() {
                         background: #0a0a0a;
                     }
                 }
+                @media (min-width: 1025px) {
+                    .sidebar-close-btn { display: none !important; }
+                }
             `}</style>
             
 
@@ -737,7 +740,8 @@ export default function AsistentePage() {
                         {/* Close button for mobile */}
                         <button 
                             onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
-                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', borderRadius: '50%', padding: '6px', cursor: 'pointer', zIndex: 10, display: window.innerWidth < 1024 ? 'block' : 'none' }}
+                            className="sidebar-close-btn"
+                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', borderRadius: '50%', padding: '6px', cursor: 'pointer', zIndex: 10 }}
                         >
                             <X size={20} />
                         </button>
