@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.9.6 (Nuclear Mobile Sidebar Fix — v1.16.6)
+// Asistente IA (Chat Pro) — v8.9.7 (Nuclear Mobile Sidebar Fix — v1.16.7)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -646,10 +646,18 @@ export default function AsistentePage() {
                         </button>
                         <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
                     </div>
+                    <button 
+                        onClick={() => window.location.reload(true)}
+                        style={{ background: 'rgba(255,50,50,0.1)', color: '#FF4D4D', border: '1px solid rgba(255,50,50,0.2)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Limpiar App
+                    </button>
                 </div>
 
                 <div className="chat-container" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '160px' }}>
-                    {isEmpty && (
+                    
+                    {/* Welcome Screen - Only if truly empty and history is ready */}
+                    {(historyLoaded && (!messages || messages.length === 0)) && (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', animation: 'msgFadeIn 0.5s ease-out' }}>
                             <div style={{
                                 width: '48px', height: '48px', borderRadius: '50%',
@@ -677,10 +685,11 @@ export default function AsistentePage() {
                         </div>
                     )}
 
-                    {!isEmpty && (
+                    {/* Chat Messages */}
+                    {((messages && messages.length > 0) || !historyLoaded) && (
                         <div style={{ padding: '0 24px', maxWidth: '860px', width: '100%', margin: '0 auto', flex: 1 }}>
-                            {(!historyLoaded && messages.length === 0) ? (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            {(!historyLoaded && (!messages || messages.length === 0)) ? (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
                                     <div className="loading-spinner" />
                                 </div>
                             ) : (
