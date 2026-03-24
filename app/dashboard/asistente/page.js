@@ -338,7 +338,7 @@ export default function AsistentePage() {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
-            setIsTyping(true);
+            const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
             const res = await fetch('/api/assistant/chat', {
                 method: 'POST',
                 headers: { 
@@ -681,7 +681,7 @@ export default function AsistentePage() {
 
                     {!isEmpty && (
                         <div style={{ padding: '0 24px', maxWidth: '860px', width: '100%', margin: '0 auto', flex: 1 }}>
-                            {!historyLoaded ? (
+                            {(!historyLoaded && messages.length === 0) ? (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                     <div className="loading-spinner" />
                                 </div>
