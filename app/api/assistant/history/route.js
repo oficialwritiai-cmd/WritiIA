@@ -113,3 +113,17 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Error guardando historial.' }, { status: 500 });
     }
 }
+export async function DELETE(req) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
+
+        const supabase = getSupabase();
+        await supabase.from('chat_conversations').update({ is_archived: true }).eq('id', id);
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('[assistant/history] DELETE Error:', error);
+        return NextResponse.json({ error: 'Error eliminando.' }, { status: 500 });
+    }
+}

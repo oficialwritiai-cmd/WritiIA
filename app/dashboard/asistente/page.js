@@ -195,7 +195,7 @@ export default function AsistentePage() {
     const [userName, setUserName] = useState('');
     const [userId, setUserId] = useState(null);
     const [toast, setToast] = useState(null);
-    const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [historyLoaded, setHistoryLoaded] = useState(true);
     const [conversations, setConversations] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -437,8 +437,14 @@ export default function AsistentePage() {
     const deleteConversation = async (e, id) => {
         e.stopPropagation();
         if (!confirm('¿Borrar definitivamente esta conversación?')) return;
-        // Logic for deletion could be added here (archiving)
-        showToast('Conversación eliminada', 'info');
+        try {
+            await fetch(`/api/assistant/history?id=${id}`, { method: 'DELETE' });
+            setConversations(prev => prev.filter(c => c.id !== id));
+            if (currentSessionId === id) startNewChat();
+            showToast('Conversación eliminada', 'info');
+        } catch {
+            showToast('Error al eliminar', 'error');
+        }
     };
 
     const isEmpty = messages.length === 0 && historyLoaded;
