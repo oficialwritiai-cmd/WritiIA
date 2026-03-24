@@ -97,7 +97,7 @@ export async function POST(req) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object;
-                await handleCheckoutCompleted(session, supabase);
+                await handleCheckoutCompleted(session, supabase, logEntry);
                 break;
             }
 
@@ -155,7 +155,7 @@ export async function POST(req) {
 // ─────────────────────────────────────────────
 // Checkout Session Completed
 // ─────────────────────────────────────────────
-async function handleCheckoutCompleted(session, supabase) {
+async function handleCheckoutCompleted(session, supabase, logEntry = null) {
     const type = session.metadata?.type;
     let userId = session.metadata?.userId || session.client_reference_id;
     const customerId = session.customer;
@@ -371,7 +371,7 @@ async function handleCheckoutCompleted(session, supabase) {
 
         // Sync legacy table quietly
         await supabase.from('ai_credits').update({
-            total_credits: (currentProfile.credits_balance || 0) + amount,
+            total_credits: newBalance,
             updated_at: new Date().toISOString()
         }).eq('user_id', userId).catch(() => {});
 

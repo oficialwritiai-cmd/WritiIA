@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v6.7.0'; // v6.7.0 (Calendar Sync & Multi-Event Fix)
+export const VERSION = 'v1.16.0'; // Updated for Beta Readiness
 
 
 
@@ -353,16 +353,9 @@ export default function DashboardPage() {
         const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
         setProfile(profileData || user);
 
-        // Credits - prefer profile.credits_balance, but fallback if 0 to check legacy
-        const { data: legacyCreds } = await supabase.from('ai_credits').select('*').eq('user_id', user.id).single();
-        const netLegacy = legacyCreds ? (legacyCreds.total_credits - legacyCreds.used_credits) : 0;
-
-        if (profileData && profileData.credits_balance !== null && profileData.credits_balance !== undefined && (profileData.credits_balance > 0 || netLegacy <= 0)) {
+        // Credits - Unified System v2.0
+        if (profileData) {
             setAiCredits({ total: profileData.credits_balance || 0, used: 0 });
-        } else if (legacyCreds) {
-            setAiCredits({ total: legacyCreds.total_credits || 0, used: legacyCreds.used_credits || 0 });
-        } else {
-            setAiCredits({ total: 0, used: 0 });
         }
 
         // Library Ideas - FILTERED BY PROJECT
@@ -522,17 +515,7 @@ export default function DashboardPage() {
     async function fetchCredits(userId) {
         if (!userId) return { total: 0, used: 0 };
         const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', userId).single();
-        const { data: legacyCreds } = await supabase.from('ai_credits').select('*').eq('user_id', userId).single();
-        const netLegacy = legacyCreds ? (legacyCreds.total_credits - legacyCreds.used_credits) : 0;
-
-        let creditsObj;
-        if (profileData && profileData.credits_balance !== null && profileData.credits_balance !== undefined && (profileData.credits_balance > 0 || netLegacy <= 0)) {
-            creditsObj = { total: profileData.credits_balance, used: 0 };
-        } else if (legacyCreds) {
-            creditsObj = { total: legacyCreds.total_credits, used: legacyCreds.used_credits };
-        } else {
-            creditsObj = { total: 0, used: 0 };
-        }
+        const creditsObj = { total: profileData?.credits_balance || 0, used: 0 };
         setAiCredits(creditsObj);
         return creditsObj; // Return so callers can use fresh data immediately
     }

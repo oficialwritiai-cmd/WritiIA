@@ -149,7 +149,10 @@ export default function LoginPage() {
                         is_admin: isMasterKey ? true : false,
                         trial_started_at: isTrialActive ? now.toISOString() : null,
                         trial_ends_at: isTrialActive ? trialEnds.toISOString() : null,
-                        is_trial_active: isTrialActive,
+                        trial_active: isTrialActive,
+                        // Also set initial credits for trial users
+                        credits_balance: isTrialActive ? 50 : 0,
+                        subscription_status: isTrialActive ? 'trial' : 'pending',
                         created_at: now.toISOString()
                     });
 
