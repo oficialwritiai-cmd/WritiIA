@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.7.0 (Nico Definitive Fixed Sidebar + Hardware Acceleration)
+// Asistente IA (Chat Pro) — v8.8.0 (Definitive Mobile Sidebar Port-Fix)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -514,27 +514,30 @@ export default function AsistentePage() {
                     opacity: 0;
                     pointer-events: none;
                 }
-                @media (max-width: 768px) {
+                @media (max-width: 1024px) {
                     .sidebar {
                         position: fixed;
                         top: 0;
                         bottom: 0;
                         left: 0;
                         width: 280px;
-                        transform: translateX(-100%);
-                        z-index: 9999;
+                        transform: translateX(-101%);
+                        z-index: 99999 !important;
                         background: #111;
                         height: 100vh;
                         opacity: 1 !important;
+                        visibility: visible !important;
                         pointer-events: auto !important;
                     }
                     .sidebar.open {
-                        transform: translateX(0);
+                        transform: translateX(0) !important;
                         box-shadow: 20px 0 50px rgba(0,0,0,0.8);
+                        visibility: visible !important;
+                        opacity: 1 !important;
                     }
                     .sidebar.closed {
                         width: 280px;
-                        transform: translateX(-100%);
+                        transform: translateX(-101%) !important;
                     }
                     .chat-container {
                         padding-bottom: 120px !important;
@@ -585,42 +588,6 @@ export default function AsistentePage() {
                 }
             `}</style>
             
-            <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-                <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, position: 'relative' }}>
-                    {/* Close button for mobile */}
-                    <button 
-                        onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#444', cursor: 'pointer', display: window.innerWidth < 768 ? 'block' : 'none' }}
-                    >
-                        <X size={20} />
-                    </button>
-
-                    <button 
-                        onClick={startNewChat}
-                        style={{ background: 'white', color: 'black', border: 'none', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                        <Plus size={18} /> Nuevo Chat
-                    </button>
-
-                    <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
-                        <div style={{ padding: '0 12px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 700, color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>Chats Recientes</div>
-                        {conversations.map(conv => (
-                            <div 
-                                key={conv.id} 
-                                className={`sidebar-item ${currentSessionId === conv.id ? 'active' : ''}`}
-                                onClick={() => loadConversation(conv.id)}
-                            >
-                                <MessageSquare size={16} />
-                                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
-                        Writi Nico v8.3.0
-                    </div>
-                </div>
-            </div>
 
             <div className="chat-main" onClick={() => isSidebarOpen && window.innerWidth < 768 && setIsSidebarOpen(false)}>
                 <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 60, borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
@@ -762,16 +729,56 @@ export default function AsistentePage() {
                     </div>
                 )}
 
+                {/* Definitive Sidebar Fixed (Mobile) & Desktop Regular */}
+                <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`} style={{ visibility: isSidebarOpen ? 'visible' : (window.innerWidth < 1024 ? 'hidden' : 'visible') }}>
+                    <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, position: 'relative' }}>
+                        {/* Close button for mobile */}
+                        <button 
+                            onClick={() => setIsSidebarOpen(false)}
+                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: window.innerWidth < 1024 ? 'block' : 'none' }}
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <button 
+                            onClick={startNewChat}
+                            style={{ background: 'white', color: 'black', border: 'none', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            <Plus size={18} /> Nuevo Chat
+                        </button>
+
+                        <div style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
+                            <div style={{ padding: '0 12px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 700, color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>Chats Recientes</div>
+                            {conversations.map(conv => (
+                                <div 
+                                    key={conv.id} 
+                                    className={`sidebar-item ${currentSessionId === conv.id ? 'active' : ''}`}
+                                    onClick={() => { loadConversation(conv.id); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                                >
+                                    <MessageSquare size={16} />
+                                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
+                            Writi Nico v8.8.0
+                        </div>
+                    </div>
+                </div>
+
                 {/* Mobile Overlay */}
                 {isSidebarOpen && (
                     <div 
                         onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 9998, animation: 'msgFadeIn 0.3s' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 99998, animation: 'msgFadeIn 0.3s' }}
                         className="mobile-overlay-only"
-                    />
+                    >
+                        <div style={{ position: 'absolute', bottom: '20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>Nico · v8.8.0</div>
+                    </div>
                 )}
                 <style>{`
-                    @media (min-width: 769px) {
+                    @media (min-width: 1025px) {
                         .mobile-overlay-only { display: none !important; }
                     }
                 `}</style>
