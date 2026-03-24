@@ -213,8 +213,9 @@ export default function AsistentePage() {
         const check = () => setIsMobile(window.innerWidth < 1024);
         check();
         window.addEventListener('resize', check);
+        window.writiChatDebug = { setMessages, setIsTyping, setHistoryLoaded, messages, isTyping, userId };
         return () => window.removeEventListener('resize', check);
-    }, []);
+    }, [messages, isTyping, userId]);
 
     // Keyboard Shortcuts
     useEffect(() => {
@@ -687,7 +688,7 @@ export default function AsistentePage() {
                                 </div>
                             ) : (
                                 <>
-                                    {messages.map((msg, index) => (
+                                    {Array.isArray(messages) && messages.map((msg, index) => (
                                         <MessageBubble
                                             key={msg.id || index}
                                             msg={msg}
@@ -707,7 +708,7 @@ export default function AsistentePage() {
                     )}
                 </div>
 
-                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`} style={{ zIndex: isSidebarOpen && isMobile ? 5 : 200 }}>
+                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`} style={{ zIndex: 2147483640 }}>
                     <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
                         <div style={{
                             display: 'flex', alignItems: 'flex-end',
