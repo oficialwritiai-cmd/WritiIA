@@ -284,9 +284,6 @@ export default function AsistentePage() {
         if (!userId) return;
         setHistoryLoaded(false);
         fetchConversations().finally(() => setHistoryLoaded(true));
-        // Reset state when project changes
-        setMessages([]);
-        setCurrentSessionId(null);
     }, [userId, activeProject?.id, fetchConversations]);
 
     // Auto-scroll
@@ -611,7 +608,7 @@ export default function AsistentePage() {
                     right: 0;
                     padding: 24px;
                     background: linear-gradient(to top, #0a0a0a 80%, transparent);
-                    z-index: 50;
+                    z-index: 2147483640;
                     transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 }
                 .input-container.wide {
