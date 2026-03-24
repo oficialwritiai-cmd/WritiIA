@@ -629,22 +629,17 @@ export default function AsistentePage() {
             `}</style>
             
 
-            <div className="chat-main">
-                <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 60, borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
+            <div className="chat-main" style={{ height: 'calc(100vh - 72px)', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', position: 'relative', zIndex: 50 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button 
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            style={{ 
-                                background: isSidebarOpen ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.05)', 
-                                border: 'none', color: isSidebarOpen ? '#7ECECA' : 'white', 
-                                padding: '8px', borderRadius: '8px', cursor: 'pointer', 
-                                display: 'flex', alignItems: 'center', transition: '0.3s'
-                            }}
-                            title="Ver historial (Atajo: H)"
-                        >
-                            <Menu size={20} />
+                        <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA' }}>
+                            <History size={20} />
                         </button>
                         <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
+                    </div>
+                    {/* Visual Debug Counter */}
+                    <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '10px', color: '#333', pointerEvents: 'none', opacity: 0.5 }}>
+                        M:{messages?.length || 0} S:{currentSessionId ? 'Y' : 'N'} H:{historyLoaded ? 'Y' : 'N'}
                     </div>
                     <button 
                         onClick={() => window.location.reload(true)}
