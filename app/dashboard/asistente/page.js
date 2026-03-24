@@ -199,6 +199,8 @@ export default function AsistentePage() {
     const [conversations, setConversations] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [editingTitle, setEditingTitle] = useState('');
     
     const messagesEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -456,6 +458,22 @@ export default function AsistentePage() {
         }
     };
 
+    const renameConversation = async (id, newTitle) => {
+        if (!newTitle.trim()) return setEditingId(null);
+        try {
+            await fetch('/api/assistant/history', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, title: newTitle })
+            });
+            setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
+            setEditingId(null);
+            showToast('Renombrado', 'success');
+        } catch {
+            showToast('Error al renombrar', 'error');
+        }
+    };
+
     const isEmpty = messages.length === 0 && historyLoaded;
 
     return (
@@ -603,6 +621,8 @@ export default function AsistentePage() {
                         background: #0a0a0a;
                     }
                 }
+                .hover-actions { opacity: 0; transition: 0.2s; }
+                .sidebar-item:hover .hover-actions { opacity: 1; }
                 @media (min-width: 1025px) {
                     .sidebar-close-btn { display: none !important; }
                 }
@@ -775,9 +795,38 @@ export default function AsistentePage() {
                                     key={conv.id} 
                                     className={`sidebar-item ${currentSessionId === conv.id ? 'active' : ''}`}
                                     onClick={() => { loadConversation(conv.id); if (window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                                    style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px', paddingRight: '40px' }}
                                 >
-                                    <MessageSquare size={16} />
-                                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</span>
+                                    <MessageSquare size={16} style={{ flexShrink: 0 }} />
+                                    {editingId === conv.id ? (
+                                        <input
+                                            autoFocus
+                                            value={editingTitle}
+                                            onChange={e => setEditingTitle(e.target.value)}
+                                            onBlur={() => renameConversation(conv.id, editingTitle)}
+                                            onKeyDown={e => e.key === 'Enter' && renameConversation(conv.id, editingTitle)}
+                                            onClick={e => e.stopPropagation()}
+                                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '0.9rem', width: '100%', borderRadius: '4px', padding: '2px 4px' }}
+                                        />
+                                    ) : (
+                                        <>
+                                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.title}</span>
+                                            <div className="hover-actions" style={{ position: 'absolute', right: '10px', display: 'flex', gap: '8px' }}>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setEditingId(conv.id); setEditingTitle(conv.title); }}
+                                                    style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    <PenLine size={14} />
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => deleteConversation(e, conv.id)}
+                                                    style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             ))}
                         </div>

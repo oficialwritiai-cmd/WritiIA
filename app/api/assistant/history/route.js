@@ -127,3 +127,20 @@ export async function DELETE(req) {
         return NextResponse.json({ error: 'Error eliminando.' }, { status: 500 });
     }
 }
+
+export async function PATCH(req) {
+    try {
+        const body = await req.json();
+        const { id, title } = body;
+        if (!id || !title) return NextResponse.json({ error: 'Faltan datos.' }, { status: 400 });
+
+        const supabase = getSupabase();
+        const { error } = await supabase.from('chat_conversations').update({ title, updated_at: new Date().toISOString() }).eq('id', id);
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('[assistant/history] PATCH Error:', error);
+        return NextResponse.json({ error: 'Error al renombrar.' }, { status: 500 });
+    }
+}
