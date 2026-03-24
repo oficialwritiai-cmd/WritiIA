@@ -338,7 +338,7 @@ export default function AsistentePage() {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
-            const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
+            setIsTyping(true);
             const res = await fetch('/api/assistant/chat', {
                 method: 'POST',
                 headers: { 
@@ -355,8 +355,10 @@ export default function AsistentePage() {
             });
 
             const data = await res.json();
+            console.log('[Asistente] Response:', res.status, data);
 
             if (!res.ok) {
+                console.error('[Asistente] API Error:', data);
                 if (data.code === 'NO_CREDITS') {
                     showToast('Créditos insuficientes. Compra más créditos para continuar.', 'error');
                 } else if (data.code === 'RATE_LIMIT') {
