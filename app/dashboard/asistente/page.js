@@ -705,24 +705,28 @@ export default function AsistentePage() {
                     )}
                 </div>
 
-                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`} style={{ zIndex: 2147483640 }}>
+                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`} style={{ 
+                    zIndex: 2147483640,
+                    paddingRight: isMobile ? '80px' : '24px' // Clear space for floating widgets
+                }}>
                     <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
                         <div style={{
                             display: 'flex', alignItems: 'flex-end',
                             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: '24px', padding: '8px 12px 8px 18px',
                             transition: '0.3s',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                            position: 'relative'
                         }}>
                             <textarea
                                 ref={textareaRef}
                                 value={input}
                                 onChange={e => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Escribe tu pregunta o pega tu guion..."
+                                placeholder={isTyping ? "Nico está pensando..." : "Escribe tu pregunta o pega tu guion..."}
                                 rows={1}
                                 style={{
-                                    flex: 1, background: 'none', border: 'none', outline: 'none', color: 'white',
+                                    flex: 1, background: 'none', border: 'none', outline: 'none', color: isTyping ? '#555' : 'white',
                                     fontSize: '1rem', lineHeight: '1.5', resize: 'none', maxHeight: '150px',
                                     overflowY: 'auto', fontFamily: 'inherit', padding: '12px 0', alignSelf: 'center'
                                 }}
@@ -732,6 +736,11 @@ export default function AsistentePage() {
                                 }}
                                 disabled={isTyping}
                             />
+                            {isTyping && (
+                                <div style={{ position: 'absolute', top: '-30px', left: '20px', fontSize: '0.8rem', color: '#7ECECA', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'msgFadeIn 0.3s ease' }}>
+                                    <Sparkles size={14} className="animate-pulse" /> Nico está escribiendo...
+                                </div>
+                            )}
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center', paddingBottom: '4px' }}>
                                 <button
                                     onClick={() => sendMessage()}
