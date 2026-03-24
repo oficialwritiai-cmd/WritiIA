@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.8.0 (Definitive Mobile Sidebar Port-Fix)
+// Asistente IA (Chat Pro) — v8.9.0 (Nuclear Mobile Sidebar Fix — v1.16.0)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -502,7 +502,7 @@ export default function AsistentePage() {
                     height: 100%;
                     display: flex;
                     flex-direction: column;
-                    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease;
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                     z-index: 100;
                     overflow: hidden;
                     flex-shrink: 0;
@@ -510,34 +510,36 @@ export default function AsistentePage() {
                 .sidebar.closed {
                     width: 0;
                     border-right: none;
-                    transform: translateX(-10px);
                     opacity: 0;
                     pointer-events: none;
                 }
                 @media (max-width: 1024px) {
                     .sidebar {
-                        position: fixed;
-                        top: 0;
-                        bottom: 0;
-                        left: 0;
-                        width: 280px;
-                        transform: translateX(-101%);
-                        z-index: 99999 !important;
-                        background: #111;
-                        height: 100vh;
+                        position: fixed !important;
+                        top: 0 !important;
+                        bottom: 0 !important;
+                        left: -282px !important;
+                        width: 280px !important;
+                        z-index: 2147483647 !important;
+                        background: #111 !important;
+                        height: 100vh !important;
                         opacity: 1 !important;
                         visibility: visible !important;
                         pointer-events: auto !important;
+                        display: flex !important;
+                        flex-direction: column !important;
                     }
                     .sidebar.open {
-                        transform: translateX(0) !important;
-                        box-shadow: 20px 0 50px rgba(0,0,0,0.8);
+                        left: 0 !important;
+                        box-shadow: 20px 0 50px rgba(0,0,0,0.8) !important;
                         visibility: visible !important;
                         opacity: 1 !important;
                     }
                     .sidebar.closed {
-                        width: 280px;
-                        transform: translateX(-101%) !important;
+                        left: -282px !important;
+                        width: 280px !important;
+                        opacity: 1 !important;
+                        visibility: visible !important;
                     }
                     .chat-container {
                         padding-bottom: 120px !important;
@@ -730,12 +732,12 @@ export default function AsistentePage() {
                 )}
 
                 {/* Definitive Sidebar Fixed (Mobile) & Desktop Regular */}
-                <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`} style={{ visibility: isSidebarOpen ? 'visible' : (window.innerWidth < 1024 ? 'hidden' : 'visible') }}>
+                <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                     <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, position: 'relative' }}>
                         {/* Close button for mobile */}
                         <button 
-                            onClick={() => setIsSidebarOpen(false)}
-                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: window.innerWidth < 1024 ? 'block' : 'none' }}
+                            onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }}
+                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', borderRadius: '50%', padding: '6px', cursor: 'pointer', zIndex: 10, display: window.innerWidth < 1024 ? 'block' : 'none' }}
                         >
                             <X size={20} />
                         </button>
@@ -771,10 +773,10 @@ export default function AsistentePage() {
                 {isSidebarOpen && (
                     <div 
                         onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 99998, animation: 'msgFadeIn 0.3s' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2147483646, animation: 'msgFadeIn 0.3s' }}
                         className="mobile-overlay-only"
                     >
-                        <div style={{ position: 'absolute', bottom: '20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>Nico · v8.8.0</div>
+                        <div style={{ position: 'absolute', bottom: '100px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', fontWeight: 600 }}>Nico IA · v8.9.0</div>
                     </div>
                 )}
                 <style>{`
