@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.9.0 (Nuclear Mobile Sidebar Fix — v1.16.0)
+// Asistente IA (Chat Pro) — v8.9.3 (Nuclear Mobile Sidebar Fix — v1.16.3)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
