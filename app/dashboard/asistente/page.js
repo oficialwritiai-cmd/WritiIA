@@ -205,6 +205,15 @@ export default function AsistentePage() {
     const supabase = createSupabaseClient();
     const { activeProject } = useProject();
 
+    // Get width safely on mount & resize
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 1024);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeys = (e) => {
@@ -297,7 +306,7 @@ export default function AsistentePage() {
                     userId, 
                     projectId: activeProject?.id || null, 
                     messages: updatedMessages,
-                    id: sessionId || currentSessionId
+                    id: sessionId || currentSessionId || null
                 })
             });
             const data = await res.json();
@@ -600,11 +609,11 @@ export default function AsistentePage() {
             `}</style>
             
 
-            <div className="chat-main" onClick={() => isSidebarOpen && window.innerWidth < 768 && setIsSidebarOpen(false)}>
+            <div className="chat-main">
                 <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 60, borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button 
-                            onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(!isSidebarOpen); }}
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                             style={{ 
                                 background: isSidebarOpen ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.05)', 
                                 border: 'none', color: isSidebarOpen ? '#7ECECA' : 'white', 
@@ -656,9 +665,9 @@ export default function AsistentePage() {
                                 </div>
                             ) : (
                                 <>
-                                    {messages.map(msg => (
+                                    {messages.map((msg, index) => (
                                         <MessageBubble
-                                            key={msg.id}
+                                            key={msg.id || index}
                                             msg={msg}
                                             onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
                                             onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
@@ -669,14 +678,14 @@ export default function AsistentePage() {
                                         />
                                     ))}
                                     {isTyping && <TypingIndicator />}
-                                    <div ref={messagesEndRef} style={{ height: '24px' }} />
+                                    <div ref={messagesEndRef} style={{ height: '100px' }} />
                                 </>
                             )}
                         </div>
                     )}
                 </div>
 
-                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`}>
+                <div className={`input-container ${!isSidebarOpen ? 'wide' : ''}`} style={{ zIndex: isSidebarOpen && isMobile ? 5 : 200 }}>
                     <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
                         <div style={{
                             display: 'flex', alignItems: 'flex-end',
@@ -783,11 +792,9 @@ export default function AsistentePage() {
                 {isSidebarOpen && (
                     <div 
                         onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2147483646, animation: 'msgFadeIn 0.3s' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 2147483640, animation: 'msgFadeIn 0.3s' }}
                         className="mobile-overlay-only"
-                    >
-                        <div style={{ position: 'absolute', bottom: '100px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', fontWeight: 600 }}>Nico IA · v8.9.0</div>
-                    </div>
+                    />
                 )}
                 <style>{`
                     @media (min-width: 1025px) {
