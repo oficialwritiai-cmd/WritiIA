@@ -61,24 +61,40 @@ IDIOMA: Responde SIEMPRE en el mismo idioma del usuario.`;
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { projectId, messages, mode, userName } = body;
+        const { projectId: rawProjectId, messages, mode, userName } = body;
+        
+        // Sanitize projectId (handle 'null' string from frontend)
+        const projectId = (rawProjectId && rawProjectId !== 'null' && rawProjectId !== 'undefined') ? rawProjectId : null;
 
-        if (!messages) {
+        console.log('[assistant/chat] POST Request:', { projectId, messageCount: messages?.length, mode });
+
+        if (!messages || !Array.isArray(messages)) {
             return NextResponse.json({ error: 'Faltan datos requeridos (messages).' }, { status: 400 });
         }
 
         // ─────────────────────────────────────────────────────────────
-        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // SECURITY: Verify Session & Project Ownership
         // ─────────────────────────────────────────────────────────────
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            console.error('[assistant/chat] Error: SUPABASE_SERVICE_ROLE_KEY is missing');
+            return NextResponse.json({ error: 'Configuración del servidor incompleta (Env vars).' }, { status: 500 });
+        }
+
         const { user, supabase } = await getServerSession(req);
-        if (!user) return unauthorized();
+        if (!user) {
+            console.error('[assistant/chat] Unauthorized: No user session found');
+            return unauthorized();
+        }
 
         if (projectId) {
             const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
-            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+            if (!hasAccess) {
+                console.error(`[assistant/chat] Forbidden: User ${user.id} has no access to project ${projectId}`);
+                return forbidden('No tienes permiso para acceder a este proyecto.');
+            }
         }
 
-        // Rate Limiting (Check stats only, but charge is 0 for Nico)
+        // Rate Limiting
         const serviceSupabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
         const limitResult = await checkAssistantLimit(serviceSupabase, user.id);
         
@@ -87,14 +103,16 @@ export async function POST(req) {
                 ? 'Has alcanzado el límite diario. Vuelve mañana para seguir creando con Nico.'
                 : `Has enviado muchos mensajes. Nico está tomando un café, vuelve en ${limitResult.waitMinutes} min.`;
             
-            return NextResponse.json({ 
-                error: msg, 
-                code: 'RATE_LIMIT' 
-            }, { status: 429 });
+            return NextResponse.json({ error: msg, code: 'RATE_LIMIT' }, { status: 429 });
         }
 
         // Charge credits (v8.2.0 - Free mode)
-        await chargeCredits(supabase, user.id, CREDIT_COSTS.ASSISTANT_CHAT, 'assistant_chat', projectId);
+        try {
+            await chargeCredits(supabase, user.id, CREDIT_COSTS.ASSISTANT_CHAT, 'assistant_chat', projectId);
+        } catch (creditErr) {
+            console.error('[assistant/chat] Credit Charge Error:', creditErr.message);
+            // We continue even if charge fails for Nico (for now) to avoid blocking beta users
+        }
 
         // Load Cerebro IA
         let brain = null;
@@ -113,9 +131,11 @@ export async function POST(req) {
 
         const systemPrompt = buildJarvisSystemPrompt({ brain, userName, projectName, mode });
 
-        const historyMessages = (messages || []).slice(-15); // Increased context window for Nico
+        const historyMessages = (messages || []).slice(-15);
         const lastMsg = historyMessages[historyMessages.length - 1];
         const userMessage = lastMsg?.content || '';
+
+        if (!userMessage) throw new Error('El último mensaje está vacío.');
 
         const previousContext = historyMessages.slice(0, -1).map(m =>
             `${m.role === 'user' ? 'Usuario' : 'NICO'}: ${m.content}`
@@ -137,7 +157,10 @@ export async function POST(req) {
         return NextResponse.json({ reply: content || 'No pude generar respuesta.' });
 
     } catch (error) {
-        console.error('[assistant/chat] Error:', error?.message);
-        return NextResponse.json({ error: 'Error al conectar con la IA.' }, { status: 500 });
+        console.error('[assistant/chat] Critical Route Error:', error?.message);
+        return NextResponse.json({ 
+            error: error?.message || 'Error al conectar con la IA.',
+            code: 'API_ERROR'
+        }, { status: 500 });
     }
 }
