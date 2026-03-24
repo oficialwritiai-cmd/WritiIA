@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.6.0 (Definitive Mobile Sidebar Fix + Fixed Positioning)
+// Asistente IA (Chat Pro) — v8.7.0 (Nico Definitive Fixed Sidebar + Hardware Acceleration)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -502,7 +502,7 @@ export default function AsistentePage() {
                     height: 100%;
                     display: flex;
                     flex-direction: column;
-                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease;
                     z-index: 100;
                     overflow: hidden;
                     flex-shrink: 0;
@@ -510,6 +510,7 @@ export default function AsistentePage() {
                 .sidebar.closed {
                     width: 0;
                     border-right: none;
+                    transform: translateX(-10px);
                     opacity: 0;
                     pointer-events: none;
                 }
@@ -518,21 +519,22 @@ export default function AsistentePage() {
                         position: fixed;
                         top: 0;
                         bottom: 0;
-                        left: -280px;
+                        left: 0;
                         width: 280px;
-                        opacity: 1;
-                        pointer-events: auto;
-                        z-index: 2000;
+                        transform: translateX(-100%);
+                        z-index: 9999;
                         background: #111;
                         height: 100vh;
+                        opacity: 1 !important;
+                        pointer-events: auto !important;
                     }
                     .sidebar.open {
-                        left: 0;
+                        transform: translateX(0);
                         box-shadow: 20px 0 50px rgba(0,0,0,0.8);
                     }
                     .sidebar.closed {
                         width: 280px;
-                        left: -280px;
+                        transform: translateX(-100%);
                     }
                     .chat-container {
                         padding-bottom: 120px !important;
@@ -584,7 +586,15 @@ export default function AsistentePage() {
             `}</style>
             
             <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-                <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, position: 'relative' }}>
+                    {/* Close button for mobile */}
+                    <button 
+                        onClick={() => setIsSidebarOpen(false)}
+                        style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#444', cursor: 'pointer', display: window.innerWidth < 768 ? 'block' : 'none' }}
+                    >
+                        <X size={20} />
+                    </button>
+
                     <button 
                         onClick={startNewChat}
                         style={{ background: 'white', color: 'black', border: 'none', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600, cursor: 'pointer' }}
@@ -753,12 +763,18 @@ export default function AsistentePage() {
                 )}
 
                 {/* Mobile Overlay */}
-                {isSidebarOpen && window.innerWidth < 768 && (
+                {isSidebarOpen && (
                     <div 
                         onClick={() => setIsSidebarOpen(false)}
-                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 1900, animation: 'msgFadeIn 0.3s' }}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', zIndex: 9998, animation: 'msgFadeIn 0.3s' }}
+                        className="mobile-overlay-only"
                     />
                 )}
+                <style>{`
+                    @media (min-width: 769px) {
+                        .mobile-overlay-only { display: none !important; }
+                    }
+                `}</style>
             </div>
         </div>
     );
