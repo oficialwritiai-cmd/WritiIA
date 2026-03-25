@@ -188,12 +188,14 @@ const ORBITA_CARDS = [
 ];
 
 // ── Main Page ─────────────────────────────────────────────
+export default function AsistentePage() {
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState(null);
     const [userName, setUserName] = useState('');
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [toast, setToast] = useState(null);
     const [historyLoaded, setHistoryLoaded] = useState(true);
     const [conversations, setConversations] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
