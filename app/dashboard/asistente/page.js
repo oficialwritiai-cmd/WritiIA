@@ -632,43 +632,45 @@ export default function AsistentePage() {
                 flexDirection: 'column', 
                 background: '#050505', 
                 position: 'relative',
-                overflow: 'visible', /* Force visibility if slicing occurs */
-                minHeight: '600px'
+                overflow: 'visible',
+                minHeight: '80vh'
             }}>
                 <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#050505', zIndex: 100 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '250px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff' }}>NICO ASISTENTE v1.17.0</h2>
+                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>Nico Asistente</h2>
                     </div>
                 </div>
 
-                <div className="chat-container" style={{ flex: 1, width: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px' }}>
+                <div className="chat-container" style={{ flex: 1, width: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
                     
-                    {/* Welcome Screen - Only if truly empty and history is ready */}
+                    {/* Welcome Screen - Using v1.17.1 Force-Visible Layout */}
                     {(historyLoaded && (!messages || messages.length === 0)) && (
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', animation: 'msgFadeIn 0.5s ease-out' }}>
-                            <div style={{
-                                width: '48px', height: '48px', borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #7ECECA, #5bb8b8)',
-                                animation: 'float 4s ease-in-out infinite, glow 3s ease-in-out infinite',
-                                marginBottom: '24px'
+                        <div className="welcome-screen" style={{ padding: '120px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible', minHeight: '500px' }}>
+                            <div style={{ 
+                                width: '64px', 
+                                height: '64px', 
+                                background: 'radial-gradient(circle, #7ECECA 0%, #5BBAD8 100%)', 
+                                borderRadius: '50%', 
+                                margin: '0 auto 24px',
+                                boxShadow: '0 0 40px rgba(126, 206, 202, 0.4)',
+                                animation: 'pulse 3s infinite ease-in-out'
                             }} />
-                            
-                            <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: '0 0 12px', textAlign: 'center' }}>
-                                Hola{userName ? `, ${userName}` : ''}, soy Nico 👋
+                            <h1 style={{ fontSize: isMobile ? '1.8rem' : '3.5rem', fontWeight: 950, margin: '0 0 16px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff', textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                                Hola, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Compañero'} 👋
                             </h1>
-                            <p style={{ color: '#888', fontSize: '1.05rem', margin: '0 0 48px', textAlign: 'center' }}>
-                                Dime qué necesitas con tu contenido y yo me encargo.
+                            <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#aaa', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
+                                Soy Nico, tu socio estratégico. ¿Qué gran idea vamos a materializar hoy?
                             </p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', width: '100%', maxWidth: '800px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', width: '100%', maxWidth: '850px', margin: '0 auto' }}>
                                 {ORBITA_CARDS.map((card, idx) => (
-                                    <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)}>
-                                        <div style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{card.icon}</div>
-                                        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>{card.title}</h3>
-                                        <p style={{ fontSize: '0.8rem', color: '#666', margin: 0, lineHeight: '1.4' }}>{card.desc}</p>
+                                    <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '24px', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
+                                        <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>{card.icon}</div>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{card.title}</h3>
+                                        <p style={{ fontSize: '0.85rem', color: '#777', margin: 0, lineHeight: '1.5' }}>{card.desc}</p>
                                     </div>
                                 ))}
                             </div>
