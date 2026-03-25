@@ -84,6 +84,21 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [saved, setSaved] = useState({});
 
+    const detectContext = (text) => {
+        const t = text.toLowerCase();
+        const isScript = /guion|script|escena|gancho|desarrollo|cta|diálogo|personaje|minutos|segundos|escrito/i.test(t);
+        const isCalendar = /calendario|fecha|planificar|semana|mes|lunes|martes|miércoles|jueves|viernes|sábado|domingo/i.test(t);
+        const isTitles = /títulos|titular|opciones de título|titulares/i.test(t);
+        const isIdea = /idea|sugerencia|concepto|estrategia|viral|tendencia/i.test(t);
+        
+        // If nothing matches, we treat it as a general "Idea" fallback
+        const hasAny = isScript || isCalendar || isTitles || isIdea;
+        
+        return { isScript, isCalendar, isTitles, isIdea, isDefault: !hasAny };
+    };
+
+    const ctx = detectContext(msg.content);
+
     const handleAction = (type, fn) => {
         if (saved[type]) return;
         fn();
@@ -121,50 +136,58 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
             {/* Action Buttons for AI messages */}
             {!isUser && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', maxWidth: '85%' }}>
-                    <button
-                        onClick={() => handleAction('idea', onSaveIdea)}
-                        disabled={!!saved.idea}
-                        className="action-btn"
-                        style={{
-                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
-                            background: saved.idea ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.idea ? '#7ECECA' : '#888',
-                            cursor: saved.idea ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                    >
-                        <Save size={14} /> {saved.idea ? 'Idea guardada' : 'Guardar Idea'}
-                    </button>
-                    <button
-                        onClick={() => handleAction('script', onSaveScript)}
-                        disabled={!!saved.script}
-                        className="action-btn"
-                        style={{
-                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
-                            background: saved.script ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.script ? '#7ECECA' : '#888',
-                            cursor: saved.script ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                    >
-                        <PenLine size={14} /> {saved.script ? 'Guardado' : 'Guardar Guion'}
-                    </button>
-                    <button
-                        onClick={() => setCalendarOpen(true)}
-                        className="action-btn"
-                        style={{
-                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
-                            background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                    >
-                        <Calendar size={14} /> Calendario
-                    </button>
-                    <button
-                        onClick={onGenerateTitles}
-                        className="action-btn"
-                        style={{
-                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
-                            background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
-                        }}
-                    >
-                        <Type size={14} /> Ir a Títulos
-                    </button>
+                    {(ctx.isIdea || ctx.isDefault) && (
+                        <button
+                            onClick={() => handleAction('idea', onSaveIdea)}
+                            disabled={!!saved.idea}
+                            className="action-btn"
+                            style={{
+                                fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                                background: saved.idea ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.idea ? '#7ECECA' : '#888',
+                                cursor: saved.idea ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <Save size={14} /> {saved.idea ? 'Idea guardada' : 'Guardar Idea'}
+                        </button>
+                    )}
+                    {ctx.isScript && (
+                        <button
+                            onClick={() => handleAction('script', onSaveScript)}
+                            disabled={!!saved.script}
+                            className="action-btn"
+                            style={{
+                                fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                                background: saved.script ? 'rgba(126,206,202,0.1)' : 'rgba(255,255,255,0.02)', color: saved.script ? '#7ECECA' : '#888',
+                                cursor: saved.script ? 'default' : 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <PenLine size={14} /> {saved.script ? 'Guion Guardado' : 'Guardar Guion'}
+                        </button>
+                    )}
+                    {(ctx.isCalendar || ctx.isScript) && (
+                        <button
+                            onClick={() => setCalendarOpen(true)}
+                            className="action-btn"
+                            style={{
+                                fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <Calendar size={14} /> Calendario
+                        </button>
+                    )}
+                    {ctx.isTitles && (
+                        <button
+                            onClick={onGenerateTitles}
+                            className="action-btn"
+                            style={{
+                                fontSize: '0.8rem', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(255,255,255,0.02)', color: '#888', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                        >
+                            <Type size={14} /> Ir a Títulos
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -653,7 +676,7 @@ export default function AsistentePage() {
                                 Hola{userName ? `, ${userName}` : ''} 👋
                             </h1>
                             <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#888', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
-                                Bienvenido a la v1.17.5. Nico está blindado y listo para ti.
+                                Bienvenido a la v1.17.7. Nico es más inteligente que nunca. ⚡
                             </p>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', width: '100%', maxWidth: '850px', margin: '0 auto' }}>
@@ -833,7 +856,7 @@ export default function AsistentePage() {
                         </div>
 
                         <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
-                            Writi Nico v1.17.6.2
+                            Writi Nico v1.17.7
                         </div>
                     </div>
                 </div>
