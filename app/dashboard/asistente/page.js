@@ -630,17 +630,17 @@ export default function AsistentePage() {
                 flex: 1, 
                 display: 'flex', 
                 flexDirection: 'column', 
-                background: '#0a0a0a', 
+                background: '#050505', 
                 position: 'relative',
-                overflow: 'hidden',
-                minHeight: '400px'
+                overflow: 'visible', /* Force visibility if slicing occurs */
+                minHeight: '600px'
             }}>
-                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', zIndex: 100 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px' }}>
+                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#050505', zIndex: 100 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '250px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>Nico Asistente</h2>
+                        <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff' }}>NICO ASISTENTE v1.17.0</h2>
                     </div>
                 </div>
 
