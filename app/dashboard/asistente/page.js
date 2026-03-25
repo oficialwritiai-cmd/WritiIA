@@ -626,23 +626,17 @@ export default function AsistentePage() {
                 }
             `}</style>
             
-            <div className="chat-main" style={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0a0a0a' }}>
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', position: 'relative', zIndex: 100 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA' }}>
+            <div className="chat-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0a0a0a', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ height: '64px', minHeight: '64px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', zIndex: 100 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px' }}>
+                        <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
+                        <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, whiteSpace: 'nowrap' }}>Nico Asistente</h2>
                     </div>
-                    <button 
-                        onClick={() => window.location.reload(true)}
-                        style={{ background: 'rgba(255,50,50,0.1)', color: '#FF4D4D', border: '1px solid rgba(255,50,50,0.2)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                        Limpiar App
-                    </button>
                 </div>
 
-                <div className="chat-container" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '160px' }}>
+                <div className="chat-container" style={{ flex: 1, width: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px' }}>
                     
                     {/* Welcome Screen - Only if truly empty and history is ready */}
                     {(historyLoaded && (!messages || messages.length === 0)) && (
