@@ -1,6 +1,6 @@
 'use client';
 /**
- * Version: v6.7.0 (Calendar Sync & Multi-Event Fix)
+ * Version: v1.17.6.2 (Omega Asistente Fix)
  */
 
 import { useState, useEffect } from 'react';
@@ -36,8 +36,8 @@ function LanguageSelector() {
 
 export default function DashboardLayout({ children }) {
     useEffect(() => {
-        console.log('%c🚀 WRITIAI Dashboard v6.7.0 (Calendar Sync Fix) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
-    });
+        console.log('%c🚀 WRITIAI Dashboard v1.17.6.2 (Omega Asistente Fix) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+    }, []);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();

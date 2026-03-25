@@ -833,7 +833,7 @@ export default function AsistentePage() {
                         </div>
 
                         <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.05)', color: '#444', fontSize: '0.75rem', textAlign: 'center' }}>
-                            Writi Nico v8.8.0
+                            Writi Nico v1.17.6.2
                         </div>
                     </div>
                 </div>
