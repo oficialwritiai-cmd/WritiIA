@@ -637,13 +637,12 @@ export default function AsistentePage() {
                         </button>
                         <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
                     </div>
-                    {/* Visual Debug Counter - Bright Red for PC visibility */}
                     <div style={{ 
                         position: 'absolute', top: '2px', right: '50%', transform: 'translateX(50%)', 
                         fontSize: '12px', color: '#FF4D4D', fontWeight: 'bold', pointerEvents: 'none', zIndex: 1000,
                         background: 'rgba(0,0,0,0.8)', padding: '2px 8px', borderRadius: '4px'
                     }}>
-                        DEBUG -> M:{messages?.length || 0} S:{currentSessionId ? 'Y' : 'N'} H:{historyLoaded ? 'Y' : 'N'}
+                        DEBUG {'->'} M:{messages?.length || 0} S:{currentSessionId ? 'Y' : 'N'} H:{historyLoaded ? 'Y' : 'N'}
                     </div>
                     <button 
                         onClick={() => window.location.reload(true)}
