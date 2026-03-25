@@ -188,14 +188,12 @@ const ORBITA_CARDS = [
 ];
 
 // ── Main Page ─────────────────────────────────────────────
-export default function AsistentePage() {
     const [user, setUser] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const [userName, setUserName] = useState('');
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [userName, setUserName] = useState('');
-    const [userId, setUserId] = useState(null);
-    const [toast, setToast] = useState(null);
     const [historyLoaded, setHistoryLoaded] = useState(true);
     const [conversations, setConversations] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -208,33 +206,21 @@ export default function AsistentePage() {
     const supabase = createSupabaseClient();
     const { activeProject } = useProject();
 
-    // Get width safely on mount & resize
     const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 1024);
         check();
         window.addEventListener('resize', check);
-        window.writiChatDebug = { setMessages, setIsTyping, setHistoryLoaded, messages, isTyping, userId };
         return () => window.removeEventListener('resize', check);
-    }, [messages, isTyping, userId]);
-
-    // Keyboard Shortcuts
-    useEffect(() => {
-        const handleKeys = (e) => {
-            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-            if (e.key.toLowerCase() === 'h') {
-                setIsSidebarOpen(prev => !prev);
-            }
-        };
-        window.addEventListener('keydown', handleKeys);
-        return () => window.removeEventListener('keydown', handleKeys);
     }, []);
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
-            if (supabaseUser) {
-                setUser(supabaseUser);
-                setUserId(supabaseUser.id);
+        supabase.auth.getUser().then(({ data: { user: sbUser } }) => {
+            if (sbUser) {
+                setUser(sbUser);
+                setUserId(sbUser.id);
+                const name = sbUser.user_metadata?.full_name?.split(' ')[0] || sbUser.email?.split('@')[0];
+                if (name) setUserName(name);
             }
         });
     }, [supabase]);
@@ -642,14 +628,14 @@ export default function AsistentePage() {
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>NICO AI - SOPORTE 💎</h2>
+                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>NICO AI - SOPORTE 🏆</h2>
                     </div>
                 </div>
 
                 <div className="chat-container" style={{ flex: 1, width: '100%', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
                     
-                    {/* Welcome Screen - Personalized v1.17.4.1 Omega Bypass */}
-                    {(historyLoaded && (!messages || messages.length === 0)) && (
+                    {/* Welcome Screen - Personalized v1.17.5 Trophy Release */}
+                    {((!messages || messages.length === 0)) && (
                         <div className="welcome-screen" style={{ padding: '150px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
                             <div style={{ 
                                 width: '64px', 
@@ -657,14 +643,14 @@ export default function AsistentePage() {
                                 background: 'radial-gradient(circle, #7ECECA 0%, #5BBAD8 100%)', 
                                 borderRadius: '50%', 
                                 margin: '0 auto 24px',
-                                boxShadow: '0 0 50px rgba(126, 206, 202, 0.6)',
+                                boxShadow: '0 0 50px rgba(126, 206, 202, 0.7)',
                                 animation: 'pulse 3s infinite ease-in-out'
                             }} />
                             <h1 style={{ fontSize: isMobile ? '1.8rem' : '4rem', fontWeight: 950, margin: '0 0 16px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff' }}>
-                                Hola, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Compañero'} 👋
+                                Hola{userName ? `, ${userName}` : ''} 👋
                             </h1>
                             <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#888', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
-                                Bienvenido a la v1.17.4.1. El chat está blindado contra cortes.
+                                Bienvenido a la v1.17.5. Nico está blindado y listo para ti.
                             </p>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', width: '100%', maxWidth: '850px', margin: '0 auto' }}>
