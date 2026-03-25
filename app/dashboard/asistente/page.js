@@ -1,5 +1,5 @@
 'use client';
-// Asistente IA (Chat Pro) — v8.9.8 (Nuclear Mobile Sidebar Fix — v1.16.8)
+// Asistente IA (Chat Pro) — v8.9.9 (Nuclear Mobile Sidebar Fix — v1.16.8.4.1)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
@@ -617,32 +617,22 @@ export default function AsistentePage() {
                 @media (max-width: 768px) {
                     .input-container {
                         left: 0;
-                        padding: 12px 16px 24px;
-                        background: #0a0a0a;
+                        padding-left: 16px;
+                        padding-right: 16px;
                     }
                 }
-                .hover-actions { opacity: 0; transition: 0.2s; }
-                .sidebar-item:hover .hover-actions { opacity: 1; }
                 @media (min-width: 1025px) {
                     .sidebar-close-btn { display: none !important; }
                 }
             `}</style>
             
-
-            <div className="chat-main" style={{ flex: 1, height: 'calc(100vh - 72px)', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0a0a0a' }}>
+            <div className="chat-main" style={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', background: '#0a0a0a' }}>
                 <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', position: 'relative', zIndex: 100 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA' }}>
                             <History size={20} />
                         </button>
                         <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Nico Asistente</h2>
-                    </div>
-                    <div style={{ 
-                        position: 'absolute', top: '2px', right: '50%', transform: 'translateX(50%)', 
-                        fontSize: '12px', color: '#FF4D4D', fontWeight: 'bold', pointerEvents: 'none', zIndex: 1000,
-                        background: 'rgba(0,0,0,0.8)', padding: '2px 8px', borderRadius: '4px'
-                    }}>
-                        DEBUG {'->'} M:{messages?.length || 0} S:{currentSessionId ? 'Y' : 'N'} H:{historyLoaded ? 'Y' : 'N'}
                     </div>
                     <button 
                         onClick={() => window.location.reload(true)}
