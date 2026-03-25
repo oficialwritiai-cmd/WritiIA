@@ -229,19 +229,14 @@ export default function AsistentePage() {
         return () => window.removeEventListener('keydown', handleKeys);
     }, []);
 
-    // Get userId and Profile once
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setUserId(user.id);
-                supabase.from('users_profiles').select('full_name').eq('id', user.id).single().then(({ data }) => {
-                    if (data?.full_name) {
-                        setUserName(data.full_name.split(' ')[0]); // Use first name
-                    }
-                });
+        supabase.auth.getUser().then(({ data: { user: supabaseUser } }) => {
+            if (supabaseUser) {
+                setUser(supabaseUser);
+                setUserId(supabaseUser.id);
             }
         });
-    }, []);
+    }, [supabase]);
 
     // 1. Fetch conversations list
     const fetchConversations = useCallback(async () => {
