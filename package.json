@@ -1,6 +1,6 @@
 {
   "name": "oficialwritiai",
-  "version": "1.16.8.5",
+  "version": "1.16.8.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
