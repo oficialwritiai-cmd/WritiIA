@@ -430,14 +430,17 @@ export default function AsistentePage() {
     };
 
     const deleteConversation = async (e, id) => {
+        e.preventDefault();
         e.stopPropagation();
         if (!confirm('¿Borrar definitivamente esta conversación?')) return;
         try {
-            await fetch(`/api/assistant/history?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/assistant/history?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Backend failed to delete');
             setConversations(prev => prev.filter(c => c.id !== id));
             if (currentSessionId === id) startNewChat();
             showToast('Conversación eliminada', 'info');
-        } catch {
+        } catch (error) {
+            console.error(error);
             showToast('Error al eliminar', 'error');
         }
     };
