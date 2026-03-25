@@ -611,32 +611,30 @@ export default function AsistentePage() {
             `}</style>
             
             <div className="chat-main" style={{ 
-                flex: 1, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                background: '#000', 
+                background: '#050505', 
                 position: isMobile ? 'relative' : 'fixed',
-                top: isMobile ? 'auto' : '72px',
-                left: isMobile ? 'auto' : (isSidebarOpen ? '280px' : '0'),
+                top: isMobile ? 'auto' : '0',
+                left: isMobile ? 'auto' : (isSidebarOpen ? '280px' : '72px'),
                 right: isMobile ? 'auto' : 0,
                 bottom: isMobile ? 'auto' : 0,
-                height: isMobile ? 'auto' : 'calc(100vh - 72px)',
-                zIndex: isMobile ? 1 : 1000000,
-                overflow: 'visible',
-                transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                width: isMobile ? '100%' : (isSidebarOpen ? 'calc(100vw - 280px)' : 'calc(100vw - 72px)'),
+                height: isMobile ? 'auto' : '100vh',
+                zIndex: isMobile ? 1 : 9999,
+                overflow: 'hidden',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
-                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#000', zIndex: 110 }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#050505', zIndex: 110 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '250px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>NICO AI - SOPORTE 🏆</h2>
+                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>Nico Asistente ⚡</h2>
                     </div>
                 </div>
 
-                <div className="chat-container" style={{ flex: 1, width: '100%', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
+                <div className="chat-container" style={{ position: 'absolute', top: '72px', left: 0, right: 0, bottom: '0', overflowY: 'auto', display: 'flex', flexDirection: 'column', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
                     
-                    {/* Welcome Screen - Personalized v1.17.5 Trophy Release */}
+                    {/* Welcome Screen - Personalized v1.17.6 Layout Enforcement */}
                     {((!messages || messages.length === 0)) && (
                         <div className="welcome-screen" style={{ padding: '150px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
                             <div style={{ 
