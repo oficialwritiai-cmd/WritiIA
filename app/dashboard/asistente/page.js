@@ -631,15 +631,11 @@ export default function AsistentePage() {
                 display: 'flex', 
                 flexDirection: 'column', 
                 background: '#0a0a0a', 
-                position: isMobile ? 'relative' : 'absolute',
-                top: isMobile ? 'auto' : 0,
-                bottom: isMobile ? 'auto' : 0,
-                left: isMobile ? 'auto' : (isSidebarOpen ? '280px' : '0'),
-                right: isMobile ? 'auto' : 0,
+                position: 'relative',
                 overflow: 'hidden',
-                transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                minHeight: '400px'
             }}>
-                <div style={{ height: '64px', minHeight: '64px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', zIndex: 100 }}>
+                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0a', zIndex: 100 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '200px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
