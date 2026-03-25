@@ -626,44 +626,45 @@ export default function AsistentePage() {
                 flex: 1, 
                 display: 'flex', 
                 flexDirection: 'column', 
-                background: '#050505', 
+                background: '#000', 
                 position: isMobile ? 'relative' : 'fixed',
                 top: isMobile ? 'auto' : '72px',
                 left: isMobile ? 'auto' : (isSidebarOpen ? '280px' : '0'),
                 right: isMobile ? 'auto' : 0,
                 bottom: isMobile ? 'auto' : 0,
-                zIndex: isMobile ? 1 : 1000,
+                height: isMobile ? 'auto' : 'calc(100vh - 72px)',
+                zIndex: isMobile ? 1 : 1000000,
                 overflow: 'visible',
                 transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
-                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#050505', zIndex: 110 }}>
+                <div style={{ height: '72px', minHeight: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#000', zIndex: 110 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '250px' }}>
                         <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>Nico Asistente</h2>
+                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>NICO AI - SOPORTE 💎</h2>
                     </div>
                 </div>
 
-                <div className="chat-container" style={{ flex: 1, width: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
+                <div className="chat-container" style={{ flex: 1, width: '100%', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
                     
-                    {/* Welcome Screen - Using v1.17.1 Force-Visible Layout */}
+                    {/* Welcome Screen - Personalized v1.17.4.1 Omega Bypass */}
                     {(historyLoaded && (!messages || messages.length === 0)) && (
-                        <div className="welcome-screen" style={{ padding: '120px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible', minHeight: '500px' }}>
+                        <div className="welcome-screen" style={{ padding: '150px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
                             <div style={{ 
                                 width: '64px', 
                                 height: '64px', 
                                 background: 'radial-gradient(circle, #7ECECA 0%, #5BBAD8 100%)', 
                                 borderRadius: '50%', 
                                 margin: '0 auto 24px',
-                                boxShadow: '0 0 40px rgba(126, 206, 202, 0.4)',
+                                boxShadow: '0 0 50px rgba(126, 206, 202, 0.6)',
                                 animation: 'pulse 3s infinite ease-in-out'
                             }} />
-                            <h1 style={{ fontSize: isMobile ? '1.8rem' : '3.5rem', fontWeight: 950, margin: '0 0 16px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff', textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                            <h1 style={{ fontSize: isMobile ? '1.8rem' : '4rem', fontWeight: 950, margin: '0 0 16px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff' }}>
                                 Hola, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Compañero'} 👋
                             </h1>
-                            <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#aaa', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
-                                Soy Nico, tu socio estratégico. ¿Qué gran idea vamos a materializar hoy?
+                            <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#888', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
+                                Bienvenido a la v1.17.4.1. El chat está blindado contra cortes.
                             </p>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', width: '100%', maxWidth: '850px', margin: '0 auto' }}>
