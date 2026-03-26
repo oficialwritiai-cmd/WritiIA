@@ -57,7 +57,13 @@ export async function POST(request) {
                 .eq('id', userId);
         }
 
-        const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'https://writi.ai';
+        // v1.17.8: Robust origin detection for Stripe redirects
+        let origin = request.headers.get('origin');
+        if (!origin || origin === 'null') {
+            const host = request.headers.get('host');
+            const protocol = host?.includes('localhost') ? 'http' : 'https';
+            origin = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || 'https://writi.ai');
+        }
 
         const session = await stripe.checkout.sessions.create({
             customer: customerId,

@@ -36,7 +36,7 @@ function LanguageSelector() {
 
 export default function DashboardLayout({ children }) {
     useEffect(() => {
-        console.log('%c🚀 WRITIAI Dashboard v1.17.7 (Smart Buttons) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v1.17.8 (Smart Buttons) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }, []);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -209,6 +209,15 @@ export default function DashboardLayout({ children }) {
             return;
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // v1.17.8: Admin Bypass for Expiration Check
+        // ─────────────────────────────────────────────────────────────
+        if (profile.is_admin) {
+            setDaysRemaining('Activa');
+            setIsExpired(false);
+            return;
+        }
+
         const calculateTime = () => {
             const now = new Date();
             let targetDate = null;
@@ -259,10 +268,14 @@ export default function DashboardLayout({ children }) {
     }, [profile]);
 
     useEffect(() => {
-        const handleShowNoCredits = () => setShowNoCreditsModal(true);
+        const handleShowNoCredits = () => {
+            // v1.17.8: Prevenir modal si es admin
+            if (profile?.is_admin) return;
+            setShowNoCreditsModal(true);
+        };
         window.addEventListener('show-no-credits', handleShowNoCredits);
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
-    }, []);
+    }, [profile]);
 
     // NEW: Enforce access restriction
     // If trial is over and no plan is active, redirect to /dashboard/expired

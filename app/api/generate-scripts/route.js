@@ -307,21 +307,22 @@ export async function POST(request) {
 
         const projectLanguage = projectData?.language || 'es';
 
-        // Rich brand context including personal details
+        // Rich brand context including personal details. 
+        // We truncate large fields to prevent exceeding strict token limits (16384 on some proxies/models)
         let brandContextString = `[CONTEXTO BASE DEL CREADOR]
-- Bio: ${brandBrain.biography || ''}
-- Nicho: ${brandBrain.niche || ''}
-- Sub-nicho: ${brandBrain.sub_niche || ''}
-- Estilo: ${brandBrain.style_words || ''}
-- Tono de marca: ${brandBrain.values_tone || ''}
-- Audiencia: ${brandBrain.audience || ''}
-- APRENDIZAJE / FEEDBACK ACUMULADO: ${brandBrain.learning_notes || ''}`;
+- Bio: ${(brandBrain.biography || '').substring(0, 1500)}
+- Nicho: ${(brandBrain.niche || '').substring(0, 500)}
+- Sub-nicho: ${(brandBrain.sub_niche || '').substring(0, 500)}
+- Estilo: ${(brandBrain.style_words || '').substring(0, 300)}
+- Tono de marca: ${(brandBrain.values_tone || '').substring(0, 300)}
+- Audiencia: ${(brandBrain.audience || '').substring(0, 1000)}
+- APRENDIZAJE / FEEDBACK ACUMULADO: ${(brandBrain.learning_notes || '').substring(0, 3000)}`;
 
         // Keep legacy fields for backward compatibility if they aren't provided in the new fields
-        if (victory) brandContextString += `\n- Victoria/Fracaso reciente: ${victory}`;
-        if (opinion) brandContextString += `\n- Opinión impopular a integrar: ${opinion}`;
-        if (story) brandContextString += `\n- Caso real/Historia: ${story}`;
-        if (awareness) brandContextString += `\n- Nivel de awareness de la audiencia: ${awareness}`;
+        if (victory) brandContextString += `\n- Victoria/Fracaso reciente: ${victory.substring(0, 500)}`;
+        if (opinion) brandContextString += `\n- Opinión impopular a integrar: ${opinion.substring(0, 500)}`;
+        if (story) brandContextString += `\n- Caso real/Historia: ${story.substring(0, 1000)}`;
+        if (awareness) brandContextString += `\n- Nivel de awareness de la audiencia: ${awareness.substring(0, 200)}`;
 
         const requestedCount = extractRequestedCount(topic, specificDetails || "");
 
@@ -332,41 +333,53 @@ export async function POST(request) {
         const targetWords = WORDS_PER_DURATION[videoDuration] || 140;
         const finalCount = count || 1;
 
-        const systemPrompt = buildSystemPrompt({
+        // ── GENERATION: Parallel Execution ───────────────────
+        // Instead of generating 4 long scripts in one 4096-token response (which always truncates and fails),
+        // we execute single-script requests in parallel to respect context window limits and avoid truncation.
+        
+        let scriptsArray = [];
+        const baseSystemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-            count: finalCount, specificDetails, requestedCount, topic, ctaIdea,
+            count: 1, specificDetails, requestedCount, topic, ctaIdea,
             experienciaReal, opinionPersonal, faseCreador, projectLanguage
         });
 
-        const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;
-
-        // ── FIRST CALL ──────────────────────────────────────
-        let { parsed: results } = await generateFn({
-            apiKey: process.env.ANTHROPIC_API_KEY,
-            systemPrompt,
-            userMessage,
+        const parallelGenerations = Array.from({ length: finalCount }).map((_, idx) => {
+            const variantMsg = idx > 0 
+                ? `${userMessage} (IMPORTANTE: Mismo tema, pero usa un ángulo o punto de vista DISTINCTO al convencional. Variante #${idx + 1})`
+                : userMessage;
+                
+            return generateFn({
+                apiKey: process.env.ANTHROPIC_API_KEY,
+                systemPrompt: baseSystemPrompt,
+                userMessage: variantMsg,
+            }).catch(err => {
+                console.error(`[generate-scripts] Variant #${idx+1} failed:`, err.message);
+                return null;
+            });
         });
 
-        let scriptsArray = Array.isArray(results) ? results : (results ? [results] : []);
+        const results = await Promise.all(parallelGenerations);
+        
+        // Collect all successfully generated scripts
+        results.forEach(res => {
+            if (res && res.parsed) {
+                const parsedResult = Array.isArray(res.parsed) ? res.parsed[0] : res.parsed;
+                if (parsedResult) scriptsArray.push(parsedResult);
+            }
+        });
 
-        // ── FIX COUNT BUG: if fewer scripts returned, retry for the missing ones ──
-        if (scriptsArray.length < finalCount) {
-            const missing = finalCount - scriptsArray.length;
-            console.log(`[generate-scripts] Got ${scriptsArray.length}/${finalCount}. Requesting ${missing} more…`);
-
-            const retryPrompt = buildSystemPrompt({
-                brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
-                count: missing, specificDetails, requestedCount, projectLanguage
-            });
-            const retryMsg = `${userMessage} (VARIANTES DISTINTAS a las ya generadas, distintos ángulos)`;
-
-            const { parsed: retryResults } = await generateFn({
+        // ── FIX COUNT BUG: if completely failed, try emergency fallback ──
+        if (scriptsArray.length === 0) {
+            console.error(`[generate-scripts] All parallel requests failed. Executing fallback.`);
+            const fallbackResults = await generateFn({
                 apiKey: process.env.ANTHROPIC_API_KEY,
-                systemPrompt: retryPrompt,
-                userMessage: retryMsg,
+                systemPrompt: baseSystemPrompt,
+                userMessage: userMessage,
             });
-            const retryScripts = Array.isArray(retryResults) ? retryResults : (retryResults ? [retryResults] : []);
-            scriptsArray = [...scriptsArray, ...retryScripts].slice(0, finalCount);
+            scriptsArray = Array.isArray(fallbackResults?.parsed) 
+                ? fallbackResults.parsed 
+                : (fallbackResults?.parsed ? [fallbackResults.parsed] : []);
         }
 
         // ── LIST COUNT VALIDATION & EXPANSION (Surgical) ─────

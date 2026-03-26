@@ -234,10 +234,12 @@ export default function SettingsPage() {
                             className="btn-primary"
                             style={{ padding: '16px 40px', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                             onClick={handleCheckoutPlan}
-                            disabled={planLoading || plan === 'pro'}
+                            disabled={planLoading || plan === 'pro' || isAdmin}
                         >
                             {planLoading ? (
                                 <><Loader2 size={20} className="animate-spin" /> Redirigiendo a Stripe...</>
+                            ) : isAdmin ? (
+                                '👑 Eres Admin (Acceso Total)'
                             ) : plan === 'pro' ? (
                                 '✅ PLAN PRO (Lanzamiento) Activo'
                             ) : (
