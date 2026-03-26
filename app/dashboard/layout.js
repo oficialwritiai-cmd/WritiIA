@@ -36,7 +36,7 @@ function LanguageSelector() {
 
 export default function DashboardLayout({ children }) {
     useEffect(() => {
-        console.log('%c🚀 WRITIAI Dashboard v1.17.8 (Smart Buttons) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
+        console.log('%c🚀 WRITIAI Dashboard v1.17.8.1 (Smart Buttons) LOADED', 'background: #7ECECA; color: #000; padding: 4px 8px; font-weight: bold; border-radius: 4px;');
     }, []);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);

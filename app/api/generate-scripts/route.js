@@ -344,6 +344,8 @@ export async function POST(request) {
             experienciaReal, opinionPersonal, faseCreador, projectLanguage
         });
 
+        const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;
+
         const parallelGenerations = Array.from({ length: finalCount }).map((_, idx) => {
             const variantMsg = idx > 0 
                 ? `${userMessage} (IMPORTANTE: Mismo tema, pero usa un ángulo o punto de vista DISTINCTO al convencional. Variante #${idx + 1})`
