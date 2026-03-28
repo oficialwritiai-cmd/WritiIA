@@ -478,7 +478,8 @@ export default function EstrategiaPage() {
         const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(String(i.id)));
 
         if (selectedIdeas.length === 0) {
-            alert('Selecciona al menos una idea para analizar y planificar.');
+            console.error('[Estrategia] Mismatch detected:', { selectedIdeaIds: Array.from(selectedIdeaIds), ideasCount: ideas.length });
+            alert('Error de selección: No se encontraron las ideas marcadas. Por favor, deselecciona y vuelve a marcar.');
             return;
         }
 
@@ -1368,11 +1369,11 @@ export default function EstrategiaPage() {
                         <button
                             className="btn-secondary"
                             onClick={() => {
-                                const allIds = ideas.map(i => i.id).filter(Boolean);
-                                if (selectedIdeaIds.size === allIds.length) {
+                                const idsToToggle = ideasList.map((idea, idx) => String(idea.id || idea.titulo_idea || idea.titulo || idx)).filter(Boolean);
+                                if (selectedIdeaIds.size === idsToToggle.length && idsToToggle.length > 0) {
                                     setSelectedIdeaIds(new Set());
                                 } else {
-                                    setSelectedIdeaIds(new Set(allIds));
+                                    setSelectedIdeaIds(new Set(idsToToggle));
                                 }
                             }}
                             style={{ background: selectedIdeaIds.size === ideasList.length && ideasList.length > 0 ? 'rgba(255,255,255,0.1)' : 'transparent' }}
@@ -1398,9 +1399,13 @@ export default function EstrategiaPage() {
                                 style={{
                                     padding: '14px 28px',
                                     fontSize: '1rem',
-                                    background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
-                                    border: 'none',
-                                    boxShadow: '0 4px 20px rgba(183, 77, 255, 0.4)'
+                                    background: selectedIdeaIds.size === 0 || isAnalyzingPlan 
+                                        ? 'rgba(255,255,255,0.05)' 
+                                        : 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
+                                    color: selectedIdeaIds.size === 0 || isAnalyzingPlan ? 'rgba(255,255,255,0.3)' : '#FFF',
+                                    border: selectedIdeaIds.size === 0 || isAnalyzingPlan ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                    boxShadow: selectedIdeaIds.size === 0 || isAnalyzingPlan ? 'none' : '0 4px 20px rgba(183, 77, 255, 0.4)',
+                                    cursor: selectedIdeaIds.size === 0 || isAnalyzingPlan ? 'not-allowed' : 'pointer'
                                 }}
                                 onClick={handleAnalyzeAndPlan}
                                 disabled={selectedIdeaIds.size === 0 || isAnalyzingPlan}
