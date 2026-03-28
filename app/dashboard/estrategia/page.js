@@ -532,6 +532,10 @@ export default function EstrategiaPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión');
 
+            // Resilience: Ensure we have a project ID
+            const targetProjectId = activeProject?.id || profile?.last_project_id || null;
+            console.log('[Estrategia] Aplicando plan al proyecto:', targetProjectId);
+
             const { data: planData, error: planError } = await supabase
                 .from('content_plans')
                 .insert({
@@ -541,7 +545,7 @@ export default function EstrategiaPage() {
                     frequency: `${editablePlan.length} publicaciones`,
                     platforms: [...new Set(editablePlan.map(i => i.suggestedPlatform || i.plataforma))],
                     focus: 'plan_inteligente',
-                    project_id: activeProject?.id
+                    project_id: targetProjectId
                 })
                 .select()
                 .single();
@@ -566,7 +570,7 @@ export default function EstrategiaPage() {
                     },
                     tags: [item.suggestedPlatform || 'General', item.tipo || 'viral', 'plan-inteligente'].filter(Boolean),
                     status: 'borrador',
-                    project_id: activeProject?.id
+                    project_id: targetProjectId
                 }));
 
             let libraryMap = {}; // Maps original array index to library ID
@@ -609,7 +613,7 @@ export default function EstrategiaPage() {
                     platform: item.suggestedPlatform || item.plataforma || 'General',
                     color: item.color || defaultColor,
                     reference_id: refId,
-                    project_id: activeProject?.id,
+                    project_id: targetProjectId,
                     status: 'En preparación'
                 };
             });
@@ -628,7 +632,8 @@ export default function EstrategiaPage() {
                 platform: item.suggestedPlatform || item.plataforma || 'Reels',
                 content_type: item.tipo || item.categoria || 'viral',
                 idea_title: item.titulo_idea || item.titulo || 'Sin título',
-                goal: item.objetivo || 'engagement'
+                goal: item.objetivo || 'engagement',
+                project_id: targetProjectId
             }));
             await supabase.from('content_slots').insert(slotsToInsert);
 
