@@ -1406,12 +1406,27 @@ function CalendarContent() {
                                         const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
                                         if (!copy) return null;
 
-                                        const caption = copy.descripcion_larga || copy.caption || copy.texto || '';
+                                        const headline = copy.titulo || copy.headline || '';
+                                        const caption = copy.descripcion_larga || copy.body || copy.caption || copy.texto || '';
                                         const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags : [];
 
                                         return (
                                             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>COPY & HASHTAGS</div>
+                                                <div className="block-label-mini" style={{ color: '#aaa', marginBottom: '8px' }}>POST COPY Y HASHTAGS</div>
+                                                <input
+                                                    type="text"
+                                                    className="cal-input-minimal"
+                                                    style={{ width: '100%', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700 }}
+                                                    value={headline}
+                                                    onChange={e => {
+                                                        const newContent = { ...(linkedScript.content || {}) };
+                                                        const newCopy = { ...(newContent.copy_post || {}) };
+                                                        newCopy.titulo = e.target.value;
+                                                        newContent.copy_post = newCopy;
+                                                        setLinkedScript({ ...linkedScript, content: newContent });
+                                                    }}
+                                                    placeholder="Título del post..."
+                                                />
                                                 <textarea
                                                     className="cal-textarea-minimal"
                                                     style={{ minHeight: '120px', padding: '16px', fontSize: '0.95rem', fontStyle: 'italic', color: '#ccc', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}
@@ -1494,8 +1509,8 @@ function CalendarContent() {
                                             className="btn-secondary"
                                             onClick={() => {
                                                 const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
-                                                const title = copy?.titulo || '';
-                                                const caption = copy?.descripcion_larga || copy?.caption || copy?.texto || '';
+                                                const title = copy?.titulo || copy?.headline || '';
+                                                const caption = copy?.descripcion_larga || copy?.body || copy?.caption || copy?.texto || '';
                                                 const tags = (copy?.hashtags || []).map(t => t.startsWith('#') ? t : `#${t}`).join(' ');
                                                 const full = `${title}\n\n${caption}\n\n${tags}`;
                                                 navigator.clipboard.writeText(full);

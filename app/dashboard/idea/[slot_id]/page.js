@@ -268,8 +268,8 @@ export default function IdeaPage() {
              setStructureText(sc.full_text);
         }
         const pc = sc.post_copy || {};
-        setPostHeadline(pc.headline || pc.titulo || '');
-        setPostBody(pc.body || pc.descripcion_larga || '');
+        setPostHeadline(pc.titulo || pc.headline || '');
+        setPostBody(pc.descripcion_larga || pc.body || '');
         setPostHashtags(Array.isArray(pc.hashtags) ? pc.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (pc.hashtags || ''));
     }
 
@@ -286,8 +286,8 @@ export default function IdeaPage() {
             setStructureText(c.desarrollo.join('\n\n'));
         }
         if (c.copy_post) {
-            setPostHeadline(c.copy_post.headline || '');
-            setPostBody(c.copy_post.body || '');
+            setPostHeadline(c.copy_post.titulo || c.copy_post.headline || '');
+            setPostBody(c.copy_post.descripcion_larga || c.copy_post.body || '');
             const ht = c.copy_post.hashtags;
             setPostHashtags(Array.isArray(ht) ? ht.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') : (ht || ''));
         }
@@ -329,7 +329,11 @@ export default function IdeaPage() {
                 const detail = hasColon ? (firstLine.split(':').slice(1).join(':').trim() + '\n' + lines.slice(1).join('\n')).trim() : block.trim();
                 return { point, detail: detail || firstLine };
             });
-            const postCopy = { headline: postHeadline, body: postBody, hashtags: postHashtags.split(/\s+/).filter(h => h.trim().length > 0) };
+            const postCopy = { 
+                titulo: postHeadline, 
+                descripcion_larga: postBody, 
+                hashtags: postHashtags.split(/\s+/).filter(h => h.trim().length > 0) 
+            };
             const fullContentText = [`HOOK: ${hook}`, `DESARROLLO:\n${structureText}`, `CTA: ${ctaText}`, `POST COPY:\n${postHeadline}\n${postBody}\n${postHashtags}`, `NOTAS:\n${notes}`].join('\n\n');
             const payload = { title, hook, structure: structureArr, cta: ctaText, notes, post_copy: postCopy, content: fullContentText, platform };
             // v6.3.1: Ensure we use the slot_id from the URL as the primary identifier if no script row exists yet

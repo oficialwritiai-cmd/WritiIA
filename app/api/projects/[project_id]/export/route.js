@@ -71,8 +71,8 @@ export async function GET(request, { params }) {
                 : (slot.script_data?.desarrollo ? (Array.isArray(slot.script_data.desarrollo) ? slot.script_data.desarrollo.join(' ') : slot.script_data.desarrollo) : '');
 
             const postCopyText = script?.post_copy
-                ? `${script.post_copy.headline || ''} | ${script.post_copy.body || ''} | ${(script.post_copy.hashtags || []).join(' ')}`
-                : (slot.script_data?.copy_post ? `${slot.script_data.copy_post.headline || ''} | ${slot.script_data.copy_post.body || ''}` : '');
+                ? `${script.post_copy.titulo || script.post_copy.headline || ''} | ${script.post_copy.descripcion_larga || script.post_copy.body || ''} | ${(script.post_copy.hashtags || []).join(' ')}`
+                : (slot.script_data?.copy_post ? `${slot.script_data.copy_post.titulo || slot.script_data.copy_post.headline || ''} | ${slot.script_data.copy_post.descripcion_larga || slot.script_data.copy_post.body || ''}` : '');
 
             return [
                 slot.day_number || '""',
