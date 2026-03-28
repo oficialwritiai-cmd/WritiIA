@@ -216,13 +216,12 @@ export default function LandingPage() {
                     <div className="lp-badge">✦ Planificador de contenido con IA</div>
 
                     <h1 className="lp-h1">
-                        Planificador de contenido<br />
-                        con IA <span>en un solo clic</span>
+                        Tu próximo mes de contenido,<br />
+                        <span>planificado y guionado en una tarde.</span>
                     </h1>
 
                     <p className="lp-hero-sub">
-                        Genera ideas estratégicas, guiones listos y un calendario mensual completo
-                        sin quedarte en blanco — en minutos, no en horas.
+                        Cerebro IA que conoce tu negocio. Ideas virales para Reels y Shorts. Guiones listos para grabar. Todo en un calendario visual. Sin abrir ChatGPT, Notion ni hojas de cálculo.
                     </p>
 
                     <div className="lp-hero-ctas">
@@ -231,7 +230,7 @@ export default function LandingPage() {
                         ) : (
                             <>
                                 <button onClick={handleStart} className="lp-cta-primary" disabled={loading}>
-                                    ⚡ {loading ? 'Preparando...' : startLabel}
+                                    ⚡ {loading ? 'Preparando...' : (user ? 'Ir a mi Panel →' : 'Quiero mi primer mes de contenido planificado')}
                                 </button>
                                 <button
                                     className="lp-cta-secondary"
@@ -312,6 +311,49 @@ export default function LandingPage() {
                 <div className="lp-scroll-indicator">
                     <div className="lp-scroll-arrow">↓</div>
                     Scroll
+                </div>
+            </section>
+
+            <div className="lp-divider" />
+
+            {/* ═══ WRITI NO ES OTRO CHATGPT ═══ */}
+            <section style={{
+                background: 'rgba(157,0,255,0.04)',
+                borderTop: '1px solid rgba(157,0,255,0.1)',
+                borderBottom: '1px solid rgba(157,0,255,0.1)',
+                padding: '64px 24px',
+                textAlign: 'center',
+            }}>
+                <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                    <span className="lp-section-label">Para que quede claro</span>
+                    <h2 className="lp-section-title" style={{ fontSize: '1.8rem', marginTop: 12 }}>WRITI no es otro ChatGPT con prompts</h2>
+                    <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+                        {[
+                            { bad: true, text: 'No es un chat donde tienes que saber qué preguntar' },
+                            { bad: true, text: 'No es un calendario vacío que rellenas tú' },
+                            { bad: true, text: 'No es contenido genérico que suena a robot' },
+                            { bad: false, text: 'Es un sistema completo: idea + guion + fecha + tu voz de marca, en un solo sitio' },
+                        ].map((item, i) => (
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'flex-start', gap: 14,
+                                textAlign: 'left', maxWidth: 560, width: '100%',
+                                background: item.bad ? 'rgba(255,255,255,0.02)' : 'rgba(52,211,153,0.06)',
+                                border: item.bad ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(52,211,153,0.2)',
+                                borderRadius: 10, padding: '14px 20px',
+                            }}>
+                                <span style={{
+                                    fontSize: '1.1rem', marginTop: 1, flexShrink: 0,
+                                    color: item.bad ? 'rgba(255,100,100,0.8)' : '#34d399',
+                                    fontWeight: 700,
+                                }}>{item.bad ? '✗' : '✓'}</span>
+                                <span style={{
+                                    color: item.bad ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.9)',
+                                    fontSize: '0.97rem', lineHeight: 1.5,
+                                    fontWeight: item.bad ? 400 : 600,
+                                }}>{item.text}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -442,20 +484,28 @@ export default function LandingPage() {
                 <h2 className="lp-section-title">El asistente de marketing ideal para tu negocio digital</h2>
                 
                 <div className="lp-features" style={{ marginTop: '40px' }}>
-                    <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
-                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Creadores de Contenido</h3>
-                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
-                            Aumenta tu frecuencia de publicación sin burnout. Genera 30 guiones de contenido orgánico en una tarde y dedícate solo a grabar.
+                    {/* CREADORES — first and richest */}
+                    <div className="lp-feature-card" style={{ background: 'rgba(157,0,255,0.04)', border: '1px solid rgba(157,0,255,0.2)' }}>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>🎬 Para Creadores de Contenido</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem', lineHeight: '1.7', marginBottom: 12 }}>
+                            Publica 3–5 veces por semana sin quedarte en blanco. WRITI genera las ideas, escribe el guion completo y lo mete en tu calendario. Tú solo grabas.
                         </p>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {['30 guiones al mes listos para grabar', 'Ganchos optimizados para Reels y Shorts', 'Calendario visual para nunca improvisar'].map((b, i) => (
+                                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem' }}>
+                                    <span style={{ color: '#9D00FF', fontWeight: 700 }}>✓</span> {b}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                     <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
-                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Coaches y Consultores</h3>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>🎓 Para Coaches y Consultores</h3>
                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
                             Demuestra tu autoridad. Crea contenido educativo profundo, hilado con inteligencia artificial, para captar leads cualificados y vender tus mentorías.
                         </p>
                     </div>
                     <div className="lp-feature-card" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
-                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>Para Agencias y Community Managers</h3>
+                        <h3 className="lp-feature-title" style={{ fontSize: '1.1rem' }}>🏢 Para Agencias y Community Managers</h3>
                         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem', lineHeight: '1.6' }}>
                             Gestiona el mes de 10 clientes distintos en tiempo récord. Cada perfil tiene su propio "Cerebro IA" para mantener la voz de marca perfecta.
                         </p>
