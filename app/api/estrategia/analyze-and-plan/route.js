@@ -53,7 +53,7 @@ export async function POST(request) {
 
         let ideasToPlan = [...selectedIdeas];
         let generatedIdeas = [];
-        const MIN_IDEAS = 20;
+        const MIN_IDEAS = 30;
 
         if (selectedIdeas.length < MIN_IDEAS) {
             const ideasNeeded = MIN_IDEAS - selectedIdeas.length;
@@ -70,12 +70,11 @@ export async function POST(request) {
 
             const platformsFromSelected = [...new Set(selectedIdeas.map(i => i.plataforma).filter(Boolean))];
 
-            const generateSystemPrompt = `Eres el mejor estratega de contenido viral del mundo.
-Tu tarea es generar ideas de contenido altamente específicas, disruptivas y con alto potencial viral.
-Debes basarte en los temas y tono de las ideas existentes del usuario.
-Las ideas deben dividirse en categorías: Autoridad (educar), Viral (entretenimiento/curiosidad), Historia (conexión).
+            const generateSystemPrompt = `Eres el estratega de contenido viral más exitoso del mundo, experto en crear "viral hooks" infalibles.
+Tu tarea es generar ideas de contenido altamente disruptivas, curiosas y con alto potencial de retención.
+Debes basarte en los temas proporcionados pero elevar el impacto con nuevos ángulos (storytelling, controversia, o valor contraintuitivo).
 
-IMPORTANTE: Las ideas generadas deben ser COMPLEMENTARIAS a las existentes, no repetirlas.
+IMPORTANTE: Las ideas generadas deben ser COMPLEMENTARIAS (no repetidas) y seguir una estructura de contenido moderno (Gancho -> Valor -> CTA). 
 Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
 [{ "titulo_idea": "...", "descripcion": "...", "categoria": "...", "plataforma": "...", "objetivo": "..." }]`;
 

@@ -68,22 +68,36 @@ export async function POST(request) {
 
         let brandContextString = brandBrain ? `Bio: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.` : '';
 
-        const systemPrompt = `Eres un estratega de contenido de élite.
+        const systemPrompt = `Eres el estratega de contenido viral más exitoso de la actualidad, experto en algoritmos de Reels, TikTok, LinkedIn y YouTube Shorts. 
 ${brandContextString}
-Objetivo: ${objective}.
-Genera 10 ideas estratégicas en formato JSON array:
+Objetivo estratégico: ${objective}.
+Contexto adicional: Lanzamiento: ${launch || 'N/A'}. Objeción a derribar: ${objection || 'N/A'}.
+
+Tu misión es generar un Banco de 40 IDEAS de contenido de ALTO IMPACTO y POTENCIAL VIRAL. 
+
+REGLAS DE ORO PARA LAS IDEAS:
+1. GANCHOS DISRUPTIVOS: Cada idea debe empezar con un gancho "scroll-stopper" (curiosidad extrema, contradicción, resultado impactante, o dolor agudo).
+2. CONTENIDO 'TOP-TIER': Evita consejos obvios. Provee ángulos específicos, tácticas poco conocidas, o historias que generen debate.
+3. VARIEDAD ESTRATÉGICA: Distribuye las 40 ideas entre:
+   - VIRALIDAD (Curiosidad, tendencias, errores comunes).
+   - AUTORIDAD (Tutoriales avanzados, estudios de caso, "detrás de escena" experto).
+   - CONEXIÓN/VENTA (Historias de transformación, derribar la objeción "${objection || 'del cliente'}", vulnerabilidad).
+
+FORMATO DE RESPUESTA (JSON Array Estricto):
 [
   {
-    "titulo_idea": "...",
-    "descripcion": "...",
+    "titulo_idea": "Gancho Magnético + Concepto",
+    "descripcion": "Estructura del contenido: Inicio (gancho), Desarrollo (3 puntos clave) y Cierre.",
     "plataforma": "...",
-    "tipo": "...",
-    "por_que_funciona": "...",
+    "tipo": "Viral | Autoridad | Conexión",
+    "por_que_funciona": "Disparador psicológico (ej: Curiosidad, FOMO, Contraste)",
     "objetivo": "...",
-    "potencial": "...",
-    "cta": "..."
+    "potencial": "Viral | Alto | Medio",
+    "cta": "Llamada a la acción estratégica"
   }
-]`;
+]
+
+IMPORTANTE: Las 40 ideas deben ser ÚNICAS y variadas. No generes variaciones de la misma idea.`;
 
         const { parsed: ideas } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,

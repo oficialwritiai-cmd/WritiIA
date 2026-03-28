@@ -256,7 +256,8 @@ export default function EstrategiaPage() {
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            if (!session) throw new Error('No hay sesión activa');
+            const token = session.access_token;
 
             const res = await fetch('/api/estrategia/generate-ideas', {
                 method: 'POST',
@@ -266,7 +267,7 @@ export default function EstrategiaPage() {
                 },
                 body: JSON.stringify({
                     ...form,
-                    userId: profile?.id,
+                    userId: session.user.id,
                     projectId: activeProject?.id
                 })
             });
@@ -510,7 +511,8 @@ export default function EstrategiaPage() {
         setIsAnalyzingPlan(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            if (!session) throw new Error('No hay sesión activa');
+            const token = session.access_token;
 
             const res = await fetch('/api/estrategia/analyze-and-plan', {
                 method: 'POST',
@@ -520,7 +522,7 @@ export default function EstrategiaPage() {
                 },
                 body: JSON.stringify({
                     selectedIdeas,
-                    userId,
+                    userId: session.user.id,
                     projectId: activeProject?.id
                 })
             });
