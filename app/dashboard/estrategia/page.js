@@ -644,7 +644,7 @@ export default function EstrategiaPage() {
             setShowPlanModal(false);
             setSuccessModalData({
                 title: '¡Plan Inteligente Aplicado!',
-                message: `Se han planificado ${editablePlan.length} ideas entre el ${minDate} y el ${maxDate} con optimización de fechas y plataformas.`,
+                message: `Se han sincronizado ${eventsToInsert.length} ideas con éxito en el proyecto "${activeProject?.name || 'actual'}". Revisa tu calendario entre el ${minDate} y el ${maxDate}. ¡Hay mucho contenido nuevo en Abril!`,
                 redirectTo: '/dashboard/calendar',
                 actionLabel: 'Ver Calendario',
                 secondaryActionLabel: 'Ver en Biblioteca',
