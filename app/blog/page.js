@@ -31,7 +31,7 @@ export default function BlogPage() {
                         background: 'linear-gradient(135deg, #9D00FF, #6100FF)',
                         color: '#fff', padding: '8px 20px', borderRadius: 8,
                         fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none',
-                    }}>Prueba gratis</Link>
+                    }}>Empieza con WRITI.AI</Link>
                 </div>
             </nav>
 
@@ -163,7 +163,7 @@ export default function BlogPage() {
                     textDecoration: 'none',
                     letterSpacing: '-0.01em',
                 }}>
-                    ⚡ Prueba WRITI.AI gratis 7 días →
+                    ⚡ Empieza con WRITI.AI →
                 </Link>
             </div>
         </div>

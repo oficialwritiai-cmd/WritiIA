@@ -77,7 +77,7 @@ export default function BlogArticlePage({ params }) {
                         background: 'linear-gradient(135deg, #9D00FF, #6100FF)',
                         color: '#fff', padding: '8px 18px', borderRadius: 8,
                         fontSize: '0.83rem', fontWeight: 700, textDecoration: 'none',
-                    }}>Prueba gratis</Link>
+                    }}>Empieza con WRITI</Link>
                 </div>
             </nav>
 
