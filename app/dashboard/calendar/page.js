@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
     ChevronLeft, ChevronRight, Plus, X, Save, Trash2, Search,
@@ -13,10 +13,19 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v6.7.0 (Sync & Multi-Event Fix)
+// Calendar Page v6.8.0 (Smart Import & Planning)
 
 export default function CalendarPage() {
+    return (
+        <Suspense fallback={<div className="cal-loading">Cargando aplicación...</div>}>
+            <CalendarContent />
+        </Suspense>
+    );
+}
+
+function CalendarContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createSupabaseClient();
 
     // -- State --
@@ -25,6 +34,7 @@ export default function CalendarPage() {
     const [events, setEvents] = useState([]);
     const [libraryItems, setLibraryItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingSmartPlan, setLoadingSmartPlan] = useState(false);
 
     // Detail Panel State
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -90,6 +100,118 @@ export default function CalendarPage() {
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, [currentDate, activeProject]);
+
+    // -- Import Logic (v1.17.9) --
+    useEffect(() => {
+        const importId = searchParams.get('import');
+        if (importId) {
+            handleImportIdea(importId);
+        }
+    }, [searchParams]);
+
+    async function handleImportIdea(id) {
+        setLoadingSmartPlan(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Fetch idea from library
+            const { data: idea, error: ideaErr } = await supabase
+                .from('library')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (ideaErr || !idea) throw new Error('No se pudo encontrar la idea en el banco de ideas.');
+
+            // 2. Call AI Smart Planning API
+            const response = await fetch('/api/calendar/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: [idea],
+                    projectId: activeProject?.id
+                })
+            });
+
+            // 3. Prepare payload and insert automatically (v1.17.9)
+            const suggestion = body.schedule?.[0];
+            const eventDate = suggestion?.fecha_sugerida || new Date().toISOString().split('T')[0];
+            const startTime = suggestion?.hora_sugerida || '09:00';
+            let endTime = '10:00';
+            
+            if (startTime) {
+                const [h, m] = startTime.split(':').map(Number);
+                const endH = (h + 1) % 24;
+                endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+
+            const notes = [
+                idea.gancho ? `GANCHO: ${idea.gancho}` : '',
+                idea.desarrollo ? `DESARROLLO: ${idea.desarrollo}` : '',
+                idea.content || ''
+            ].filter(Boolean).join('\n\n');
+
+            const payload = {
+                user_id: user.id,
+                project_id: activeProject?.id,
+                title: idea.titulo || idea.titulo_idea || 'Idea importada',
+                status: 'idea',
+                platform: idea.platform || 'General',
+                notes: notes,
+                event_date: eventDate,
+                type: 'idea',
+                color: 'green', // Distinct color: Green for Smart Import
+                start_time: startTime,
+                end_time: endTime,
+                reference_id: idea.id // Link back to library item
+            };
+
+            const { data: newEv, error: insertErr } = await supabase
+                .from('calendar_events')
+                .insert(payload)
+                .select()
+                .single();
+
+            if (insertErr) throw insertErr;
+
+            // 4. Update local state and show the event
+            if (newEv) {
+                setEvents(prev => [...prev, newEv]);
+                setSelectedEvent(newEv);
+                setSelectedDate(eventDate);
+                
+                // Pre-populate form states for the panel
+                setTempTitle(newEv.title);
+                setTempNotes(newEv.notes);
+                setTempPlatform(newEv.platform);
+                setTempStatus(newEv.status);
+                setTempColor(newEv.color);
+                setTempStartTime(newEv.start_time);
+                setTempEndTime(newEv.end_time);
+                
+                setIsPanelOpen(true);
+                
+                // Jump to the month of the new event if it's different
+                const suggestedDateObj = new Date(eventDate + 'T12:00:00');
+                if (suggestedDateObj.getMonth() !== currentDate.getMonth() || suggestedDateObj.getFullYear() !== currentDate.getFullYear()) {
+                    setCurrentDate(suggestedDateObj);
+                }
+            }
+
+            // 5. Cleanup URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('import');
+            window.history.replaceState({}, '', url.pathname);
+
+        } catch (err) {
+            console.error('Error importing idea:', err);
+            alert('Error al analizar e insertar idea: ' + err.message);
+        } finally {
+            setLoadingSmartPlan(false);
+        }
+    }
+
 
     // Cargar guion vinculado cuando se selecciona un evento
     useEffect(() => {
@@ -1035,8 +1157,18 @@ export default function CalendarPage() {
                 </header>
 
                 <div className="cal-grid-wrapper">
-                    {loading ? (
-                        <div className="cal-loading">Sincronizando calendario...</div>
+                    {loading || loadingSmartPlan ? (
+                        <div className="cal-loading">
+                            {loadingSmartPlan ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                                    <div className="spinner-mini" style={{ width: '40px', height: '40px' }}></div>
+                                    <div style={{ fontWeight: 800, color: '#9D00FF', fontSize: '1.1rem' }}>IA analizando mejor momento para publicar...</div>
+                                    <div style={{ fontSize: '0.85rem', color: '#666', maxWidth: '300px' }}>
+                                        Estamos revisando tu estrategia y tu historial para sugerir el hueco perfecto.
+                                    </div>
+                                </div>
+                            ) : 'Sincronizando calendario...'}
+                        </div>
                     ) : isMobile ? (
                         <div className="cal-mobile-v2">
                             {viewMode === 'month' && (
