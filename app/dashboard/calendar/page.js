@@ -13,7 +13,7 @@ import Logo from '@/app/components/Logo';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
-// Calendar Page v6.8.0 (Smart Import & Planning)
+// Calendar Page v1.17.23 (Smart Import & Planning)
 
 export default function CalendarPage() {
     return (
@@ -44,6 +44,8 @@ function CalendarContent() {
     // Filter State
     const [filterPlatform, setFilterPlatform] = useState('All');
     const [filterStatus, setFilterStatus] = useState('All');
+    const [lastFetchRange, setLastFetchRange] = useState('');
+    const version = 'v1.17.23';
     const [searchQuery, setSearchQuery] = useState('');
     const [linkedScript, setLinkedScript] = useState(null);
     const [loadingScript, setLoadingScript] = useState(false);
@@ -863,11 +865,11 @@ function CalendarContent() {
         // Vista semanal: mostrar 7 días basados en weekOffset relativo a hoy
         const dateList = [];
         if (viewMode === 'week') {
-            // Base: lunes de la semana actual, ajustado por weekOffset
-            const today = new Date();
-            const dayOfWeek = today.getDay(); // 0=domingo
-            const monday = new Date(today);
-            monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + weekOffset * 7);
+            // Base: Lunes de la semana seleccionada (v1.17.23 sync)
+            const anchor = new Date(currentDate);
+            const dayOfWeek = anchor.getDay(); // 0=domingo
+            const monday = new Date(anchor);
+            monday.setDate(anchor.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + weekOffset * 7);
 
             for (let i = 0; i < 7; i++) {
                 const d = new Date(monday);
