@@ -378,8 +378,15 @@ export default function EstrategiaPage() {
                 console.log('[Estrategia] Idea[' + i + ']:', typeof ideasData[i], ideasData[i]?.titulo_idea);
             }
 
-            console.log('[Estrategia] Setting ideas, type:', typeof ideasData, 'isArray:', Array.isArray(ideasData));
-            setIdeas(ideasData);
+            // Step 4: Inject stable IDs for selection robustness
+            const finalIdeas = ideasData.map((idea, idx) => ({
+                ...idea,
+                id: idea.id || `idea-${Date.now()}-${idx}`
+            }));
+
+            console.log('[Estrategia] Setting finalIdeas, count:', finalIdeas.length);
+            setIdeas(finalIdeas);
+            setSelectedIdeaIds(new Set()); // Reset selection for new batch
             setStep(1);
         } catch (err) {
             setError(err.message);
@@ -401,10 +408,7 @@ export default function EstrategiaPage() {
             return;
         }
 
-        const ideasToSave = ideas.filter((i, idx) => {
-            const id = i?.id || i?.titulo_idea || i?.titulo || String(idx);
-            return selectedIdeaIds.has(id);
-        });
+        const ideasToSave = ideas.filter(i => selectedIdeaIds.has(i.id));
 
         if (ideasToSave.length === 0) return;
 
@@ -451,25 +455,7 @@ export default function EstrategiaPage() {
             return;
         }
 
-        // Filtrar ideas seleccionadas - con protección
-        let ideasArray = ideas;
-        if (typeof ideas === 'string') {
-            try {
-                ideasArray = JSON.parse(ideas);
-                if (!Array.isArray(ideasArray)) ideasArray = [ideasArray];
-            } catch (e) {
-                ideasArray = [];
-            }
-        }
-
-        if (!Array.isArray(ideasArray)) {
-            ideasArray = [];
-        }
-
-        const selectedIdeas = ideasArray.filter(i => {
-            const id = i?.id || i?.titulo_idea || i?.titulo || String(ideasArray.indexOf(i));
-            return selectedIdeaIds.has(id);
-        });
+        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id));
 
         if (selectedIdeas.length === 0) {
             alert('Selecciona al menos una idea para crear tu plan.');
@@ -486,22 +472,7 @@ export default function EstrategiaPage() {
             return;
         }
 
-        let ideasArray = ideas;
-        if (typeof ideas === 'string') {
-            try {
-                ideasArray = JSON.parse(ideas);
-                if (!Array.isArray(ideasArray)) ideasArray = [ideasArray];
-            } catch (e) {
-                ideasArray = [];
-            }
-        }
-
-        if (!Array.isArray(ideasArray)) ideasArray = [];
-
-        const selectedIdeas = ideasArray.filter(i => {
-            const id = i?.id || i?.titulo_idea || i?.titulo || String(ideasArray.indexOf(i));
-            return selectedIdeaIds.has(id);
-        });
+        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id));
 
         if (selectedIdeas.length === 0) {
             alert('Selecciona al menos una idea para analizar y planificar.');
@@ -1394,7 +1365,7 @@ export default function EstrategiaPage() {
                         <button
                             className="btn-secondary"
                             onClick={() => {
-                                const allIds = ideasList.map((i, idx) => i?.id || i?.titulo_idea || i?.titulo || String(idx)).filter(Boolean);
+                                const allIds = ideas.map(i => i.id).filter(Boolean);
                                 if (selectedIdeaIds.size === allIds.length) {
                                     setSelectedIdeaIds(new Set());
                                 } else {
@@ -1485,8 +1456,8 @@ export default function EstrategiaPage() {
 
                             return (
                                 <div
-                                    key={idx}
-                                    onClick={() => toggleIdeaSelection(id)}
+                                    key={idea.id || idx}
+                                    onClick={() => toggleIdeaSelection(idea.id)}
                                     className="premium-card"
                                     style={{
                                         padding: '18px',
