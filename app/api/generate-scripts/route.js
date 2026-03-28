@@ -162,6 +162,11 @@ Para CADA item de la lista, escribe un bloque de desarrollo que:
 function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador, projectLanguage, targetWords }) {
     const parsedItems = parseUserItemList(specificDetails);
     const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
+    const defaultItemsCount = (videoDuration === '3 min' || videoDuration === '5 min') ? 6 
+                            : videoDuration === '10 min' ? 10 
+                            : 3;
+    const finalItemsCount = totalItems || defaultItemsCount;
+    const exampleDesarrollo = Array.from({ length: finalItemsCount }).map((_, i) => `"[PUNTO REAL ${i + 1}]"`).join(', ');
 
     // Prompt context enrichment
     const contextLines = [];
@@ -230,7 +235,7 @@ EJEMPLO DE RESPUESTA CORRECTA (copia este formato con contenido REAL):
 ESTRUCTURA DEL GUION:
 1. HOOK (1-2 frases): Directo al problema o promesa. Impactante (intensidad ${intensity}/5).
 2. CONTEXTO (2-3 frases): Quién eres y por qué esto importa ahora.
-3. DESARROLLO: ${totalItems || 3}-5 puntos desarrollados, cada uno con ejemplos o datos concretos.
+3. DESARROLLO: EXACTAMENTE ${finalItemsCount} puntos desarrollados, cada uno con profundidad, ejemplos y datos concretos.
 4. CIERRE: Frase de conclusión emocional o reflexión.
 5. CTA: Acción clara alineada con el objetivo.
 
@@ -250,7 +255,7 @@ RESPONDE ÚNICAMENTE con un JSON array válido (sin texto adicional, sin markdow
     "titulo_guion": "Título del guion",
     "video_duration": "${videoDuration}",
     "gancho": "[TEXTO REAL - NO VACÍO]",
-    "desarrollo": ["[PUNTO REAL 1]", "[PUNTO REAL 2]", "[PUNTO REAL 3]"],
+    "desarrollo": [${exampleDesarrollo}],
     "cierre": "[TEXTO REAL - NO VACÍO]",
     "cta": "[TEXTO REAL - NO VACÍO]",
     "copy_post": {
