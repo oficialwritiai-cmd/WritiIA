@@ -283,7 +283,7 @@ export default function IdeaPage() {
         if (c.full_text) {
             setStructureText(c.full_text);
         } else if (Array.isArray(c.desarrollo)) {
-            setStructureText(c.desarrollo.join('\n\n'));
+            setStructureText(c.desarrollo.map(d => (typeof d === 'object' ? JSON.stringify(d) : String(d))).join('\n\n'));
         }
         if (c.copy_post) {
             setPostHeadline(c.copy_post.titulo || c.copy_post.headline || '');

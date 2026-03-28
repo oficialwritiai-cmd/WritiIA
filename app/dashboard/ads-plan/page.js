@@ -633,7 +633,9 @@ export default function AdsPlanPage() {
                                                     {ad.desarrollo.map((d, idx) => (
                                                         <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                                                             <span style={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.15)', minWidth: '20px', marginTop: '2px' }}>{String(idx + 1).padStart(2, '0')}</span>
-                                                            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.5 }}>{d}</p>
+                                                            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', margin: 0, lineHeight: 1.5 }}>
+                                                                {typeof d === 'object' ? JSON.stringify(d) : String(d)}
+                                                            </p>
                                                         </div>
                                                     ))}
                                                 </div>

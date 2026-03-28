@@ -92,6 +92,23 @@ function extractJSONArray(text) {
     }
 }
 
+/**
+ * Ensures an input is a flat array of strings.
+ * If items are objects, it tries to extract common text fields.
+ */
+function ensureStringArray(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(item => {
+        if (typeof item === 'string') return item;
+        if (item === null || item === undefined) return '';
+        if (typeof item === 'object') {
+            // Try common text keys if AI returned objects
+            return item.text || item.punto || item.point || item.contenido || JSON.stringify(item);
+        }
+        return String(item);
+    }).filter(s => typeof s === 'string' && s.length > 0);
+}
+
 function parseUserItemList(specificDetails) {
     if (!specificDetails) return [];
     // Detect numbered list: "1) ...", "1. ...", "1: ..."
@@ -324,7 +341,19 @@ export async function POST(request) {
         if (story) brandContextString += `\n- Caso real/Historia: ${story.substring(0, 1000)}`;
         if (awareness) brandContextString += `\n- Nivel de awareness de la audiencia: ${awareness.substring(0, 200)}`;
 
-        const requestedCount = extractRequestedCount(topic, specificDetails || "");
+        const requestedCountRaw = extractRequestedCount(topic, specificDetails || "");
+        
+        // v4.5.4: Cap requestedCount based on duration to prevent [object Object] / truncation
+        // 90s/60s/30s videos should NOT have 50 points even if the title says so.
+        let requestedCount = requestedCountRaw;
+        if (requestedCount > 15 && (videoDuration === '30 seg' || videoDuration === '60 seg' || videoDuration === '90 seg')) {
+            console.log(`[generate-scripts] Capping insane requestedCount (${requestedCount} -> 12) for duration ${videoDuration}`);
+            requestedCount = 12; 
+        } else if (requestedCount > 30 && (videoDuration === '2 min' || videoDuration === '3 min')) {
+            requestedCount = 20;
+        } else if (requestedCount > 50) {
+            requestedCount = 50; // Hard max
+        }
 
         // Pick the right generator based on duration
         const isLongScript = videoDuration === '3 min' || videoDuration === '5 min';
@@ -387,7 +416,7 @@ export async function POST(request) {
         // ── LIST COUNT VALIDATION & EXPANSION (Surgical) ─────
         if (requestedCount) {
             scriptsArray = await Promise.all(scriptsArray.map(async (s) => {
-                const currentItems = Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo];
+                const currentItems = ensureStringArray(s.desarrollo);
                 if (currentItems.length < requestedCount) {
                     console.log(`[generate-scripts] List too short (${currentItems.length}/${requestedCount}). Expanding...`);
                     const missing = requestedCount - currentItems.length;
@@ -409,7 +438,7 @@ Responde SOLO con un JSON array de strings: ["Punto extra 1", "Punto extra 2", .
                         userMessage: `Genera los ${missing} puntos faltantes para este guion: ${s.titulo_guion}. Responde SOLO con el JSON array.`,
                     });
 
-                    // Hardened parsing
+                    // Hardened parsing with ensureStringArray
                     let extraPoints = Array.isArray(rawExtra) ? rawExtra : extractJSONArray(rawExtra);
 
                     if (!Array.isArray(extraPoints) && typeof rawExtra === 'string') {
@@ -417,10 +446,15 @@ Responde SOLO con un JSON array de strings: ["Punto extra 1", "Punto extra 2", .
                     }
 
                     if (Array.isArray(extraPoints)) {
-                        s.desarrollo = [...currentItems, ...extraPoints].slice(0, requestedCount);
+                        const validatedExtra = ensureStringArray(extraPoints);
+                        s.desarrollo = [...currentItems, ...validatedExtra].slice(0, requestedCount);
+                    } else {
+                        s.desarrollo = currentItems;
                     }
                 } else if (currentItems.length > requestedCount) {
                     s.desarrollo = currentItems.slice(0, requestedCount);
+                } else {
+                    s.desarrollo = currentItems;
                 }
                 return s;
             }));
@@ -452,8 +486,12 @@ ${baseSystemPrompt}`;
                 if (countScriptWords(s) < minWords && expandIdx < expandedResults.length) {
                     const expanded = expandedResults[expandIdx++]?.parsed;
                     const expandedScript = Array.isArray(expanded) ? expanded[0] : expanded;
-                    return expandedScript || s;
+                    if (expandedScript) {
+                        expandedScript.desarrollo = ensureStringArray(expandedScript.desarrollo);
+                        return expandedScript;
+                    }
                 }
+                s.desarrollo = ensureStringArray(s.desarrollo);
                 return s;
             });
         }
@@ -471,11 +509,12 @@ ${baseSystemPrompt}`;
             return s;
         });
 
-        // Ensure all scripts have required fields - v4.4.23: hard content guard
+        // Ensure all scripts have required fields - v4.5.4: hard content guard
         scriptsArray = scriptsArray.map(s => {
-            const hasGancho = s.gancho && s.gancho.trim().length > 10;
-            const hasDesarrollo = Array.isArray(s.desarrollo) && s.desarrollo.some(d => d && d.trim().length > 10);
-            const hasCta = s.cta && s.cta.trim().length > 10;
+            const hasGancho = s.gancho && typeof s.gancho === 'string' && s.gancho.trim().length > 10;
+            const desarrolloArray = ensureStringArray(s.desarrollo);
+            const hasDesarrollo = desarrolloArray.length > 0 && desarrolloArray.some(d => d.trim().length > 10);
+            const hasCta = s.cta && typeof s.cta === 'string' && s.cta.trim().length > 10;
 
             // If gancho is empty or is just the title, generate a content-aware fallback
             const ganchoFinal = hasGancho ? s.gancho
@@ -484,22 +523,30 @@ ${baseSystemPrompt}`;
             const ctaFinal = hasCta ? s.cta
                 : (ctaIdea || `Comenta "${topic.split(' ')[0].toUpperCase()}" y te envío más información. 👇`);
 
-            const desarrolloFinal = hasDesarrollo ? (Array.isArray(s.desarrollo) ? s.desarrollo : [s.desarrollo])
+            const desarrolloFinal = hasDesarrollo ? desarrolloArray
                 : [
                     `Un primer punto clave sobre ${topic}: esto cambia la forma en que trabajas si lo aplicas hoy.`,
                     `Segundo punto: la mayoría de creadores y emprendedores cometen este error que les cuesta tiempo y dinero.`,
                     `Tercer punto: la solución práctica que puedes implementar de inmediato sin necesidad de experiencia previa.`
                   ];
 
+            // Safety for copy_post strings
+            const copyPost = s.copy_post || {};
+            const cleanCopyPost = {
+                titulo: typeof copyPost.titulo === 'string' ? copyPost.titulo : (topic || 'Post'),
+                descripcion_larga: typeof copyPost.descripcion_larga === 'string' ? copyPost.descripcion_larga : ganchoFinal,
+                hashtags: Array.isArray(copyPost.hashtags) ? copyPost.hashtags.map(h => String(h)) : []
+            };
+
             return {
                 ...s,
-                titulo_guion: s.titulo_guion || topic || 'Guion Generado',
+                titulo_guion: (s.titulo_guion && typeof s.titulo_guion === 'string') ? s.titulo_guion : (topic || 'Guion Generado'),
                 video_duration: s.video_duration || videoDuration,
-                gancho: ganchoFinal,
+                gancho: String(ganchoFinal),
                 desarrollo: desarrolloFinal,
-                cierre: (s.cierre && s.cierre.trim().length > 10) ? s.cierre : `Empieza hoy, no mañana. El momento perfecto no llega solo.`,
-                cta: ctaFinal,
-                copy_post: s.copy_post || { titulo: topic, descripcion_larga: ganchoFinal, hashtags: [] }
+                cierre: (s.cierre && typeof s.cierre === 'string' && s.cierre.trim().length > 10) ? s.cierre : `Empieza hoy, no mañana. El momento perfecto no llega solo.`,
+                cta: String(ctaFinal),
+                copy_post: cleanCopyPost
             };
         });
 

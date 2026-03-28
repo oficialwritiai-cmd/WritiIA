@@ -3635,7 +3635,7 @@ export default function DashboardPage() {
                                                         <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>{idx < 9 ? `0${idx + 1}` : idx + 1}</div>
                                                         <div style={{ flex: 1, position: 'relative' }}>
                                                             <textarea
-                                                                value={s.desarrollo[idx] || ''}
+                                                                value={typeof s.desarrollo[idx] === 'object' ? JSON.stringify(s.desarrollo[idx]) : (s.desarrollo[idx] || '')}
                                                                 disabled={refiningBlock === `${i}-punto${idx + 1}`}
                                                                 onChange={(e) => {
                                                                     const news = [...scripts];
@@ -4247,7 +4247,9 @@ export default function DashboardPage() {
                                                             {desarrolloArr.length > 0 ? desarrolloArr.map((punto, pidx) => (
                                                                 <div key={pidx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                                                                     <span style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}>{pidx + 1}</span>
-                                                                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5', margin: 0 }}>{punto}</p>
+                                                                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5', margin: 0 }}>
+                                                                        {typeof punto === 'object' ? JSON.stringify(punto) : punto}
+                                                                    </p>
                                                                 </div>
                                                             )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Sin desarrollo</p>}
                                                         </div>
