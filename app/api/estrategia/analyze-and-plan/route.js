@@ -16,8 +16,11 @@ export async function POST(request) {
 
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        const endOfMonthStr = endOfMonth.toISOString().split('T')[0];
+        
+        // Planning Window: 30 days from today (regardless of month boundary)
+        const endOfWindow = new Date(today);
+        endOfWindow.setDate(today.getDate() + 30);
+        const endOfWindowStr = endOfWindow.toISOString().split('T')[0];
 
         let brandBrain = null;
         if (projectId) {
@@ -34,7 +37,7 @@ export async function POST(request) {
             .select('event_date, type, platform')
             .eq('user_id', userId)
             .gte('event_date', todayStr)
-            .lte('event_date', endOfMonthStr);
+            .lte('event_date', endOfWindowStr);
 
         const eventsByDate = {};
         if (existingEvents) {
@@ -111,16 +114,17 @@ REGLAS DE PLANIFICACIÓN:
 3. LinkedIn/X: Días laborales.
 
 REGLAS DE DISTRIBUCIÓN:
-- MÁXIMO 10 publicaciones por día.
-- IGNORAR DENSIDAD: Si el usuario tiene muchas ideas, agrúpalas aunque haya varios eventos el mismo día. 
-- Prioriza llenar el calendario incluso si hay eventos existentes.
+- MÁXIMO 2 publicaciones por día (idealmente 1 si es posible).
+- DISTRIBUCIÓN EQUILIBRADA: No satures los últimos días del mes. Distribuye las ideas a lo largo de los 30 días de la ventana.
+- Prioriza llenar el calendario de forma uniforme.
 - Respetar eventos ya existentes pero añadir los nuevos encima si es necesario.
-- Si una fecha está saturada, aún así añade la idea si es importante para el plan.
+- Evita que se solapen muchas ideas en un mismo día.
+- Si una fecha está saturada para un tipo de contenido, intenta moverlo a otro día cercano dentro de la ventana de 30 días.
 
 CONOCIMIENTO DEL CALENDARIO EXISTENTE:
 ${Object.entries(eventsByDate).map(([date, events]) => 
     `${date}: ${events.length} eventos (${events.map(e => e.type).join(', ')})`
-).join('\n') || 'No hay eventos programados este mes.'}
+).join('\n') || 'No hay eventos programados en este rango.'}
 
 Responde ÚNICAMENTE con un array JSON válido con este formato exacto:
 [{
@@ -135,7 +139,7 @@ Responde ÚNICAMENTE con un array JSON válido con este formato exacto:
 
         const planUserMessage = `
 FECHA ACTUAL (HOY): ${todayStr}
-FIN DE MES: ${endOfMonthStr}
+FIN DE LA VENTANA (30 DÍAS): ${endOfWindowStr}
 
 IDEAS A PLANIFICAR (${ideasToPlan.length} total):
 ${ideasToPlan.map((idea, idx) => {
@@ -184,7 +188,7 @@ Genera la planificación óptima distribuyendo las ideas a lo largo del mes de f
                 totalIdeas: ideasToPlan.length,
                 originalIdeas: selectedIdeas.length,
                 newIdeas: generatedIdeas.length,
-                dateRange: { start: todayStr, end: endOfMonthStr }
+                dateRange: { start: todayStr, end: endOfWindowStr }
             }
         });
 
