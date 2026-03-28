@@ -159,7 +159,7 @@ Para CADA item de la lista, escribe un bloque de desarrollo que:
 `;
 }
 
-function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador, projectLanguage }) {
+function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador, projectLanguage, targetWords }) {
     const parsedItems = parseUserItemList(specificDetails);
     const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
 
@@ -174,10 +174,12 @@ function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, 
         : videoDuration === '90 seg' || videoDuration === '2 min'
             ? `- DURACIÓN: ${videoDuration} → Gancho, ${totalItems || 5} bloques de desarrollo (2-3 frases c/u), cierre emocional, CTA.`
             : videoDuration === '3 min' || videoDuration === '5 min'
-                ? `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro, ${totalItems || 6} bloques extensos (ejemplos reales), Conclusión, CTA.`
-                : `- DURACIÓN: ${videoDuration} (Formato muy largo/Podcast) → Estructura de Guion de 10 min completo. Intro profunda, ${totalItems || 10} bloques de desarrollo detallados con casos de estudio, resumen intermedio, conclusión y CTA extendido.`;
+                ? `- DURACIÓN: ${videoDuration} (YouTube largo) → Intro narrativa detallada, ${totalItems || 6} bloques MUY EXTENSOS (usa anécdotas completas y ejemplos paso a paso), Conclusión profunda, CTA.`
+                : `- DURACIÓN: ${videoDuration} (Formato muy largo/Podcast) → Estructura de Guion de 10 min completo. Intro profunda, ${totalItems || 10} bloques de desarrollo súper detallados con historias, casos reales, transiciones, conclusión y CTA extendido.`;
 
     const listConstraints = buildListConstraints(parsedItems, totalItems);
+
+    const lengthRule = targetWords ? `\nREGLA DE LONGITUD ESTRICTA: Tu respuesta FINAL debe contener APROXIMADAMENTE ${targetWords} PALABRAS de contenido real (excluyendo formato JSON). Para lograr esto en duraciones largas (3, 5, 10 min), es OBLIGATORIO que los bloques de desarrollo sean MUY EXTENSOS, con descripciones ricas, guiones de actuación, ejemplos reales completos y storytelling. ESTÁ PROHIBIDO RESUMIR.` : '';
 
     return `ROL:
 Eres guionista y estratega de contenido especializado en vídeos cortos y largos para creadores de marca personal. Tu objetivo es escribir guiones que suenen a PERSONA REAL, huyendo de los clichés motivacionales de la IA.
@@ -237,6 +239,7 @@ REGLAS ESPECÍFICAS DE FORMATO:
 - TONO: ${tone}
 ${duracionRules}
 ${listConstraints}
+${lengthRule}
 
 ${ctaIdea ? `CTA OBLIGATORIO: El usuario quiere que pidas esto: "${ctaIdea}"` : 'CTA SUGERIDO: El usuario no ha definido un CTA. Sugiere uno creativo y directo alineado con el objetivo (DMs, seguidor, compartir, etc.) que se sienta natural.'}
 
@@ -376,7 +379,7 @@ export async function POST(request) {
         const baseSystemPrompt = buildSystemPrompt({
             brandContextString, videoDuration, platform, tone, intensity: intensity || 3,
             count: 1, specificDetails, requestedCount, topic, ctaIdea,
-            experienciaReal, opinionPersonal, faseCreador, projectLanguage
+            experienciaReal, opinionPersonal, faseCreador, projectLanguage, targetWords
         });
 
         const userMessage = `Tema central: ${topic}. Tipo de gancho preferido: ${hookType || 'curiosidad extrema'}.`;
