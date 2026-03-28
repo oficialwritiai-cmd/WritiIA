@@ -435,7 +435,7 @@ Responde SOLO con un JSON array de strings: ["Punto extra 1", "Punto extra 2", .
             const expandPrompt = `El guion que generaste es DEMASIADO CORTO para ${videoDuration}.
 Expande CADA bloque de desarrollo con más información, ejemplos concretos y datos reales.
 Mínimo total de palabras: ${targetWords}.
-${systemPrompt}`;
+${baseSystemPrompt}`;
 
             const shortScripts = scriptsArray.filter(s => countScriptWords(s) < minWords);
             const expandedResults = await Promise.all(
