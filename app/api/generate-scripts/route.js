@@ -39,6 +39,12 @@ function countScriptWords(script) {
 function extractRequestedCount(topic, details) {
     const combined = `${topic} ${details}`.toLowerCase();
 
+    // v4.5.5: Si es una narrativa real ("Cómo gané 10k", "Por qué odio 5 cosas", "Cuando..."), ignorar extracción de números
+    const isNarrative = /\b(c[oó]mo|por qu[eé]|mi historia|experiencia|storytime|cuando|tutorial|gu[ií]a|chisme|an[é\e]cdota)\b/i.test(combined);
+    if (isNarrative) {
+        return null;
+    }
+
     // Map textual Spanish numbers to digits
     const numMap = {
         'un': 1, 'uno': 1, 'una': 1,
