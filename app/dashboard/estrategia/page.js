@@ -611,7 +611,7 @@ export default function EstrategiaPage() {
                     event_date: item.suggestedDate,
                     type: item.tipo || item.categoria || 'idea',
                     platform: item.suggestedPlatform || item.plataforma || 'General',
-                    color: item.color || defaultColor,
+                    color: 'green', // Identificador visual para ideas estratégicas
                     reference_id: refId,
                     project_id: targetProjectId,
                     status: 'En preparación'
