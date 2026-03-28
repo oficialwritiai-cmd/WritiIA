@@ -498,7 +498,8 @@ export default function EstrategiaPage() {
                 body: JSON.stringify({
                     selectedIdeas,
                     userId: session.user.id,
-                    projectId: activeProject?.id
+                    projectId: activeProject?.id,
+                    preferences: form
                 })
             });
 

@@ -114,12 +114,12 @@ REGLAS DE PLANIFICACIÓN:
 3. LinkedIn/X: Días laborales.
 
 REGLAS DE DISTRIBUCIÓN:
-- MÁXIMO 2 publicaciones por día (idealmente 1 si es posible).
-- DISTRIBUCIÓN EQUILIBRADA: No satures los últimos días del mes. Distribuye las ideas a lo largo de los 30 días de la ventana.
-- Prioriza llenar el calendario de forma uniforme.
+- MÁXIMO POSTS: No exceder ${defaultPreferences.maxPostsPerDay || 10} publicaciones por día.
+- DISTRIBUCIÓN QUIRÚRGICA: Prioriza el "Goteo Constante". Es mejor 1 o 2 ideas diarias que amontonar muchas un día y dejar el resto de la semana vacío.
+- RELLENO DE HUECOS (Full Coverage): Intenta que no haya días vacíos en la ventana de 30 días si el volumen de ideas lo permite.
+- COBERTURA UNIFORME: Si hay 30 ideas, lo ideal es aprox 1 por día. Si hay 60, aprox 2 por día.
 - Respetar eventos ya existentes pero añadir los nuevos encima si es necesario.
-- Evita que se solapen muchas ideas en un mismo día.
-- Si una fecha está saturada para un tipo de contenido, intenta moverlo a otro día cercano dentro de la ventana de 30 días.
+- Evita que se solapen muchas ideas en un mismo día a menos que el volumen sea masivo.
 
 CONOCIMIENTO DEL CALENDARIO EXISTENTE:
 ${Object.entries(eventsByDate).map(([date, events]) => 
@@ -150,10 +150,13 @@ ${ideasToPlan.map((idea, idx) => {
     return `${idx + 1}. [${plataforma}] ${titulo} (${tipo})${isGenerated}`;
 }).join('\n')}
 
-PREFERENCIAS:
-- Máximo ${defaultPreferences.maxPostsPerDay} posts/día
-- ${defaultPreferences.avoidWeekends ? 'Evitar fines de semana' : 'Fines de semana permitidos'}
-- ${defaultPreferences.postsPerWeek} publicaciones por semana objetivo
+PREFERENCIAS Y CONTEXTO:
+- Objetivo Principal: ${preferences?.objective || 'Not specified'}
+- Objeción a Derribar: ${preferences?.objection || 'Not specified'}
+- Lanzamiento/Promo: ${preferences?.launch || 'Not specified'}
+- Plataformas Objetivo: ${preferences?.platforms?.join(', ') || 'Not specified'}
+- Máximo ${defaultPreferences.maxPostsPerDay} posts/día (Límite técnico)
+- ${defaultPreferences.avoidWeekends ? 'IMPORTANTE: Evitar fines de semana' : 'Fines de semana permitidos'}
 
 Genera la planificación óptima distribuyendo las ideas a lo largo del mes de forma inteligente.`;
 
