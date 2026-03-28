@@ -379,10 +379,13 @@ export default function EstrategiaPage() {
             }
 
             // Step 4: Inject stable IDs for selection robustness
-            const finalIdeas = ideasData.map((idea, idx) => ({
-                ...idea,
-                id: idea.id || `idea-${Date.now()}-${idx}`
-            }));
+            const finalIdeas = ideasData.map((idea, idx) => {
+                const stableId = idea.id || idea.titulo_idea || idea.titulo || `idea-${Date.now()}-${idx}`;
+                return {
+                    ...idea,
+                    id: String(stableId)
+                };
+            });
 
             console.log('[Estrategia] Setting finalIdeas, count:', finalIdeas.length);
             setIdeas(finalIdeas);
@@ -455,7 +458,7 @@ export default function EstrategiaPage() {
             return;
         }
 
-        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id));
+        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(String(i.id)));
 
         if (selectedIdeas.length === 0) {
             alert('Selecciona al menos una idea para crear tu plan.');
@@ -472,7 +475,7 @@ export default function EstrategiaPage() {
             return;
         }
 
-        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(i.id));
+        const selectedIdeas = ideas.filter(i => selectedIdeaIds.has(String(i.id)));
 
         if (selectedIdeas.length === 0) {
             alert('Selecciona al menos una idea para analizar y planificar.');
@@ -1444,8 +1447,9 @@ export default function EstrategiaPage() {
                             }
 
                             // Extract fields with fallbacks
-                            const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
+                            const id = String(idea.id || idea.titulo_idea || idea.titulo || idx);
                             const isSelected = selectedIdeaIds.has(id);
+                            
                             const titulo = idea?.titulo_idea || idea?.titulo || idea?.idea_title || idea?.title || idea?.titulo_angulo || 'Idea Estratégica';
                             const desc = idea?.descripcion || idea?.idea_description || idea?.description || idea?.contenido || '';
 
@@ -1456,8 +1460,8 @@ export default function EstrategiaPage() {
 
                             return (
                                 <div
-                                    key={idea.id || idx}
-                                    onClick={() => toggleIdeaSelection(idea.id)}
+                                    key={id}
+                                    onClick={() => toggleIdeaSelection(id)}
                                     className="premium-card"
                                     style={{
                                         padding: '18px',
