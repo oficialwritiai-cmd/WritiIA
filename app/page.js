@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import Logo from '@/app/components/Logo';
 import { Menu, X, CheckCircle, ShieldCheck, Zap } from 'lucide-react';
+import { blogPosts } from '@/lib/blog-posts';
 import './landing.css';
 
 /* ────────────────────────────────────────
@@ -163,6 +164,7 @@ export default function LandingPage() {
                         <a href="#how-it-works" className="lp-nav-link">Cómo funciona</a>
                         <a href="#features" className="lp-nav-link">Producto</a>
                         <a href="#pricing" className="lp-nav-link">Pricing</a>
+                        <Link href="/blog" className="lp-nav-link">Blog</Link>
                     </div>
 
                     <div className="lp-nav-right">
@@ -725,6 +727,51 @@ export default function LandingPage() {
 
             <div className="lp-divider" />
 
+            {/* ═══ BLOG PREVIEW – Aprende a crear contenido con IA ═══ */}
+            <section className="lp-section">
+                <span className="lp-section-label">Blog</span>
+                <h2 className="lp-section-title">Aprende a crear contenido con IA</h2>
+                <p className="lp-section-sub">
+                    Guías prácticas para publicar más, trabajar menos y crecer en redes con inteligencia artificial.
+                </p>
+
+                <div className="lp-features" style={{ marginTop: '40px' }}>
+                    {blogPosts.slice(0, 3).map(post => (
+                        <Link
+                            key={post.slug}
+                            href={`/blog/${post.slug}`}
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <div className="lp-feature-card" style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.025)' }}>
+                                <div style={{ fontSize: '0.72rem', color: '#c084fc', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {post.readTime} · {post.date}
+                                </div>
+                                <h3 className="lp-feature-title" style={{ fontSize: '1rem' }}>{post.title}</h3>
+                                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', lineHeight: '1.65', marginBottom: 12 }}>
+                                    {post.excerpt}
+                                </p>
+                                <span style={{ color: '#9D00FF', fontSize: '0.85rem', fontWeight: 700 }}>Leer artículo →</span>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: 36 }}>
+                    <Link href="/blog" style={{
+                        display: 'inline-block',
+                        border: '1px solid rgba(157,0,255,0.4)',
+                        color: '#c084fc',
+                        padding: '12px 28px',
+                        borderRadius: 10,
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                    }}>Ver todos los artículos →</Link>
+                </div>
+            </section>
+
+            <div className="lp-divider" />
+
             {/* ═══ FINAL CTA ═══ */}
             <section className="lp-final-cta" ref={ctaRef}>
                 <div className="lp-final-bg" />
@@ -763,6 +810,8 @@ export default function LandingPage() {
                     <p>© 2026 WRITI. Todos los derechos reservados.</p>
                 </div>
                 <div className="lp-footer-links">
+                    <Link href="/blog">Blog</Link>
+                    <Link href="/sobre-writi">Sobre WRITI</Link>
                     <Link href="/privacidad">Privacidad</Link>
                     <Link href="/terminos">Términos</Link>
                     <a href="mailto:hi@writi-ai.com">Contacto</a>
