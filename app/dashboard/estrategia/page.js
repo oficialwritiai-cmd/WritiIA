@@ -575,57 +575,71 @@ export default function EstrategiaPage() {
 
             const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
-            const eventsToInsert = [];
+            // 1. Identify items requiring library storage (new ideas from IA)
+            const ideasForLibrary = editablePlan
+                .filter(item => !isValidUUID(item.id))
+                .map(item => ({
+                    user_id: user.id,
+                    type: 'idea',
+                    platform: item.suggestedPlatform || item.plataforma || 'General',
+                    goal: item.objetivo || 'engagement',
+                    titulo: item.titulo_idea || item.titulo || 'Idea Estratégica',
+                    content: {
+                        descripcion: item.descripcion || item.description || '',
+                        por_que_funciona: item.por_que_funciona || '',
+                        cta: item.cta || ''
+                    },
+                    tags: [item.suggestedPlatform || 'General', item.tipo || 'viral', 'plan-inteligente'].filter(Boolean),
+                    status: 'borrador',
+                    project_id: activeProject?.id
+                }));
 
-            for (const item of editablePlan) {
-                let validRefId = isValidUUID(item.id) ? item.id : null;
+            let libraryMap = {}; // Maps original array index to library ID
 
-                if (!validRefId) {
-                    try {
-                        const savedData = await supabase.from('library').insert({
-                            user_id: user.id,
-                            type: 'idea',
-                            platform: item.suggestedPlatform || item.plataforma || 'General',
-                            goal: item.objetivo || 'engagement',
-                            titulo: item.titulo_idea || item.titulo || 'Idea Estratégica',
-                            content: item,
-                            tags: [item.suggestedPlatform, item.tipo, item.objetivo, item.isNew ? 'Sugerida por IA' : null].filter(Boolean),
-                            status: 'borrador',
-                            project_id: activeProject?.id
-                        }).select().single();
-
-                        if (savedData.data && savedData.data.id) {
-                            validRefId = savedData.data.id;
-                        }
-                    } catch (saveErr) {
-                        console.error('Error auto-guardando idea:', saveErr);
-                    }
+            // 2. Batch insert into library
+            if (ideasForLibrary.length > 0) {
+                const { data: savedLibraryItems, error: libErr } = await supabase
+                    .from('library')
+                    .insert(ideasForLibrary)
+                    .select('id, titulo');
+                
+                if (libErr) console.error('[ApplyPlan] Error batch saving to library:', libErr);
+                
+                // Map the saved IDs back (by title/order)
+                if (savedLibraryItems) {
+                    savedLibraryItems.forEach(saved => {
+                        libraryMap[saved.titulo] = saved.id;
+                    });
                 }
+            }
 
+            // 3. Prepare events for batch insert into calendar
+            const eventsToInsert = editablePlan.map(item => {
+                const title = item.titulo_idea || item.titulo || 'Sin título';
+                const refId = isValidUUID(item.id) ? item.id : libraryMap[title];
+                
                 let descriptionStr = item.descripcion || item.description || '';
-                if (item.reason) {
-                    descriptionStr += `\n\n🎯 AI Tip: ${item.reason}`;
-                }
-                if (item.suggestedTime) {
-                    descriptionStr += `\n⏰ Hora Sugerida: ${item.suggestedTime}`;
-                }
+                if (item.reason) descriptionStr += `\n\n🎯 AI Tip: ${item.reason}`;
+                if (item.suggestedTime) descriptionStr += `\n⏰ Hora Sugerida: ${item.suggestedTime}`;
 
                 const colorOptions = ['purple', 'pink', 'blue', 'green', 'yellow'];
                 const defaultColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
 
-                eventsToInsert.push({
+                return {
                     user_id: user.id,
-                    title: item.titulo_idea || item.titulo || 'Sin título',
+                    title: title,
                     description: descriptionStr,
                     event_date: item.suggestedDate,
                     type: item.tipo || item.categoria || 'idea',
                     platform: item.suggestedPlatform || item.plataforma || 'General',
-                    color: defaultColor,
-                    reference_id: validRefId,
-                    project_id: activeProject?.id
-                });
-            }
+                    color: item.color || defaultColor,
+                    reference_id: refId,
+                    project_id: activeProject?.id,
+                    status: 'En preparación'
+                };
+            });
 
+            // 4. Final Batch Insert into Calendar
             const { error: eventError } = await supabase
                 .from('calendar_events')
                 .insert(eventsToInsert);

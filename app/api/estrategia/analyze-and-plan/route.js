@@ -45,9 +45,9 @@ export async function POST(request) {
         }
 
         const defaultPreferences = {
-            maxPostsPerDay: 2,
-            postsPerWeek: 4,
-            avoidWeekends: true,
+            maxPostsPerDay: 10,
+            postsPerWeek: 10,
+            avoidWeekends: false,
             ...preferences
         };
 
@@ -106,17 +106,16 @@ Las ideas deben seguir el mismo tono y estilo de las existentes pero proponer nu
 Tu tarea es analizar las ideas recibidas y asignar a cada una la mejor fecha y plataforma óptima.
 
 REGLAS DE PLANIFICACIÓN:
-1. YouTube: 1-2 veces por semana (días laborales, preferiblemente martes-jueves)
-2. Instagram/TikTok: más frecuencia, distribuir a lo largo de la semana (evitar fines de semana si es posible)
-3. LinkedIn: días laborales, preferiblemente martes-miércoles-jueves
-4. X (Twitter): cualquier día, más flexible
+1. YouTube: 1-2 veces por semana.
+2. Instagram/TikTok: Alta frecuencia (+5 veces por semana).
+3. LinkedIn/X: Días laborales.
 
 REGLAS DE DISTRIBUCIÓN:
-- Máximo ${defaultPreferences.maxPostsPerDay} publicaciones por día
-- Alternar tipos de contenido (no poner todo viral el mismo día)
-- No poner muchas piezas largas seguidas (como 3 lives/YouTube largos)
-- Respetar eventos ya existentes en el calendario
-- Si una fecha está muy ocupada, buscar el día más cercano libre
+- MÁXIMO 10 publicaciones por día.
+- IGNORAR DENSIDAD: Si el usuario tiene muchas ideas, agrúpalas aunque haya varios eventos el mismo día. 
+- Prioriza llenar el calendario incluso si hay eventos existentes.
+- Respetar eventos ya existentes pero añadir los nuevos encima si es necesario.
+- Si una fecha está saturada, aún así añade la idea si es importante para el plan.
 
 CONOCIMIENTO DEL CALENDARIO EXISTENTE:
 ${Object.entries(eventsByDate).map(([date, events]) => 

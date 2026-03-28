@@ -87,17 +87,18 @@ FORMATO DE RESPUESTA (JSON Array Estricto):
 [
   {
     "titulo_idea": "Gancho Magnético + Concepto",
-    "descripcion": "Estructura del contenido: Inicio (gancho), Desarrollo (3 puntos clave) y Cierre.",
+    "descripcion": "Estructura breve: Gancho, 3 puntos, Cierre.",
     "plataforma": "...",
     "tipo": "Viral | Autoridad | Conexión",
-    "por_que_funciona": "Disparador psicológico (ej: Curiosidad, FOMO, Contraste)",
+    "por_que_funciona": "Disparador (ej: Curiosidad)",
     "objetivo": "...",
     "potencial": "Viral | Alto | Medio",
-    "cta": "Llamada a la acción estratégica"
+    "cta": "Llamada a la acción"
   }
 ]
 
-IMPORTANTE: Las 40 ideas deben ser ÚNICAS y variadas. No generes variaciones de la misma idea.`;
+IMPORTANTE: Las 40 ideas deben ser ÚNICAS y variadas. 
+MANTÉN LAS DESCRIPCIONES CONCISAS (máximo 250 caracteres por idea) para asegurar que el listado completo de 40 ideas sea procesado correctamente sin cortes.`;
 
         const { parsed: ideas } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
