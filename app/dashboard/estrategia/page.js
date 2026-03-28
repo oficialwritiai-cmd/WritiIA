@@ -13,6 +13,7 @@ import 'jspdf-autotable';
 import { useProject } from '@/app/components/ProjectContext';
 import BrainField from '@/app/components/BrainField';
 
+// Strategy Page v1.17.22 (Refined Planning & Persistence)
 // Simple stepper component
 function Stepper({ current }) {
     const steps = ['Descubrimiento', 'Banco de Ideas', 'Plan Mensual'];
@@ -605,6 +606,14 @@ export default function EstrategiaPage() {
                 const colorOptions = ['purple', 'pink', 'blue', 'green', 'yellow'];
                 const defaultColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
 
+                // Map suggested time (v1.17.22 fix)
+                const startTime = item.suggestedTime || '09:00';
+                let endTime = '10:00';
+                if (startTime.includes(':')) {
+                    const [h, m] = startTime.split(':').map(Number);
+                    endTime = `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+
                 return {
                     user_id: user.id,
                     title: title,
@@ -615,7 +624,9 @@ export default function EstrategiaPage() {
                     color: 'green', // Identificador visual para ideas estratégicas
                     reference_id: refId,
                     project_id: targetProjectId,
-                    status: 'En preparación'
+                    status: 'En preparación',
+                    start_time: startTime,
+                    end_time: endTime
                 };
             });
 
@@ -879,6 +890,14 @@ export default function EstrategiaPage() {
                 const colorOptions = ['purple', 'pink', 'blue', 'green', 'yellow'];
                 const defaultColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
 
+                // Map suggested time (v1.17.22 fix)
+                const startTime = suggestion.hora_sugerida || suggestion.hora || '09:00';
+                let endTime = '10:00';
+                if (startTime.includes(':')) {
+                    const [h, m] = startTime.split(':').map(Number);
+                    endTime = `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+
                 eventsToInsert.push({
                     user_id: user.id,
                     title: idea.titulo_idea || idea.titulo || 'Sin título',
@@ -888,7 +907,9 @@ export default function EstrategiaPage() {
                     platform: idea.plataforma || 'General',
                     color: defaultColor,
                     reference_id: validRefId,
-                    project_id: activeProject?.id
+                    project_id: activeProject?.id,
+                    start_time: startTime,
+                    end_time: endTime
                 });
             }
 
@@ -955,6 +976,7 @@ export default function EstrategiaPage() {
             return;
         }
 
+        // Strategy Page v1.17.22 (Refined Planning & Persistence)
         console.log('[Estrategia] Generating script for idea:', { titulo, plataforma, objetivo });
 
         const params = new URLSearchParams();
