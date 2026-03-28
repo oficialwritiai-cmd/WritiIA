@@ -116,6 +116,8 @@ REGLAS DE PLANIFICACIÓN:
 REGLAS DE DISTRIBUCIÓN:
 - MÁXIMO POSTS: No exceder ${defaultPreferences.maxPostsPerDay || 10} publicaciones por día.
 - DISTRIBUCIÓN QUIRÚRGICA: Prioriza el "Goteo Constante". Es mejor 1 o 2 ideas diarias que amontonar muchas un día y dejar el resto de la semana vacío.
+- VARIACIÓN DE HORARIOS: Evita que todas las publicaciones tengan la misma hora. Usa franjas típicas de alto engagement (Mañana: 08:30-10:00, Mediodía: 13:00-14:30, Tarde: 18:00-19:30, Noche: 21:00-22:30).
+- SIN SOLAPAMIENTOS: Si hay más de una publicación el mismo día, sepáralas por al menos 3 horas.
 - RELLENO DE HUECOS (Full Coverage): Intenta que no haya días vacíos en la ventana de 30 días si el volumen de ideas lo permite.
 - COBERTURA UNIFORME: Si hay 30 ideas, lo ideal es aprox 1 por día. Si hay 60, aprox 2 por día.
 - Respetar eventos ya existentes pero añadir los nuevos encima si es necesario.

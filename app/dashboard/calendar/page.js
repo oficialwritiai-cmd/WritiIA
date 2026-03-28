@@ -279,8 +279,10 @@ function CalendarContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             // Load events for the current month range (standard calendar events)
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
-            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+            // Expanded range: Previous Month, Current Month, and Next Month (approx 90 days)
+            // This ensures mobile weekly calendars don't show "no plans" when a week crosses month boundaries.
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString().split('T')[0];
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0).toISOString().split('T')[0];
 
             let eventQuery = supabase
                 .from('calendar_events')
