@@ -1446,10 +1446,10 @@ export default function EstrategiaPage() {
                             // Extract fields with fallbacks
                             const id = idea?.id || idea?.titulo_idea || idea?.titulo || String(idx);
                             const isSelected = selectedIdeaIds.has(id);
-                            const titulo = idea?.titulo_idea || idea?.titulo || idea?.title || idea?.titulo_angulo || 'Idea Estratégica';
-                            const desc = idea?.descripcion || idea?.description || idea?.contenido || '';
+                            const titulo = idea?.titulo_idea || idea?.titulo || idea?.idea_title || idea?.title || idea?.titulo_angulo || 'Idea Estratégica';
+                            const desc = idea?.descripcion || idea?.idea_description || idea?.description || idea?.contenido || '';
 
-                            const truncateDesc = (text, maxLen = 100) => {
+                            const truncateDesc = (text, maxLen = 120) => {
                                 if (!text) return '';
                                 return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
                             };

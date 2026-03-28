@@ -122,13 +122,13 @@ MANTÉN LAS DESCRIPCIONES CONCISAS (máximo 250 caracteres por idea) para asegur
             const ideasToInsert = ideasArray.map(idea => ({
                 session_id: session.id, 
                 user_id: verifiedUserId, 
-                plataforma: idea.plataforma,
-                tipo: idea.tipo, 
-                titulo_idea: idea.titulo_idea, 
-                descripcion: idea.descripcion,
-                por_que_funciona: idea.por_que_funciona, 
-                objetivo: idea.objetivo, 
-                potencial: idea.potencial
+                plataforma: idea.plataforma || 'General',
+                tipo: idea.tipo || 'viral', 
+                titulo_idea: idea.titulo_idea || idea.titulo || idea.idea_title || idea.titulo_angulo || 'Idea Estratégica', 
+                descripcion: idea.descripcion || idea.idea_description || idea.descripcion_idea || 'Sin descripción',
+                por_que_funciona: idea.por_que_funciona || '', 
+                objetivo: idea.objetivo || 'engagement', 
+                potencial: idea.potencial || 'Medio'
             }));
             await supabase.from('strategy_ideas').insert(ideasToInsert);
         }
