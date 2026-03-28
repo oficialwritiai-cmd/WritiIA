@@ -202,7 +202,7 @@ INSTRUCCIONES DE ESTILO (CRÍTICAS):
    ❌ MAL: título="3 formas de usar IA" → gancho="3 formas de usar IA"
    ✅ BIEN: título="3 formas de usar IA" → gancho="Estaba perdiendo 4 horas al día en tareas que ahora tardo 10 minutos..."
 3) SIN INVENTOS: No inventes logros. Si el creador empieza, actúa como tal.
-4) RITMO: Frases cortas. Sin párrafos de relleno.
+4) RITMO: ${(videoDuration === '3 min' || videoDuration === '5 min' || videoDuration === '10 min') ? 'Párrafos detallados y ricos. CADA bloque de desarrollo debe tener AL MENOS 3-5 frases con ejemplos, anécdotas o datos concretos.' : 'Frases cortas. Sin párrafos de relleno.'}
 
 OBJETIVO ESPECÍFICO DEL DÍA (MÁXIMA PRIORIDAD - Escribe SOBRE ESTO):
 ${specificDetails || `Explica el tema: ${topic}. Proporciona valor real sobre este tema.`}
@@ -210,7 +210,7 @@ ${specificDetails || `Explica el tema: ${topic}. Proporciona valor real sobre es
 REGLA ANTI-ESQUELETO (CRÍTICA - NO NEGOCIABLE):
 - CADA campo del JSON DEBE tener texto real. CAMPO VACÍO = RESPUESTA INVÁLIDA.
 - "gancho" → Mínimo 1 frase impactante, diferente al título.
-- "desarrollo" → Array con mínimo 3 strings, cada uno con 1-3 frases explicando un punto.
+- "desarrollo" → Array con EXACTAMENTE ${finalItemsCount} strings. ${(videoDuration === '3 min' || videoDuration === '5 min' || videoDuration === '10 min') ? `Para duración ${videoDuration}, CADA string debe ser un párrafo extenso de mínimo 4-6 frases con ejemplos o historias completas.` : 'Cada string con 1-3 frases explicando un punto.'}
 - "cierre" → Mínimo 1 frase de conclusión.
 - "cta" → Mínimo 1 frase con acción (visita, comenta, guarda...).
 - "copy_post.descripcion_larga" → Mínimo 2 frases para usar como caption.
