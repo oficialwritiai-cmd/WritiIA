@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.36'; // Fixed calendar sync and added pink color for generated scripts
+export const VERSION = 'v1.17.37'; // Fixed calendar script sync linkage
 
 
 
@@ -1559,6 +1559,7 @@ export default function DashboardPage() {
                 status: 'prep',
                 color: 'pink', // FORCED: Pink for generated script ideas
                 script_id: libraryItem?.id || null,
+                reference_id: libraryItem?.id || null, // FIX: Set reference_id for calendar script lookup
                 has_script: true,
                 script_full_text: fullText,
                 content: {
@@ -1643,6 +1644,7 @@ export default function DashboardPage() {
                 const { error: updateErr } = await supabase.from('calendar_events').update({
                     has_script: true,
                     script_id: savedItem.id, // We keep pointing to library for retrocompat
+                    reference_id: savedItem.id, // FIX: Ensure direct source save also sets reference_id
                     script_full_text: fullText,
                     color: 'pink', // Differentiate in calendar
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',

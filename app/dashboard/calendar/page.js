@@ -236,7 +236,7 @@ function CalendarContent() {
                 if (!user) return;
 
                 // Intentar cargar el guion de la tabla library o scripts
-                const scriptId = selectedEvent.reference_id || selectedEvent.id;
+                const scriptId = selectedEvent.reference_id || selectedEvent.script_id || selectedEvent.id;
 
                 // Primero buscar en library
                 const { data: libData } = await supabase
