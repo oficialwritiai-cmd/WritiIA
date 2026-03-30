@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.37'; // Fixed calendar script sync linkage
+export const VERSION = 'v1.17.38'; // Fixed Guardar Original persistence and added Color Selection
 
 
 
@@ -491,6 +491,8 @@ export default function DashboardPage() {
     }, [projectBrain]);
     const [isSuggestingAI, setIsSuggestingAI] = useState(false);
     const [suggestedReasoning, setSuggestedReasoning] = useState('');
+    const [selectedColor, setSelectedColor] = useState('pink');
+    const [existingLibraryId, setExistingLibraryId] = useState(null);
 
     const supabase = createSupabaseClient();
     const router = useRouter();
@@ -543,7 +545,28 @@ export default function DashboardPage() {
                 if (forceCount) setQuantity(forceCount);
                 if (params.get('date')) setCalendarDate(params.get('date'));
                 if (savedSourceType) setSourceType(savedSourceType);
-                if (savedSourceReferenceId) setSourceReferenceId(savedSourceReferenceId);
+                if (savedSourceReferenceId) {
+                    setSourceReferenceId(savedSourceReferenceId);
+                    
+                    // v5.1.5: Fetch existing event to get its script_id & color
+                    const fetchSourceDetails = async () => {
+                        try {
+                            const { data, error } = await supabase
+                                .from('calendar_events')
+                                .select('script_id, color')
+                                .eq('id', savedSourceReferenceId)
+                                .single();
+                            
+                            if (data) {
+                                if (data.script_id) setExistingLibraryId(data.script_id);
+                                if (data.color) setSelectedColor(data.color);
+                            }
+                        } catch (e) {
+                            console.warn('[v5.1.5] Error fetching source details:', e);
+                        }
+                    };
+                    fetchSourceDetails();
+                }
             }
         }
     }, [supabase, router]);
@@ -1557,7 +1580,7 @@ export default function DashboardPage() {
                 type: 'Post',
                 platform: script.platform || platform || 'General',
                 status: 'prep',
-                color: 'pink', // FORCED: Pink for generated script ideas
+                color: selectedColor || 'pink', // v5.1.5: Use dynamic color selection
                 script_id: libraryItem?.id || null,
                 reference_id: libraryItem?.id || null, // FIX: Set reference_id for calendar script lookup
                 has_script: true,
@@ -1602,6 +1625,7 @@ export default function DashboardPage() {
 
             // Siempre guardamos una copia primaria en la biblioteca del usuario
             const savedItem = await saveToLibrary({
+                id: existingLibraryId, // FIX: Pass existing ID to allow updates in 'Guardar Original'
                 userId: profile.id,
                 type: 'guion',
                 platform: script.platform || platform || 'General',
@@ -1646,7 +1670,7 @@ export default function DashboardPage() {
                     script_id: savedItem.id, // We keep pointing to library for retrocompat
                     reference_id: savedItem.id, // FIX: Ensure direct source save also sets reference_id
                     script_full_text: fullText,
-                    color: 'pink', // Differentiate in calendar
+                    color: selectedColor || 'pink', // v5.1.5: Respetamos el color seleccionado al guardar
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
                     content: {
                         video_duration: script.video_duration || '45-60 seg',
@@ -3812,6 +3836,37 @@ export default function DashboardPage() {
                                                     ))}
                                                 </div>
                                             </div>
+
+                                            {/* v5.1.5: Color Selector UI in Direct Save context */}
+                                            {sourceReferenceId && (
+                                                <div style={{ padding: '0px 0px 20px 0px' }}>
+                                                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎨 Estilo visual (Color en Calendario)</p>
+                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                        {[
+                                                            { id: 'pink', color: '#FF79C6' },
+                                                            { id: 'purple', color: '#BD93F9' },
+                                                            { id: 'blue', color: '#8BE9FD' },
+                                                            { id: 'green', color: '#50FA7B' },
+                                                            { id: 'orange', color: '#FFB86C' }
+                                                        ].map(c => (
+                                                            <div
+                                                                key={c.id}
+                                                                onClick={() => setSelectedColor(c.id)}
+                                                                style={{
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    borderRadius: '50%',
+                                                                    background: c.color,
+                                                                    border: selectedColor === c.id ? '2px solid white' : 'none',
+                                                                    cursor: 'pointer',
+                                                                    transition: '0.2s',
+                                                                    transform: selectedColor === c.id ? 'scale(1.2)' : 'none'
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* QUICK POLISH BUTTONS */}
@@ -3977,6 +4032,43 @@ export default function DashboardPage() {
                                                         onChange={e => setPlannedTime(e.target.value)}
                                                         style={{ fontSize: '0.95rem', width: '100%', padding: '12px 16px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}
                                                     />
+                                                </div>
+                                            </div>
+
+                                            {/* v5.1.5: Color Selector UI */}
+                                            <div style={{ marginBottom: '28px' }}>
+                                                <label style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.6)', fontWeight: 800, display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>COLOR DE LA IDEA (VISUAL EN CALENDARIO)</label>
+                                                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                    {[
+                                                        { id: 'pink', color: '#FF79C6', label: 'Rosa' },
+                                                        { id: 'purple', color: '#BD93F9', label: 'Púrpura' },
+                                                        { id: 'blue', color: '#8BE9FD', label: 'Azul' },
+                                                        { id: 'green', color: '#50FA7B', label: 'Verde' },
+                                                        { id: 'orange', color: '#FFB86C', label: 'Naranja' }
+                                                    ].map((c) => (
+                                                        <div
+                                                            key={c.id}
+                                                            onClick={() => setSelectedColor(c.id)}
+                                                            title={c.label}
+                                                            style={{
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '50%',
+                                                                background: c.color,
+                                                                border: selectedColor === c.id ? `3px solid #fff` : 'none',
+                                                                cursor: 'pointer',
+                                                                boxShadow: selectedColor === c.id ? `0 0 15px ${c.color}` : 'none',
+                                                                transition: '0.2s transform, 0.2s box-shadow',
+                                                                transform: selectedColor === c.id ? 'scale(1.15)' : 'scale(1)'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginLeft: '10px' }}>
+                                                        {selectedColor === 'pink' ? 'Rosa (AI)' : 
+                                                         selectedColor === 'purple' ? 'Púrpura' : 
+                                                         selectedColor === 'blue' ? 'Azul' : 
+                                                         selectedColor === 'green' ? 'Verde' : 'Naranja'}
+                                                    </span>
                                                 </div>
                                             </div>
 
