@@ -21,12 +21,13 @@ export async function generateMetadata({ params }) {
             url: `https://www.writi-ai.com/blog/${post.slug}`,
             type: 'article',
             siteName: 'WRITI.AI',
-            images: [{ url: 'https://www.writi-ai.com/og-image.jpg', width: 1200, height: 630 }],
+            images: [{ url: post.image ? `https://www.writi-ai.com${post.image}` : 'https://www.writi-ai.com/og-image.jpg', width: 1200, height: 630 }],
         },
         twitter: {
             card: 'summary_large_image',
             title: post.title,
             description: post.description,
+            images: [post.image ? `https://www.writi-ai.com${post.image}` : 'https://www.writi-ai.com/og-image.jpg'],
         },
     };
 }
@@ -49,6 +50,7 @@ export default function BlogArticlePage({ params }) {
             url: 'https://www.writi-ai.com',
         },
         mainEntityOfPage: { '@type': 'WebPage', '@id': `https://www.writi-ai.com/blog/${post.slug}` },
+        image: post.image ? `https://www.writi-ai.com${post.image}` : undefined,
     };
 
     return (
@@ -82,7 +84,25 @@ export default function BlogArticlePage({ params }) {
             </nav>
 
             {/* ARTICLE */}
-            <article style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px 100px' }}>
+            <article style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 100px' }}>
+                {/* Hero Image */}
+                {post.image && (
+                    <div style={{
+                        width: '100%',
+                        aspectRatio: '16/9',
+                        borderRadius: 20,
+                        overflow: 'hidden',
+                        marginBottom: 40,
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                    }}>
+                        <img 
+                            src={post.image} 
+                            alt={post.title} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                    </div>
+                )}
                 {/* Meta */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
                     <span style={{

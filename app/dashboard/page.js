@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.16.0'; // Updated for Beta Readiness
+export const VERSION = 'v1.17.36'; // Fixed calendar sync and added pink color for generated scripts
 
 
 
@@ -1539,16 +1539,25 @@ export default function DashboardPage() {
             });
 
             // 2. Insert into calendar
+            let endTime = '10:00';
+            if (plannedTime) {
+                const [h, m] = plannedTime.split(':').map(Number);
+                const endH = (h + 1) % 24;
+                endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+
             const { error: calErr } = await supabase.from('calendar_events').insert({
                 user_id: user.id,
                 project_id: activeProject?.id,
                 event_date: plannedDate,
-                event_time: plannedTime,
+                start_time: plannedTime, // FIX: Use start_time for calendar compatibility
+                end_time: endTime,       // FIX: Include end_time
                 title: script.titulo_guion || script.titulo_angulo || 'Publicación Planificada',
                 description: `Contenido planificado desde el generador.\n\nGuion: ${script.titulo_guion || ''}`,
                 type: 'Post',
                 platform: script.platform || platform || 'General',
                 status: 'prep',
+                color: 'pink', // FORCED: Pink for generated script ideas
                 script_id: libraryItem?.id || null,
                 has_script: true,
                 script_full_text: fullText,
@@ -1635,6 +1644,7 @@ export default function DashboardPage() {
                     has_script: true,
                     script_id: savedItem.id, // We keep pointing to library for retrocompat
                     script_full_text: fullText,
+                    color: 'pink', // Differentiate in calendar
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
                     content: {
                         video_duration: script.video_duration || '45-60 seg',
@@ -1669,7 +1679,8 @@ export default function DashboardPage() {
                 // NOW update content_slots with the CORRECT script ID (from scripts table, not library)
                 const { error: slotErr } = await supabase.from('content_slots').update({ 
                     has_script: true, 
-                    script_id: newScript.id 
+                    script_id: newScript.id,
+                    color: 'pink' // Differentiate
                 }).eq('id', sourceReferenceId);
                 
                 if (slotErr) throw slotErr;

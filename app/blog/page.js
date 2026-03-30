@@ -69,8 +69,8 @@ export default function BlogPage() {
                 margin: '0 auto',
                 padding: '0 24px 100px',
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: 28,
+                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+                gap: 32,
             }}>
                 {blogPosts.map((post, i) => (
                     <Link
@@ -81,59 +81,74 @@ export default function BlogPage() {
                         <article style={{
                             background: 'rgba(255,255,255,0.03)',
                             border: '1px solid rgba(255,255,255,0.07)',
-                            borderRadius: 16,
-                            padding: 28,
+                            borderRadius: 20,
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 14,
-                            transition: 'all 0.25s ease',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
+                            overflow: 'hidden',
                         }}
                             onMouseEnter={e => {
                                 e.currentTarget.style.background = 'rgba(157,0,255,0.06)';
-                                e.currentTarget.style.borderColor = 'rgba(157,0,255,0.25)';
-                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                e.currentTarget.style.borderColor = 'rgba(157,0,255,0.3)';
+                                e.currentTarget.style.transform = 'translateY(-6px)';
+                                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.3)';
                             }}
                             onMouseLeave={e => {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
                                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
                                 e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = 'none';
                             }}
                         >
-                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                <span style={{
-                                    background: 'rgba(157,0,255,0.15)',
-                                    color: '#c084fc',
-                                    borderRadius: 6,
-                                    padding: '3px 10px',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 700,
-                                }}>SEO</span>
-                                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>{post.date}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>· {post.readTime}</span>
+                            {/* Card Image */}
+                            <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <img 
+                                    src={post.image} 
+                                    alt={post.title} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                />
                             </div>
 
-                            <h2 style={{
-                                fontSize: '1.05rem',
-                                fontWeight: 700,
-                                color: '#fff',
-                                lineHeight: 1.45,
-                                letterSpacing: '-0.01em',
-                                margin: 0,
-                            }}>{post.title}</h2>
+                            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12, flexGrow: 1 }}>
+                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                    <span style={{
+                                        background: 'rgba(157,0,255,0.15)',
+                                        color: '#c084fc',
+                                        borderRadius: 6,
+                                        padding: '3px 10px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                    }}>GUÍA IA</span>
+                                    <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>{post.date}</span>
+                                    <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>· {post.readTime}</span>
+                                </div>
 
-                            <p style={{
-                                color: 'rgba(255,255,255,0.55)',
-                                fontSize: '0.88rem',
-                                lineHeight: 1.65,
-                                flexGrow: 1,
-                                margin: 0,
-                            }}>{post.excerpt}</p>
+                                <h2 style={{
+                                    fontSize: '1.1rem',
+                                    fontWeight: 700,
+                                    color: '#fff',
+                                    lineHeight: 1.4,
+                                    letterSpacing: '-0.01em',
+                                    margin: 0,
+                                }}>{post.title}</h2>
 
-                            <span style={{ color: '#9D00FF', fontSize: '0.85rem', fontWeight: 700 }}>
-                                Leer artículo →
-                            </span>
+                                <p style={{
+                                    color: 'rgba(255,255,255,0.5)',
+                                    fontSize: '0.88rem',
+                                    lineHeight: 1.6,
+                                    margin: 0,
+                                }}>{post.excerpt}</p>
+
+                                <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+                                    <span style={{ color: '#c084fc', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        Leer artículo <span style={{ fontSize: '1.1rem' }}>→</span>
+                                    </span>
+                                </div>
+                            </div>
                         </article>
                     </Link>
                 ))}
