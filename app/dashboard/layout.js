@@ -613,7 +613,7 @@ export default function DashboardLayout({ children }) {
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <div style={{ padding: '4px 10px', background: profile?.plan === 'pro' ? 'rgba(126, 206, 202, 0.2)' : 'rgba(255, 184, 0, 0.1)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, color: profile?.plan === 'pro' ? '#7ECECA' : '#FFB800' }}>
-                                            {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'PRUEBA GRATUITA'}
+                                            {profile?.plan === 'pro' ? 'MEMBRESÍA PRO' : 'ACCESO PREMIUM'}
                                         </div>
                                         <div style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 900, color: '#FFD700' }}>
                                             {daysRemaining || '...'}
@@ -955,7 +955,7 @@ export default function DashboardLayout({ children }) {
                                 <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: '1.6' }}>
                                     Necesitas créditos o un plan activo para usar las funciones de IA.
                                     {profile?.is_trial_active && !isExpired && (
-                                        <><br /><span style={{ color: '#9D00FF' }}>¡Tienes {daysRemaining} de prueba gratis!</span></>
+                                        <><br /><span style={{ color: '#9D00FF' }}>¡Te quedan {daysRemaining} de acceso exclusivo!</span></>
                                     )}
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

@@ -21,7 +21,7 @@ export default function TrialExpiredPage() {
                 </div>
 
                 <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '16px', background: 'linear-gradient(135deg, #FFF, #888)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Tu prueba de 7 días ha terminado
+                    Tu periodo de acceso ha terminado
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '40px', lineHeight: '1.6', fontSize: '1.1rem' }}>
                     Esperamos que hayas disfrutado la potencia de <strong style={{ color: '#7ECECA' }}>Writi AI</strong>. Tu acceso se ha pausado, pero tu contenido sigue a salvo. Activa el Plan Pro para continuar creando.

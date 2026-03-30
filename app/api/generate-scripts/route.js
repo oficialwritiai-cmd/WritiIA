@@ -223,7 +223,7 @@ EJEMPLO DE RESPUESTA CORRECTA (copia este formato con contenido REAL):
     "gancho": "Pasé de trabajar 12 horas al día a 6, sin sacrificar resultados. Y no fue solo disciplina.",
     "desarrollo": ["Primero, automaticé mis emails con una IA que redacta por mí en segundos.", "Segundo, uso IA para resumir documentos largos en 3 puntos clave.", "Tercero, tengo un asistente que crea mi contenido de redes basándose en mi estilo."],
     "cierre": "No se trata de trabajar más, sino de trabajar de forma más inteligente.",
-    "cta": "Comenta 'IA' y te mando los 3 tools que uso gratis.",
+    "cta": "Comenta 'IA' y te mando los 3 tools que uso hoy mismo.",
     "copy_post": {
       "titulo": "Así ahorro 6 horas cada día usando IA",
       "descripcion_larga": "La IA no es el futuro. Es la diferencia entre crecer y quedarte estancado ahora mismo. Estos son los 3 usos que cambiaron todo para mí.",

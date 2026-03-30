@@ -6,7 +6,7 @@ import './globals.css';
 
 export const metadata = {
     title: 'WRITI.AI – Planificador de Contenido con IA para Creadores | Ideas + Guiones + Calendario',
-    description: 'Genera ideas virales, guiones completos y un calendario mensual de contenido con IA. Para creadores de Reels y Shorts en español. Prueba 7 días gratis.',
+    description: 'Genera ideas virales, guiones completos y un calendario mensual de contenido con IA. Para creadores de Reels y Shorts en español. Empieza hoy mismo.',
     keywords: 'planificador contenido IA, generador guiones reels, calendario contenido ia, ideas virales creadores, guiones shorts ia, planificar redes sociales ia',
     metadataBase: new URL('https://www.writi-ai.com'),
     alternates: {

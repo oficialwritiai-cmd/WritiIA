@@ -536,7 +536,7 @@ export default function LandingPage() {
                         <div className="lp-pricing-period">por mes · facturado mensualmente</div>
                         <div className="lp-pricing-trial">
                             <span style={{ color: '#34d399' }}>✓</span>
-                            Prueba gratis 7 días con tu llave de acceso
+                            Acceso completo con tu llave de acceso
                         </div>
 
                         <ul className="lp-pricing-features">
@@ -568,7 +568,7 @@ export default function LandingPage() {
                         </button>
 
                         <p className="lp-pricing-note">
-                            7 días gratis sin cargo. Cancela cuando quieras.<br />
+                            Acceso inmediato sin compromiso. Cancela cuando quieras.<br />
                             Pago 100% seguro vía Stripe 🔒
                         </p>
                     </div>
@@ -639,7 +639,7 @@ export default function LandingPage() {
                                 ✦ {loading ? 'Cargando...' : 'Crear mi mes con IA'}
                             </button>
                             <div className="lp-final-note">
-                                <span><span className="lp-final-note-dot">✓</span> 7 días gratis</span>
+                                <span><span className="lp-final-note-dot">✓</span> Acceso Premium</span>
                                 <span><span className="lp-final-note-dot">✓</span> Sin tarjeta requerida</span>
                                 <span><span className="lp-final-note-dot">✓</span> Acceso inmediato</span>
                             </div>

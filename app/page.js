@@ -670,7 +670,7 @@ export default function LandingPage() {
 
                         <div className="lp-pricing-trial" style={{ justifyContent: 'center', marginTop: '16px', border: 'none', padding: 0 }}>
                             <span style={{ color: '#34d399' }}>✓</span>
-                            Prueba gratis de 7 días
+                            Acceso completo inmediato
                         </div>
 
                         <p className="lp-pricing-note" style={{ marginTop: '16px' }}>
@@ -790,7 +790,7 @@ export default function LandingPage() {
                                 ✦ {loading ? 'Cargando...' : 'Crear mi mes con IA'}
                             </button>
                             <div className="lp-final-note">
-                                <span><span className="lp-final-note-dot">✓</span> 7 días gratis</span>
+                                <span><span className="lp-final-note-dot">✓</span> Acceso Premium</span>
                                 <span><span className="lp-final-note-dot">✓</span> Sin tarjeta requerida</span>
                                 <span><span className="lp-final-note-dot">✓</span> Acceso inmediato</span>
                             </div>

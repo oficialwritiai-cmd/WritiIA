@@ -224,7 +224,7 @@ export default function SettingsPage() {
 
                         {periodEnd && (
                             <div style={{ margin: '20px 0', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
-                                📅 Su plan {plan === 'pro' ? 'se renueva / finaliza' : 'de prueba termina'} el: <br />
+                                📅 Su periodo de {plan === 'pro' ? 'renovación / finalización' : 'acceso termina'} el: <br />
                                 <strong style={{ color: '#7ECECA', fontSize: '1rem' }}>{new Date(periodEnd).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
                             </div>
                         )}

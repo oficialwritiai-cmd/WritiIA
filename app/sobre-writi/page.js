@@ -142,7 +142,7 @@ export default function SobreWRITI() {
                         borderRadius: 12, fontWeight: 800,
                         fontSize: '1rem', textDecoration: 'none',
                     }}>
-                        ⚡ Prueba WRITI.AI gratis 7 días →
+                        ⚡ Empieza con WRITI.AI ahora →
                     </Link>
                     <p style={{ marginTop: 14, fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)' }}>
                         Sin tarjeta de crédito · Acceso inmediato · Cancela cuando quieras

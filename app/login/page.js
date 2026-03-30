@@ -180,7 +180,7 @@ export default function LoginPage() {
                 }
 
                 if (!session && !isMasterKey && hasAccessKey) {
-                    setSuccess('¡Registro exitoso! Por favor, revisa tu email para confirmar y activar tus 7 días gratis.');
+                    setSuccess('¡Registro exitoso! Por favor, revisa tu email para confirmar y activar tu acceso.');
                     setMode('login');
                     setLoading(false);
                     return;
@@ -297,7 +297,7 @@ export default function LoginPage() {
                                 <input
                                     type="text"
                                     className="input-field"
-                                    placeholder="Si tienes una llave, obtendrás 7 días gratis"
+                                    placeholder="Si tienes una llave, obtendrás acceso inmediato"
                                     value={accessKey}
                                     onChange={(e) => setAccessKey(e.target.value)}
                                 />
