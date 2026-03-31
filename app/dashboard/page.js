@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.39'; // Wizard UX Redesign: new steps, chip UI, animations, mobile-first
+export const VERSION = 'v1.17.41'; // Wizard UX Redesign & Routing fixes
 
 
 
@@ -1580,9 +1580,9 @@ export default function DashboardPage() {
                 end_time: endTime,       // FIX: Include end_time
                 title: script.titulo_guion || script.titulo_angulo || 'Publicación Planificada',
                 description: `Contenido planificado desde el generador.\n\nGuion: ${script.titulo_guion || ''}`,
-                type: 'Post',
+                type: 'guion', // Change from 'Post' to 'guion' so Calendar displays it
                 platform: script.platform || platform || 'General',
-                status: 'prep',
+                status: 'Guion listo', // Change from 'prep' to 'Guion listo'
                 color: selectedColor || 'pink', // v5.1.5: Use dynamic color selection
                 script_id: libraryItem?.id || null,
                 reference_id: libraryItem?.id || null, // FIX: Set reference_id for calendar script lookup
@@ -2182,13 +2182,13 @@ export default function DashboardPage() {
             {step === 1 && (
                 <div style={{ display: 'flex', gap: '8px', padding: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', width: 'fit-content', margin: '0 auto 10px' }}>
                     <button
-                        onClick={() => { setGenerationMode('single'); setTopic(''); }}
+                        onClick={() => { setGenerationMode('single'); setTopic(''); setWizardStep(1); }}
                         style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7ECECA' : 'transparent', color: generationMode === 'single' ? '#000' : 'white', border: 'none', cursor: 'pointer' }}
                     >
                         Guiones de un tema
                     </button>
                     <button
-                        onClick={() => { setGenerationMode('plan'); setTopic(''); }}
+                        onClick={() => { setGenerationMode('plan'); setTopic(''); setPlanWizardStep(hasBrain ? 1 : 1); setStep(1); }}
                         style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'plan' ? '#7ECECA' : 'transparent', color: generationMode === 'plan' ? '#000' : 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         <CalendarDays size={18} /> Plan mensual de contenido
@@ -2545,14 +2545,7 @@ export default function DashboardPage() {
                                     ))}
                                 </div>
                             </div>
-                            <div>
-                                <span className="wz-label">📅 Frecuencia de publicación</span>
-                                <div className="wz-chips">
-                                    {FRECUENCIAS.map(f => (
-                                        <button key={f} className={`wz-chip${singleFrequency === f ? ' active' : ''}`} onClick={() => setSingleFrequency(f)}>{f.split(' ')[0]}× por semana</button>
-                                    ))}
-                                </div>
-                            </div>
+
                             <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                                 <button onClick={() => setWizardStep(hasBrain ? 1 : 1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente →</button>
