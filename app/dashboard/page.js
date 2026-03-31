@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.41'; // Wizard UX Redesign & Routing fixes
+export const VERSION = 'v1.17.42'; // Plan mode URL integration reset
 
 
 
@@ -570,6 +570,11 @@ export default function DashboardPage() {
                     };
                     fetchSourceDetails();
                 }
+            } else if (params.get('mode') === 'plan') {
+                setGenerationMode('plan');
+                setStep(1);
+                setPlanWizardStep(1);
+                setTopic('');
             }
         }
     }, [supabase, router]);
