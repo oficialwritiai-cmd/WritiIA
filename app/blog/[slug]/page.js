@@ -38,7 +38,6 @@ export default async function BlogArticlePage({ params }) {
     const post = getPostBySlug(slug);
     if (!post) notFound();
 
-
     const articleSchema = {
         '@context': 'https://schema.org',
         '@type': 'Article',
@@ -65,6 +64,60 @@ export default async function BlogArticlePage({ params }) {
         }}>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
 
+            {/* GLOBAL STYLES — must be before render */}
+            <style>{`
+                .blog-nav-cta:hover { opacity: 0.85; }
+                .blog-back:hover { color: rgba(255,255,255,0.9) !important; }
+                .related-link {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.07);
+                    border-radius: 10px;
+                    padding: 14px 18px;
+                    text-decoration: none;
+                    color: #fff;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+                .related-link:hover {
+                    border-color: rgba(157,0,255,0.3);
+                    background: rgba(157,0,255,0.06);
+                    transform: translateX(4px);
+                }
+                article h2 {
+                    font-size: 1.5rem;
+                    font-weight: 800;
+                    font-family: 'Outfit', sans-serif;
+                    letter-spacing: -0.025em;
+                    margin: 2.5rem 0 1rem;
+                    color: #fff;
+                    line-height: 1.3;
+                }
+                article h3 {
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    margin: 1.8rem 0 0.7rem;
+                    color: rgba(255,255,255,0.9);
+                }
+                article p { margin-bottom: 1.2rem; }
+                article ul, article ol {
+                    padding-left: 1.5rem;
+                    margin-bottom: 1.4rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+                article li {
+                    line-height: 1.7;
+                    color: rgba(255,255,255,0.75);
+                }
+                article strong { color: #fff; font-weight: 700; }
+                article a { color: #c084fc; text-decoration: underline; }
+            `}</style>
+
             {/* NAV */}
             <nav style={{
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -77,11 +130,12 @@ export default async function BlogArticlePage({ params }) {
                     <Logo size="1rem" />
                 </Link>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                    <Link href="/blog" style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', textDecoration: 'none' }}>← Blog</Link>
-                    <Link href="/login?mode=register" style={{
+                    <Link href="/blog" className="blog-back" style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', textDecoration: 'none', transition: 'color 0.2s' }}>← Blog</Link>
+                    <Link href="/login?mode=register" className="blog-nav-cta" style={{
                         background: 'linear-gradient(135deg, #9D00FF, #6100FF)',
                         color: '#fff', padding: '8px 18px', borderRadius: 8,
                         fontSize: '0.83rem', fontWeight: 700, textDecoration: 'none',
+                        transition: 'opacity 0.2s',
                     }}>Empieza con WRITI</Link>
                 </div>
             </nav>
@@ -99,13 +153,14 @@ export default async function BlogArticlePage({ params }) {
                         border: '1px solid rgba(255,255,255,0.08)',
                         boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
                     }}>
-                        <img 
-                            src={post.image} 
-                            alt={post.title} 
+                        <img
+                            src={post.image}
+                            alt={post.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     </div>
                 )}
+
                 {/* Meta */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
                     <span style={{
@@ -154,6 +209,32 @@ export default async function BlogArticlePage({ params }) {
                 {/* Divider */}
                 <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '56px 0 40px' }} />
 
+                {/* CTA Box */}
+                <div style={{
+                    background: 'rgba(157,0,255,0.08)',
+                    border: '1px solid rgba(157,0,255,0.25)',
+                    borderRadius: 16,
+                    padding: '32px 28px',
+                    textAlign: 'center',
+                    marginBottom: 56,
+                }}>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16, color: '#fff' }}>
+                        ¿Listo para crear contenido con IA en minutos?
+                    </p>
+                    <Link href="/login?mode=register" style={{
+                        display: 'inline-block',
+                        background: 'linear-gradient(135deg, #9D00FF, #6100FF)',
+                        color: '#fff',
+                        padding: '14px 32px',
+                        borderRadius: 10,
+                        fontWeight: 800,
+                        fontSize: '0.95rem',
+                        textDecoration: 'none',
+                    }}>
+                        ⚡ Empieza con WRITI.AI →
+                    </Link>
+                </div>
+
                 {/* Related articles */}
                 <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -164,18 +245,7 @@ export default async function BlogArticlePage({ params }) {
                             .filter(p => p.slug !== post.slug)
                             .slice(0, 3)
                             .map(related => (
-                                <Link key={related.slug} href={`/blog/${related.slug}`} style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.07)',
-                                    borderRadius: 10, padding: '14px 18px',
-                                    textDecoration: 'none', color: '#fff',
-                                    fontSize: '0.9rem', fontWeight: 600,
-                                    transition: 'all 0.2s',
-                                }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(157,0,255,0.3)'; e.currentTarget.style.background = 'rgba(157,0,255,0.05)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                                >
+                                <Link key={related.slug} href={`/blog/${related.slug}`} className="related-link">
                                     <span>{related.title}</span>
                                     <span style={{ color: '#9D00FF', flexShrink: 0, marginLeft: 12 }}>→</span>
                                 </Link>
@@ -183,47 +253,6 @@ export default async function BlogArticlePage({ params }) {
                     </div>
                 </div>
             </article>
-
-            {/* GLOBAL ARTICLE STYLES */}
-            <style>{`
-                article h2 {
-                    font-size: 1.5rem;
-                    font-weight: 800;
-                    font-family: 'Outfit', sans-serif;
-                    letter-spacing: -0.025em;
-                    margin: 2.5rem 0 1rem;
-                    color: #fff;
-                    line-height: 1.3;
-                }
-                article h3 {
-                    font-size: 1.15rem;
-                    font-weight: 700;
-                    margin: 1.8rem 0 0.7rem;
-                    color: rgba(255,255,255,0.9);
-                }
-                article p {
-                    margin-bottom: 1.2rem;
-                }
-                article ul, article ol {
-                    padding-left: 1.5rem;
-                    margin-bottom: 1.4rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                }
-                article li {
-                    line-height: 1.7;
-                    color: rgba(255,255,255,0.75);
-                }
-                article strong {
-                    color: #fff;
-                    font-weight: 700;
-                }
-                article a {
-                    color: #c084fc;
-                    text-decoration: underline;
-                }
-            `}</style>
         </div>
     );
 }
