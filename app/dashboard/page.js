@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.45'; // Monthly Plan: Fix skip steps + Reset planSlots
+export const VERSION = 'v1.17.46'; // Monthly Plan: Disable auto-skip to step 3 in fetchPlanSlots
 
 
 
@@ -410,17 +410,8 @@ export default function DashboardPage() {
                 
                 if (slots && slots.length > 0) {
                     setPlanSlots(slots);
-                    // v5.1.2: Solo saltar al step 3 si verdaderamente estamos en 'plan' mode
-                    // y no estamos en medio de un form wizard (step === 1).
-                    setGenerationMode(currentMode => {
-                        setStep(currentStep => {
-                            if (currentMode === 'plan' && currentStep === 1) {
-                                return 3;
-                            }
-                            return currentStep;
-                        });
-                        return currentMode;
-                    });
+                    // v1.17.46: No more auto-skipping to step 3. 
+                    // User should always see the wizard (Step 1) to configure or clear.
                 }
             }
         } catch (err) {
