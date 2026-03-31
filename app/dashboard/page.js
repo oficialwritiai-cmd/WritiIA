@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.43'; // Fix Monthly Plan Navigation reset + UI cleanup
+export const VERSION = 'v1.17.44'; // Monthly Plan: Remove duration + Fix Calendar Sync
 
 
 
@@ -2098,6 +2098,9 @@ export default function DashboardPage() {
                     has_script: hasScriptNow,
                     script_full_text: safeCalScriptText || '',
                     notes: safeCalScriptText || '',
+                    start_time: '10:00', // v1.17.44: Fix calendar visibility
+                    end_time: '11:00',   // v1.17.44: Fix calendar visibility
+                    color: '#9D00FF',    // v1.17.44: Specific color for Monthly Plan
                     content: null
                 };
 
@@ -3320,20 +3323,6 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div>
-                                <span className="wz-label">Duración base de los vídeos</span>
-                                <div className="pwz-chips">
-                                    {['60 seg', '90 seg', '3 min', '5 min', '10 min'].map(d => (
-                                        <button 
-                                            key={d} 
-                                            onClick={() => setVideoDuration(d)} 
-                                            className={`pwz-chip${videoDuration === d ? ' active' : ''}`}
-                                        >
-                                            {d}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
