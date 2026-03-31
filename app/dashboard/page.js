@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.50'; // Monthly Plan: Fix Sync reference_id bug
+export const VERSION = 'v1.17.51'; // Monthly Plan: Fix plan_id schema error
 
 
 
@@ -2094,7 +2094,7 @@ export default function DashboardPage() {
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
-                    plan_id: planId, // v1.17.50: Link to the parent plan
+                    // v1.17.51: Removed plan_id as it does not exist in calendar_events schema
                     title: slot.idea_title || 'Idea Sin Título',
                     description: [
                         slot.idea_description || '',
@@ -2106,7 +2106,7 @@ export default function DashboardPage() {
                     type: hasScriptNow ? 'guion' : 'idea',
                     status: hasScriptNow ? 'Guion listo' : 'Idea',
                     platform: slot.platform || 'General',
-                    reference_id: refId, // v1.17.50: Use validated UUID (refId) instead of raw slot.id
+                    reference_id: refId, // v1.17.50: Use validated UUID (refId)
                     has_script: hasScriptNow,
                     script_full_text: safeCalScriptText || '',
                     notes: safeCalScriptText || '',
