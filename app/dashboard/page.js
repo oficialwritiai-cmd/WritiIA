@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.51'; // Monthly Plan: Fix plan_id schema error
+export const VERSION = 'v1.17.52'; // Monthly Plan: Sync Reliability Fix + Diagnostics
 
 
 
@@ -1905,252 +1905,186 @@ export default function DashboardPage() {
             return;
         }
 
+        // v1.17.52: Inform the user before starting
+        if (slotsToSend) {
+            console.log(`[Sync] Iniciando proceso para ${slotsToSend.length} ideas seleccionadas.`);
+        }
+
         setSendingToCalendar(true);
         setGenerationProgress({ current: 0, total: slots.length, status: 'Iniciando sincronización...' });
 
+        let insertedCount = 0;
+        let updatedCount = 0;
+        let failedCount = 0;
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No hay sesión');
+            if (!user) throw new Error('No hay sesión activa');
 
-            const existingPlanId = slots[0]?.plan_id;
-            let planId = existingPlanId;
+            // Fetch existing events to detect duplicates/updates
+            const { data: existingEvents } = await supabase
+                .from('calendar_events')
+                .select('id, event_date, title, has_script, script_full_text, notes')
+                .eq('user_id', user.id)
+                .eq('project_id', activeProject?.id || null);
 
-            if (!planId) {
-                const currentMonth = new Date().getMonth() + 1;
-                const currentYear = new Date().getFullYear();
-                const { data: planData, error: planError } = await supabase
-                    .from('content_plans')
-                    .insert({
-                        user_id: user.id,
-                        project_id: activeProject?.id,
-                        month: currentMonth,
-                        year: currentYear,
-                        frequency: `${slots.length} publicaciones`,
-                        platforms: [...new Set(slots.map(s => s.platform))],
-                        focus: 'plan_mensual'
-                    })
-                    .select()
-                    .single();
-
-                if (planError) throw planError;
-                planId = planData.id;
-            }
-
-            const eventsToInsert = [];
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            // Fetch existing events and scripts to ensure we have all data
-            // Use a broader query for scripts and library (where guiones live)
-            const scriptQuery = supabase.from('scripts').select('*').eq('user_id', user.id);
-            const libraryQuery = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'guion');
-
-            if (activeProject?.id) {
-                scriptQuery.eq('project_id', activeProject.id);
-                libraryQuery.eq('project_id', activeProject.id);
-            }
-
-            const [{ data: existingEvents }, { data: allScripts }, { data: allLibraryScripts }] = await Promise.all([
-                supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id),
-                scriptQuery,
-                libraryQuery
+            // Fetch existing scripts and library items once to improve performance
+            const [ { data: allScripts }, { data: allLibraryScripts } ] = await Promise.all([
+                supabase.from('scripts').select('*').eq('user_id', user.id).eq('project_id', activeProject?.id || null),
+                supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'guion').eq('project_id', activeProject?.id || null)
             ]);
 
-            // Combine both tables for matching
             const combinedScripts = [
                 ...(allScripts || []),
                 ...(allLibraryScripts || []).map(libs => ({
                     ...libs,
-                    topic: libs.titulo, // Map titulo to topic for normalization
+                    topic: libs.titulo,
                     content: libs.content
                 }))
             ];
 
-            const occupiedDates = new Set(existingEvents?.map(e => e.event_date) || []);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
             for (let i = 0; i < slots.length; i++) {
                 const slot = slots[i];
-                setGenerationProgress({
-                    current: i + 1,
-                    total: slots.length,
-                    status: `Sincronizando ${i + 1}/${slots.length}: ${slot.idea_title}`
-                });
-
-                let targetDate = slot.scheduled_date ? new Date(slot.scheduled_date + 'T12:00:00') : new Date(today);
-                
-                // Rule 1: No past dates
-                if (targetDate < today) {
-                    targetDate = new Date(today);
-                }
-
-                // Rule 2: Overlaps are now ALLOWED (v4.9.4)
-                let dateStr = targetDate.toISOString().split('T')[0];
-                console.log(`[v4.9.4 CALENDAR] Syncing "${slot.idea_title}" to date ${dateStr} (Overlaps allowed)`);
-
-                // Rule 3: Avoid exact duplicates, update if missing script or empty notes
-                const existingEvent = existingEvents?.find(e => e.event_date === dateStr && e.title === slot.idea_title);
-                if (existingEvent) {
-                    if (existingEvent.has_script && (existingEvent.notes || existingEvent.script_full_text)) {
-                        console.log(`[Sync] Skipping exact duplicate (already has script and text): ${slot.idea_title}`);
-                        continue; 
-                    } else {
-                        // We will update this event instead of inserting a new one
-                        slot.updateExistingEventId = existingEvent.id;
-                    }
-                }
-
-                if (!slot.updateExistingEventId) {
-                    occupiedDates.add(dateStr); // Mark as occupied for next slots in loop
-                }
-
-                const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-                let refId = slot.id && isValidUUID(slot.id) ? slot.id : null;
-
-                if (!refId) {
-                    const savedIdea = await saveToLibrary({
-                        userId: user.id,
-                        projectId: activeProject?.id,
-                        type: 'idea',
-                        platform: slot.platform,
-                        goal: slot.goal,
-                        titulo: slot.idea_title,
-                        content: { ...slot },
-                        tags: [slot.platform, slot.content_type, slot.goal].filter(Boolean)
+                try {
+                    setGenerationProgress({
+                        current: i + 1,
+                        total: slots.length,
+                        status: `Procesando ${i + 1}/${slots.length}: ${slot.idea_title}`
                     });
 
-                    if (savedIdea?.id) refId = savedIdea.id;
+                    let targetDate = slot.scheduled_date ? new Date(slot.scheduled_date + 'T12:00:00') : new Date(today);
+                    if (targetDate < today) targetDate = new Date(today);
+                    
+                    let dateStr = targetDate.toISOString().split('T')[0];
+                    
+                    // Duplicate/Update Detection
+                    let existingEventId = null;
+                    const existingEvent = existingEvents?.find(e => e.event_date === dateStr && e.title === slot.idea_title);
+                    
+                    if (existingEvent) {
+                        // v1.17.52: RELAXED RULE - Don't skip anymore! If it exists, we mark for UPDATE.
+                        // Only skip if the exact content is the SAME to save bandwidth (unlikely to happen during a test)
+                        const isSameContent = existingEvent.has_script && (existingEvent.notes || existingEvent.script_full_text);
+                        if (isSameContent) {
+                            console.log(`[Sync] Match found for ${slot.idea_title} - overwriting/updating data.`);
+                        }
+                        existingEventId = existingEvent.id;
+                    }
+
+                    // UUID Validation for reference_id
+                    const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+                    let refId = slot.id && isValidUUID(slot.id) ? slot.id : null;
+
+                    // If not a UUID (proactive or local), save to library first
+                    if (!refId) {
+                        const savedItem = await saveToLibrary({
+                            userId: user.id,
+                            projectId: activeProject?.id || null,
+                            type: 'idea',
+                            platform: slot.platform,
+                            goal: slot.goal,
+                            titulo: slot.idea_title,
+                            content: { ...slot },
+                            tags: [slot.platform, slot.content_type].filter(Boolean)
+                        });
+                        if (savedItem?.id) refId = savedItem.id;
+                    }
+
+                    // Process script data if available
+                    const normalize = (t) => String(t || '').replace(/[^\w\s\d]/g, '').trim().toLowerCase();
+                    const slotTitleNorm = normalize(slot.idea_title);
+                    const matchedScript = combinedScripts?.find(sc => normalize(sc.topic) === slotTitleNorm || normalize(sc.titulo) === slotTitleNorm);
+                    
+                    const sd = slot.script_data || matchedScript?.content;
+                    let parsedSd = sd;
+                    if (typeof sd === 'string' && sd.startsWith('{')) {
+                        try { parsedSd = JSON.parse(sd); } catch(e) { parsedSd = { hook: sd }; }
+                    } else if (typeof sd === 'string' && sd.trim().length > 0) {
+                        parsedSd = { hook: sd };
+                    }
+
+                    const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
+                    const desRaw = parsedSd?.desarrollo || parsedSd?.puntos || [];
+                    const desArr = Array.isArray(desRaw) ? desRaw : (desRaw ? [desRaw] : []);
+                    const ctaVal = parsedSd?.cta || parsedSd?.cierre || '';
+                    const hasRealContent = hookVal.length > 5 || desArr.length > 0;
+
+                    const richIdeaContext = [
+                        `📅 PLAN MENSUAL`,
+                        `TÍTULO: ${slot.idea_title}`,
+                        slot.idea_description ? `📝 RESUMEN: ${slot.idea_description}` : '',
+                        `🎯 OBJETIVO: ${slot.goal || 'engagement'}`,
+                        `📱 PLATAFORMA: ${slot.platform || 'General'}`,
+                    ].filter(Boolean).join('\n');
+
+                    let fullText = richIdeaContext;
+                    if (hasRealContent) {
+                        fullText = [
+                            slot.idea_title,
+                            '', '🎯 GANCHO', hookVal,
+                            '', '📝 DESARROLLO', ...desArr.map((d, idx) => `${idx + 1}. ${d}`),
+                            '', '🔥 CTA', ctaVal
+                        ].join('\n');
+                    }
+
+                    const eventPayload = {
+                        user_id: user.id,
+                        project_id: activeProject?.id || null,
+                        title: slot.idea_title || 'Idea Sin Título',
+                        description: `[Plan Mensual] ${slot.idea_description || ''}`,
+                        event_date: dateStr,
+                        type: (slot.has_script || (parsedSd && hasRealContent)) ? 'guion' : 'idea',
+                        status: (slot.has_script || (parsedSd && hasRealContent)) ? 'Guion listo' : 'Idea',
+                        platform: slot.platform || 'General',
+                        reference_id: refId,
+                        has_script: !!(slot.has_script || (parsedSd && hasRealContent)),
+                        script_full_text: fullText,
+                        notes: fullText,
+                        start_time: '12:00',
+                        end_time: '13:00',
+                        color: '#9D00FF'
+                    };
+
+                    if (existingEventId) {
+                        const { error: upError } = await supabase.from('calendar_events').update(eventPayload).eq('id', existingEventId);
+                        if (upError) throw upError;
+                        updatedCount++;
+                    } else {
+                        const { error: insError } = await supabase.from('calendar_events').insert(eventPayload);
+                        if (insError) throw insError;
+                        insertedCount++;
+                    }
+
+                } catch (slotErr) {
+                    console.error(`[Sync] Error en slot ${i}:`, slotErr);
+                    failedCount++;
                 }
-
-                const normalize = (t) => String(t || '').replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\u200D|\uFE0F|[^\w\s\d]/g, '').trim().toLowerCase();
-                const slotTitleNorm = normalize(slot.idea_title);
-                
-                // Search in combined sources
-                const matchedScript = combinedScripts?.find(sc => 
-                    normalize(sc.topic) === slotTitleNorm || 
-                    normalize(sc.titulo) === slotTitleNorm ||
-                    normalize(sc.content?.titulo_guion) === slotTitleNorm
-                );
-
-                const sd = slot.script_data || matchedScript?.content;
-                // If sd is a string (legacy/direct prompt), try parsing
-                let parsedSd = sd;
-                if (typeof sd === 'string' && sd.startsWith('{')) {
-                    try { parsedSd = JSON.parse(sd); } catch(e) { parsedSd = { hook: sd }; }
-                } else if (typeof sd === 'string' && sd.trim().length > 0) {
-                    parsedSd = { hook: sd };
-                }
-                
-                // --- FALLBACK REMOVED v4.4.21 ---
-                // We no longer overwrite with slot.idea_title if data is missing.
-                // This prevents the generic "repetitive" content bug.
-
-                const hookVal = parsedSd?.hook || parsedSd?.gancho || '';
-                const desRaw = parsedSd?.desarrollo || parsedSd?.puntos || [];
-                const desArr = Array.isArray(desRaw) ? desRaw : (desRaw ? [desRaw] : []);
-                const ctaVal = parsedSd?.cta || parsedSd?.cierre || '';
-                const cpPost = parsedSd?.copy_post || {};
-                const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
-
-                // v4.5.2: Diagnostic log — see exactly what data is available per slot
-                console.log(`[v4.5.2 CALENDAR] Slot "${slot.idea_title}" script_data:`, JSON.stringify(parsedSd));
-                console.log(`[v4.5.2 CALENDAR] hookVal="${hookVal}", desArr.length=${desArr.length}, ctaVal="${ctaVal}"`);
-
-                // v4.5.2: GUARD — Only build the script text if we actually have content
-                const hasRealContent = (hookVal && hookVal.trim().length > 10) ||
-                                       (desArr.length > 0 && desArr.some(d => d && d.trim().length > 10)) ||
-                                       (ctaVal && ctaVal.trim().length > 10);
-
-                let calScriptText = null;
-                if (hasRealContent) {
-                    calScriptText = [
-                        slot.idea_title,
-                        '', '🎯 GANCHO', hookVal,
-                        '', '📝 DESARROLLO', ...desArr.map((d, idx) => `${idx + 1}. ${d}`),
-                        '', '🔥 CTA', ctaVal,
-                        '', '📱 COPY PARA EL POST', cpPost.titulo || '', cpPost.descripcion_larga || '',
-                        htags ? `\nHASHTAGS: ${htags}` : ''
-                    ].filter(l => l !== undefined).join('\n');
-                } else {
-                    console.warn(`[v4.4.24] Slot "${slot.idea_title}" has NO real content — skipping skeleton. Raw script_data:`, slot.script_data);
-                    calScriptText = null;
-                }
-
-                const hasScriptNow = !!(slot.has_script || (parsedSd && hasRealContent));
-                // v4.9.1: Rich context when no script yet — no placeholders, real idea data
-                const richIdeaContext = [
-                    `📅 IDEA DEL PLAN MENSUAL`,
-                    `TÍTULO: ${slot.idea_title}`,
-                    ``,
-                    slot.idea_description ? `📝 RESUMEN: ${slot.idea_description}` : '',
-                    `🎯 OBJETIVO: ${slot.goal || 'engagement'}`,
-                    `📌 ENFOQUE: ${slot.content_type || 'educativo'}`,
-                    `📱 PLATAFORMA: ${slot.platform || 'General'}`,
-                    ``,
-                    `💡 Para generar el guion completo, abre esta idea en el calendario y pulsa "Crear Guion con IA".`,
-                ].filter(Boolean).join('\n');
-                const safeCalScriptText = calScriptText || richIdeaContext;
-
-                // v4.9.1: Store slot_id as reference_id so calendar can call /api/slots/{id}/generate-script
-                const eventPayload = {
-                    user_id: user.id,
-                    project_id: activeProject?.id,
-                    // v1.17.51: Removed plan_id as it does not exist in calendar_events schema
-                    title: slot.idea_title || 'Idea Sin Título',
-                    description: [
-                        slot.idea_description || '',
-                        `Objetivo: ${slot.goal || 'engagement'}`,
-                        `Enfoque: ${slot.content_type || 'educativo'}`,
-                        `Plataforma: ${slot.platform || 'General'}`,
-                    ].filter(Boolean).join(' · '),
-                    event_date: dateStr,
-                    type: hasScriptNow ? 'guion' : 'idea',
-                    status: hasScriptNow ? 'Guion listo' : 'Idea',
-                    platform: slot.platform || 'General',
-                    reference_id: refId, // v1.17.50: Use validated UUID (refId)
-                    has_script: hasScriptNow,
-                    script_full_text: safeCalScriptText || '',
-                    notes: safeCalScriptText || '',
-                    start_time: '10:00', // v1.17.44: Fix calendar visibility
-                    end_time: '11:00',   // v1.17.44: Fix calendar visibility
-                    color: '#9D00FF',    // v1.17.44: Specific color for Monthly Plan
-                    content: null
-                };
-
-                if (slot.updateExistingEventId) {
-                    // Update existing event that previously didn't have a script
-                    await supabase.from('calendar_events').update(eventPayload).eq('id', slot.updateExistingEventId);
-                } else {
-                    eventsToInsert.push(eventPayload);
-                }
-            }
-
-            if (eventsToInsert.length > 0) {
-                const { error: eventError } = await supabase
-                    .from('calendar_events')
-                    .insert(eventsToInsert);
-
-                if (eventError) throw eventError;
             }
 
             setPlanSlots(slots.map(s => ({ ...s, sent_to_calendar: true })));
             setGenerationProgress({ current: slots.length, total: slots.length, status: '¡Sincronización completa!' });
 
-            // v4.9.1: Honest message — only claim guiones if they actually exist
-            const withScript = slots.filter(s => s.has_script || (s.script_data && (s.script_data.hook || s.script_data.gancho))).length;
-            const withoutScript = slots.length - withScript;
-            const msgLines = [
-                `✅ Plan mensual sincronizado al calendario.`,
+            // v1.17.52: DEEP DIAGNOSTIC REPORT
+            const report = [
+                `✅ ¡Sincronización Finalizada!`,
                 ``,
-                `📊 Resumen:`,
-                withScript > 0 ? `  • ${withScript} idea(s) con guion completo ✍️` : '',
-                withoutScript > 0 ? `  • ${withoutScript} idea(s) sin guion aún (pulsa "Crear Guion con IA" en cada una del calendario)` : '',
-            ].filter(l => l !== '').join('\n');
-            alert(msgLines);
+                `📊 Resultados:`,
+                insertedCount > 0 ? `  • Insertados: ${insertedCount} nuevos ✅` : '',
+                updatedCount > 0 ? `  • Actualizados: ${updatedCount} existentes 🔄` : '',
+                failedCount > 0 ? `  • Fallidos: ${failedCount} (Ver consola) ❌` : '',
+                ``,
+                `Ahora puedes ir al calendario para ver tus publicaciones programadas.`
+            ].filter(Boolean).join('\n');
+            
+            alert(report);
             router.push('/dashboard/calendar');
 
         } catch (err) {
-            console.error('[Plan Mensual] Error sending to calendar:', err);
-            alert('Error al enviar al calendario: ' + err.message);
+            console.error('[Sync Major Error] ', err);
+            alert('Error grave al sincronizar: ' + err.message);
         } finally {
             setSendingToCalendar(false);
         }
