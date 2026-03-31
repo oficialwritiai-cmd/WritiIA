@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.44'; // Monthly Plan: Remove duration + Fix Calendar Sync
+export const VERSION = 'v1.17.45'; // Monthly Plan: Fix skip steps + Reset planSlots
 
 
 
@@ -574,6 +574,7 @@ export default function DashboardPage() {
             setGenerationMode('plan');
             setStep(1);
             setPlanWizardStep(1);
+            setPlanSlots([]); // v1.17.45: Clear previous slots to avoid skipping
             setTopic('');
         } else if (!params.get('mode')) {
             // v1.17.43: Reset to initial state when navigating to root /dashboard without params
@@ -4196,7 +4197,7 @@ export default function DashboardPage() {
                                         </button>
                                     </>
                                 )}
-                                <button onClick={() => { setStep(1); setPlanWizardStep(1); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
+                                <button onClick={() => { setStep(1); setPlanWizardStep(1); setPlanSlots([]); setTopic(''); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
                             </div>
                         </div>
 
