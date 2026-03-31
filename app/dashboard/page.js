@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.42'; // Plan mode URL integration reset
+export const VERSION = 'v1.17.43'; // Fix Monthly Plan Navigation reset + UI cleanup
 
 
 
@@ -499,6 +499,7 @@ export default function DashboardPage() {
 
     const supabase = createSupabaseClient();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const singleLoadingSteps = [
         "Leyendo tu Cerebro IA...",
@@ -526,58 +527,67 @@ export default function DashboardPage() {
     }
 
     useEffect(() => {
-        // Load params from URL on initial load
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('mode') === 'single') {
-                setGenerationMode('single');
-                const topicParam = params.get('topic');
-                const platformParam = params.get('platform');
-                const goalParam = params.get('goal');
-                const countParam = params.get('count');
-                const forceCount = countParam ? parseInt(countParam) : null;
+        // Load params from URL on initial load or navigation
+        const params = searchParams;
+        if (params.get('mode') === 'single') {
+            setGenerationMode('single');
+            const topicParam = params.get('topic');
+            const platformParam = params.get('platform');
+            const goalParam = params.get('goal');
+            const countParam = params.get('count');
+            const forceCount = countParam ? parseInt(countParam) : null;
 
-                const savedDescription = params.get('description');
-                const savedSourceType = params.get('source_type');
-                const savedSourceReferenceId = params.get('source_reference_id');
+            const savedDescription = params.get('description');
+            const savedSourceType = params.get('source_type');
+            const savedSourceReferenceId = params.get('source_reference_id');
 
-                if (topicParam) setTopic(topicParam);
-                if (platformParam) setPlatform(platformParam);
-                if (goalParam) setGoal(goalParam);
-                if (savedDescription) setIdeas(savedDescription);
-                if (forceCount) setQuantity(forceCount);
-                if (params.get('date')) setCalendarDate(params.get('date'));
-                if (savedSourceType) setSourceType(savedSourceType);
-                if (savedSourceReferenceId) {
-                    setSourceReferenceId(savedSourceReferenceId);
-                    
-                    // v5.1.5: Fetch existing event to get its script_id & color
-                    const fetchSourceDetails = async () => {
-                        try {
-                            const { data, error } = await supabase
-                                .from('calendar_events')
-                                .select('script_id, color')
-                                .eq('id', savedSourceReferenceId)
-                                .single();
-                            
-                            if (data) {
-                                if (data.script_id) setExistingLibraryId(data.script_id);
-                                if (data.color) setSelectedColor(data.color);
-                            }
-                        } catch (e) {
-                            console.warn('[v5.1.5] Error fetching source details:', e);
+            if (topicParam) setTopic(topicParam);
+            if (platformParam) setPlatform(platformParam);
+            if (goalParam) setGoal(goalParam);
+            if (savedDescription) setIdeas(savedDescription);
+            if (forceCount) setQuantity(forceCount);
+            if (params.get('date')) setCalendarDate(params.get('date'));
+            if (savedSourceType) setSourceType(savedSourceType);
+            if (savedSourceReferenceId) {
+                setSourceReferenceId(savedSourceReferenceId);
+                
+                // v5.1.5: Fetch existing event to get its script_id & color
+                const fetchSourceDetails = async () => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('calendar_events')
+                            .select('script_id, color')
+                            .eq('id', savedSourceReferenceId)
+                            .single();
+                        
+                        if (data) {
+                            if (data.script_id) setExistingLibraryId(data.script_id);
+                            if (data.color) setSelectedColor(data.color);
                         }
-                    };
-                    fetchSourceDetails();
-                }
-            } else if (params.get('mode') === 'plan') {
-                setGenerationMode('plan');
-                setStep(1);
-                setPlanWizardStep(1);
-                setTopic('');
+                    } catch (e) {
+                        console.warn('[v5.1.5] Error fetching source details:', e);
+                    }
+                };
+                fetchSourceDetails();
             }
+        } else if (params.get('mode') === 'plan') {
+            setGenerationMode('plan');
+            setStep(1);
+            setPlanWizardStep(1);
+            setTopic('');
+        } else if (!params.get('mode')) {
+            // v1.17.43: Reset to initial state when navigating to root /dashboard without params
+            // This ensures sidebar "Nuevo Guion" always starts a fresh session
+            setGenerationMode('single');
+            setStep(1);
+            setWizardStep(1);
+            setPlanWizardStep(1);
+            setScripts([]);
+            setPlanSlots([]);
+            setTopic('');
+            setIdeas('');
         }
-    }, [supabase, router]);
+    }, [supabase, searchParams]);
 
     useEffect(() => {
         if (generationMode === 'plan' && planWizardStep === 1) {
@@ -2187,13 +2197,25 @@ export default function DashboardPage() {
             {step === 1 && (
                 <div style={{ display: 'flex', gap: '8px', padding: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', width: 'fit-content', margin: '0 auto 10px' }}>
                     <button
-                        onClick={() => { setGenerationMode('single'); setTopic(''); setWizardStep(1); }}
+                        onClick={() => { 
+                            setGenerationMode('single'); 
+                            setTopic(''); 
+                            setWizardStep(1); 
+                            setStep(1);
+                            setScripts([]);
+                        }}
                         style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7ECECA' : 'transparent', color: generationMode === 'single' ? '#000' : 'white', border: 'none', cursor: 'pointer' }}
                     >
                         Guiones de un tema
                     </button>
                     <button
-                        onClick={() => { setGenerationMode('plan'); setTopic(''); setPlanWizardStep(hasBrain ? 1 : 1); setStep(1); }}
+                        onClick={() => { 
+                            setGenerationMode('plan'); 
+                            setTopic(''); 
+                            setPlanWizardStep(1); 
+                            setStep(1); 
+                            setPlanSlots([]);
+                        }}
                         style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'plan' ? '#7ECECA' : 'transparent', color: generationMode === 'plan' ? '#000' : 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         <CalendarDays size={18} /> Plan mensual de contenido
@@ -2946,15 +2968,6 @@ export default function DashboardPage() {
                                     ))}
                                 </div>
                             </div>
-                            {/* Negocio fields – mantener para IA, visualmente compacto */}
-                            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                <span className="wz-label" style={{ marginBottom: 0 }}>🏷️ Contexto de negocio (para la IA)</span>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                    <input className="input-field" placeholder="¿Qué vendes? (Ej: Mentoría 1:1)" value={businessOffer} onChange={e => setBusinessOffer(e.target.value)} style={{ fontSize: '0.85rem' }} />
-                                    <input className="input-field" placeholder="Ticket (Ej: 297€)" value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} style={{ fontSize: '0.85rem' }} />
-                                </div>
-                                <textarea className="textarea-field" placeholder="¿A quién le hablas y cuál es su problema principal? (Ej: Coaches de +35 que...)" value={mainPainPoint} onChange={e => setMainPainPoint(e.target.value)} rows={2} style={{ fontSize: '0.85rem' }} />
-                            </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div style={{ gridColumn: '1 / span 2' }}>
@@ -3000,8 +3013,6 @@ export default function DashboardPage() {
                                             </p>
                                         </div>
                                     )}
-
-
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Precio / Ticket medio (Opcional)</p>
