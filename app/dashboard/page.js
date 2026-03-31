@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.47'; // Monthly Plan: Stable IDs for Idea Bank selection
+export const VERSION = 'v1.17.48'; // Monthly Plan: Smart Scheduling + Review UI
 
 
 
@@ -1128,8 +1128,22 @@ export default function DashboardPage() {
             const slotsWithDates = slots.map((slot, index) => {
                 let scheduledDate = slot.scheduled_date;
                 if (!scheduledDate) {
-                    // Start from TOMORROW (index + 1)
-                    const slotDate = new Date(currentYear, currentMonth, today.getDate() + index + 1);
+                    // v1.17.48: SMART SCHEDULING based on frequency
+                    let dayOffset = index + 1; // Default
+                    const freqPrefix = planFrequency.split(' ')[0]; // "3", "4", "7"
+                    
+                    if (freqPrefix === '3') {
+                        // 3x week (12 slots) -> Gap of ~2.5 days to cover 30 days
+                        dayOffset = Math.floor(index * 2.5) + 1;
+                    } else if (freqPrefix === '4') {
+                        // 4x week (16 slots) -> Gap of ~1.8 days
+                        dayOffset = Math.floor(index * 1.8) + 1;
+                    } else if (freqPrefix === '7' || planFrequency === 'Diario') {
+                        // Every day
+                        dayOffset = index + 1;
+                    }
+                    
+                    const slotDate = new Date(currentYear, currentMonth, today.getDate() + dayOffset);
                     scheduledDate = slotDate.toISOString().split('T')[0];
                 }
                 return { ...slot, scheduled_date: scheduledDate };
@@ -4275,83 +4289,99 @@ export default function DashboardPage() {
                                         background: selectedSlots.has(slot.id) ? 'rgba(126, 206, 202, 0.03)' : 'transparent',
                                         opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
                                         transition: '0.2s',
-                                        overflow: 'hidden'
+                                        overflow: 'hidden',
+                                        marginBottom: '12px'
                                     }}
                                 >
-                                    {/* Header row */}
+                                    {/* Header row: REVIEW & EDIT */}
                                     <div
-                                        onMouseDown={() => handleSlotMouseDown(slot.id)}
-                                        onMouseEnter={() => handleSlotMouseEnter(slot.id)}
-                                        onContextMenu={(e) => handleContextMenu(e, slot.id)}
                                         style={{
                                             padding: '20px 24px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             cursor: 'pointer',
-                                            userSelect: 'none'
+                                            userSelect: 'none',
+                                            background: 'rgba(255,255,255,0.02)'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }}>
+                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }} onClick={toggleExpand}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedSlots.has(slot.id)}
                                                 onChange={() => handleToggleSlotSelection(slot.id)}
                                                 onClick={(e) => e.stopPropagation()}
-                                                style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#7ECECA', flexShrink: 0 }}
+                                                style={{ width: '20px', height: '20px', accentColor: '#7ECECA', cursor: 'pointer', flexShrink: 0 }}
                                             />
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(126, 206, 202, 0.08)', borderRadius: '12px', minWidth: '56px', height: '56px', flexShrink: 0 }}>
-                                                <span style={{ fontSize: '0.65rem', color: '#7ECECA', fontWeight: 800, textTransform: 'uppercase' }}>DÍA</span>
-                                                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{slot.day_number}</span>
-                                            </div>
-
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                                    <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', fontSize: '0.7rem', padding: '3px 10px' }}>{slot.platform}</span>
-                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Objetivo: <strong style={{ color: 'white' }}>{slot.goal}</strong></span>
-                                                    {slot.has_script && (
-                                                        <span className="badge" style={{ background: 'rgba(0, 255, 0, 0.1)', color: '#00ff00', border: '1px solid rgba(0,255,0,0.3)', fontSize: '0.65rem', padding: '2px 8px' }}>✓ Guión Listo</span>
-                                                    )}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', fontWeight: 900 }}>DÍA {slot.day_number || (i + 1)}</span>
+                                                    <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>•</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Calendar size={12} color="#7ECECA" />
+                                                        <input 
+                                                            type="date"
+                                                            value={slot.scheduled_date || ''}
+                                                            onChange={(e) => {
+                                                                const newSlots = [...planSlots];
+                                                                newSlots[i].scheduled_date = e.target.value;
+                                                                setPlanSlots(newSlots);
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            style={{ 
+                                                                background: 'rgba(126, 206, 202, 0.1)', 
+                                                                color: '#7ECECA', 
+                                                                border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                borderRadius: '6px',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 800,
+                                                                padding: '4px 8px',
+                                                                outline: 'none',
+                                                                cursor: 'pointer',
+                                                                colorScheme: 'dark'
+                                                            }}
+                                                        />
+                                                        <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 700 }}>
+                                                            {slot.scheduled_date ? new Date(slot.scheduled_date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' }) : ''}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', margin: 0 }}>{slot.idea_title}</h4>
-                                                {slot.idea_description && (
-                                                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                                                        {slot.idea_description}
-                                                    </p>
-                                                )}
-                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '6px 0 0 0' }}>Enfoque: {slot.content_type}</p>
+                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', margin: 0 }}>{slot.idea_title}</h3>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{slot.platform}</span>
+                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>|</span>
+                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{slot.content_type}</span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Calendar size={14} color="var(--text-secondary)" />
-                                                <input
-                                                    type="date"
-                                                    value={slot.scheduled_date || ''}
-                                                    onChange={(e) => handleScheduleSlot(slot.id, e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', colorScheme: 'dark' }}
-                                                />
-                                            </div>
+                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setPlanSlots(planSlots.filter(s => s.id !== slot.id)); }} 
+                                                className="btn-secondary" 
+                                                style={{ padding: '8px', minWidth: 'auto', border: '1px solid rgba(255,0,0,0.1)', color: 'rgba(255,77,77,0.6)' }}
+                                                title="Eliminar esta idea"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                            
                                             {!slot.has_script ? (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleGenerateSlotScript(slot); }}
                                                     disabled={generatingSlotId === slot.id}
                                                     className="btn-primary"
-                                                    style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, opacity: generatingSlotId === slot.id ? 0.7 : 1, whiteSpace: 'nowrap' }}
+                                                    style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(126, 206, 202, 0.2)' }}
                                                 >
-                                                    {generatingSlotId === slot.id ? <><Loader className="animate-spin" size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generando...</> : <><Sparkles size={14} style={{ marginRight: '6px', display: 'inline' }} /> Generar Guión</>}
+                                                    {generatingSlotId === slot.id ? <Loader className="animate-spin" size={14} /> : 'Generar Guión'}
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
                                                     className="btn-secondary"
-                                                    style={{ padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                    style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)' }}
                                                 >
-                                                    <BookOpen size={14} />
-                                                    {isExpanded ? 'Ocultar Guión' : 'Ver Guión'}
+                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    {isExpanded ? 'Cerrar' : 'Ver Guión'}
                                                 </button>
                                             )}
                                         </div>
