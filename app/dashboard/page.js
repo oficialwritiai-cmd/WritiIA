@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.38'; // Fixed Guardar Original persistence and added Color Selection
+export const VERSION = 'v1.17.39'; // Wizard UX Redesign: new steps, chip UI, animations, mobile-first
 
 
 
@@ -61,6 +61,9 @@ export default function DashboardPage() {
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [intensity, setIntensity] = useState(3);
     const [videoDuration, setVideoDuration] = useState('60 seg');
+    const [singleFrequency, setSingleFrequency] = useState('3 publicaciones por semana');
+    const [singleHowNotToSound, setSingleHowNotToSound] = useState('');
+    const [singleContentStyles, setSingleContentStyles] = useState([]);
     const [specificDetails, setSpecificDetails] = useState('');
     const [ctaIdea, setCtaIdea] = useState('');
     const [experienciaReal, setExperienciaReal] = useState('');
@@ -2223,28 +2226,43 @@ export default function DashboardPage() {
                             if (c.story) setStory(c.story);
                         }}
                     />
+                    <style>{`
+                        .wz-chip { padding: 10px 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08); cursor: pointer; font-size: 0.85rem; font-weight: 600; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.65); transition: all 0.18s ease; display: inline-flex; align-items: center; gap: 6px; }
+                        .wz-chip:hover { border-color: rgba(157,0,255,0.4); color: #fff; }
+                        .wz-chip.active { background: rgba(157,0,255,0.85); border-color: #9D00FF; color: #fff; font-weight: 700; box-shadow: 0 0 14px rgba(157,0,255,0.4); }
+                        .wz-chip-teal.active { background: rgba(126,206,202,0.15); border-color: #7ECECA; color: #7ECECA; box-shadow: 0 0 12px rgba(126,206,202,0.2); }
+                        .wz-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+                        @media (max-width: 768px) { .wz-chips { display: grid; grid-template-columns: 1fr 1fr; } }
+                        .wz-label { font-size: 0.7rem; font-weight: 800; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; display: block; }
+                        .wz-step { animation: wzFadeIn 0.22s ease; }
+                        @keyframes wzFadeIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+                        .wz-input { background: rgba(255,255,255,0.04) !important; border: 2px solid rgba(255,255,255,0.08) !important; border-radius: 10px !important; transition: border-color 0.2s, box-shadow 0.2s !important; }
+                        .wz-input:focus { border-color: #9D00FF !important; box-shadow: 0 0 0 3px rgba(157,0,255,0.15) !important; outline: none !important; }
+                        .wz-progress-bar { height: 3px; background: rgba(255,255,255,0.07); border-radius: 99px; overflow: hidden; margin-bottom: 32px; }
+                        .wz-progress-fill { height: 100%; background: linear-gradient(90deg, #9D00FF, #7ECECA); border-radius: 99px; transition: width 0.35s ease; }
+                        @media (max-width: 768px) { .wz-nav-sticky { position: sticky; bottom: 0; background: #0a0a0f; padding: 16px 0 4px; border-top: 1px solid rgba(255,255,255,0.06); margin: 0 -40px; padding-left: 40px; padding-right: 40px; z-index: 10; } }
+                    `}</style>
+
                     {/* Wizard Progress */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', gap: '16px' }}>
-                        {[1, 2, 3].map(w => (
-                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    background: wizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)',
-                                    color: wizardStep >= w ? 'black' : 'rgba(255,255,255,0.5)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem'
-                                }}>
-                                    {wizardStep > w ? '✓' : w}
-                                </div>
-                                <span style={{ color: wizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', fontWeight: wizardStep === w ? 700 : 400, fontSize: '0.85rem' }}>
-                                    {w === 1 ? 'Marca' : w === 2 ? 'Contexto' : 'Detalle'}
-                                </span>
-                                {w < 3 && <div style={{ width: '40px', height: '2px', background: wizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
-                            </div>
-                        ))}
+                    <div style={{ marginBottom: '28px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                {wizardStep === 1 ? 'Tu Marca' : wizardStep === 2 ? 'Tu Contenido' : wizardStep === 3 ? 'Tu Estrategia' : 'Tu Idea'}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9D00FF' }}>Paso {wizardStep} de {hasBrain ? 3 : 4}</span>
+                        </div>
+                        <div className="wz-progress-bar">
+                            <div className="wz-progress-fill" style={{ width: `${(wizardStep / (hasBrain ? 3 : 4)) * 100}%` }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                            {(hasBrain ? [2,3,4] : [1,2,3,4]).map((w,i) => (
+                                <div key={w} style={{ width: 8, height: 8, borderRadius: '50%', background: wizardStep >= w ? '#9D00FF' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+                            ))}
+                        </div>
                     </div>
 
-                    <h2 style={{ fontSize: '1.8rem', marginBottom: '32px', fontWeight: 800, textAlign: 'center' }}>
-                        {wizardStep === 1 ? 'Tu Marca Personal' : wizardStep === 2 ? 'Contexto del Contenido' : 'Detalle del Guion'}
+                    <h2 style={{ fontSize: '1.6rem', marginBottom: '24px', fontWeight: 800, textAlign: 'center', letterSpacing: '-0.02em' }}>
+                        {wizardStep === 1 ? '🧠 Tu Marca Personal' : wizardStep === 2 ? '📱 Tu Contenido' : wizardStep === 3 ? '🎯 Tu Estrategia' : '💡 Tu Idea'}
                     </h2>
 
                     {/* Wizard Step 1: Marca Personal */}
@@ -2508,57 +2526,99 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* Wizard Step 2: Contexto */}
+                    {/* Wizard Step 2: Tu Contenido */}
                     {wizardStep === 2 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivo del guion</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {OBJETIVOS.map(o => (
-                                        <button key={o} onClick={() => setGoal(o)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: goal === o ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: goal === o ? 'black' : 'white', fontWeight: goal === o ? 700 : 400 }}>{o}</button>
+                                <span className="wz-label">📱 Plataforma principal</span>
+                                <div className="wz-chips">
+                                    {['Reels','TikTok','YouTube Shorts','LinkedIn','X','Instagram','YouTube'].map(p => (
+                                        <button key={p} className={`wz-chip${platform === p ? ' active' : ''}`} onClick={() => setPlatform(p)}>{p}</button>
                                     ))}
                                 </div>
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataforma</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {PLATAFORMAS.map(p => (
-                                        <button key={p} onClick={() => setPlatform(p)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: platform === p ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: platform === p ? 'black' : 'white', fontWeight: platform === p ? 700 : 400 }}>{p}</button>
+                                <span className="wz-label">⏱ Duración base del vídeo</span>
+                                <div className="wz-chips">
+                                    {['60 seg','90 seg','3 min','5 min','10 min'].map(d => (
+                                        <button key={d} className={`wz-chip${videoDuration === d ? ' active' : ''}`} onClick={() => setVideoDuration(d)}>{d}</button>
                                     ))}
                                 </div>
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Nivel de awareness de tu audiencia</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {AWARENESS_LEVELS.map(a => (
-                                        <button key={a} onClick={() => setAwareness(a)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: awareness === a ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: awareness === a ? 'black' : 'white', fontWeight: awareness === a ? 700 : 400 }}>{a === 'no te conoce' ? 'No te conoce' : a === 'tibia' ? 'Te conoce / Tibia' : 'Muy caliente'}</button>
+                                <span className="wz-label">📅 Frecuencia de publicación</span>
+                                <div className="wz-chips">
+                                    {FRECUENCIAS.map(f => (
+                                        <button key={f} className={`wz-chip${singleFrequency === f ? ' active' : ''}`} onClick={() => setSingleFrequency(f)}>{f.split(' ')[0]}× por semana</button>
                                     ))}
                                 </div>
                             </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración del video</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {DURACIONES.map(d => (
-                                        <button key={d} onClick={() => setVideoDuration(d)} style={{ padding: '10px 18px', fontSize: '0.85rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: videoDuration === d ? 'black' : 'white', fontWeight: videoDuration === d ? 700 : 400 }}>{d}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
-                                <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Detalle →</button>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setWizardStep(hasBrain ? 1 : 1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente →</button>
                             </div>
                         </div>
                     )}
 
-                    {/* Wizard Step 3: Detalle */}
+                    {/* Wizard Step 3: Tu Estrategia */}
                     {wizardStep === 3 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Sobre qué va el contenido</p>
+                                <span className="wz-label">🎯 Objetivo principal</span>
+                                <div className="wz-chips">
+                                    {[
+                                        { val: 'engagement', label: 'Más Visibilidad' },
+                                        { val: 'atraer leads', label: 'Más Leads' },
+                                        { val: 'venta directa', label: 'Más Ventas' },
+                                        { val: 'autoridad', label: 'Autoridad' },
+                                        { val: 'educar', label: 'Educar' },
+                                        { val: 'storytelling', label: 'Storytelling' },
+                                    ].map(o => (
+                                        <button key={o.val} className={`wz-chip${goal === o.val ? ' active' : ''}`} onClick={() => setGoal(o.val)}>{o.label}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <span className="wz-label">🎨 Estilo de contenido (multi-selección)</span>
+                                <div className="wz-chips">
+                                    {ESTILOS_PLAN.map(e => (
+                                        <button key={e} className={`wz-chip wz-chip-teal${singleContentStyles.includes(e) ? ' active' : ''}`}
+                                            onClick={() => setSingleContentStyles(prev => prev.includes(e) ? prev.filter(x=>x!==e) : [...prev, e])}>
+                                            {e}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <span className="wz-label">🚫 Lo que NO quieres (voz de marca)</span>
+                                <input className="input-field wz-input" placeholder="Ej: No quiero frases motivacionales vacías ni promesas de dinero fácil" value={singleHowNotToSound} onChange={e => setSingleHowNotToSound(e.target.value)} />
+                            </div>
+                            <div>
+                                <span className="wz-label">💫 Nivel de audiencia</span>
+                                <div className="wz-chips">
+                                    {AWARENESS_LEVELS.map(a => (
+                                        <button key={a} className={`wz-chip${awareness === a ? ' active' : ''}`} onClick={() => setAwareness(a)}>
+                                            {a === 'no te conoce' ? 'No me conoce' : a === 'tibia' ? 'Me conoce (tibia)' : 'Muy caliente'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setWizardStep(4)} className="btn-primary" style={{ flex: 2 }}>Siguiente →</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Wizard Step 4: Tu Idea */}
+                    {wizardStep === 4 && (
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                            <div>
+                                <span className="wz-label">💡 Idea o tema que quieres empujar</span>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                    <AIPolishedTextarea className="textarea-field wz-input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '90px', flex: 1 }} />
                                     <VoiceDictation onResult={(text) => setTopic(prev => prev ? `${prev} ${text}` : text)} />
                                 </div>
-                                <AIPolishedTextarea className="textarea-field" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '100px' }} />
                             </div>
                             <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
@@ -2780,53 +2840,24 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0 }}>Temas o detalles específicos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.78rem' }}>(opcional pero recomendado)</span></p>
-                                    <VoiceDictation onResult={(text) => setSpecificDetails(prev => prev ? `${prev} ${text}` : text)} />
-                                </div>
-                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '10px' }}>Ej: "Lista las 5 mejores IA para crear contenido: Notion AI, Jasper, Copy.ai, ChatGPT, Claude" · "Habla del error de publicar sin estrategia" · "Añade la técnica del loop abierto"</p>
-                                <textarea
-                                    className="textarea-field"
-                                    placeholder="Escribe aquí los temas, herramientas, listas o puntos clave que quieres que cubra el guion…"
-                                    value={specificDetails}
-                                    onChange={(e) => setSpecificDetails(e.target.value)}
-                                    rows={3}
-                                    style={{ width: '100%', boxSizing: 'border-box', fontSize: '0.85rem' }}
-                                />
+                                <span className="wz-label">🔁 Mantra / Idea repetida <span style={{ color: 'rgba(255,255,255,0.25)' }}>(opcional)</span></span>
+                                <input className="input-field wz-input" placeholder="Ej: La consistencia es la clave" value={brandMantra} onChange={e => setBrandMantra(e.target.value)} />
                             </div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración estimada del vídeo</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {['60 seg', '90 seg', '3 min', '5 min', '10 min'].map(d => (
-                                        <button 
-                                            key={d} 
-                                            onClick={() => setVideoDuration(d)} 
-                                            style={{ 
-                                                padding: '8px 14px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', 
-                                                background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)', 
-                                                color: videoDuration === d ? 'black' : 'white', fontWeight: 700, transition: 'all 0.2s' 
-                                            }}
-                                        >
-                                            {d}
-                                        </button>
+                                <span className="wz-label">📊 Métrica de éxito <span style={{ color: 'rgba(255,255,255,0.25)' }}>(opcional)</span></span>
+                                <input className="input-field wz-input" placeholder="Ej: 500 seguidores en 30 días" value={successMetric} onChange={e => setSuccessMetric(e.target.value)} />
+                            </div>
+                            <div>
+                                <span className="wz-label">📦 Cantidad de guiones</span>
+                                <div className="wz-chips">
+                                    {[1,2,3,4].map(q => (
+                                        <button key={q} className={`wz-chip${quantity === q ? ' active' : ''}`} onClick={() => setQuantity(q)}>{q} guión{q > 1 ? 'es' : ''}</button>
                                     ))}
                                 </div>
                             </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Cantidad de guiones</p>
-                                <input type="range" min="1" max="4" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#7ECECA' }} />
-                                <p style={{ textAlign: 'center', marginTop: '8px', fontWeight: 700, color: '#7ECECA' }}>{quantity} guiones</p>
-                            </div>
-
-                            <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <p style={{ fontSize: '0.85rem', color: '#7ECECA', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0 }}>
-                                    <Mic size={16} /> Puedes rellenar cada campo hablando: pulsa el icono del micrófono y dicta tu idea.
-                                </p>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>←  Atrás</button>
-                                <button onClick={handleGenerateSingle} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>Generar Guiones →</button>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={handleGenerateSingle} className="btn-primary btn-premium-glow" style={{ flex: 2, height: '56px', fontSize: '1.05rem', fontWeight: 800 }}>⚡ Generar guion con IA →</button>
                             </div>
                         </div>
                     )}
@@ -2864,38 +2895,67 @@ export default function DashboardPage() {
                             if (c.videoDuration) setVideoDuration(c.videoDuration);
                         }}
                     />
+                    <style>{`
+                        .pwz-chip { padding: 11px 20px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08); cursor: pointer; font-size: 0.85rem; font-weight: 600; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.65); transition: all 0.18s ease; }
+                        .pwz-chip:hover { border-color: rgba(157,0,255,0.4); color: #fff; }
+                        .pwz-chip.active { background: #9D00FF; border-color: #9D00FF; color: #fff; font-weight: 700; box-shadow: 0 0 14px rgba(157,0,255,0.4); }
+                        .pwz-chip.active-teal { background: rgba(126,206,202,0.15); border-color: #7ECECA; color: #7ECECA; font-weight: 700; }
+                        .pwz-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+                        @media (max-width: 768px) { .pwz-chips { display: grid; grid-template-columns: 1fr 1fr; } }
+                        .pwz-intensity { padding: 16px 20px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.08); cursor: pointer; text-align: center; font-weight: 700; font-size: 0.9rem; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); transition: all 0.2s; flex: 1; }
+                        .pwz-intensity:hover { border-color: rgba(157,0,255,0.3); }
+                        .pwz-intensity.active { border-color: #9D00FF; background: rgba(157,0,255,0.12); color: #fff; box-shadow: 0 0 18px rgba(157,0,255,0.2); }
+                    `}</style>
+
                     {/* Stepper Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '40px', gap: '20px' }}>
-                        {[1, 2, 3, 4].map(w => (
-                            <div key={w} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{
-                                    width: '40px', height: '40px', borderRadius: '50%',
-                                    background: planWizardStep >= w ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
-                                    color: planWizardStep >= w ? 'black' : 'rgba(255,255,255,0.3)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, 
-                                    fontSize: '1rem', border: planWizardStep === w ? '2px solid #fff' : 'none',
-                                    transition: 'all 0.3s ease'
-                                }}>
-                                    {planWizardStep > w ? '✓' : w}
-                                </div>
-                                <span style={{ 
-                                    color: planWizardStep >= w ? 'white' : 'rgba(255,255,255,0.3)', 
-                                    fontWeight: planWizardStep === w ? 800 : 400, 
-                                    fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em'
-                                }}>
-                                    {w === 1 ? 'Negocio' : w === 2 ? 'Estrategia' : w === 3 ? 'Voz' : 'Análisis'}
-                                </span>
-                                {w < 4 && <div style={{ width: '30px', height: '1px', background: planWizardStep > w ? '#7ECECA' : 'rgba(255,255,255,0.1)' }} />}
-                            </div>
-                        ))}
+                    <div style={{ marginBottom: '32px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                {planWizardStep === 1 ? 'Plataformas' : planWizardStep === 2 ? 'Estrategia' : planWizardStep === 3 ? 'Tu Voz' : 'Ideas del Banco'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9D00FF' }}>Paso {planWizardStep} de 4</span>
+                        </div>
+                        <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+                            <div style={{ height: '100%', background: 'linear-gradient(90deg, #9D00FF, #7ECECA)', borderRadius: 99, width: `${(planWizardStep / 4) * 100}%`, transition: 'width 0.35s ease' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            {[1,2,3,4].map(w => (
+                                <div key={w} style={{ width: 8, height: 8, borderRadius: '50%', background: planWizardStep >= w ? '#9D00FF' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+                            ))}
+                        </div>
                     </div>
 
-                    {/* STEP 1: NEGOCIO Y PÚBLICO */}
+                    {/* STEP 1: PLATAFORMAS Y FRECUENCIA */}
                     {planWizardStep === 1 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Tu Negocio y Oferta</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>Define qué quieres vender este mes y a quién le hablas.</p>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>📱 Plataformas y Frecuencia</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>¿Dónde publicas y con qué ritmo?</p>
+                            </div>
+                            <div>
+                                <span className="wz-label">Plataformas (multi-selección)</span>
+                                <div className="pwz-chips">
+                                    {PLATAFORMAS.map(p => (
+                                        <button key={p} className={`pwz-chip${planPlatforms.includes(p) ? ' active' : ''}`} onClick={() => handleTogglePlatform(p)}>{p}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <span className="wz-label">Frecuencia semanal</span>
+                                <div className="pwz-chips">
+                                    {FRECUENCIAS.map(f => (
+                                        <button key={f} className={`pwz-chip${planFrequency === f ? ' active' : ''}`} onClick={() => setPlanFrequency(f)}>{f.split(' ')[0]}× por semana</button>
+                                    ))}
+                                </div>
+                            </div>
+                            {/* Negocio fields – mantener para IA, visualmente compacto */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <span className="wz-label" style={{ marginBottom: 0 }}>🏷️ Contexto de negocio (para la IA)</span>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <input className="input-field" placeholder="¿Qué vendes? (Ej: Mentoría 1:1)" value={businessOffer} onChange={e => setBusinessOffer(e.target.value)} style={{ fontSize: '0.85rem' }} />
+                                    <input className="input-field" placeholder="Ticket (Ej: 297€)" value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} style={{ fontSize: '0.85rem' }} />
+                                </div>
+                                <textarea className="textarea-field" placeholder="¿A quién le hablas y cuál es su problema principal? (Ej: Coaches de +35 que...)" value={mainPainPoint} onChange={e => setMainPainPoint(e.target.value)} rows={2} style={{ fontSize: '0.85rem' }} />
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -3010,28 +3070,22 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>Volver</button>
-                                <button 
-                                    onClick={() => {
-                                        if (!businessOffer || !mainPainPoint) {
-                                            alert('Por favor rellena los campos obligatorios (*)');
-                                            return;
-                                        }
-                                        setPlanWizardStep(2);
-                                    }} 
-                                    className="btn-primary" style={{ flex: 2 }}
-                                >Siguiente: Estrategia →</button>
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>← Volver</button>
+                                <button onClick={() => {
+                                    if (planPlatforms.length === 0) { alert('Selecciona al menos una plataforma.'); return; }
+                                    setPlanWizardStep(2);
+                                }} className="btn-primary" style={{ flex: 2 }}>Siguiente →</button>
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 2: OBJETIVOS Y TEMAS + IDEA BANK */}
+                    {/* STEP 2: ESTRATEGIA DEL MES */}
                     {planWizardStep === 2 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Estrategia del Mes</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>Define tus metas y los ángulos que quieres tocar.</p>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>🎯 Estrategia del Mes</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Metas, estilos e intensidad de contenido.</p>
                             </div>
 
                             <div>
@@ -3044,11 +3098,7 @@ export default function DashboardPage() {
                                                 if (monthlyGoals.includes(o)) setMonthlyGoals(monthlyGoals.filter(i => i !== o));
                                                 else setMonthlyGoals([...monthlyGoals, o]);
                                             }}
-                                            style={{ 
-                                                padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                                background: monthlyGoals.includes(o) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
-                                                color: monthlyGoals.includes(o) ? 'black' : 'white', fontWeight: 700, fontSize: '0.8rem'
-                                            }}
+                                            className={`pwz-chip${monthlyGoals.includes(o) ? ' active' : ''}`}
                                         >
                                             {o}
                                         </button>
@@ -3104,13 +3154,13 @@ export default function DashboardPage() {
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Métrica de éxito mensual</p>
                                     <input 
-                                        className="input-field" 
+                                        className="input-field wz-input" 
                                         placeholder="Ej: 50 nuevos seguidores, 10 llamadas de venta..." 
                                         value={successMetric} 
                                         onChange={(e) => setSuccessMetric(e.target.value)} 
                                     />
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '20px', marginBottom: '12px' }}>Estilo de contenido</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    <div className="pwz-chips">
                                         {ESTILOS_PLAN.map(s => (
                                             <button 
                                                 key={s} 
@@ -3118,11 +3168,7 @@ export default function DashboardPage() {
                                                     if (contentStyles.includes(s)) setContentStyles(contentStyles.filter(i => i !== s));
                                                     else setContentStyles([...contentStyles, s]);
                                                 }}
-                                                style={{ 
-                                                    padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer',
-                                                    background: contentStyles.includes(s) ? '#7ECECA' : 'rgba(255,255,255,0.05)',
-                                                    color: contentStyles.includes(s) ? 'black' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.65rem'
-                                                }}
+                                                className={`pwz-chip${contentStyles.includes(s) ? ' active-teal' : ''}`}
                                             >
                                                 {s}
                                             </button>
@@ -3231,7 +3277,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                                 <button onClick={() => setPlanWizardStep(1)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
                                 <button onClick={() => setPlanWizardStep(3)} className="btn-primary" style={{ flex: 2 }}>Siguiente: Configuración →</button>
                             </div>
@@ -3240,43 +3286,39 @@ export default function DashboardPage() {
 
                     {/* STEP 3: CONFIGURACIÓN Y VOZ */}
                     {planWizardStep === 3 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Tu Voz y Canales</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>Frecuencia, plataformas y tu estilo de comunicación.</p>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>🔊 Tu Voz y Canales</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Frecuencia, plataformas y tu estilo de comunicación.</p>
                             </div>
 
                             <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Plataformas</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    <span className="wz-label">Plataformas</span>
+                                    <div className="pwz-chips">
                                         {PLATAFORMAS.map(p => (
-                                            <button key={p} onClick={() => handleTogglePlatform(p)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planPlatforms.includes(p) ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planPlatforms.includes(p) ? 'black' : 'white' }}>{p}</button>
+                                            <button key={p} onClick={() => handleTogglePlatform(p)} className={`pwz-chip${planPlatforms.includes(p) ? ' active' : ''}`}>{p}</button>
                                         ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Frecuencia</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                    <span className="wz-label">Frecuencia</span>
+                                    <div className="pwz-chips">
                                         {FRECUENCIAS.map(f => (
-                                            <button key={f} onClick={() => setPlanFrequency(f)} style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', background: planFrequency === f ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: planFrequency === f ? 'black' : 'white' }}>{f.split(' ')[0]}xSem</button>
+                                            <button key={f} onClick={() => setPlanFrequency(f)} className={`pwz-chip${planFrequency === f ? ' active' : ''}`}>{f.split(' ')[0]}xSem</button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Duración base de los vídeos</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                <span className="wz-label">Duración base de los vídeos</span>
+                                <div className="pwz-chips">
                                     {['60 seg', '90 seg', '3 min', '5 min', '10 min'].map(d => (
                                         <button 
                                             key={d} 
                                             onClick={() => setVideoDuration(d)} 
-                                            style={{ 
-                                                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', 
-                                                background: videoDuration === d ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)', 
-                                                color: videoDuration === d ? 'black' : 'white', fontWeight: 700, transition: 'all 0.2s' 
-                                            }}
+                                            className={`pwz-chip${videoDuration === d ? ' active' : ''}`}
                                         >
                                             {d}
                                         </button>
@@ -3286,38 +3328,32 @@ export default function DashboardPage() {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Filtro: Lo que NO queremos <span style={{fontWeight:400, color:'var(--text-muted)'}}>(voto de silencio)</span></p>
-                                    <input className="input-field" placeholder="Ej: No quiero frases motivacionales vacías ni promesas de dinero rápido." value={howNotToSound} onChange={(e) => setHowNotToSound(e.target.value)} />
+                                    <span className="wz-label">Filtro: Lo que NO queremos <span style={{fontWeight:400, color:'var(--text-muted)', textTransform:'none'}}>(voto de silencio)</span></span>
+                                    <input className="input-field wz-input" placeholder="Ej: No quiero frases motivacionales vacías..." value={howNotToSound} onChange={(e) => setHowNotToSound(e.target.value)} />
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Mantra / Idea repetida</p>
-                                    <input className="input-field" placeholder="Ej: La consistencia siempre gana al talento." value={brandMantra} onChange={(e) => setBrandMantra(e.target.value)} />
+                                    <span className="wz-label">Mantra / Idea repetida</span>
+                                    <input className="input-field wz-input" placeholder="Ej: La consistencia siempre gana al talento." value={brandMantra} onChange={(e) => setBrandMantra(e.target.value)} />
                                 </div>
                             </div>
 
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Presión de contenido (v3.1.0)</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {['Suave (Orgánico)', 'Media (Estrategia)', 'Fuerte (Lanzamiento)'].map(p => (
-                                        <button 
-                                            key={p} 
-                                            onClick={() => setPlanFocus(p)}
-                                            style={{ 
-                                                padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                                                background: planFocus === p ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.05)',
-                                                color: planFocus === p ? 'black' : 'white', fontWeight: 700, fontSize: '0.8rem'
-                                            }}
-                                        >
-                                            {p}
+                                <span className="wz-label">⚡ Presión de contenido</span>
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    {[{val:'Suave (Orgánico)', icon:'🌱', sub:'Atracción'},{val:'Media (Estrategia)', icon:'🎯', sub:'Equilibrio'},{val:'Fuerte (Lanzamiento)', icon:'🚀', sub:'Conversión'}].map(p => (
+                                        <button key={p.val} className={`pwz-intensity${planFocus === p.val ? ' active' : ''}`} onClick={() => setPlanFocus(p.val)}>
+                                            <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{p.icon}</div>
+                                            <div style={{ fontSize: '0.78rem', fontWeight: 800 }}>{p.sub}</div>
+                                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{p.val.split('(')[1]?.replace(')','')}</div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                 <button onClick={() => setPlanWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
-                                <button onClick={handleAnalyzeBrief} disabled={isAnalyzingBrief} className="btn-primary" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>
-                                    {isAnalyzingBrief ? <><Loader size={20} className="animate-spin" /> Analizando... </> : 'Analizar con IA para Continuar →'}
+                                <button onClick={handleAnalyzeBrief} disabled={isAnalyzingBrief} className="btn-primary btn-premium-glow" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>
+                                    {isAnalyzingBrief ? <><Loader size={20} className="animate-spin" /> Analizando... </> : '⚡ Analizar con IA para Continuar →'}
                                 </button>
                             </div>
                         </div>
@@ -3325,10 +3361,10 @@ export default function DashboardPage() {
 
                     {/* STEP 4: ANÁLISIS IA Y GENERAR */}
                     {planWizardStep === 4 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px', color: '#7ECECA' }}>Estrategia Confirmada</h2>
-                                <p style={{ color: 'var(--text-secondary)' }}>La IA ha interpretado tu briefing. Revisa antes de generar.</p>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em', color: '#7ECECA' }}>✨ Estrategia Confirmada</h2>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>La IA ha interpretado tu briefing. Revisa antes de generar.</p>
                             </div>
 
                             <div style={{ 
@@ -3358,8 +3394,8 @@ export default function DashboardPage() {
                                 </p>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>Re-ajustar</button>
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                                <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>← Re-ajustar</button>
                                 <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '64px', fontSize: '1.2rem', fontWeight: 900 }}>
                                     ¡Generar Plan Mensual AHORA! 🚀
                                 </button>
