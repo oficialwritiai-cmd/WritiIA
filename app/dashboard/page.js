@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.49'; // Monthly Plan: Fix Trash2 missing import
+export const VERSION = 'v1.17.50'; // Monthly Plan: Fix Sync reference_id bug
 
 
 
@@ -2094,6 +2094,7 @@ export default function DashboardPage() {
                 const eventPayload = {
                     user_id: user.id,
                     project_id: activeProject?.id,
+                    plan_id: planId, // v1.17.50: Link to the parent plan
                     title: slot.idea_title || 'Idea Sin Título',
                     description: [
                         slot.idea_description || '',
@@ -2105,7 +2106,7 @@ export default function DashboardPage() {
                     type: hasScriptNow ? 'guion' : 'idea',
                     status: hasScriptNow ? 'Guion listo' : 'Idea',
                     platform: slot.platform || 'General',
-                    reference_id: slot.id, // Always the content_slot id for /api/slots/{id}/generate-script
+                    reference_id: refId, // v1.17.50: Use validated UUID (refId) instead of raw slot.id
                     has_script: hasScriptNow,
                     script_full_text: safeCalScriptText || '',
                     notes: safeCalScriptText || '',
