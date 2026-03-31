@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.46'; // Monthly Plan: Disable auto-skip to step 3 in fetchPlanSlots
+export const VERSION = 'v1.17.47'; // Monthly Plan: Stable IDs for Idea Bank selection
 
 
 
@@ -616,7 +616,12 @@ export default function DashboardPage() {
             });
             const data = await res.json();
             if (res.ok) {
-                setRecommendedIdeas(data.ideas || []);
+                // v1.17.47: Assign stable IDs upon fetch to ensure selection works
+                const stableIdeas = (data.ideas || []).map((idea, idx) => ({
+                    ...idea,
+                    id: `ai-idea-${idx}-${Date.now()}`
+                }));
+                setRecommendedIdeas(stableIdeas);
             }
         } catch (err) {
             console.error('Error fetching proactive ideas:', err);
@@ -3207,7 +3212,6 @@ export default function DashboardPage() {
                                         let combined = [
                                             ...recommendedIdeas.map((i, idx) => ({ 
                                                 ...i, 
-                                                id: `rec-${idx}-${Date.now()}`, // Unique ID for cache busting
                                                 source: 'ai', 
                                                 displayTitle: i.titulo_idea || i.titulo || i.title || i.titulo_propuesto || i.content?.titulo || i.content?.idea_title || 'Sugerencia viral',
                                                 descripcion: i.descripcion || i.description || i.idea_description || i.content?.descripcion || ''
