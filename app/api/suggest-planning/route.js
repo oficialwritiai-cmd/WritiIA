@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 export async function POST(req) {
     try {
+        // SECURITY: Verify user session
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const { topic, platform, brainProfile, existingEvents } = await req.json();
 
         const systemPrompt = `Eres un experto en estrategia de contenidos y algoritmos de redes sociales.
@@ -24,6 +30,15 @@ REGLAS:
 - Elige una hora óptima para la plataforma (ej: tarde/noche para TikTok/Reels, mañana para LinkedIn).
 - Hoy es ${new Date().toISOString().split('T')[0]}, sugiere una fecha a partir de mañana.
 - Devuelve SOLO el JSON solicitado.`;
+
+        // CREDIT VALIDATION: Check before generating with AI
+        const creditCost = CREDIT_COSTS.SUGGEST_PLANNING || 0;
+        if (creditCost > 0) {
+            const creditResult = await chargeCredits(supabase, user.id, creditCost, 'suggest_planning', null);
+            if (!creditResult.success) {
+                return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+            }
+        }
 
         const { parsed } = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,

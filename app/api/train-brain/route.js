@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateWithSonnet } from '@/lib/anthropic';
 import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
+import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 export async function POST(request) {
     try {
@@ -19,6 +20,15 @@ export async function POST(request) {
         // SECURITY: Verify the project belongs to the authenticated user
         const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
         if (!hasAccess) return forbidden();
+
+        // CREDIT VALIDATION: Check before generating with AI
+        const creditCost = CREDIT_COSTS.TRAIN_BRAIN || 0;
+        if (creditCost > 0) {
+            const creditResult = await chargeCredits(supabase, user.id, creditCost, 'train_brain', projectId);
+            if (!creditResult.success) {
+                return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
+            }
+        }
 
         // 1. Fetch current brain
         const { data: brainData } = await supabase
