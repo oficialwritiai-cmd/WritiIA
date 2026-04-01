@@ -35,7 +35,7 @@ const OBJETIVOS_PLAN = ['Más Alcance / Visibilidad', 'Más Leads / DMs / Listas
 const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales / Paso a paso', 'Casos de estudio', 'Detrás de cámaras', 'Curación de contenido'];
 
 // 20) v4.9.8 - Authorization JWT Fix
-export const VERSION = 'v1.17.54'; // UI Duplicate Fix (Step 3) + Schema Fix (color)
+export const VERSION = 'v1.17.55'; // UI Duplicate Fix (Step 3) + Schema Fix (color & Datos inválidos)
 
 
 

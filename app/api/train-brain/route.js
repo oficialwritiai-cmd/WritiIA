@@ -1,20 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateWithSonnet } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { feedback, scriptContext, projectId, userId, type } = body;
+        const { feedback, scriptContext, projectId, type } = body;
 
         if (!projectId || !feedback) {
             return NextResponse.json({ error: 'Missing data' }, { status: 400 });
         }
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        // SECURITY: Verify session — never trust userId from body
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+
+        // SECURITY: Verify the project belongs to the authenticated user
+        const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+        if (!hasAccess) return forbidden();
 
         // 1. Fetch current brain
         const { data: brainData } = await supabase

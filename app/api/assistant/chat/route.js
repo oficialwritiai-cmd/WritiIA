@@ -77,20 +77,24 @@ export async function POST(req) {
         }
         console.log('[assistant/chat] >>> USER VERIFIED:', user.id);
 
-        // Security bypass for debugging (optional if verifyProjectAccess is buggy)
+        // Verify project ownership
         if (projectId) {
             const { data: projCheck } = await supabase.from('projects').select('id').eq('id', projectId).eq('user_id', user.id).single();
             if (!projCheck) {
                 console.error(`[assistant/chat] ERR: Access denied to project ${projectId}`);
-                // return forbidden('No tienes acceso a este proyecto'); 
+                return forbidden('No tienes acceso a este proyecto');
             }
         }
 
-        // NO LIMIT CHECK FOR DEBUGGING
+        // Check usage limits
         const serviceSupabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-        
-        // NO CREDIT CHARGE FOR DEBUGGING (Free Nico)
-        console.log('[assistant/chat] >>> Skipping limits/credits for debug...');
+        const limitCheck = await checkAssistantLimit(serviceSupabase, user.id);
+        if (!limitCheck.allowed) {
+            const msg = limitCheck.reason === 'DAILY_CAP_REACHED'
+                ? 'Has alcanzado el límite diario del asistente. Vuelve mañana.'
+                : `Límite alcanzado. Vuelve en ${limitCheck.waitMinutes} minutos.`;
+            return NextResponse.json({ error: msg }, { status: 429 });
+        }
 
         // Load Cerebro IA
         let brain = null;

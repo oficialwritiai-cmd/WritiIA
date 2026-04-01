@@ -5,10 +5,11 @@ import { z } from 'zod';
 
 const RequestSchema = z.object({
     platform: z.string().max(50).optional(),
-    videoDuration: z.enum(['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min']).default('60 seg'),
+    videoDuration: z.enum(['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min', '10 min']).default('60 seg'),
     focus: z.string().max(100).optional().default('autoridad'),
     instruction: z.string().max(1000).optional().nullable(),
     ctaIdea: z.string().max(500).optional().nullable(),
+    userId: z.string().uuid('ID de usuario inválido').optional().nullable(),
 });
 
 function validateScriptJson(obj) {

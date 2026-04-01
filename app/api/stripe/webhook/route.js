@@ -178,7 +178,7 @@ async function handleCheckoutCompleted(session, supabase, logEntry = null) {
             const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
                 email: pending.email,
                 password: pending.password_plan,
-                email_confirm: false // Requerimos que el usuario confirme su email obligatoriamente
+                email_confirm: true
             });
 
             if (authError) {
@@ -188,7 +188,11 @@ async function handleCheckoutCompleted(session, supabase, logEntry = null) {
             } else {
                 console.log('[Webhook] Successfully created user:', authUser.user.id);
                 // Envía el correo de confirmación obligatoriamente
-                const rawUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://oficialwritiai.vercel.app';
+                const rawUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL;
+                if (!rawUrl) {
+                    console.error('[Webhook] NEXT_PUBLIC_APP_URL is not set — cannot send confirmation email with correct redirect URL.');
+                    throw new Error('Missing NEXT_PUBLIC_APP_URL env var');
+                }
                 const anonClient = createClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL,
                     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY 
@@ -328,53 +332,22 @@ async function handleCheckoutCompleted(session, supabase, logEntry = null) {
             return;
         }
 
-        // Add credits via single source of truth: users_profiles.credits_balance
-        // We use a transaction-like approach or atomic update to prevent double additions
-        // We also check if this specific session was already handled for credits specifically
-        
-        const { data: currentProfile, error: fetchErr } = await supabase
-            .from('users_profiles')
-            .select('credits_balance')
-            .eq('id', userId)
-            .single();
-
-        if (fetchErr) throw new Error(`Could not fetch profile for credit deposit: ${fetchErr.message}`);
-
-        const newBalance = (currentProfile.credits_balance || 0) + amount;
-
-        // Atomic update with idempotency check on credits_usage log
-        // If the insert into credits_usage fails due to idempotency_key (unique), the whole thing should fail or skip
-        const { error: logErr } = await supabase.from('credits_usage').insert({
-            user_id: userId,
-            action_type: 'purchase_credits',
-            amount: amount,
-            idempotency_key: `stripe_session_${session.id}` // UNIQUE CONSTRAINT prevents duplicate credit additions
+        // Atomic credit deposit via RPC (uses FOR UPDATE row-lock + idempotency check).
+        // Prevents double-crediting if Stripe retries the webhook.
+        const { data: rpcResult, error: rpcErr } = await supabase.rpc('add_credits_balance', {
+            u_id: userId,
+            amount,
+            p_idempotency_key: `stripe_session_${session.id}`
         });
 
-        if (logErr) {
-            if (logErr.message.includes('unique constraint')) {
-                console.log(`[Webhook] Credits for session ${session.id} already assigned. Skipping balance update.`);
-                return;
-            }
-            throw new Error(`Failed to log credit purchase: ${logErr.message}`);
+        if (rpcErr) throw new Error(`Failed to add credits: ${rpcErr.message}`);
+
+        if (rpcResult?.skipped) {
+            console.log(`[Webhook] Credits for session ${session.id} already assigned. Skipping.`);
+            return;
         }
 
-        const { error: updateErr } = await supabase
-            .from('users_profiles')
-            .update({ 
-                credits_balance: newBalance,
-                last_credits_purchase_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-
-        if (updateErr) throw new Error(`Failed to update user balance: ${updateErr.message}`);
-
-        // Sync legacy table quietly
-        await supabase.from('ai_credits').update({
-            total_credits: newBalance,
-            updated_at: new Date().toISOString()
-        }).eq('user_id', userId).catch(() => {});
-
+        const newBalance = rpcResult?.new_balance;
         console.log(`[Webhook] ✅ ${amount} credits added to user ${userId}. New balance: ${newBalance}`);
 
         // Send confirmation email

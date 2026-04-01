@@ -1,14 +1,10 @@
-import { createSupabaseClient } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
 
 /**
  * API Scripts Handler - v6.3.0 (Guided Debug)
  * Handles GET (fetch fresh) and PATCH (partial update) for single scripts with mandatory tracing.
  */
-
-const supabase = createSupabaseClient();
-
-import { getServerSession, unauthorized } from '@/lib/auth-guard';
 
 export async function GET(req, { params }) {
     const { id } = params;
@@ -69,14 +65,32 @@ export async function PATCH(req, { params }) {
         // Remove undefined fields
         Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-        // USE UPSERT v6.3.1 (To allow saving new scripts from library IDs)
-        const { error: upErr } = await supabase
+        // First, check if the script exists and belongs to this user
+        const { data: existing } = await supabase
             .from('scripts')
-            .upsert({
-                id: id,
-                user_id: user.id,
-                ...updateData
-            });
+            .select('id, user_id')
+            .eq('id', id)
+            .maybeSingle();
+
+        let upErr;
+        if (existing) {
+            // Script exists — only update if it belongs to this user
+            if (existing.user_id !== user.id) {
+                return NextResponse.json({ error: 'Acceso denegado.' }, { status: 403 });
+            }
+            const { error } = await supabase
+                .from('scripts')
+                .update(updateData)
+                .eq('id', id)
+                .eq('user_id', user.id);
+            upErr = error;
+        } else {
+            // New script from library — insert with explicit ownership
+            const { error } = await supabase
+                .from('scripts')
+                .insert({ id, user_id: user.id, ...updateData });
+            upErr = error;
+        }
 
         if (upErr) {
             console.error('❌ [BACKEND] UPDATE_ERROR:', upErr);
