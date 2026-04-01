@@ -4008,11 +4008,12 @@ export default function DashboardPage() {
                                                 <label style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.6)', fontWeight: 800, display: 'block', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>COLOR DE LA IDEA (VISUAL EN CALENDARIO)</label>
                                                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                     {[
-                                                        { id: 'pink', color: '#FF79C6', label: 'Rosa' },
-                                                        { id: 'purple', color: '#BD93F9', label: 'Púrpura' },
-                                                        { id: 'blue', color: '#8BE9FD', label: 'Azul' },
-                                                        { id: 'green', color: '#50FA7B', label: 'Verde' },
-                                                        { id: 'orange', color: '#FFB86C', label: 'Naranja' }
+                                                        { id: 'purple', color: '#9D00FF', label: 'Morado' },
+                                                        { id: 'pink', color: '#EC4899', label: 'Rosa' },
+                                                        { id: 'blue', color: '#3B82F6', label: 'Azul' },
+                                                        { id: 'green', color: '#10B981', label: 'Verde' },
+                                                        { id: 'yellow', color: '#F59E0B', label: 'Amarillo' },
+                                                        { id: 'red', color: '#EF4444', label: 'Rojo' }
                                                     ].map((c) => (
                                                         <div
                                                             key={c.id}
@@ -4032,10 +4033,11 @@ export default function DashboardPage() {
                                                         />
                                                     ))}
                                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginLeft: '10px' }}>
-                                                        {selectedColor === 'pink' ? 'Rosa (AI)' : 
-                                                         selectedColor === 'purple' ? 'Púrpura' : 
-                                                         selectedColor === 'blue' ? 'Azul' : 
-                                                         selectedColor === 'green' ? 'Verde' : 'Naranja'}
+                                                        {selectedColor === 'purple' ? 'Morado' :
+                                                         selectedColor === 'pink' ? 'Rosa' :
+                                                         selectedColor === 'blue' ? 'Azul' :
+                                                         selectedColor === 'green' ? 'Verde' :
+                                                         selectedColor === 'yellow' ? 'Amarillo' : 'Rojo'}
                                                     </span>
                                                 </div>
                                             </div>

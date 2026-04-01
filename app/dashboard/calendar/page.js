@@ -318,12 +318,13 @@ function CalendarContent() {
                 user_id: slot.user_id,
                 project_id: slot.project_id,
                 event_date: slot.scheduled_date,
-                title: slot.title || 'Idea de Contenido',
+                title: slot.title || slot.idea_title || 'Idea de Contenido',
                 notes: slot.description || '',
                 platform: slot.platform || 'General',
                 status: slot.status || 'idea',
                 start_time: slot.start_time || '09:00', // Default if missing
                 end_time: slot.end_time || '10:00',
+                color: slot.slot_color || 'pink', // ARREGLO: Agregar color del slot
                 is_slot: true // Marker to distinguish
             }));
 
