@@ -284,7 +284,9 @@ export async function POST(request) {
 
         const validation = GenerateScriptSchema.safeParse(body);
         if (!validation.success) {
-            return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
+            console.error('[generate-scripts] Zod validation failed:', JSON.stringify(validation.error.flatten(), null, 2));
+            console.error('[generate-scripts] Body received:', JSON.stringify(body, null, 2));
+            return NextResponse.json({ error: 'Datos inválidos.', details: validation.error.flatten() }, { status: 400 });
         }
 
         const {
