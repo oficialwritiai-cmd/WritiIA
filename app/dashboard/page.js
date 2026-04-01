@@ -1681,6 +1681,7 @@ export default function DashboardPage() {
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
                     content: fullText,
                     hook: script.hook || script.gancho || '',
+                    cierre: script.cierre || script.remate || '',
                     cta: script.cta || '',
                     structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : [],
                     post_copy: script.copy_post || {},
@@ -1720,6 +1721,7 @@ export default function DashboardPage() {
                     title: script.titulo_guion || script.titulo_angulo || 'Guion Generado',
                     content: fullText,
                     hook: script.hook || script.gancho || '',
+                    cierre: script.cierre || script.remate || '',
                     cta: script.cta || '',
                     structure: Array.isArray(script.desarrollo) ? script.desarrollo.map(d => ({ point: 'Desarrollo', detail: d })) : [],
                     post_copy: script.copy_post || {},
@@ -1868,23 +1870,29 @@ export default function DashboardPage() {
 
     const handleScheduleSlot = async (slotId, dateValue) => {
         try {
+            // GUARDAR FECHA Y COLOR EN content_slots
             const { error: slotErr } = await supabase.from('content_slots').update({
-                scheduled_date: dateValue
+                scheduled_date: dateValue,
+                slot_color: selectedColor || 'pink'  // Guardar el color seleccionado
             }).eq('id', slotId);
 
             if (slotErr) throw slotErr;
 
             setPlanSlots(planSlots.map(s => {
-                if (s.id === slotId) return { ...s, scheduled_date: dateValue };
+                if (s.id === slotId) return { ...s, scheduled_date: dateValue, slot_color: selectedColor || 'pink' };
                 return s;
             }));
 
             const slot = planSlots.find(s => s.id === slotId);
             if (slot && slot.script_id) {
-                await supabase.from('scripts').update({ scheduled_date: dateValue }).eq('id', slot.script_id);
+                // También actualizar en scripts para consistencia
+                await supabase.from('scripts').update({
+                    scheduled_date: dateValue,
+                    slot_color: selectedColor || 'pink'
+                }).eq('id', slot.script_id);
             }
 
-            alert('Añadido al calendario ✅');
+            alert(`✅ Agregado al calendario (Fecha: ${dateValue}, Color: ${selectedColor || 'pink'})`);
         } catch (err) {
             alert('Error al programar: ' + err.message);
         }
