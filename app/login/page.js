@@ -131,15 +131,8 @@ export default function LoginPage() {
                 }
 
                 // ARREGLO: Validar que el email ESTÁ confirmado incluso en registro
+                // Nota: signUp() ya envía email automáticamente, no llamar resendEmailConfirmationEmail() aquí
                 if (user && !user.email_confirmed_at) {
-                    // Intentar reenviar email de confirmación
-                    try {
-                        await supabase.auth.resendEmailConfirmationEmail({
-                            email: user.email
-                        });
-                    } catch (err) {
-                        console.error('Error enviando email de confirmación:', err);
-                    }
                     setSuccess('¡Registro exitoso! Se ha enviado un enlace de confirmación a tu email. Por favor confirma tu email para continuar.');
                     setMode('login');
                     setLoading(false);
