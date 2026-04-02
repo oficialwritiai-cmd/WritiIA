@@ -74,6 +74,15 @@ export async function middleware(req) {
         return NextResponse.redirect(redirectUrl);
     }
 
+    // ARREGLO: Bloqueo obligatorio - Email confirmation validation en middleware
+    // Si el usuario existe pero su email NO está confirmado y accede a /dashboard
+    if (user && req.nextUrl.pathname.startsWith('/dashboard') && !user.email_confirmed_at) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/login';
+        redirectUrl.searchParams.set('error', 'Por favor confirma tu email antes de continuar');
+        return NextResponse.redirect(redirectUrl);
+    }
+
     // Anti-loop for authenticated users trying to go to login
     if (user && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/auth')) {
         const redirectUrl = req.nextUrl.clone();
