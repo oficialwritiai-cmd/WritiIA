@@ -352,6 +352,13 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
+        // ARREGLO: Validar email confirmado - BLOQUEO OBLIGATORIO
+        if (user && !user.email_confirmed_at) {
+            await supabase.auth.signOut();
+            router.push('/login?error=Por favor confirma tu email antes de continuar');
+            return;
+        }
+
         // Profile
         const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
         setProfile(profileData || user);
