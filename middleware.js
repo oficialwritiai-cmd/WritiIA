@@ -66,6 +66,15 @@ export async function middleware(req) {
     // Optimized: Use getUser() for security, as it verifies the token on every request
     const { data: { user } } = await supabase.auth.getUser();
 
+    // ARREGLO CRÍTICO: Bloqueo obligatorio - Email confirmation validation PRIMERO
+    // Si el usuario existe pero su email NO está confirmado, NO puede entrar a NINGÚN lado protegido
+    if (user && !user.email_confirmed_at && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname === '/auth/callback')) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/login';
+        redirectUrl.searchParams.set('error', 'Por favor confirma tu email antes de continuar');
+        return NextResponse.redirect(redirectUrl);
+    }
+
     // If there is no user and they're trying to access a protected route
     if (!user && req.nextUrl.pathname.startsWith('/dashboard')) {
         const redirectUrl = req.nextUrl.clone();
@@ -74,17 +83,18 @@ export async function middleware(req) {
         return NextResponse.redirect(redirectUrl);
     }
 
-    // ARREGLO: Bloqueo obligatorio - Email confirmation validation en middleware
-    // Si el usuario existe pero su email NO está confirmado y accede a /dashboard
-    if (user && req.nextUrl.pathname.startsWith('/dashboard') && !user.email_confirmed_at) {
-        const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = '/login';
-        redirectUrl.searchParams.set('error', 'Por favor confirma tu email antes de continuar');
-        return NextResponse.redirect(redirectUrl);
+    // Anti-loop for authenticated users trying to go to login
+    // PERO: Si el email NO está confirmado, permitir que vuelvan a /login
+    if (user && !user.email_confirmed_at) {
+        // Permitir acceso a /login y /auth si email no está confirmado
+        // Para que puedan ver el error y confirmar
+        if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname.startsWith('/auth')) {
+            return res;
+        }
     }
 
-    // Anti-loop for authenticated users trying to go to login
-    if (user && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/auth')) {
+    // Anti-loop para usuarios con email confirmado
+    if (user && user.email_confirmed_at && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/auth')) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = '/dashboard';
         return NextResponse.redirect(redirectUrl);
