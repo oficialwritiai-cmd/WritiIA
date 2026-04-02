@@ -130,12 +130,20 @@ export default function LoginPage() {
                     throw signUpError;
                 }
 
+                // ARREGLO: Validar que el email ESTÁ confirmado incluso en registro
+                if (user && !user.email_confirmed_at) {
+                    setSuccess('¡Registro exitoso! Se ha enviado un enlace de confirmación a tu email. Por favor confirma tu email para continuar.');
+                    setMode('login');
+                    setLoading(false);
+                    return;
+                }
+
                 if (user) {
                     const now = new Date();
                     const trialEnds = new Date();
                     trialEnds.setDate(now.getDate() + 7);
 
-                    // New Logic: 
+                    // New Logic:
                     // No key -> plan: 'pending', is_trial_active: false
                     // Key -> plan: 'trial', is_trial_active: true
                     const isTrialActive = hasAccessKey;
