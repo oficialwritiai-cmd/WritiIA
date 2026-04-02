@@ -413,7 +413,8 @@ function CalendarContent() {
                         description: tempNotes,
                         scheduled_date: selectedDate,
                         start_time: tempStartTime,
-                        end_time: tempEndTime
+                        end_time: tempEndTime,
+                        slot_color: colorValue  // ✅ FIX: Guardar color en slots
                     };
 
                     const { error: updateErr } = await supabase
@@ -428,10 +429,12 @@ function CalendarContent() {
                             ...ev,
                             ...slotUpdates,
                             event_date: selectedDate,
-                            notes: tempNotes
+                            notes: tempNotes,
+                            color: colorValue  // ✅ FIX: Actualizar color en memoria local
                         } : ev
                     );
                     setEvents([...newEvents]);
+
                 } else {
                     // Actualizar en calendar_events
                     const updates = {
