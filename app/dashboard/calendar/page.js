@@ -1306,9 +1306,23 @@ function CalendarContent() {
                                                 key={color.id}
                                                 className={`color-swatch ${tempColor === color.id ? 'active' : ''}`}
                                                 style={{ background: color.hex }}
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
                                                     setTempColor(color.id);
+
+                                                    // ✅ AUTO-SAVE: guardar el color inmediatamente sin necesitar el botón Guardar
+                                                    if (selectedEvent && selectedEvent.id) {
+                                                        const isSlot = selectedEvent.is_slot === true;
+                                                        if (isSlot) {
+                                                            await supabase.from('content_slots').update({ slot_color: color.id }).eq('id', selectedEvent.id);
+                                                        } else {
+                                                            await supabase.from('calendar_events').update({ color: color.id }).eq('id', selectedEvent.id);
+                                                        }
+                                                        // Actualizar estado local inmediatamente
+                                                        setEvents(prev => prev.map(ev =>
+                                                            ev.id === selectedEvent.id ? { ...ev, color: color.id } : ev
+                                                        ));
+                                                    }
                                                 }}
                                                 title={color.name}
                                             />
