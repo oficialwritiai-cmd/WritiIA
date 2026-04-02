@@ -132,6 +132,14 @@ export default function LoginPage() {
 
                 // ARREGLO: Validar que el email ESTÁ confirmado incluso en registro
                 if (user && !user.email_confirmed_at) {
+                    // Intentar reenviar email de confirmación
+                    try {
+                        await supabase.auth.resendEmailConfirmationEmail({
+                            email: user.email
+                        });
+                    } catch (err) {
+                        console.error('Error enviando email de confirmación:', err);
+                    }
                     setSuccess('¡Registro exitoso! Se ha enviado un enlace de confirmación a tu email. Por favor confirma tu email para continuar.');
                     setMode('login');
                     setLoading(false);
@@ -207,9 +215,17 @@ export default function LoginPage() {
                     throw signInError;
                 }
 
-                // ARREGLO: Validar que el email ESTÁ confirmado
+                // ARREGLO: Validar que el email ESTÁ confirmado - BLOQUEO OBLIGATORIO
                 if (signedInUser && !signedInUser.email_confirmed_at) {
-                    throw new Error('Por favor confirma tu email antes de continuar. Revisa tu bandeja de entrada.');
+                    // Enviar email de confirmación nuevamente
+                    try {
+                        await supabase.auth.resendEmailConfirmationEmail({
+                            email: signedInUser.email
+                        });
+                    } catch (err) {
+                        console.error('Error reenviando email:', err);
+                    }
+                    throw new Error('Tu email no está confirmado. Se ha reenviado el enlace de confirmación a tu bandeja de entrada. Por favor confirma tu email antes de continuar.');
                 }
 
                 if (process.env.NEXT_PUBLIC_MASTER_KEY && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY) {
