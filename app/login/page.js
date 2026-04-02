@@ -150,8 +150,8 @@ export default function LoginPage() {
                         trial_started_at: isTrialActive ? now.toISOString() : null,
                         trial_ends_at: isTrialActive ? trialEnds.toISOString() : null,
                         trial_active: isTrialActive,
-                        // Also set initial credits for trial users
-                        credits_balance: isTrialActive ? 50 : 0,
+                        // ARREGLO: TODOS los usuarios nuevos reciben 250 créditos iniciales
+                        credits_balance: 250,
                         subscription_status: isTrialActive ? 'trial' : 'pending',
                         created_at: now.toISOString()
                     });
@@ -197,6 +197,11 @@ export default function LoginPage() {
                     if (signInError.message.includes('Invalid login credentials')) throw new Error('Email o contraseña incorrectos.');
                     if (signInError.message.includes('Email not confirmed')) throw new Error('Por favor verifica tu email primero.');
                     throw signInError;
+                }
+
+                // ARREGLO: Validar que el email ESTÁ confirmado
+                if (signedInUser && !signedInUser.email_confirmed_at) {
+                    throw new Error('Por favor confirma tu email antes de continuar. Revisa tu bandeja de entrada.');
                 }
 
                 if (process.env.NEXT_PUBLIC_MASTER_KEY && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY) {
