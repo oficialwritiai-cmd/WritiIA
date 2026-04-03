@@ -1417,7 +1417,11 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
 
     useEffect(() => {
+        console.log('EFFECT_MOUNTED: Stats useEffect is executing');
+
         const fetchStats = async () => {
+            console.log('FETCH_STATS_CALLED: Starting fetchStats');
+
             const { data: { user } } = await supabase.auth.getUser();
             console.log('AUTH_USER_ID', user?.id);
 
@@ -1436,7 +1440,8 @@ export default function DashboardPage() {
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', user.id);
 
-            console.log('GUARDADOS_COUNT', guardados, 'ERROR:', error1);
+            console.log('GUARDADOS_COUNT', guardados);
+            console.log('GUARDADOS_ERROR', error1);
 
             // Contar generaciones del mes
             const { count: monthGenerations, error: error2 } = await supabase
@@ -1445,10 +1450,12 @@ export default function DashboardPage() {
                 .eq('user_id', user.id)
                 .gte('created_at', startOfMonth.toISOString());
 
-            console.log('MONTH_COUNT', monthGenerations, 'ERROR:', error2);
+            console.log('MONTH_COUNT', monthGenerations);
+            console.log('MONTH_ERROR', error2);
 
             setStats({ generated: guardados || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
         };
+
         fetchStats();
         const chan = supabase.channel('ui-stats')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts' }, fetchStats)
