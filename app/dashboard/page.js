@@ -2386,8 +2386,14 @@ export default function DashboardPage() {
 
                                             <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                             <button onClick={async () => {
+                                                console.log('EDIT_BRAIN_SAVE_CLICKED');
                                                 const { data: { user } } = await supabase.auth.getUser();
-                                                await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                                const { error: upsertError } = await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                                console.log('BRAIN_UPSERT', { upsertError });
+                                                if (upsertError) {
+                                                    setError('Error guardando: ' + upsertError.message);
+                                                    return;
+                                                }
                                                 setHasBrain(true);
                                                 setEditingBrain(false);
                                                 setBrainName(brainForm.biography.substring(0, 30));
@@ -2513,14 +2519,23 @@ export default function DashboardPage() {
 
                                     <input className="input-field" placeholder="3 palabras de estilo (ej: directo, irónico, elegante)" value={brainForm.style_words} onChange={(e) => setBrainForm({ ...brainForm, style_words: e.target.value })} />
                                     <button onClick={async () => {
+                                        console.log('STEP1_BUTTON_CLICKED', { brainForm });
                                         const { data: { user } } = await supabase.auth.getUser();
                                         if (!brainForm.biography || !brainForm.helps) {
+                                            console.log('VALIDATION_FAILED', { biography: brainForm.biography, helps: brainForm.helps });
                                             setError('Por favor, completa al menos "Quién eres" y "A quién ayuda"');
                                             return;
                                         }
-                                        await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                        console.log('VALIDATION_PASSED');
+                                        const { error: upsertError } = await supabase.from('brand_brain').upsert({ user_id: user.id, biography: brainForm.biography, products_services: brainForm.sells, audience: brainForm.helps, style_words: brainForm.style_words }, { onConflict: 'user_id' });
+                                        console.log('UPSERT_COMPLETE', { upsertError });
+                                        if (upsertError) {
+                                            setError('Error guardando cerebro IA: ' + upsertError.message);
+                                            return;
+                                        }
                                         setHasBrain(true);
                                         setBrainName(brainForm.biography.substring(0, 30));
+                                        console.log('STEP_CHANGE_TO_2');
                                         setWizardStep(2);
                                     }} className="btn-primary" style={{ marginTop: '8px' }}>Guardar y Continuar →</button>
                                 </div>
