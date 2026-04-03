@@ -2254,13 +2254,13 @@ export default function DashboardPage() {
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 {wizardStep === 1 ? 'Tu Marca' : wizardStep === 2 ? 'Tu Contenido' : wizardStep === 3 ? 'Tu Estrategia' : 'Tu Idea'}
                             </span>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9D00FF' }}>Paso {wizardStep} de {hasBrain ? 3 : 4}</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#9D00FF' }}>Paso {wizardStep} de 4</span>
                         </div>
                         <div className="wz-progress-bar">
-                            <div className="wz-progress-fill" style={{ width: `${(wizardStep / (hasBrain ? 3 : 4)) * 100}%` }} />
+                            <div className="wz-progress-fill" style={{ width: `${(wizardStep / 4) * 100}%` }} />
                         </div>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            {(hasBrain ? [2,3,4] : [1,2,3,4]).map((w,i) => (
+                            {[1,2,3,4].map((w,i) => (
                                 <div key={w} style={{ width: 8, height: 8, borderRadius: '50%', background: wizardStep >= w ? '#9D00FF' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
                             ))}
                         </div>
