@@ -1417,12 +1417,20 @@ export default function DashboardPage() {
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
 
     useEffect(() => {
-        if (!profile?.id) return;
         const fetchStats = async () => {
-            const userId = profile.id;
+            // ARREGLO CRÍTICO: Usar user.id de auth, NO profile.id
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user?.id) {
+                console.warn('No user found');
+                return;
+            }
+
+            const userId = user.id;
             const startOfMonth = new Date();
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
+
+            console.log('USER_ID_USADO', userId);
 
             // ARREGLO: Contar SIN filtro de project_id - TODOS los scripts del usuario
             const genQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
@@ -1439,10 +1447,10 @@ export default function DashboardPage() {
         };
         fetchStats();
         const chan = supabase.channel('ui-stats')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts', filter: `user_id=eq.${profile.id}` }, fetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts' }, fetchStats)
             .subscribe();
         return () => supabase.removeChannel(chan);
-    }, [profile?.id]);
+    }, []);
 
     const copyToClipboard = (text, id) => {
         navigator.clipboard.writeText(text);
