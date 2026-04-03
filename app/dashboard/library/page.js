@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Search, Filter, Star, Calendar, Trash2, Edit3, Loader2, Copy, RefreshCw, Zap, Sparkles, ExternalLink } from 'lucide-react';
+import { Search, Filter, Star, Calendar, Trash2, Edit3, Loader2, Copy, RefreshCw, Zap, Sparkles, ExternalLink, Plus } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
+import SheetEditor from '@/app/components/SheetEditor';
 
 const PLATFORMS = ['Todas', 'Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X'];
 const CONTENT_TYPES = ['Todos', 'guion', 'idea', 'mensual'];
@@ -27,6 +28,7 @@ export default function LibraryPage() {
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [error, setError] = useState('');
+    const [showSheetEditor, setShowSheetEditor] = useState(false);
 
     const supabase = createSupabaseClient();
     const router = useRouter();
@@ -277,6 +279,27 @@ export default function LibraryPage() {
                     <input type="checkbox" checked={onlyFavorites} onChange={(e) => setOnlyFavorites(e.target.checked)} style={{ display: 'none' }} />
                     Favoritos
                 </label>
+
+                <button
+                    onClick={() => setShowSheetEditor(true)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        height: '48px',
+                        padding: '0 16px',
+                        borderRadius: '12px',
+                        background: 'var(--accent-gradient)',
+                        border: 'none',
+                        color: '#000',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        marginLeft: 'auto'
+                    }}
+                >
+                    <Plus size={18} />
+                    Nueva Hoja
+                </button>
             </div>
 
             {/* Lista de contenido */}
@@ -383,6 +406,20 @@ export default function LibraryPage() {
                 <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#FF4D4D' : '#7ECECA', color: toast.type === 'error' ? 'white' : 'black', padding: '14px 28px', borderRadius: '50px', fontWeight: 700, boxShadow: '0 15px 40px rgba(0,0,0,0.4)', zIndex: 1000 }}>
                     {toast.msg}
                 </div>
+            )}
+
+            {/* Sheet Editor Modal */}
+            {showSheetEditor && (
+                <SheetEditor
+                    sheetId="new"
+                    onClose={() => setShowSheetEditor(false)}
+                    onSave={(newSheet) => {
+                        setShowSheetEditor(false);
+                        loadScripts();
+                    }}
+                    userId={currentUserId}
+                    activeProjectId={activeProject?.id}
+                />
             )}
 
             <style jsx>{`
