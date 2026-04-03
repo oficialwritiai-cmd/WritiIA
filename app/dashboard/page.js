@@ -1450,7 +1450,7 @@ export default function DashboardPage() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts', filter: `user_id=eq.${profile.id}` }, fetchStats)
             .subscribe();
         return () => supabase.removeChannel(chan);
-    }, [profile?.id]);
+    }, [profile?.id, activeProject?.id]);
 
     const copyToClipboard = (text, id) => {
         navigator.clipboard.writeText(text);
