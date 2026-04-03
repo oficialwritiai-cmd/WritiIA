@@ -315,7 +315,7 @@ export default function LibraryPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '16px' }}>
                                         <input
                                             style={{
                                                 background: 'transparent',
@@ -323,7 +323,8 @@ export default function LibraryPage() {
                                                 fontSize: '1.2rem',
                                                 fontWeight: 800,
                                                 color: 'white',
-                                                width: '100%',
+                                                flex: 1,
+                                                minWidth: 0,
                                                 outline: 'none',
                                                 borderBottom: '1px solid transparent'
                                             }}
@@ -332,7 +333,7 @@ export default function LibraryPage() {
                                             onFocus={(e) => e.target.style.borderBottom = '1px solid #7ECECA'}
                                             placeholder="Título del contenido..."
                                         />
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                                             <button
                                                 onClick={() => {
                                                     const ideaId = item.metadata?.slot_id || item.id;
