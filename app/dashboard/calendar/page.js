@@ -136,7 +136,8 @@ function CalendarContent() {
                 })
             });
 
-            // 3. Prepare payload and insert automatically (v1.17.9)
+            // 3. Parse response and prepare payload
+            const body = response.ok ? await response.json() : {};
             const suggestion = body.schedule?.[0];
             const eventDate = suggestion?.fecha_sugerida || new Date().toISOString().split('T')[0];
             const startTime = suggestion?.hora_sugerida || '09:00';
