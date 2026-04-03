@@ -104,8 +104,10 @@ const ConfirmDialog = ({ isOpen, onClose, title, message, confirmLabel = 'Confir
                         {cancelLabel}
                     </button>
                     <button
-                        onClick={() => {
-                            onConfirm();
+                        onClick={async () => {
+                            if (onConfirm) {
+                                await onConfirm();
+                            }
                             onClose();
                         }}
                         style={{

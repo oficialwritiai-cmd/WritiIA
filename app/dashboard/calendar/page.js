@@ -151,7 +151,7 @@ function CalendarContent() {
 
             const notes = [
                 idea.gancho ? `GANCHO: ${idea.gancho}` : '',
-                idea.desarrollo ? `DESARROLLO: ${idea.desarrollo}` : '',
+                idea.desarrollo ? `DESARROLLO: ${Array.isArray(idea.desarrollo) ? idea.desarrollo.join('\n') : idea.desarrollo}` : '',
                 idea.content || ''
             ].filter(Boolean).join('\n\n');
 

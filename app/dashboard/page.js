@@ -1453,7 +1453,8 @@ export default function DashboardPage() {
             console.log('MONTH_COUNT', monthGenerations);
             console.log('MONTH_ERROR', error2);
 
-            setStats({ generated: guardados || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
+            // ARREGLO: generated debe ser monthGenerations, saved debe ser guardados
+            setStats({ generated: monthGenerations || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
         };
 
         fetchStats();
