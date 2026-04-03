@@ -487,6 +487,40 @@ function CalendarContent() {
     };
 
 
+    const hasUnsavedChanges = () => {
+        if (!tempTitle && !tempNotes && !tempStartTime && !tempEndTime) return false;
+        if (selectedEvent) {
+            return tempTitle !== selectedEvent.title ||
+                   tempNotes !== selectedEvent.notes ||
+                   tempStartTime !== selectedEvent.start_time ||
+                   tempEndTime !== selectedEvent.end_time ||
+                   tempStatus !== selectedEvent.status ||
+                   tempPlatform !== selectedEvent.platform ||
+                   tempColor !== selectedEvent.color;
+        }
+        return tempTitle.trim() !== '' || tempNotes.trim() !== '';
+    };
+
+    const handleClosePanel = () => {
+        if (hasUnsavedChanges()) {
+            if (confirm('¿Descartar cambios en esta publicación?')) {
+                setIsPanelOpen(false);
+                // Reset form
+                setTempTitle('');
+                setTempNotes('');
+                setTempStatus('idea');
+                setTempPlatform('General');
+                setTempColor('purple');
+                setTempStartTime('09:00');
+                setTempEndTime('10:00');
+                setSelectedEvent(null);
+                setSelectedDate(null);
+            }
+        } else {
+            setIsPanelOpen(false);
+        }
+    };
+
     const handleDeleteEvent = async (id) => {
         if (!confirm('¿Eliminar este evento?')) return;
 
@@ -1204,7 +1238,7 @@ function CalendarContent() {
                 <aside className="cal-detail-panel">
                     <div className="cal-panel-header">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <button className="cal-close-icon" onClick={() => setIsPanelOpen(false)}>
+                            <button className="cal-close-icon" onClick={handleClosePanel}>
                                 <X size={24} />
                             </button>
                             <div style={{ display: 'flex', gap: '8px' }}>
