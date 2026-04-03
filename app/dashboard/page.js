@@ -1433,14 +1433,24 @@ export default function DashboardPage() {
                 savQuery = savQuery.eq('project_id', activeProject.id);
                 monQuery = monQuery.eq('project_id', activeProject.id);
             } else {
-                genQuery = genQuery.is('project_id', null);
-                savQuery = savQuery.is('project_id', null);
-                monQuery = monQuery.is('project_id', null);
+                // When no project selected, show all scripts (both with and without project_id)
+                // Removed the .is('project_id', null) filters to include all content
             }
 
-            const { count: gen } = await genQuery;
-            const { count: sav } = await savQuery;
-            const { count: mon } = await monQuery;
+            const { count: gen, error: genErr } = await genQuery;
+            const { count: sav, error: savErr } = await savQuery;
+            const { count: mon, error: monErr } = await monQuery;
+
+            console.log('[Stats Debug]', {
+                userId,
+                activeProjectId: activeProject?.id,
+                genCount: gen,
+                savCount: sav,
+                monCount: mon,
+                genErr,
+                savErr,
+                monErr
+            });
 
             setStats({ generated: gen || 0, saved: sav || 0, monthGenerations: mon || 0 });
         };

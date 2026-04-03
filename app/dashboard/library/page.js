@@ -337,7 +337,9 @@ export default function LibraryPage() {
                                         />
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                                             <button
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
                                                     const ideaId = item.metadata?.slot_id || item.id;
                                                     router.push(`/dashboard/idea/${ideaId}`);
                                                 }}
