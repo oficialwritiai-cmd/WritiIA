@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Plus, FolderOpen, Calendar, X, Loader2, Trash2, Sparkles, ArrowRight } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 
 export default function DashboardHomePage() {
     const [profile, setProfile] = useState(null);
@@ -16,6 +17,8 @@ export default function DashboardHomePage() {
     const [newDesc, setNewDesc] = useState('');
     const [creating, setCreating] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [projectToDelete, setProjectToDelete] = useState(null);
     const supabase = createSupabaseClient();
     const router = useRouter();
     const { refreshProjects, setActiveProject } = useProject();
@@ -98,13 +101,19 @@ export default function DashboardHomePage() {
 
     async function handleDeleteProject(e, projectId) {
         e.stopPropagation();
-        if (!confirm('¿Eliminar este proyecto?')) return;
-        setDeletingId(projectId);
+        setProjectToDelete(projectId);
+        setShowDeleteConfirm(true);
+    }
+
+    async function confirmDeleteProject() {
+        if (!projectToDelete) return;
+        setDeletingId(projectToDelete);
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from('projects').update({ is_deleted: true }).eq('id', projectId).eq('user_id', user?.id || null);
-        await supabase.from('activity_logs').insert({ user_id: user.id, project_id: projectId, action: 'deleted' });
-        setProjects(prev => prev.filter(p => p.id !== projectId));
+        await supabase.from('projects').update({ is_deleted: true }).eq('id', projectToDelete).eq('user_id', user?.id || null);
+        await supabase.from('activity_logs').insert({ user_id: user.id, project_id: projectToDelete, action: 'deleted' });
+        setProjects(prev => prev.filter(p => p.id !== projectToDelete));
         setDeletingId(null);
+        setProjectToDelete(null);
     }
 
     function formatDate(dateStr) {
@@ -395,6 +404,17 @@ export default function DashboardHomePage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                title="¿Eliminar proyecto?"
+                message="Esta acción eliminará el proyecto y todos sus datos. No se puede deshacer."
+                confirmLabel="Eliminar"
+                cancelLabel="Cancelar"
+                isDangerous={true}
+                onConfirm={confirmDeleteProject}
+            />
 
             <style jsx>{`
                 .spin { animation: spin 1s linear infinite; }
