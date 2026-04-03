@@ -303,9 +303,11 @@ export default function LibraryPage() {
                                         <span className="badge" style={{ background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA' }}>{getTypeLabel(item.type)}</span>
                                         <span className="badge" style={{ background: 'rgba(157, 0, 255, 0.1)', color: '#B74DFF' }}>{item.platform || 'General'}</span>
                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                            {(item.tags || []).map((tag, idx) => (
-                                                <span key={idx} className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>{tag}</span>
-                                            ))}
+                                            {(item.tags || [])
+                                                .filter(tag => tag && tag.toLowerCase() !== 'guion' && tag.toLowerCase() !== (item.platform || 'General').toLowerCase())
+                                                .map((tag, idx) => (
+                                                    <span key={idx} className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>{tag}</span>
+                                                ))}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
