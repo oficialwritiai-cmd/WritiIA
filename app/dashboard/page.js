@@ -1694,6 +1694,8 @@ export default function DashboardPage() {
                     post_copy: script.copy_post || {},
                     video_duration: script.video_duration || '60 seg',
                     focus: script.focus || 'autoridad',
+                    platform: platform || 'General',
+                    goal: goal || 'engagement',
                     source_type: 'calendar_events',
                     source_reference_id: sourceReferenceId
                 }).select('id').single();
@@ -1734,6 +1736,8 @@ export default function DashboardPage() {
                     post_copy: script.copy_post || {},
                     video_duration: script.video_duration || '60 seg',
                     focus: script.focus || 'autoridad',
+                    platform: platform || 'General',
+                    goal: goal || 'engagement',
                     source_type: 'content_slots',
                     source_reference_id: sourceReferenceId
                 }).select('id').single();

@@ -252,6 +252,7 @@ export default function IdeaPage() {
         setTitle(ev.title || '');
         setDescription(ev.description || '');
         setPlatform(ev.platform || 'General');
+        setGoal(ev.goal || ev.content?.goal || '');
         setScheduledDate(ev.event_date || '');
     }
 
@@ -260,6 +261,8 @@ export default function IdeaPage() {
         setHook(sc.hook || sc.gancho || '');
         setCtaText(sc.cta || '');
         setNotes(sc.notes || '');
+        setGoal(sc.goal || '');
+        setPlatform(sc.platform || 'General');
         if (Array.isArray(sc.structure) && sc.structure.length > 0) {
             setStructureText(sc.structure.map((p, i) => `${i + 1}. ${p.point || ''}: ${p.detail || ''}`).join('\n\n'));
         } else if (sc.content) {
@@ -276,6 +279,7 @@ export default function IdeaPage() {
     function populateFromLibrary(item) {
         setTitle(item.titulo || item.title || '');
         setPlatform(item.platform || 'General');
+        setGoal(item.goal || item.metadata?.goal || '');
         const c = item.content || {};
         setHook(c.hook || c.gancho || c.hook_principal || '');
         setCtaText(c.cta || c.cierre || '');
