@@ -1418,32 +1418,36 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const fetchStats = async () => {
-            // ARREGLO CRÍTICO: Usar user.id de auth, NO profile.id
             const { data: { user } } = await supabase.auth.getUser();
+            console.log('AUTH_USER_ID', user?.id);
+
             if (!user?.id) {
                 console.warn('No user found');
                 return;
             }
 
-            const userId = user.id;
             const startOfMonth = new Date();
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
 
-            console.log('USER_ID_USADO', userId);
+            // Test query - contar TODOS los scripts del usuario
+            const { count: guardados, error: error1 } = await supabase
+                .from('scripts')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id);
 
-            // ARREGLO: Contar SIN filtro de project_id - TODOS los scripts del usuario
-            const genQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
-            const savQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
-            const monQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', startOfMonth.toISOString());
+            console.log('GUARDADOS_COUNT', guardados, 'ERROR:', error1);
 
-            const { count: generaciones, error: error1 } = await genQuery;
-            const { count: guardados, error: error2 } = await savQuery;
-            const { count: monthGenerations, error: error3 } = await monQuery;
+            // Contar generaciones del mes
+            const { count: monthGenerations, error: error2 } = await supabase
+                .from('scripts')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', startOfMonth.toISOString());
 
-            console.log('CONTADORES_DEBUG', { userId, generaciones, guardados, monthGenerations, error1, error2, error3 });
+            console.log('MONTH_COUNT', monthGenerations, 'ERROR:', error2);
 
-            setStats({ generated: generaciones || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
+            setStats({ generated: guardados || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
         };
         fetchStats();
         const chan = supabase.channel('ui-stats')
