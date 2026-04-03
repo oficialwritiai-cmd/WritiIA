@@ -1424,43 +1424,25 @@ export default function DashboardPage() {
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
 
-            let genQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
-            let savQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
-            let monQuery = supabase.from('usage_logs').select('*', { count: 'exact', head: true }).eq('user_id', userId).in('action', ['generate_scripts', 'generate_plan']).gte('created_at', startOfMonth.toISOString());
+            // ARREGLO: Contar SIN filtro de project_id - TODOS los scripts del usuario
+            const genQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+            const savQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_saved', true);
+            const monQuery = supabase.from('scripts').select('*', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', startOfMonth.toISOString());
 
-            if (activeProject) {
-                genQuery = genQuery.eq('project_id', activeProject.id);
-                savQuery = savQuery.eq('project_id', activeProject.id);
-                monQuery = monQuery.eq('project_id', activeProject.id);
-            } else {
-                // When no project selected, show all scripts (both with and without project_id)
-                // Removed the .is('project_id', null) filters to include all content
-            }
+            const { count: generaciones, error: error1 } = await genQuery;
+            const { count: guardados, error: error2 } = await savQuery;
+            const { count: monthGenerations, error: error3 } = await monQuery;
 
-            const { count: gen, error: genErr } = await genQuery;
-            const { count: sav, error: savErr } = await savQuery;
-            const { count: mon, error: monErr } = await monQuery;
+            console.log('CONTADORES_DEBUG', { userId, generaciones, guardados, monthGenerations, error1, error2, error3 });
 
-            console.log('[Stats Debug]', {
-                userId,
-                activeProjectId: activeProject?.id,
-                genCount: gen,
-                savCount: sav,
-                monCount: mon,
-                genErr,
-                savErr,
-                monErr
-            });
-
-            setStats({ generated: gen || 0, saved: sav || 0, monthGenerations: mon || 0 });
+            setStats({ generated: generaciones || 0, saved: guardados || 0, monthGenerations: monthGenerations || 0 });
         };
         fetchStats();
         const chan = supabase.channel('ui-stats')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'usage_logs', filter: `user_id=eq.${profile.id}` }, fetchStats)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'scripts', filter: `user_id=eq.${profile.id}` }, fetchStats)
             .subscribe();
         return () => supabase.removeChannel(chan);
-    }, [profile?.id, activeProject?.id]);
+    }, [profile?.id]);
 
     const copyToClipboard = (text, id) => {
         navigator.clipboard.writeText(text);
