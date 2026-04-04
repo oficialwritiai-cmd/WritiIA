@@ -340,12 +340,29 @@ export default function DashboardPage() {
     // Load user data and credits on mount
     useEffect(() => {
         const loadUserCredits = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    console.warn('[Credits] No user found');
+                    return;
+                }
 
-            const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', user.id).single();
-            if (profileData) {
-                setAiCredits({ total: profileData.credits_balance || 0, used: 0 });
+                const { data: profileData, error } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
+
+                if (error) {
+                    console.error('[Credits] Error fetching profile:', error);
+                    return;
+                }
+
+                if (profileData) {
+                    const creditsValue = profileData.credits_balance !== undefined ? profileData.credits_balance : 0;
+                    console.log('[Credits] Profile loaded, balance:', creditsValue);
+                    setAiCredits({ total: creditsValue, used: 0 });
+                } else {
+                    console.warn('[Credits] No profile data found');
+                }
+            } catch (err) {
+                console.error('[Credits] Exception loading credits:', err);
             }
         };
 
@@ -378,10 +395,8 @@ export default function DashboardPage() {
         const { data: profileData } = await supabase.from('users_profiles').select('*').eq('id', user.id).single();
         setProfile(profileData || user);
 
-        // Credits - Unified System v2.0
-        if (profileData) {
-            setAiCredits({ total: profileData.credits_balance || 0, used: 0 });
-        }
+        // Credits are loaded in initial useEffect on mount, not here
+        // This prevents overwriting them with stale data
 
         // Library Ideas - FILTERED BY PROJECT
         let query = supabase.from('library').select('*').eq('user_id', user.id).eq('type', 'idea');
