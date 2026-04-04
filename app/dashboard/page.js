@@ -337,6 +337,21 @@ export default function DashboardPage() {
         // Optionally move to calendar or stay
     };
 
+    // Load user data and credits on mount
+    useEffect(() => {
+        const loadUserCredits = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: profileData } = await supabase.from('users_profiles').select('credits_balance').eq('id', user.id).single();
+            if (profileData) {
+                setAiCredits({ total: profileData.credits_balance || 0, used: 0 });
+            }
+        };
+
+        loadUserCredits();
+    }, []);
+
     useEffect(() => {
         // Clear generation results when switching project to avoid confusion
         setScripts([]);
