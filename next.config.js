@@ -1,9 +1,10 @@
 // SECURITY: Content Security Policy
-// Note: 'unsafe-inline' is required by Next.js for internal scripts/styles.
-// 'unsafe-eval' is intentionally excluded to prevent XSS/code injection attacks.
+// 'unsafe-eval' is added only in development for Next.js HMR/Fast Refresh.
+// Production keeps it excluded to prevent XSS/code injection attacks.
+const isDev = process.env.NODE_ENV === 'development';
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline';
+    script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''};
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' data: https://fonts.gstatic.com;
     img-src 'self' blob: data: https:;
