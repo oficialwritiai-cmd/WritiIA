@@ -331,8 +331,9 @@ REGLAS (en orden de prioridad):
 2. SIN FRASES ROBÓTICAS: Elimina "En este valioso contenido...", 
    "Como mencioné anteriormente...", "Es importante destacar que..."
 3. FRASES CORTAS: Habla como en una conversación real.
-4. HUECOS HUMANOS: Después de cada punto clave añade:
+4. HUECOS HUMANOS: Después de cada punto clave añade una línea entre corchetes, ej:
    [Aquí añade una anécdota tuya sobre esto]
+   Si el guion ya incluye líneas entre corchetes ([ ... ]), consérvales o mejóralas — nunca las elimines.
 5. MISMA ESTRUCTURA: Mantén hook, desarrollo, cierre, CTA — no añadas ni elimines puntos.
 6. TIMESTAMPS: Si el guion incluye marcas de tiempo (ej: 0:00, 1:30), consérvelas exactamente.
 7. NO INVENTES: No añadas logros, datos o historias que no estaban.
