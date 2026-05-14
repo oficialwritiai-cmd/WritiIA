@@ -138,8 +138,8 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
         };
 
         recognition.onend = () => {
-            // Auto-restart if still recording (Chrome stops after silence)
-            if (status === 'recording' || recognitionRef.current === recognition) {
+            // Auto-restart only if still recording (not stopped by user)
+            if (recognitionRef.current === recognition) {
                 try { recognition.start(); } catch (_) {}
             }
         };
@@ -159,19 +159,34 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
         cancelAnimationFrame(rafRef.current);
         streamRef.current?.getTracks().forEach(t => t.stop());
         setVolume(0);
+        setStatus('processing');
 
-        try { recognitionRef.current?.stop(); } catch (_) {}
-        recognitionRef.current = null;
+        const recognition = recognitionRef.current;
+        recognitionRef.current = null; // prevent auto-restart in onend
 
-        const transcript = accTextRef.current.trim() || liveText.trim() || finalText.trim();
-
-        if (!transcript && !useFallback) {
-            setErrMsg('No se detectó texto. Habla más fuerte o usa el campo de texto.');
-            setStatus('error');
+        if (!recognition) {
+            // Fallback: use whatever text we have in state
+            const t = liveText.trim() || finalText.trim();
+            await sendToBackend(t);
             return;
         }
 
-        await sendToBackend(transcript);
+        // Override onend — fires AFTER all final recognition results are delivered
+        recognition.onend = async () => {
+            const transcript = accTextRef.current.trim() || liveText.trim() || finalText.trim();
+            if (!transcript) {
+                setErrMsg('No se detectó texto. Habla más fuerte o usa el campo de texto.');
+                setStatus('error');
+                return;
+            }
+            await sendToBackend(transcript);
+        };
+
+        try { recognition.stop(); } catch (_) {
+            // If stop fails, read what we have
+            const t = accTextRef.current.trim() || liveText.trim();
+            await sendToBackend(t);
+        }
     }
 
     async function sendToBackend(transcript) {

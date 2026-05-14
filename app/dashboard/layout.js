@@ -404,7 +404,7 @@ export default function DashboardLayout({ children }) {
     const breadcrumbMap = {
         '/dashboard/home':         'Inicio',
         '/dashboard/asistente':    'Asistente IA',
-        '/dashboard/session':      'Modo Sesión',
+        '/dashboard/session':      'Matrix',
         '/dashboard/copys':        'Copys',
         '/dashboard/estrategia':   'Estrategia',
         '/dashboard/ideas-virales':'Ideas Virales',
@@ -425,7 +425,7 @@ export default function DashboardLayout({ children }) {
     const navItems = [
         { href: '/dashboard/home', icon: Home, label: t('nav.home') },
         { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
-        { href: sessionHref, icon: Sparkles, label: 'Sesión' },
+        { href: sessionHref, icon: Sparkles, label: 'Matrix', highlight: true },
         { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
         { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
         { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
