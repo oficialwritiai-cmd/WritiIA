@@ -30,18 +30,31 @@ export default function SessionStep2Ideas() {
         setError('');
         try {
             const { data: { user } } = await supabase.auth.getUser();
+
+            // Clean + truncate to satisfy schema (max 100/300 chars per item, context max 490 chars)
+            const cleanPillars = contentPillars
+                .filter(s => s && s.trim().length > 0)
+                .map(s => s.slice(0, 98))
+                .slice(0, 10);
+            const cleanFAQs = sessionFAQs
+                .filter(s => s && s.trim().length > 0)
+                .map(s => s.slice(0, 298))
+                .slice(0, 15);
+            const rawCtx = `${cleanPillars.join(', ')} | FAQs: ${cleanFAQs.slice(0, 5).join('. ')}`;
+            const context = rawCtx.trim().slice(0, 490) || 'Creador de contenido para redes sociales';
+
             const res = await fetch('/api/generate-ideas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    context: `${contentPillars.join(', ')} | FAQs: ${sessionFAQs.slice(0, 5).join('. ')}`,
+                    context,
                     platforms: ['Reels', 'TikTok', 'YouTube Shorts'],
                     goal: timeHorizon === '2weeks' ? 'Contenido para 2 semanas' : 'Contenido para 1 mes',
                     count: 18,
                     userId: user?.id,
                     projectId,
-                    contentPillars,
-                    sessionFAQs,
+                    contentPillars: cleanPillars,
+                    sessionFAQs: cleanFAQs,
                 }),
             });
 

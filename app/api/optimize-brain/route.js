@@ -200,7 +200,23 @@ Genera un análisis en JSON con esta estructura exacta:
 Idioma: ${lang}. Sé específico, no genérico.`;
 
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
-            const audit = parseClaudeResponse(raw);
+
+            let audit = {};
+            // Robust extraction: same approach as field improve
+            const rawStr2 = typeof raw === 'string'
+                ? raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim()
+                : null;
+            try {
+                const parsed = parseClaudeResponse(raw);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) audit = parsed;
+            } catch (_) {}
+            if (!audit.positioning && rawStr2) {
+                try {
+                    const p2 = JSON.parse(rawStr2.startsWith('{') ? rawStr2 : (rawStr2.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+                    if (p2.positioning) audit = p2;
+                } catch (_) {}
+            }
+            console.log('[brand_audit] result:', JSON.stringify(audit).slice(0, 200));
             return NextResponse.json({ audit });
         }
 
