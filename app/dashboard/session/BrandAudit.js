@@ -47,8 +47,8 @@ export default function BrandAudit({ fields, projectId }) {
             if (typeof a.opportunities === 'string') a.opportunities = a.opportunities.split('\n').filter(Boolean);
             if (typeof a.contentAngles === 'string') a.contentAngles = a.contentAngles.split('\n').filter(Boolean);
 
-            if (!a.positioning && !a.strengths?.length && !a.quickWin) {
-                throw new Error('La IA no generó el análisis. Inténtalo de nuevo.');
+            if (!a.positioning && !a.strengths?.length && !a.quickWin && !a.audienceInsight) {
+                throw new Error('No se generó análisis. Asegúrate de tener Biografía o Pilares rellenados e inténtalo de nuevo.');
             }
 
             setAudit(a);

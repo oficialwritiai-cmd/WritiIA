@@ -174,49 +174,86 @@ Escribe exactamente ${count} líneas, una por línea, sin números ni viñetas:`
             return NextResponse.json({ suggestions });
         }
 
-        // ── Auditoría de marca ────────────────────────────────────────
+        // ── Auditoría de marca (texto plano, sin JSON) ───────────────
         if (target === 'brand_audit') {
             const { bio='', audience='', offer='', style='', pillars='', faqs='' } = data;
-            const prompt = `Eres un consultor experto en marketing de contenidos. Analiza este Cerebro IA y genera una auditoría de marca concisa.
 
-Datos del creador:
-- Bio: ${bio}
-- Audiencia: ${audience}
-- Oferta: ${offer}
-- Estilo: ${style}
-- Pilares: ${pillars}
-- FAQs frecuentes: ${faqs}
+            const prompt = `Eres consultor de marketing de contenidos. Analiza este perfil y responde en texto plano con exactamente estas 6 secciones separadas por líneas en blanco.
 
-Genera un análisis en JSON con esta estructura exacta:
-{
-  "positioning": "1-2 frases sobre el posicionamiento único de esta marca",
-  "strengths": ["fortaleza 1", "fortaleza 2", "fortaleza 3"],
-  "opportunities": ["oportunidad de contenido 1", "oportunidad 2", "oportunidad 3"],
-  "contentAngles": ["ángulo de contenido 1", "ángulo 2", "ángulo 3", "ángulo 4"],
-  "audienceInsight": "1 insight clave sobre la audiencia que pocos creadores aprovechan",
-  "quickWin": "1 acción concreta que puede implementar esta semana para destacar"
-}
+PERFIL:
+Bio: ${bio.slice(0,300)}
+Audiencia: ${audience.slice(0,200)}
+Oferta: ${offer.slice(0,200)}
+Estilo: ${style.slice(0,150)}
+Pilares: ${pillars.slice(0,200)}
+FAQs: ${faqs.slice(0,200)}
 
-Idioma: ${lang}. Sé específico, no genérico.`;
+Responde EXACTAMENTE con este formato (reemplaza el contenido entre corchetes):
 
-            const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
+POSICIONAMIENTO: [1-2 frases sobre qué hace única esta marca]
 
-            let audit = {};
-            // Robust extraction: same approach as field improve
-            const rawStr2 = typeof raw === 'string'
-                ? raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim()
-                : null;
-            try {
-                const parsed = parseClaudeResponse(raw);
-                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) audit = parsed;
-            } catch (_) {}
-            if (!audit.positioning && rawStr2) {
-                try {
-                    const p2 = JSON.parse(rawStr2.startsWith('{') ? rawStr2 : (rawStr2.match(/\{[\s\S]*\}/) || ['{}'])[0]);
-                    if (p2.positioning) audit = p2;
-                } catch (_) {}
-            }
-            console.log('[brand_audit] result:', JSON.stringify(audit).slice(0, 200));
+FORTALEZAS:
+- [fortaleza 1]
+- [fortaleza 2]
+- [fortaleza 3]
+
+OPORTUNIDADES:
+- [oportunidad 1]
+- [oportunidad 2]
+- [oportunidad 3]
+
+ANGULOS DE CONTENIDO:
+- [ángulo 1]
+- [ángulo 2]
+- [ángulo 3]
+- [ángulo 4]
+
+INSIGHT: [1 insight clave sobre la audiencia]
+
+QUICK WIN: [1 acción concreta para esta semana]
+
+Idioma: ${lang}. Sin explicaciones extra, solo el análisis.`;
+
+            const raw = await improveBlockWithHaiku({
+                apiKey,
+                systemPrompt: 'Responde solo con el análisis en el formato exacto solicitado.',
+                userMessage: prompt,
+            });
+
+            // Parse plain text response
+            const text = typeof raw === 'string' ? raw
+                : typeof raw === 'object' && raw !== null
+                    ? (raw.text || raw.content || JSON.stringify(raw))
+                    : String(raw);
+
+            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            const getSection = (key) => {
+                const idx = lines.findIndex(l => l.toUpperCase().startsWith(key.toUpperCase() + ':'));
+                if (idx === -1) return '';
+                return lines[idx].replace(new RegExp(`^${key}:?\\s*`, 'i'), '').trim();
+            };
+            const getBullets = (key) => {
+                const idx = lines.findIndex(l => l.toUpperCase().startsWith(key.toUpperCase() + ':') || l.toUpperCase() === key.toUpperCase() + ':');
+                if (idx === -1) return [];
+                const result = [];
+                for (let i = idx + 1; i < lines.length && i < idx + 8; i++) {
+                    if (lines[i].startsWith('-') || lines[i].startsWith('•')) {
+                        result.push(lines[i].replace(/^[-•]\s*/, '').trim());
+                    } else if (lines[i].match(/^[A-ZÁÉÍÓÚ]{3,}:/)) break;
+                }
+                return result;
+            };
+
+            const audit = {
+                positioning:    getSection('POSICIONAMIENTO'),
+                strengths:      getBullets('FORTALEZAS'),
+                opportunities:  getBullets('OPORTUNIDADES'),
+                contentAngles:  getBullets('ANGULOS DE CONTENIDO').concat(getBullets('ÁNGULOS DE CONTENIDO')),
+                audienceInsight: getSection('INSIGHT'),
+                quickWin:       getSection('QUICK WIN'),
+            };
+
+            console.log('[brand_audit] parsed:', JSON.stringify(audit).slice(0, 300));
             return NextResponse.json({ audit });
         }
 
