@@ -96,7 +96,7 @@ export async function middleware(req) {
     // Anti-loop para usuarios con email confirmado
     if (user && user.email_confirmed_at && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/auth')) {
         const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = '/dashboard';
+        redirectUrl.pathname = '/dashboard/home';
         return NextResponse.redirect(redirectUrl);
     }
 

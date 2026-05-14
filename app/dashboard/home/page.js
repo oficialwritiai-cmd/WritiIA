@@ -319,10 +319,11 @@ export default function DashboardHomePage() {
                         onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
                     >
-                        <Sparkles size={16} strokeWidth={2} /> Iniciar Sesión WRITI
+                        <Sparkles size={16} strokeWidth={2} />
+                        {stats.activeSession ? 'Continuar Sesión WRITI' : 'Iniciar Sesión WRITI'}
                     </button>
                     <button
-                        onClick={() => router.push('/dashboard')}
+                        onClick={() => router.push('/dashboard/home')}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px',
                             background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)',

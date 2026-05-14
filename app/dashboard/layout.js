@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }) {
             if (cp) {
                 setPurchasedCredits(parseInt(cp) || 0);
                 setIsPaymentSuccessModalOpen(true);
-                router.replace('/dashboard');
+                router.replace('/dashboard/home');
 
                 // Polling Refresh: The webhook might take a few seconds
                 handleRefreshProfile();
@@ -179,7 +179,7 @@ export default function DashboardLayout({ children }) {
                 setTimeout(handleRefreshProfile, 7000);
             } else if (pa === 'true') {
                 // Instantly poll after plan activation to show PRO badge
-                router.replace('/dashboard');
+                router.replace('/dashboard/home');
 
                 // Ensure profile is updated properly
                 handleRefreshProfile();
@@ -187,7 +187,7 @@ export default function DashboardLayout({ children }) {
                 setTimeout(handleRefreshProfile, 7000);
             } else if (urlParams.get('open_credits')) {
                 setIsCreditsModalOpen(true);
-                router.replace('/dashboard');
+                router.replace('/dashboard/home');
             }
         }
 

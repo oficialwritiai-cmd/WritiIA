@@ -110,7 +110,7 @@ export default function LoginPage() {
 
     const handleLogoClick = async () => {
         const { data: { session } } = await supabase.auth.getSession();
-        router.push(session ? '/dashboard' : '/');
+        router.push(session ? '/dashboard/home' : '/');
     };
 
     async function handleResetPassword(e) {
@@ -208,7 +208,7 @@ export default function LoginPage() {
                     setMode('login'); setLoading(false); return;
                 }
 
-                router.push('/dashboard');
+                router.push('/dashboard/home');
             } else {
                 const { error: signInError, data: { user: signedInUser } } = await supabase.auth.signInWithPassword({ email, password });
                 if (signInError) {
@@ -223,7 +223,7 @@ export default function LoginPage() {
                 if (process.env.NEXT_PUBLIC_MASTER_KEY && accessKey.trim() === process.env.NEXT_PUBLIC_MASTER_KEY) {
                     await supabase.from('users_profiles').update({ plan: 'pro', is_admin: true }).eq('id', signedInUser.id);
                 }
-                router.push('/dashboard');
+                router.push('/dashboard/home');
             }
         } catch (err) {
             setError(err.message || 'Error de autenticación.');
