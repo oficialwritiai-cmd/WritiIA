@@ -52,24 +52,20 @@ export async function POST(req) {
                 /\b(eh|mmm|bueno|o sea|entonces|sabes|pues)\b/i.test(value);
 
             const prompt = isVoiceTranscript
-                ? `Eres un experto en copywriting. Tienes una transcripción de voz de un creador de contenido hablando sobre "${fieldLabel}".
-Tu tarea: EXTRAE y TRANSFORMA la información clave en un texto profesional, claro y estructurado para ese campo del Cerebro IA.
+                ? `Eres copywriter experto. Tienes audio transcrito (con muletillas) de alguien hablando sobre su negocio.
+CAMPO: "${fieldLabel}"
+TRANSCRIPCIÓN: "${value.slice(0, 800)}"
 
-Transcripción de voz:
-"${value}"
+TAREA: Reescribe en 2-4 frases profesionales y claras. Extrae solo lo relevante.
+PROHIBIDO: copiar frases del original, incluir muletillas (eh, mmm, o sea, sabes, entonces).
+IDIOMA: ${lang}
 
-Reglas:
-- Ignora muletillas, repeticiones y frases sin sentido
-- Extrae solo la información relevante sobre ${fieldLabel}
-- Escríbelo en 2-4 frases limpias y profesionales
-- Mantén idioma: ${lang}
-- NO copies la transcripción tal cual
-
-JSON: {"${fieldKey}":"texto estructurado y profesional aquí"}`
-                : `Mejora este texto del Cerebro IA para el campo "${fieldLabel}".
-Texto: "${value}"
-Reglas: más claro, sin relleno, máximo 4 frases, idioma ${lang}, conserva hechos.
-JSON: {"${fieldKey}":"texto mejorado"}`;
+Responde SOLO con JSON: {"${fieldKey}":"versión profesional aquí"}`
+                : `Reescribe este texto de forma más clara y profesional para el campo "${fieldLabel}".
+TEXTO: "${value.slice(0, 600)}"
+REGLAS: máximo 3 frases, idioma ${lang}, conserva los hechos clave, elimina relleno.
+PROHIBIDO: copiar el texto original palabra por palabra.
+JSON: {"${fieldKey}":"versión mejorada"}`;
 
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
             const improved = parseClaudeResponse(raw);

@@ -165,10 +165,23 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                                 const newVal   = improved[key];
                                 if (!newVal && !original) return null;
 
+                                // Si Claude devolvió el texto casi igual, avisar en vez de fingir mejora
+                                const isSame = newVal && original &&
+                                    (newVal.trim() === original.trim() ||
+                                     (newVal.length > 50 && original.length > 50 &&
+                                      newVal.slice(0, 60).toLowerCase() === original.slice(0, 60).toLowerCase()));
+
                                 return (
                                     <div key={key}>
-                                        {/* ── VERSIÓN MEJORADA (siempre arriba y destacada) ── */}
-                                        {newVal && (
+                                        {/* ── Aviso si no hubo mejora real ── */}
+                                        {isSame && (
+                                            <div style={{ padding: '12px 16px', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '12px', marginBottom: '10px', fontSize: '0.8rem', color: '#fbbf24' }}>
+                                                ⚠️ La IA no pudo transformar suficientemente este texto. Edítalo manualmente o graba de nuevo con más detalle.
+                                            </div>
+                                        )}
+
+                                        {/* ── VERSIÓN MEJORADA ── */}
+                                        {newVal && !isSame && (
                                             <div style={{
                                                 background: 'rgba(52,211,153,0.06)',
                                                 border: '1px solid rgba(52,211,153,0.25)',
