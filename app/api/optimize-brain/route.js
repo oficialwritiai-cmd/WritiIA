@@ -126,49 +126,51 @@ JSON: {"pillars":"pilar1\\npilar2\\n...","faqs":"pregunta1\\npregunta2\\n..."}`;
             return NextResponse.json({ improved: parseClaudeResponse(raw) });
         }
 
-        // ── Generar sugerencias ───────────────────────────────────────
+        // ── Generar sugerencias (texto plano, sin JSON) ──────────────
         if (target === 'suggestions') {
-            const bio   = brain.biography || brain.bio || '';
-            const aud   = brain.audience  || '';
-            const sty   = brain.style_words || brain.style || '';
-            const off   = brain.products_services || brain.offer || '';
-            const ctx   = [bio&&`Negocio: ${bio}`, aud&&`Audiencia: ${aud}`, sty&&`Estilo: ${sty}`, off&&`Oferta: ${off}`].filter(Boolean).join('. ') || 'Creador de contenido.';
-            const skip = existing.join(', ') || 'ninguno';
-            const prompt = type === 'pillars'
-                ? `Genera 7 pilares de contenido (2-5 palabras, uno por línea). Contexto: ${ctx}. No repetir: ${skip}. Idioma: ${lang}.\nJSON: {"suggestions":["p1","p2","p3","p4","p5","p6","p7"]}`
-                : `Genera 8 FAQs reales de la audiencia. Contexto: ${ctx}. No repetir: ${skip}. Idioma: ${lang}.\nJSON: {"suggestions":["q1","q2","q3","q4","q5","q6","q7","q8"]}`;
-            const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
+            const bio = brain.biography || brain.bio || '';
+            const aud = brain.audience  || '';
+            const sty = brain.style_words || brain.style || '';
+            const off = brain.products_services || brain.offer || '';
+            const ctx = [bio, aud, sty, off].filter(Boolean).join('. ') || 'Creador de contenido.';
 
+            const count = type === 'pillars' ? 7 : 8;
+            const what  = type === 'pillars'
+                ? `${count} pilares de contenido (2-5 palabras cada uno)`
+                : `${count} preguntas frecuentes reales de la audiencia`;
+
+            // Plain text prompt — no JSON, no parsing issues
+            const prompt = `Genera ${what} para este creador.
+Contexto: ${ctx.slice(0, 400)}
+${existing.length ? `Ya tiene estos (no repetir): ${existing.slice(0,5).join(', ')}` : ''}
+Idioma: ${lang}
+
+Escribe exactamente ${count} líneas, una por línea, sin números ni viñetas:`;
+
+            const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: 'Respondes solo con la lista solicitada, sin explicaciones ni formato extra.', userMessage: prompt });
+
+            // Parse: raw can be object, array, or string
             let suggestions = [];
-            // Try multiple strategies to extract suggestions array
-            const candidates = typeof raw === 'string'
-                ? [raw, raw.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim()]
-                : [raw];
 
-            for (const candidate of candidates) {
-                try {
-                    const parsed = typeof candidate === 'object' ? candidate : JSON.parse(
-                        typeof candidate === 'string' && (candidate.startsWith('{') || candidate.startsWith('['))
-                            ? candidate
-                            : (candidate.match(/[\[{][\s\S]*[\]}]/) || [''])[0]
-                    );
-                    if (Array.isArray(parsed?.suggestions) && parsed.suggestions.length) {
-                        suggestions = parsed.suggestions.filter(s => typeof s === 'string' && s.trim());
-                        break;
-                    }
-                    if (Array.isArray(parsed) && parsed.length) {
-                        suggestions = parsed.filter(s => typeof s === 'string' && s.trim());
-                        break;
-                    }
-                } catch (_) {}
+            if (Array.isArray(raw)) {
+                suggestions = raw.filter(s => typeof s === 'string' && s.trim().length > 3);
+            } else {
+                const text = typeof raw === 'string' ? raw
+                    : typeof raw === 'object' && raw !== null
+                        ? (Array.isArray(raw) ? raw.join('\n') : Object.values(raw).find(v => typeof v === 'string') || JSON.stringify(raw))
+                        : String(raw);
+
+                suggestions = text
+                    .replace(/```[\s\S]*?```/g, '')   // strip code blocks
+                    .split('\n')
+                    .map(l => l.replace(/^[\d\-\*\.\•]+\s*/, '').replace(/^["']|["']$/g, '').trim())
+                    .filter(l => l.length > 3 && l.length < 120 && !l.includes('{') && !l.includes('```'));
             }
 
-            // Last resort: extract quoted strings from the raw response
-            if (!suggestions.length && typeof raw === 'string') {
-                const matches = raw.match(/"([^"]{5,80})"/g);
-                if (matches) suggestions = matches.map(m => m.slice(1,-1)).filter(s => !s.includes('{') && !s.includes('suggestions'));
-            }
+            // Trim to expected count
+            suggestions = suggestions.slice(0, count);
 
+            console.log(`[suggestions] type=${type} count=${suggestions.length}`, suggestions);
             return NextResponse.json({ suggestions });
         }
 
