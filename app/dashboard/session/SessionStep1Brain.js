@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from '@/app/components/SessionContext';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
@@ -208,26 +208,50 @@ export default function SessionStep1Brain() {
     const [wizardStep, setWizardStep] = useState(1);
     const [answers, setAnswers]       = useState({ step1:'', step2:'', step3:'', step4:'', step5:'' });
 
+    /* Debounced save to project_brains in Supabase (1.5s after last keystroke) */
+    const brainSaveTimer = useRef(null);
+    function debouncedBrainSave(updatedFields) {
+        clearTimeout(brainSaveTimer.current);
+        brainSaveTimer.current = setTimeout(async () => {
+            if (!projectId) return;
+            try {
+                await supabase.from('project_brains').upsert({
+                    project_id:        projectId,
+                    biography:         updatedFields.bio      || '',
+                    audience:          updatedFields.audience  || '',
+                    products_services: updatedFields.offer     || '',
+                    style_words:       updatedFields.style     || '',
+                });
+            } catch (e) { console.error('[debouncedBrainSave]', e); }
+        }, 1500);
+    }
+
     function updateField(key, val) {
-        setFields(prev => ({ ...prev, [key]: val }));
-        if (key === 'pillars') {
-            const arr = val.split('\n').map(s => s.trim()).filter(Boolean);
-            dispatch({ type: 'SET_PILLARS', payload: arr });
-            debouncedSave({ content_pillars: arr });
-        } else if (key === 'faqs') {
-            const arr = val.split('\n').map(s => s.trim()).filter(Boolean);
-            dispatch({ type: 'SET_FAQS', payload: arr });
-            debouncedSave({ session_faqs: arr });
-        } else {
-            const brainUpdate = {
-                bio:      key === 'bio'      ? val : fields.bio,
-                audience: key === 'audience' ? val : fields.audience,
-                offer:    key === 'offer'    ? val : fields.offer,
-                style:    key === 'style'    ? val : fields.style,
-            };
-            dispatch({ type: 'SET_BRAIN', payload: { ...brain, biography: brainUpdate.bio, audience: brainUpdate.audience, products_services: brainUpdate.offer, style_words: brainUpdate.style } });
-            debouncedSave();
-        }
+        setFields(prev => {
+            const next = { ...prev, [key]: val };
+
+            if (key === 'pillars') {
+                const arr = val.split('\n').map(s => s.trim()).filter(Boolean);
+                dispatch({ type: 'SET_PILLARS', payload: arr });
+                debouncedSave({ content_pillars: arr });
+            } else if (key === 'faqs') {
+                const arr = val.split('\n').map(s => s.trim()).filter(Boolean);
+                dispatch({ type: 'SET_FAQS', payload: arr });
+                debouncedSave({ session_faqs: arr });
+            } else {
+                dispatch({ type: 'SET_BRAIN', payload: {
+                    ...brain,
+                    biography:         next.bio,
+                    audience:          next.audience,
+                    products_services: next.offer,
+                    style_words:       next.style,
+                }});
+                // Save brain to Supabase so it survives page refresh
+                debouncedBrainSave(next);
+            }
+
+            return next;
+        });
     }
 
     function handleVoiceResult(transcript, brainSuggested) {
