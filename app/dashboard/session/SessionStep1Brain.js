@@ -233,10 +233,10 @@ export default function SessionStep1Brain() {
     function handleVoiceResult(transcript, brainSuggested) {
         const b = brainSuggested || {};
         const updates = {};
-        if (b.bio)           updates.bio      = b.bio;
-        if (b.audience)      updates.audience = b.audience;
-        if (b.style)         updates.style    = b.style;
-        if (b.offer)         updates.offer    = b.offer;
+        if (b.bio)      updates.bio      = b.bio;
+        if (b.audience) updates.audience = b.audience;
+        if (b.style)    updates.style    = b.style;
+        if (b.offer)    updates.offer    = b.offer;
         if (b.pillars?.length) {
             const merged = [...new Set([...fields.pillars.split('\n').filter(Boolean), ...b.pillars])];
             updates.pillars = merged.join('\n');
@@ -245,6 +245,21 @@ export default function SessionStep1Brain() {
             const merged = [...new Set([...fields.faqs.split('\n').filter(Boolean), ...b.faqs])];
             updates.faqs = merged.join('\n');
         }
+
+        // Fallback garantizado: si Claude no extrajo nada pero hay transcript,
+        // meter el texto crudo en el campo objetivo
+        if (!Object.keys(updates).length && transcript?.trim()) {
+            const fieldMap = { bio:'bio', audience:'audience', style:'style', offer:'offer', pillars:'pillars', faqs:'faqs', all:'bio' };
+            const target = fieldMap[voiceField] || 'bio';
+            if (target === 'pillars' || target === 'faqs') {
+                const lines = transcript.split(/[.?!;\n]+/).map(s => s.trim()).filter(s => s.length > 8).slice(0, 8);
+                const existing = fields[target].split('\n').filter(Boolean);
+                updates[target] = [...new Set([...existing, ...lines])].join('\n');
+            } else {
+                updates[target] = transcript.trim();
+            }
+        }
+
         if (Object.keys(updates).length) {
             setFields(prev => ({ ...prev, ...updates }));
             // Sync context

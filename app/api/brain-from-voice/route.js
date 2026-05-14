@@ -54,22 +54,49 @@ Extrae en JSON (deja vacío "" o [] si no hay información suficiente):
 Responde SOLO con el JSON, sin texto extra.`;
 
         let brain = { bio: '', audience: '', style: '', pillars: [], faqs: [] };
+        let extractionOk = false;
 
-        if (finalTranscript && !finalTranscript.includes('pendiente de implementación')) {
-            try {
-                const raw = await improveBlockWithHaiku({
-                    apiKey: process.env.ANTHROPIC_API_KEY,
-                    systemPrompt: 'Respondes siempre SOLO con JSON válido.',
-                    userMessage,
-                });
-                const jsonStr = raw.startsWith('{') ? raw : raw.match(/\{[\s\S]*\}/)?.[0];
-                if (jsonStr) brain = { ...brain, ...JSON.parse(jsonStr) };
-            } catch (e) {
-                console.error('[brain-from-voice] Claude extraction error:', e);
+        try {
+            const raw = await improveBlockWithHaiku({
+                apiKey: process.env.ANTHROPIC_API_KEY,
+                systemPrompt: 'Respondes siempre SOLO con JSON válido.',
+                userMessage,
+            });
+            console.log('[brain-from-voice] Claude raw response:', raw?.slice(0, 200));
+
+            // Strip markdown code blocks if present
+            const cleaned = raw?.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const jsonStr  = cleaned?.startsWith('{') ? cleaned : cleaned?.match(/\{[\s\S]*\}/)?.[0];
+
+            if (jsonStr) {
+                const parsed = JSON.parse(jsonStr);
+                brain = { ...brain, ...parsed };
+                extractionOk = true;
+                console.log('[brain-from-voice] Extracted brain:', brain);
+            } else {
+                console.warn('[brain-from-voice] No JSON found in response:', raw?.slice(0, 200));
+            }
+        } catch (e) {
+            console.error('[brain-from-voice] Claude extraction error:', e.message);
+        }
+
+        // If extraction failed, put transcript in the most relevant field
+        if (!extractionOk) {
+            const fieldMap = {
+                bio: 'bio', audience: 'audience', style: 'style',
+                offer: 'offer', pillars: 'pillars', faqs: 'faqs', all: 'bio',
+            };
+            const targetField = fieldMap[fieldHint] || 'bio';
+            if (['pillars', 'faqs'].includes(targetField)) {
+                // Split transcript into lines as array
+                brain[targetField] = finalTranscript
+                    .split(/[.?!;\n]+/).map(s => s.trim()).filter(s => s.length > 8).slice(0, 8);
+            } else {
+                brain[targetField] = finalTranscript;
             }
         }
 
-        return NextResponse.json({ transcript: finalTranscript, brain });
+        return NextResponse.json({ transcript: finalTranscript, brain, extractionOk });
     } catch (err) {
         console.error('[brain-from-voice]', err);
         return NextResponse.json({ error: err.message || 'Error interno' }, { status: 500 });
