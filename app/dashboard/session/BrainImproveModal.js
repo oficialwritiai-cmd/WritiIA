@@ -34,6 +34,10 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                 window.dispatchEvent(new CustomEvent('show-no-credits'));
                 throw new Error('Sin créditos. Añade más para usar Mejorar con IA.');
             }
+            if (res.status === 422) {
+                const e = await res.json().catch(() => ({}));
+                throw new Error(e.error || 'La IA no generó una mejora válida. Inténtalo de nuevo.');
+            }
             if (!res.ok) {
                 const e = await res.json().catch(() => ({}));
                 throw new Error(e.error || 'Error al optimizar.');
