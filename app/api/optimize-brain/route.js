@@ -47,16 +47,32 @@ export async function POST(req) {
             const { fieldKey, fieldLabel, value = '' } = data;
             if (!value.trim()) return NextResponse.json({ improved: { [fieldKey]: value } });
 
-            const prompt = `Mejora este texto del Cerebro IA de un creador de contenido.
-Campo: "${fieldLabel}"
-Texto actual: "${value}"
+            // Detect if input looks like raw voice transcription (long + many filler words)
+            const isVoiceTranscript = value.length > 200 &&
+                /\b(eh|mmm|bueno|o sea|entonces|sabes|pues)\b/i.test(value);
 
-Reglas: más claro, sin relleno, máximo 4 frases, mantén el idioma (${lang}), conserva los hechos.
-JSON: {"${fieldKey}":"texto mejorado aquí"}`;
+            const prompt = isVoiceTranscript
+                ? `Eres un experto en copywriting. Tienes una transcripción de voz de un creador de contenido hablando sobre "${fieldLabel}".
+Tu tarea: EXTRAE y TRANSFORMA la información clave en un texto profesional, claro y estructurado para ese campo del Cerebro IA.
+
+Transcripción de voz:
+"${value}"
+
+Reglas:
+- Ignora muletillas, repeticiones y frases sin sentido
+- Extrae solo la información relevante sobre ${fieldLabel}
+- Escríbelo en 2-4 frases limpias y profesionales
+- Mantén idioma: ${lang}
+- NO copies la transcripción tal cual
+
+JSON: {"${fieldKey}":"texto estructurado y profesional aquí"}`
+                : `Mejora este texto del Cerebro IA para el campo "${fieldLabel}".
+Texto: "${value}"
+Reglas: más claro, sin relleno, máximo 4 frases, idioma ${lang}, conserva hechos.
+JSON: {"${fieldKey}":"texto mejorado"}`;
 
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
             const improved = parseClaudeResponse(raw);
-            // Ensure the field key exists in response
             if (!improved[fieldKey]) improved[fieldKey] = value;
             return NextResponse.json({ improved });
         }

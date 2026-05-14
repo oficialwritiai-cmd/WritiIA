@@ -93,7 +93,9 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                         <div>
                             <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginBottom: '1px' }}>Mejorar con IA</p>
                             <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                                {target === 'brain' ? 'Cerebro IA — bio, audiencia, estilo' : 'Contexto — pilares y FAQs'}
+                                {target === 'brain'  ? 'Cerebro IA — bio, audiencia, estilo'
+                                 : target === 'field' ? (currentData.fieldLabel || 'Campo individual')
+                                 : 'Contexto — pilares y FAQs'}
                             </p>
                         </div>
                     </div>
@@ -161,7 +163,8 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                                 {fields.map(({ key, label }) => {
                                     const original = target === 'field' ? currentData.value : currentData[key];
                                     const newVal   = improved[key];
-                                    const changed  = newVal && newVal !== original;
+                                    // For 'field' target: always treat as changed (transcriptions are transformed, not just edited)
+                                    const changed  = target === 'field' ? !!newVal : (newVal && newVal !== original);
                                     if (!original && !newVal) return null; // skip entirely empty
                                     return (
                                         <div key={key} style={{
