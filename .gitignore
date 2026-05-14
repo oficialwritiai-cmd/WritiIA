@@ -37,3 +37,12 @@ next-env.d.ts
 build_error.txt
 next_path.txt
 node_path.txt
+
+# Emergent source folders (no subir)
+/frontend/
+/frontendfinal/
+/frontend2.0f/
+/appfrontendsrccomponents*.txt
+/temp-home-code.txt.txt
+/fondo.png
+/.superpowers/
