@@ -106,13 +106,7 @@ export default function LoginPage() {
         if (err) setError(err);
     }, []);
 
-    const handleGoBack = () => {
-        if (window.history.length > 1 && document.referrer && !document.referrer.includes('/login') && !document.referrer.includes('/auth')) {
-            router.back();
-        } else {
-            router.push('/');
-        }
-    };
+    const handleGoBack = () => router.push('/');
 
     const handleLogoClick = async () => {
         const { data: { session } } = await supabase.auth.getSession();
