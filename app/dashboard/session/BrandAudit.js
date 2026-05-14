@@ -1,12 +1,15 @@
 'use client';
 import { useState } from 'react';
-import { Sparkles, Loader2, ChevronDown, ChevronUp, Zap, Target, TrendingUp, Users, Star, ArrowRight, Download, RefreshCw } from 'lucide-react';
+import { createSupabaseClient } from '@/lib/supabase';
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Zap, Target, TrendingUp, Users, Star, ArrowRight, Download, RefreshCw, BookOpen } from 'lucide-react';
 
 export default function BrandAudit({ fields, projectId }) {
-    const [status, setStatus] = useState('idle');
-    const [audit, setAudit]   = useState(null);
+    const [status, setStatus]   = useState('idle');
+    const [audit, setAudit]     = useState(null);
     const [expanded, setExpanded] = useState(true);
-    const [errMsg, setErrMsg] = useState('');
+    const [errMsg, setErrMsg]   = useState('');
+    const [saved, setSaved]     = useState(false);
+    const supabase = createSupabaseClient();
 
     const hasData = !!(fields.bio || fields.audience || fields.pillars);
 
@@ -53,6 +56,29 @@ export default function BrandAudit({ fields, projectId }) {
 
             setAudit(a);
             setStatus('done');
+
+            // Auto-save audit to project_brains.learning_notes so the algorithm can use it
+            if (projectId) {
+                try {
+                    const auditText = [
+                        `=== AUDITORÍA DE MARCA (${new Date().toLocaleDateString('es-ES')}) ===`,
+                        a.positioning ? `Posicionamiento: ${a.positioning}` : '',
+                        a.strengths?.length ? `Fortalezas: ${a.strengths.join(' · ')}` : '',
+                        a.opportunities?.length ? `Oportunidades: ${a.opportunities.join(' · ')}` : '',
+                        a.contentAngles?.length ? `Ángulos de contenido: ${a.contentAngles.join(' · ')}` : '',
+                        a.audienceInsight ? `Insight audiencia: ${a.audienceInsight}` : '',
+                        a.quickWin ? `Quick win: ${a.quickWin}` : '',
+                        '=========================',
+                    ].filter(Boolean).join('\n');
+
+                    await supabase.from('project_brains')
+                        .update({ learning_notes: auditText })
+                        .eq('project_id', projectId);
+                    setSaved(true);
+                } catch (e) {
+                    console.error('[BrandAudit] save error:', e);
+                }
+            }
         } catch (e) {
             console.error('[BrandAudit]', e);
             setErrMsg(e.message);
@@ -113,7 +139,14 @@ ${audit?.quickWin ? `<h2>Quick win · Esta semana</h2><div class="quickwin">${au
                         <Star size={20} color="#a78bfa" strokeWidth={1.8} />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', marginBottom: '2px' }}>Auditoría de Marca IA</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff' }}>Auditoría de Marca IA</h3>
+                            {saved && (
+                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '100px', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <BookOpen size={10} /> Guardado en Cerebro IA
+                                </span>
+                            )}
+                        </div>
                         <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>Posicionamiento, fortalezas y quick-win de esta semana</p>
                     </div>
                 </div>
