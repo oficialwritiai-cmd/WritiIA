@@ -3,11 +3,15 @@ import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SessionProvider } from '@/app/components/SessionContext';
 import SessionLayout from './SessionLayout';
+import { useProject } from '@/app/components/ProjectContext';
 import { Loader2 } from 'lucide-react';
 
 function SessionContent() {
-    const params = useSearchParams();
-    const projectId = params.get('project');
+    const params    = useSearchParams();
+    const { activeProjectId } = useProject();
+
+    // Priority: ?project= query param → ProjectContext active project
+    const projectId = params.get('project') || activeProjectId;
 
     if (!projectId) {
         return (

@@ -341,7 +341,7 @@ export default function DashboardHomePage() {
             {/* ── ACTIVE SESSION BANNER ────────────────────────── */}
             {stats.activeSession && (
                 <div
-                    onClick={() => router.push('/dashboard/session')}
+                    onClick={() => router.push(`/dashboard/session${activeProject ? `?project=${activeProject.id}` : ''}`)}
                     style={{
                         background: 'rgba(124,58,237,0.08)',
                         border: '1px solid rgba(124,58,237,0.25)',
