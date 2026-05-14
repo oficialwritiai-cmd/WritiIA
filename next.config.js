@@ -13,6 +13,7 @@ const cspHeader = `
     form-action 'self';
     frame-ancestors 'none';
     connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.stripe.com;
+    media-src 'self' https://d8j0ntlcm91z4.cloudfront.net;
     upgrade-insecure-requests;
 `;
 
