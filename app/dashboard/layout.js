@@ -431,7 +431,6 @@ export default function DashboardLayout({ children }) {
         { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
         { href: '/dashboard/ideas-virales', icon: Megaphone, label: t('nav.viral_ideas') },
         { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
-        { href: '/dashboard/brain', icon: Brain, label: t('nav.brain') },
         { href: '/dashboard/calendar', icon: CalendarDays, label: t('nav.calendar') },
         { href: '/dashboard/stats', icon: BarChart2, label: t('nav.stats') },
         { href: '/dashboard/settings', icon: Settings, label: t('nav.settings') },
