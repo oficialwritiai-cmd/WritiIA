@@ -13,7 +13,7 @@ import { X, Sparkles, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
  *  currentData   { bio, audience, style } | { pillars: string, faqs: string }
  *  onApply       (improved) => void  — recibe el objeto mejorado
  */
-export default function BrainImproveModal({ isOpen, onClose, target = 'brain', currentData = {}, onApply }) {
+export default function BrainImproveModal({ isOpen, onClose, target = 'brain', currentData = {}, customFields = null, onApply }) {
     const [status, setStatus] = useState('idle'); // idle | loading | done | error
     const [improved, setImproved] = useState(null);
     const [errMsg, setErrMsg]     = useState('');
@@ -24,6 +24,7 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
         setStatus('loading');
         setErrMsg('');
         try {
+            // For target: 'field', currentData already has the right shape
             const res = await fetch('/api/optimize-brain', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -58,16 +59,12 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
         onClose();
     }
 
-    const fields = target === 'brain'
-        ? [
-            { key: 'bio',      label: 'Biografía' },
-            { key: 'audience', label: 'Audiencia ideal' },
-            { key: 'style',    label: 'Estilo y palabras clave' },
-          ]
-        : [
-            { key: 'pillars', label: 'Pilares de contenido' },
-            { key: 'faqs',    label: 'FAQs de clientes' },
-          ];
+    const fields = customFields || (
+        target === 'brain'   ? [{ key:'bio', label:'Biografía' }, { key:'audience', label:'Audiencia ideal' }, { key:'style', label:'Estilo y palabras clave' }] :
+        target === 'context' ? [{ key:'pillars', label:'Pilares de contenido' }, { key:'faqs', label:'FAQs de clientes' }] :
+        target === 'field'   ? [{ key: currentData.fieldKey, label: currentData.fieldLabel || currentData.fieldKey }] :
+        []
+    );
 
     return (
         <>
@@ -114,17 +111,21 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                             </p>
                             {/* Preview current */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
-                                {fields.map(({ key, label }) => currentData[key] ? (
+                                {fields.map(({ key, label }) => {
+                                    // For target: 'field', value is in currentData.value
+                                    const val = target === 'field' ? currentData.value : currentData[key];
+                                    return val ? (
                                     <div key={key} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', padding: '12px 14px' }}>
                                         <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.28)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>{label}</p>
-                                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}>{currentData[key]}</p>
+                                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}>{val}</p>
                                     </div>
                                 ) : (
                                     <div key={key} style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '11px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
                                         <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', fontStyle: 'italic' }}>campo vacío — la IA lo generará</span>
                                     </div>
-                                ))}
+                                );
+                                })}
                             </div>
                             <button
                                 onClick={runOptimize}
@@ -158,7 +159,7 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {fields.map(({ key, label }) => {
-                                    const original = currentData[key];
+                                    const original = target === 'field' ? currentData.value : currentData[key];
                                     const newVal   = improved[key];
                                     const changed  = newVal && newVal !== original;
                                     if (!original && !newVal) return null; // skip entirely empty

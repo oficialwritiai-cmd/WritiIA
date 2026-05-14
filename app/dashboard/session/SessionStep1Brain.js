@@ -10,6 +10,7 @@ import {
 import VoiceModal        from './VoiceModal';
 import BrainImproveModal from './BrainImproveModal';
 import SuggestionsModal  from './SuggestionsModal';
+import BrandAudit        from './BrandAudit';
 
 /* ─── Block definitions ─────────────────────────────── */
 const BLOCKS = [
@@ -192,10 +193,9 @@ export default function SessionStep1Brain() {
     const [horizon, setHorizon] = useState(timeHorizon);
 
     /* Modals */
-    const [voiceOpen, setVoiceOpen]     = useState(false);
-    const [voiceField, setVoiceField]   = useState('all');
-    const [improveOpen, setImproveOpen] = useState(false);
-    const [improveField, setImproveField] = useState('bio');
+    const [voiceOpen, setVoiceOpen]   = useState(false);
+    const [voiceField, setVoiceField] = useState('all');
+    const [improveConfig, setImproveConfig] = useState(null); // { target, currentData, customFields }
     const [suggestOpen, setSuggestOpen] = useState(false);
     const [suggestType, setSuggestType] = useState('pillars');
 
@@ -274,14 +274,11 @@ export default function SessionStep1Brain() {
     }
 
     function handleApplyImprove(improved) {
-        const updates = {};
-        if (improved.bio)      updates.bio      = improved.bio;
-        if (improved.audience) updates.audience = improved.audience;
-        if (improved.style)    updates.style    = improved.style;
-        if (improved.offer)    updates.offer    = improved.offer;
-        if (improved.pillars)  updates.pillars  = improved.pillars;
-        if (improved.faqs)     updates.faqs     = improved.faqs;
-        Object.entries(updates).forEach(([k, v]) => updateField(k, v));
+        // improved may have any subset of field keys
+        const validKeys = ['bio', 'audience', 'offer', 'style', 'pillars', 'faqs'];
+        Object.entries(improved).forEach(([k, v]) => {
+            if (validKeys.includes(k) && v) updateField(k, v);
+        });
     }
 
     function handleAddSuggestions(items) {
@@ -356,7 +353,27 @@ export default function SessionStep1Brain() {
                     value={fields[currentBlock.field]}
                     onChange={v => updateField(currentBlock.field, v)}
                     onVoiceResult={fieldId => { setVoiceField(fieldId); setVoiceOpen(true); }}
-                    onImprove={() => { setImproveField(currentBlock.id); setImproveOpen(true); }}
+                    onImprove={() => {
+                        if (currentBlock.isTextLines) {
+                            // Pilares / FAQs → improve context
+                            setImproveConfig({
+                                target: 'context',
+                                currentData: { pillars: fields.pillars, faqs: fields.faqs },
+                                customFields: null,
+                            });
+                        } else {
+                            // Bio, Audiencia, Oferta, Estilo → improve campo individual
+                            setImproveConfig({
+                                target: 'field',
+                                currentData: {
+                                    fieldKey:   currentBlock.field,
+                                    fieldLabel: currentBlock.title,
+                                    value:      fields[currentBlock.field] || '',
+                                },
+                                customFields: [{ key: currentBlock.field, label: currentBlock.title }],
+                            });
+                        }
+                    }}
                     onSuggest={currentBlock.isTextLines ? () => { setSuggestType(currentBlock.id); setSuggestOpen(true); } : null}
                     projectId={projectId}
                 />
@@ -372,35 +389,45 @@ export default function SessionStep1Brain() {
                             Siguiente bloque <ChevronRight size={16} />
                         </button>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
-                            {/* Horizon in last block */}
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                {[
-                                    { val: '2weeks', label: '2 semanas', desc: '~6–8 piezas', icon: '⚡' },
-                                    { val: '1month', label: '1 mes', desc: '~12–16 piezas', icon: '📅' },
-                                ].map(({ val, label, desc, icon }) => (
-                                    <button key={val} onClick={() => handleHorizonChange(val)} style={{
-                                        flex: 1, padding: '14px 16px', borderRadius: '13px', cursor: 'pointer', textAlign: 'left',
-                                        border: `1.5px solid ${horizon===val ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                                        background: horizon===val ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.025)',
-                                        transition: 'all 0.2s',
-                                    }}>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: horizon===val ? '#fff' : '#aaa', marginBottom: '4px' }}>{icon} {label}</div>
-                                        <div style={{ fontSize: '0.72rem', color: horizon===val ? '#a78bfa' : '#555' }}>{desc}</div>
-                                    </button>
-                                ))}
-                            </div>
-                            <button onClick={handleConfirm} style={{ ...S.btnPrimary, justifyContent: 'center', width: '100%', padding: '16px' }}
-                                onMouseEnter={e=>e.currentTarget.style.background='#6d28d9'} onMouseLeave={e=>e.currentTarget.style.background='#7c3aed'}>
-                                <Sparkles size={18} /> Confirmar y generar ideas
-                            </button>
-                            <p style={{ ...S.hint, textAlign: 'center' }}>
-                                <Info size={12} style={{ display:'inline', marginRight:'4px', verticalAlign:'middle' }} />
-                                Los campos se guardan automáticamente mientras escribes.
-                            </p>
-                        </div>
+                        <button onClick={() => setBlockIdx(i => i+1)} style={{ ...S.btnSecondary, display: 'none' }} />
                     )}
                 </div>
+
+                {/* Auditoría de marca + confirmar (siempre visible al final) */}
+                {isLastBlock && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '4px' }}>
+                        {/* Auditoría */}
+                        <BrandAudit fields={fields} projectId={projectId} />
+
+                        {/* Horizonte */}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {[
+                                { val: '2weeks', label: '2 semanas', desc: '~6–8 piezas', icon: '⚡' },
+                                { val: '1month', label: '1 mes completo', desc: '~12–16 piezas', icon: '📅' },
+                            ].map(({ val, label, desc, icon }) => (
+                                <button key={val} onClick={() => handleHorizonChange(val)} style={{
+                                    flex: 1, padding: '14px 16px', borderRadius: '13px', cursor: 'pointer', textAlign: 'left',
+                                    border: `1.5px solid ${horizon===val ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                                    background: horizon===val ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.025)',
+                                    transition: 'all 0.2s',
+                                }}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: horizon===val ? '#fff' : '#aaa', marginBottom: '4px' }}>{icon} {label}</div>
+                                    <div style={{ fontSize: '0.72rem', color: horizon===val ? '#a78bfa' : '#555' }}>{desc}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Confirmar */}
+                        <button onClick={handleConfirm} style={{ ...S.btnPrimary, justifyContent: 'center', width: '100%', padding: '16px' }}
+                            onMouseEnter={e=>e.currentTarget.style.background='#6d28d9'} onMouseLeave={e=>e.currentTarget.style.background='#7c3aed'}>
+                            <Sparkles size={18} /> Confirmar y generar ideas
+                        </button>
+                        <p style={{ ...S.hint, textAlign: 'center' }}>
+                            <Info size={12} style={{ display:'inline', marginRight:'4px', verticalAlign:'middle' }} />
+                            Los campos se guardan automáticamente mientras escribes.
+                        </p>
+                    </div>
+                )}
 
                 {/* Modals */}
                 <VoiceModal
@@ -411,14 +438,11 @@ export default function SessionStep1Brain() {
                     onResult={handleVoiceResult}
                 />
                 <BrainImproveModal
-                    isOpen={improveOpen}
-                    onClose={() => setImproveOpen(false)}
-                    target={['pillars','faqs'].includes(improveField) ? 'context' : 'brain'}
-                    currentData={
-                        ['pillars','faqs'].includes(improveField)
-                            ? { pillars: fields.pillars, faqs: fields.faqs }
-                            : { bio: fields.bio, audience: fields.audience, style: fields.style }
-                    }
+                    isOpen={!!improveConfig}
+                    onClose={() => setImproveConfig(null)}
+                    target={improveConfig?.target || 'field'}
+                    currentData={improveConfig?.currentData || {}}
+                    customFields={improveConfig?.customFields || null}
                     onApply={handleApplyImprove}
                 />
                 <SuggestionsModal
