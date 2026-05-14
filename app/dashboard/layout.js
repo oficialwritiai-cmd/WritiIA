@@ -42,6 +42,8 @@ export default function DashboardLayout({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
+    const { activeProject } = useProject();
+    const activeProjectId = activeProject?.id || null;
     const [loadingStatus, setLoadingStatus] = useState(t('common.loading'));
     const [authError, setAuthError] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,6 +57,7 @@ export default function DashboardLayout({ children }) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isPaymentSuccessModalOpen, setIsPaymentSuccessModalOpen] = useState(false);
     const [purchasedCredits, setPurchasedCredits] = useState(0);
+    const [sidebarHovered, setSidebarHovered] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -407,6 +410,7 @@ export default function DashboardLayout({ children }) {
         '/dashboard/ideas-virales':'Ideas Virales',
         '/dashboard/library':      'Biblioteca',
         '/dashboard/knowledge':    'Cerebro IA',
+        '/dashboard/brain':        'Cerebro IA',
         '/dashboard/calendar':     'Calendario',
         '/dashboard/stats':        'Estadísticas',
         '/dashboard/settings':     'Ajustes',
@@ -414,16 +418,20 @@ export default function DashboardLayout({ children }) {
     };
     const currentPageLabel = breadcrumbMap[pathname] || 'Dashboard';
 
+    const sessionHref = activeProjectId
+        ? `/dashboard/session?project=${activeProjectId}`
+        : '/dashboard/session';
+
     const navItems = [
         { href: '/dashboard/home', icon: Home, label: t('nav.home') },
         { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
-        { href: '/dashboard/session', icon: Sparkles, label: 'Sesión' },
+        { href: sessionHref, icon: Sparkles, label: 'Sesión' },
         { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
         { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
         { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
         { href: '/dashboard/ideas-virales', icon: Megaphone, label: t('nav.viral_ideas') },
         { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
-        { href: '/dashboard/knowledge', icon: Brain, label: t('nav.brain') },
+        { href: '/dashboard/brain', icon: Brain, label: t('nav.brain') },
         { href: '/dashboard/calendar', icon: CalendarDays, label: t('nav.calendar') },
         { href: '/dashboard/stats', icon: BarChart2, label: t('nav.stats') },
         { href: '/dashboard/settings', icon: Settings, label: t('nav.settings') },
@@ -436,21 +444,25 @@ export default function DashboardLayout({ children }) {
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0e' }}>
 
             {/* ── Desktop Sidebar ─────────────────────────────────── */}
-            <aside style={{
-                width: '64px',
-                height: '100vh',
-                background: '#111116',
-                borderRight: '1px solid rgba(255,255,255,0.06)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '16px 0',
-                flexShrink: 0,
-                overflowY: 'auto',
-                overflowX: 'visible',
-                scrollbarWidth: 'none',
-                zIndex: 50,
-            }} className="desktop-sidebar">
+            <aside
+                onMouseEnter={() => setSidebarHovered(true)}
+                onMouseLeave={() => setSidebarHovered(false)}
+                style={{
+                    width: sidebarHovered ? '220px' : '64px',
+                    transition: 'width 0.22s ease',
+                    overflow: 'hidden',
+                    height: '100vh',
+                    background: '#111116',
+                    borderRight: '1px solid rgba(255,255,255,0.06)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '16px 0',
+                    flexShrink: 0,
+                    overflowY: 'auto',
+                    scrollbarWidth: 'none',
+                    zIndex: 50,
+                }} className="desktop-sidebar">
 
                 {/* Logo */}
                 <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
@@ -477,8 +489,10 @@ export default function DashboardLayout({ children }) {
                                     position: 'relative',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '44px',
+                                    justifyContent: sidebarHovered ? 'flex-start' : 'center',
+                                    paddingLeft: sidebarHovered ? '14px' : 0,
+                                    gap: '10px',
+                                    width: '100%',
                                     height: '44px',
                                     borderRadius: '10px',
                                     background: isActive
@@ -498,10 +512,23 @@ export default function DashboardLayout({ children }) {
                                         : item.highlight && !isActive
                                             ? '1px solid rgba(124,58,237,0.2)'
                                             : '1px solid transparent',
+                                    boxSizing: 'border-box',
                                 }}
                                 className="sidebar-nav-link"
                             >
-                                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
+                                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
+
+                                {sidebarHovered && (
+                                    <span style={{
+                                        fontSize: '0.82rem',
+                                        fontWeight: 600,
+                                        color: 'inherit',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                    }}>
+                                        {item.label}
+                                    </span>
+                                )}
 
                                 {/* Active indicator dot */}
                                 {isActive && (
@@ -531,8 +558,8 @@ export default function DashboardLayout({ children }) {
                                     }} />
                                 )}
 
-                                {/* Tooltip */}
-                                {hoveredItem === item.label && (
+                                {/* Tooltip — only when collapsed */}
+                                {!sidebarHovered && hoveredItem === item.label && (
                                     <div style={{
                                         position: 'absolute',
                                         left: '56px',
@@ -576,17 +603,33 @@ export default function DashboardLayout({ children }) {
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '44px',
+                            justifyContent: sidebarHovered ? 'flex-start' : 'center',
+                            paddingLeft: sidebarHovered ? '14px' : 0,
+                            gap: '10px',
+                            width: '100%',
                             height: '44px',
                             borderRadius: '10px',
                             transition: 'background 0.15s ease, color 0.15s ease',
+                            boxSizing: 'border-box',
                         }}
                         className="sidebar-logout-btn"
                     >
-                        <LogOut size={18} strokeWidth={1.8} />
+                        <LogOut size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
 
-                        {hoveredItem === '__logout__' && (
+                        {sidebarHovered && (
+                            <span style={{
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                color: 'inherit',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                            }}>
+                                {t('nav.logout')}
+                            </span>
+                        )}
+
+                        {/* Tooltip — only when collapsed */}
+                        {!sidebarHovered && hoveredItem === '__logout__' && (
                             <div style={{
                                 position: 'absolute',
                                 left: '56px',
