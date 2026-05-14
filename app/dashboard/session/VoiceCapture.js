@@ -16,8 +16,20 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
         setStatus('recording');
         setErrorMsg('');
         try {
+            // Check API availability
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw new Error('Tu navegador no soporta grabación de audio. Usa Chrome o Edge.');
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mr = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
+
+            // Pick best supported mimeType — don't force one that may throw
+            let mimeType = '';
+            for (const mt of ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/mp4', '']) {
+                if (mt === '' || MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+            }
+
+            const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
             chunksRef.current = [];
             mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mr.onstop = () => processAudio(stream);
@@ -25,7 +37,15 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
             mediaRecorderRef.current = mr;
         } catch (e) {
             setStatus('error');
-            setErrorMsg('No se pudo acceder al micrófono. Verifica los permisos.');
+            // Show actual error to help debug
+            const msg = e?.name === 'NotAllowedError'
+                ? 'Permiso denegado. Haz clic en el candado de la barra de direcciones y permite el micrófono.'
+                : e?.name === 'NotFoundError'
+                ? 'No se encontró micrófono. Conecta uno e intenta de nuevo.'
+                : e?.name === 'NotSupportedError'
+                ? 'Tu navegador no soporta grabación. Usa Chrome o Edge.'
+                : `Error: ${e?.message || e}`;
+            setErrorMsg(msg);
         }
     }
 
