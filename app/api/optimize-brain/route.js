@@ -128,7 +128,11 @@ JSON: {"pillars":"pilar1\\npilar2\\n...","faqs":"pregunta1\\npregunta2\\n..."}`;
 
         // ── Generar sugerencias ───────────────────────────────────────
         if (target === 'suggestions') {
-            const ctx = `Negocio: ${brain.biography||brain.bio||''}. Audiencia: ${brain.audience||''}. Estilo: ${brain.style_words||brain.style||''}.`;
+            const bio   = brain.biography || brain.bio || '';
+            const aud   = brain.audience  || '';
+            const sty   = brain.style_words || brain.style || '';
+            const off   = brain.products_services || brain.offer || '';
+            const ctx   = [bio&&`Negocio: ${bio}`, aud&&`Audiencia: ${aud}`, sty&&`Estilo: ${sty}`, off&&`Oferta: ${off}`].filter(Boolean).join('. ') || 'Creador de contenido.';
             const skip = existing.join(', ') || 'ninguno';
             const prompt = type === 'pillars'
                 ? `Genera 7 pilares de contenido (2-5 palabras, uno por línea). Contexto: ${ctx}. No repetir: ${skip}. Idioma: ${lang}.\nJSON: {"suggestions":["p1","p2","p3","p4","p5","p6","p7"]}`

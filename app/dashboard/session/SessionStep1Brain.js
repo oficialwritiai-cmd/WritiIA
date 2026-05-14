@@ -322,8 +322,33 @@ export default function SessionStep1Brain() {
         await completeStep(1, { content_pillars: pillarsArr, session_faqs: faqsArr, time_horizon: horizon });
     }
 
-    const isLastBlock = blockIdx === BLOCKS.length - 1;
+    const isLastBlock  = blockIdx === BLOCKS.length - 1;
     const isFirstBlock = blockIdx === 0;
+
+    /* Guarda el bloque actual al navegar */
+    function saveCurrentBlock() {
+        const { field } = currentBlock;
+        const val = fields[field] || '';
+        if (!val.trim()) return;
+        if (field === 'pillars') {
+            const arr = val.split('\n').map(s=>s.trim()).filter(Boolean);
+            dispatch({ type:'SET_PILLARS', payload: arr });
+            debouncedSave({ content_pillars: arr });
+        } else if (field === 'faqs') {
+            const arr = val.split('\n').map(s=>s.trim()).filter(Boolean);
+            dispatch({ type:'SET_FAQS', payload: arr });
+            debouncedSave({ session_faqs: arr });
+        } else {
+            dispatch({ type:'SET_BRAIN', payload: {
+                ...brain,
+                biography:         fields.bio,
+                audience:          fields.audience,
+                products_services: fields.offer,
+                style_words:       fields.style,
+            }});
+            debouncedSave();
+        }
+    }
 
     /* ── REVIEW MODE ──────────────────────────────────── */
     if (brainSaved && brain) {
@@ -380,11 +405,11 @@ export default function SessionStep1Brain() {
 
                 {/* Block navigation */}
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <button onClick={() => setBlockIdx(i => Math.max(0, i-1))} disabled={isFirstBlock} style={{ ...S.btnSecondary, opacity: isFirstBlock ? 0.3 : 1 }}>
+                    <button onClick={() => { saveCurrentBlock(); setBlockIdx(i => Math.max(0, i-1)); }} disabled={isFirstBlock} style={{ ...S.btnSecondary, opacity: isFirstBlock ? 0.3 : 1 }}>
                         <ChevronLeft size={16} /> Anterior
                     </button>
                     {!isLastBlock ? (
-                        <button onClick={() => setBlockIdx(i => i+1)} style={S.btnPrimary}
+                        <button onClick={() => { saveCurrentBlock(); setBlockIdx(i => i+1); }} style={S.btnPrimary}
                             onMouseEnter={e=>e.currentTarget.style.background='#6d28d9'} onMouseLeave={e=>e.currentTarget.style.background='#7c3aed'}>
                             Siguiente bloque <ChevronRight size={16} />
                         </button>
@@ -449,7 +474,12 @@ export default function SessionStep1Brain() {
                     isOpen={suggestOpen}
                     onClose={() => setSuggestOpen(false)}
                     type={suggestType}
-                    brain={brain}
+                    brain={{
+                        biography:         fields.bio,
+                        audience:          fields.audience,
+                        products_services: fields.offer,
+                        style_words:       fields.style,
+                    }}
                     existing={(fields[suggestType]||'').split('\n').filter(Boolean)}
                     onAdd={handleAddSuggestions}
                 />
