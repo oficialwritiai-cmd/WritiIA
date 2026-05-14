@@ -43,7 +43,7 @@ const Navbar = () => {
             </span>
           </a>
 
-          <ul className="hidden md:flex items-center gap-8 text-sm text-white/70">
+          <ul className="hidden md:flex items-center gap-8 text-sm text-white/70 list-none m-0 p-0">
             <li><a className="hover:text-white transition-colors" href="#system" data-testid="nav-system">{t("nav.system")}</a></li>
             <li><a className="hover:text-white transition-colors" href="#forwho" data-testid="nav-forwho">{t("nav.forWho")}</a></li>
             <li><a className="hover:text-white transition-colors" href="#pricing" data-testid="nav-pricing">{t("nav.pricing")}</a></li>

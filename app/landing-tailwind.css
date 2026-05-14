@@ -1,9 +1,23 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fondo base para evitar flash antes de que cargue el canvas */
+/* Fondo base */
 html:has(#landing-root) {
     background-color: #050214;
+}
+
+/* Reset de links y listas — evita azul/subrayado del browser sin @tailwind base */
+#landing-root a,
+#landing-root a:link,
+#landing-root a:visited {
+    color: inherit;
+    text-decoration: none;
+}
+#landing-root ul,
+#landing-root ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 /* ─── CSS variables (landing scope) ─── */
