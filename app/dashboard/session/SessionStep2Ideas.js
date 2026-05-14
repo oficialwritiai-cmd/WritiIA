@@ -198,8 +198,24 @@ export default function SessionStep2Ideas() {
             </div>
 
             {error && (
-                <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', borderRadius: '10px', color: '#EF4444', marginBottom: '20px', fontSize: '0.88rem' }}>
-                    {error}
+                <div style={{ marginBottom: '20px' }}>
+                    <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', borderRadius: '10px', color: '#EF4444', fontSize: '0.88rem', marginBottom: '10px' }}>
+                        {error}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
+                            style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}
+                        >
+                            ← Volver al Paso 1
+                        </button>
+                        <button
+                            onClick={() => { setError(''); generateIdeas(); }}
+                            style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(126,206,202,0.1)', color:'#7ECECA', border:'1px solid rgba(126,206,202,0.2)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}
+                        >
+                            <Sparkles size={13} /> Reintentar
+                        </button>
+                    </div>
                 </div>
             )}
 
