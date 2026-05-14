@@ -39,6 +39,10 @@ export default function SuggestionsModal({ isOpen, onClose, type = 'pillars', br
                     lang: 'es',
                 }),
             });
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                throw new Error('Sin créditos. Añade más para generar sugerencias.');
+            }
             if (!res.ok) {
                 const e = await res.json().catch(() => ({}));
                 throw new Error(e.error || 'Error generando sugerencias.');

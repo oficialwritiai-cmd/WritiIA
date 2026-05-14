@@ -29,6 +29,10 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ target, data: currentData, lang: 'es' }),
             });
+            if (res.status === 402) {
+                window.dispatchEvent(new CustomEvent('show-no-credits'));
+                throw new Error('Sin créditos. Añade más para usar Mejorar con IA.');
+            }
             if (!res.ok) {
                 const e = await res.json().catch(() => ({}));
                 throw new Error(e.error || 'Error al optimizar.');
