@@ -204,7 +204,16 @@ export default function SessionStep2Ideas() {
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         <button
-                            onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
+                            onClick={async () => {
+                                // Reset step in session so step 1 is shown again
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (user) {
+                                    await supabase.from('sessions')
+                                        .update({ current_step: 1, status: 'active' })
+                                        .eq('id', sessionId);
+                                }
+                                dispatch({ type: 'SET_STEP', payload: 1 });
+                            }}
                             style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}
                         >
                             ← Volver al Paso 1

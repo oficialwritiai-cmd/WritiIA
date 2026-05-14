@@ -316,50 +316,61 @@ export default function SessionStep1Brain() {
     async function handleConfirm() {
         const pillarsArr = fields.pillars.split('\n').map(s=>s.trim()).filter(Boolean);
         const faqsArr    = fields.faqs.split('\n').map(s=>s.trim()).filter(Boolean);
+
+        // Save ALL fields to context before advancing
+        const updatedBrain = {
+            ...(brain || {}),
+            biography:         fields.bio      || '',
+            audience:          fields.audience  || '',
+            products_services: fields.offer     || '',
+            style_words:       fields.style     || '',
+        };
+        dispatch({ type: 'SET_BRAIN',        payload: updatedBrain });
         dispatch({ type: 'SET_PILLARS',      payload: pillarsArr });
         dispatch({ type: 'SET_FAQS',         payload: faqsArr });
         dispatch({ type: 'SET_TIME_HORIZON', payload: horizon });
+
+        // Persist brain to Supabase so it survives navigation
+        if (projectId) {
+            try {
+                await supabase.from('project_brains').upsert({
+                    ...updatedBrain,
+                    project_id: projectId,
+                });
+            } catch (e) { console.error('[handleConfirm] brain upsert:', e); }
+        }
+
         await completeStep(1, { content_pillars: pillarsArr, session_faqs: faqsArr, time_horizon: horizon });
     }
 
     const isLastBlock  = blockIdx === BLOCKS.length - 1;
     const isFirstBlock = blockIdx === 0;
 
-    /* Guarda el bloque actual al navegar — sync a project_brains + session */
+    /* Guarda TODOS los campos al navegar entre bloques */
     async function saveCurrentBlock() {
-        const { field } = currentBlock;
-        const val = fields[field] || '';
+        // Always sync brain fields to context
+        const updatedBrain = {
+            ...(brain || {}),
+            biography:         fields.bio      || '',
+            audience:          fields.audience  || '',
+            products_services: fields.offer     || '',
+            style_words:       fields.style     || '',
+        };
+        dispatch({ type:'SET_BRAIN', payload: updatedBrain });
 
-        if (field === 'pillars' || field === 'faqs') {
-            const arr = val.split('\n').map(s=>s.trim()).filter(Boolean);
-            if (field === 'pillars') {
-                dispatch({ type:'SET_PILLARS', payload: arr });
-                debouncedSave({ content_pillars: arr });
-            } else {
-                dispatch({ type:'SET_FAQS', payload: arr });
-                debouncedSave({ session_faqs: arr });
-            }
-        } else {
-            // Save brain fields to project_brains in Supabase
-            const updatedBrain = {
-                ...(brain || {}),
-                biography:         fields.bio      || brain?.biography     || '',
-                audience:          fields.audience  || brain?.audience      || '',
-                products_services: fields.offer     || brain?.products_services || '',
-                style_words:       fields.style     || brain?.style_words   || '',
-            };
-            dispatch({ type:'SET_BRAIN', payload: updatedBrain });
-            debouncedSave();
+        // Sync pillars + faqs
+        const pillarsArr = fields.pillars.split('\n').map(s=>s.trim()).filter(Boolean);
+        const faqsArr    = fields.faqs.split('\n').map(s=>s.trim()).filter(Boolean);
+        dispatch({ type:'SET_PILLARS', payload: pillarsArr });
+        dispatch({ type:'SET_FAQS',    payload: faqsArr });
 
-            if (projectId) {
-                try {
-                    await supabase.from('project_brains').upsert({
-                        ...updatedBrain,
-                        project_id: projectId,
-                    });
-                } catch (e) { console.error('[saveCurrentBlock]', e); }
-            }
+        // Persist to Supabase
+        if (projectId) {
+            try {
+                await supabase.from('project_brains').upsert({ ...updatedBrain, project_id: projectId });
+            } catch (e) { console.error('[saveCurrentBlock brain]', e); }
         }
+        debouncedSave({ content_pillars: pillarsArr, session_faqs: faqsArr });
     }
 
     /* ── REVIEW MODE ──────────────────────────────────── */
