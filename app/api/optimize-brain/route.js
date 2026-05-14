@@ -61,19 +61,40 @@ Reescríbelo más claro y profesional en máximo 3 frases en ${lang}. Responde S
 
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
 
+            // Strip markdown artifacts first (lib/anthropic may return raw string)
+            const rawStr = typeof raw === 'string'
+                ? raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim()
+                : null;
+
             let improvedText = '';
             try {
                 const parsed = parseClaudeResponse(raw);
                 if (parsed && typeof parsed === 'object') {
-                    // Try exact key, then any string value in the response
                     improvedText = parsed[fieldKey]
                         || Object.values(parsed).find(v => typeof v === 'string' && v.trim().length > 10)
                         || '';
-                } else if (typeof raw === 'string' && raw.trim().length > 10) {
-                    improvedText = raw.trim();
                 }
-            } catch (e) {
-                console.error('[optimize-brain field] parse error:', e.message);
+            } catch (_) {}
+
+            // Fallback: try parsing the cleaned raw string
+            if (!improvedText && rawStr) {
+                try {
+                    const p2 = JSON.parse(rawStr);
+                    improvedText = p2[fieldKey]
+                        || Object.values(p2).find(v => typeof v === 'string' && v.trim().length > 10)
+                        || '';
+                } catch (_) {
+                    // If it's a plain text answer (not JSON), use it directly
+                    if (rawStr.length > 20 && !rawStr.startsWith('{')) improvedText = rawStr;
+                }
+            }
+
+            // Final cleanup — remove any residual JSON/markdown from the text itself
+            if (improvedText) {
+                improvedText = improvedText
+                    .replace(/```json\n?/gi, '').replace(/```\n?/g, '')
+                    .replace(/^\s*\{[\s\S]*\}\s*$/, m => { try { return JSON.parse(m)[fieldKey] || m; } catch { return m; } })
+                    .trim();
             }
 
             if (!improvedText) {
