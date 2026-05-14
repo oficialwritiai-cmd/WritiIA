@@ -154,35 +154,57 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                     )}
 
                     {status === 'done' && improved && (
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <CheckCircle2 size={17} color="#34d399" />
-                                <p style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>Versión mejorada lista</p>
+                                <p style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>Versión mejorada lista — revisa antes de aplicar</p>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {fields.map(({ key, label }) => {
-                                    const original = target === 'field' ? currentData.value : currentData[key];
-                                    const newVal   = improved[key];
-                                    // For 'field' target: always treat as changed (transcriptions are transformed, not just edited)
-                                    const changed  = target === 'field' ? !!newVal : (newVal && newVal !== original);
-                                    if (!original && !newVal) return null; // skip entirely empty
-                                    return (
-                                        <div key={key} style={{
-                                            background: changed ? 'rgba(52,211,153,0.04)' : 'rgba(255,255,255,0.02)',
-                                            border: `1px solid ${changed ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                                            borderRadius: '12px', padding: '14px 16px',
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                                <p style={{ fontSize: '0.68rem', color: changed ? '#34d399' : 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-                                                {!changed && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}>sin cambios</span>}
+
+                            {fields.map(({ key, label }) => {
+                                const original = target === 'field' ? currentData.value : currentData[key];
+                                const newVal   = improved[key];
+                                if (!newVal && !original) return null;
+
+                                return (
+                                    <div key={key}>
+                                        {/* ── VERSIÓN MEJORADA (siempre arriba y destacada) ── */}
+                                        {newVal && (
+                                            <div style={{
+                                                background: 'rgba(52,211,153,0.06)',
+                                                border: '1px solid rgba(52,211,153,0.25)',
+                                                borderRadius: '14px', padding: '16px',
+                                                marginBottom: '8px',
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(52,211,153,0.15)', padding: '2px 8px', borderRadius: '100px' }}>
+                                                        ✓ Versión mejorada
+                                                    </span>
+                                                    {label && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)' }}>— {label}</span>}
+                                                </div>
+                                                <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.65, whiteSpace: 'pre-wrap', margin: 0, fontWeight: 500 }}>
+                                                    {newVal}
+                                                </p>
                                             </div>
-                                            <p style={{ fontSize: '0.83rem', color: changed ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}>
-                                                {newVal || original}
-                                            </p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        )}
+
+                                        {/* ── TEXTO ACTUAL (tachado / gris) ── */}
+                                        {original && (
+                                            <div style={{
+                                                background: 'rgba(255,255,255,0.02)',
+                                                border: '1px solid rgba(255,255,255,0.06)',
+                                                borderRadius: '12px', padding: '12px 14px',
+                                            }}>
+                                                <span style={{ fontSize: '0.63rem', fontWeight: 700, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '6px' }}>
+                                                    Texto actual (será reemplazado)
+                                                </span>
+                                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0, textDecoration: newVal ? 'line-through' : 'none' }}>
+                                                    {original.length > 200 ? original.slice(0, 200) + '…' : original}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
