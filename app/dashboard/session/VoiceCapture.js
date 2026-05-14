@@ -11,6 +11,7 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
     const [errorMsg, setErrorMsg] = useState('');
     const mediaRecorderRef = useRef(null);
     const chunksRef        = useRef([]);
+    const streamRef        = useRef(null);
 
     async function startRecording() {
         setStatus('recording');
@@ -22,6 +23,7 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
             }
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
 
             // Pick best supported mimeType — don't force one that may throw
             let mimeType = '';
@@ -32,8 +34,7 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
             const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
             chunksRef.current = [];
             mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-            mr.onstop = () => processAudio(stream);
-            mr.start();
+            mr.start(250); // collect chunks every 250ms
             mediaRecorderRef.current = mr;
         } catch (e) {
             setStatus('error');
@@ -50,33 +51,73 @@ export default function VoiceCapture({ onTranscribed, onBrainSuggested, projectI
     }
 
     function stopRecording() {
-        mediaRecorderRef.current?.stop();
+        const mr = mediaRecorderRef.current;
+        if (!mr || mr.state === 'inactive') {
+            setStatus('idle');
+            return;
+        }
+
+        // Fallback: if onstop doesn't fire in 5s, reset
+        const fallbackTimer = setTimeout(() => {
+            setStatus('idle');
+            setErrorMsg('La grabación no se completó. Inténtalo de nuevo.');
+        }, 5000);
+
+        mr.onstop = () => {
+            clearTimeout(fallbackTimer);
+            processAudio();
+        };
+        mr.stop();
         setStatus('processing');
     }
 
-    async function processAudio(stream) {
-        // Stop all tracks
-        stream.getTracks().forEach(t => t.stop());
+    async function processAudio() {
+        // Stop microphone tracks
+        try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch (_) {}
+
         try {
+            // If no audio chunks, bail gracefully
+            if (!chunksRef.current.length) {
+                setStatus('idle');
+                setErrorMsg('No se grabó audio. Mantén el botón mientras hablas.');
+                return;
+            }
+
             const blob = new Blob(chunksRef.current, { type: chunksRef.current[0]?.type || 'audio/webm' });
             const formData = new FormData();
             formData.append('audio', blob, 'voice.webm');
             if (projectId) formData.append('projectId', projectId);
 
-            const res = await fetch('/api/brain-from-voice', { method: 'POST', body: formData });
+            // 20s timeout
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+
+            const res = await fetch('/api/brain-from-voice', {
+                method: 'POST', body: formData, signal: controller.signal,
+            });
+            clearTimeout(timer);
+
             if (!res.ok) {
                 const e = await res.json().catch(() => ({}));
                 throw new Error(e.error || 'Error procesando el audio.');
             }
             const data = await res.json();
 
-            // data.transcript (string) + data.brain (object with bio/audience/style/pillars/faqs)
             if (data.transcript) onTranscribed?.(data.transcript);
-            if (data.brain)      onBrainSuggested?.(data.brain);
+
+            // Only call onBrainSuggested if there's actual data
+            const b = data.brain || {};
+            const hasBrainData = b.bio || b.audience || b.style || b.pillars?.length || b.faqs?.length;
+            if (hasBrainData) onBrainSuggested?.(b);
+
             setStatus('done');
         } catch (e) {
             setStatus('error');
-            setErrorMsg(e.message);
+            setErrorMsg(
+                e.name === 'AbortError'
+                    ? 'Tiempo de espera agotado. Intenta de nuevo.'
+                    : e.message || 'Error procesando el audio.'
+            );
         }
     }
 
