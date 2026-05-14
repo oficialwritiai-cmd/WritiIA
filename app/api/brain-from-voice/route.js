@@ -64,17 +64,22 @@ Responde SOLO con el JSON, sin texto extra.`;
             });
             console.log('[brain-from-voice] Claude raw response:', raw?.slice(0, 200));
 
-            // Strip markdown code blocks if present
-            const cleaned = raw?.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const jsonStr  = cleaned?.startsWith('{') ? cleaned : cleaned?.match(/\{[\s\S]*\}/)?.[0];
+            // lib/anthropic may return already-parsed object or raw string
+            let parsed = null;
+            if (raw !== null && typeof raw === 'object') {
+                parsed = raw;
+            } else {
+                const str = String(raw ?? '').replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+                const jsonStr = str.startsWith('{') ? str : str.match(/\{[\s\S]*\}/)?.[0];
+                if (jsonStr) parsed = JSON.parse(jsonStr);
+            }
 
-            if (jsonStr) {
-                const parsed = JSON.parse(jsonStr);
+            if (parsed) {
                 brain = { ...brain, ...parsed };
                 extractionOk = true;
                 console.log('[brain-from-voice] Extracted brain:', brain);
             } else {
-                console.warn('[brain-from-voice] No JSON found in response:', raw?.slice(0, 200));
+                console.warn('[brain-from-voice] No parseable response:', String(raw).slice(0, 200));
             }
         } catch (e) {
             console.error('[brain-from-voice] Claude extraction error:', e.message);
