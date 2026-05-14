@@ -2,14 +2,65 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Loader2, CheckCircle2 } from 'lucide-react';
 
+// Preguntas guía que rotan mientras el usuario habla
+const GUIDE_PROMPTS = {
+    bio: [
+        '¿Cómo te llamas y a qué te dedicas?',
+        '¿Cuántos años llevas en esto?',
+        '¿Qué resultados concretos has conseguido con tus clientes?',
+        '¿Qué te hace diferente a otros en tu sector?',
+        '¿Cuál es tu mayor logro profesional hasta ahora?',
+    ],
+    audience: [
+        '¿Quién es tu cliente ideal? Describe su perfil (edad, situación...)',
+        '¿Cuál es el problema principal que tiene?',
+        '¿Qué desea conseguir? ¿Cuál es su gran sueño?',
+        '¿Qué le impide lograrlo? ¿Cuáles son sus miedos?',
+        '¿Qué lenguaje usa? ¿Cómo describe su problema con sus propias palabras?',
+    ],
+    offer: [
+        '¿Qué vendes exactamente? Descríbelo en detalle.',
+        '¿Cuál es el resultado principal que prometes?',
+        '¿En cuánto tiempo consiguen ese resultado?',
+        '¿Cuáles son las objeciones más comunes antes de comprarte?',
+        '¿Por qué tu oferta es irresistible comparada con otras opciones?',
+    ],
+    style: [
+        '¿Cómo hablas con tus clientes? ¿Eres cercano, directo, formal?',
+        'Di 3 a 5 palabras que te definan como comunicador.',
+        '¿Qué NO quieres que diga tu contenido?',
+        '¿Qué tono tiene tu comunidad? ¿Serio, divertido, motivador?',
+    ],
+    pillars: [
+        '¿De qué temas hablas cada semana en redes?',
+        'Nombra 3 a 5 temas que siempre aparecen en tu contenido.',
+        '¿Qué enseñas a tu audiencia que más valoran?',
+        '¿Sobre qué te preguntan más en comentarios o DMs?',
+    ],
+    faqs: [
+        '¿Qué te preguntan antes de comprarte?',
+        '¿Qué dudas tienen sobre tu método o programa?',
+        '¿Qué miedos o excusas tienen tus clientes potenciales?',
+        '¿Qué preguntas recibes más en redes o mensajes?',
+        '¿Qué creen que es difícil y en realidad no lo es?',
+    ],
+    all: [
+        '¿Quién eres y a qué te dedicas?',
+        '¿Quién es tu cliente ideal y qué problema tiene?',
+        '¿Qué vendes y qué resultado concreto prometes?',
+        '¿Cómo es tu estilo de comunicación?',
+        '¿De qué temas hablas en tu contenido habitualmente?',
+    ],
+};
+
 const GUIDE_TEXTS = {
-    bio:      'Cuéntame quién eres y qué haces. ¿Qué resultados has conseguido? ¿Cuánto tiempo llevas en esto?',
-    audience: 'Describe a tu cliente ideal. ¿Qué problema tiene? ¿Qué desea conseguir? ¿Cuál es su mayor miedo?',
-    offer:    'Cuéntame qué vendes, qué problema resuelves y cuáles son las objeciones más comunes de tus clientes.',
-    style:    'Describe cómo hablas con tus clientes. ¿Eres cercano, directo, formal? ¿Qué 3-5 palabras te definen?',
-    pillars:  'Cuéntame los temas principales sobre los que hablas en redes. ¿De qué hablas cada semana?',
-    faqs:     'Dime las preguntas que más te hace tu audiencia antes de comprarte o cuando te siguen.',
-    all:      'Cuéntame de qué va tu negocio, quién es tu cliente ideal, qué vendes y qué resultados prometes. Habla como si se lo explicaras a un cliente nuevo.',
+    bio:      'Cuéntame quién eres, qué haces y qué resultados has conseguido.',
+    audience: 'Describe a tu cliente ideal, su problema y lo que desea.',
+    offer:    'Cuéntame qué vendes, qué resultado prometes y las objeciones habituales.',
+    style:    'Describe tu tono y 3-5 palabras que te definan.',
+    pillars:  'Di los temas principales de los que hablas cada semana.',
+    faqs:     'Dime las preguntas que más te hace tu audiencia.',
+    all:      'Cuéntame de tu negocio, cliente ideal, oferta y estilo de comunicación.',
 };
 
 const FIELD_LABELS = {
@@ -24,14 +75,16 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
     const [liveText, setLiveText]       = useState('');
     const [finalText, setFinalText]     = useState('');
     const [errMsg, setErrMsg]           = useState('');
-    const [useFallback, setUseFallback] = useState(false); // true = no Speech API, use manual textarea
+    const [useFallback, setUseFallback] = useState(false);
+    const [promptIdx, setPromptIdx]     = useState(0); // índice de la pregunta activa
 
     const recognitionRef = useRef(null);
     const timerRef       = useRef(null);
+    const promptTimerRef = useRef(null); // rota preguntas guía cada 6s
     const analyserRef    = useRef(null);
     const rafRef         = useRef(null);
     const streamRef      = useRef(null);
-    const accTextRef     = useRef(''); // accumulates final recognition results
+    const accTextRef     = useRef('');
 
     useEffect(() => {
         if (!isOpen) { reset(); }
@@ -39,6 +92,7 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
 
     function reset() {
         clearInterval(timerRef.current);
+        clearInterval(promptTimerRef.current);
         cancelAnimationFrame(rafRef.current);
         streamRef.current?.getTracks().forEach(t => t.stop());
         try { recognitionRef.current?.stop(); } catch (_) {}
@@ -50,6 +104,7 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
         setLiveText('');
         setFinalText('');
         setErrMsg('');
+        setPromptIdx(0);
     }
 
     const trackVolume = useCallback(() => {
@@ -87,7 +142,10 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
             // Fallback: manual textarea
             setUseFallback(true);
             setStatus('recording');
+            setPromptIdx(0);
             timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+            const prompts = GUIDE_PROMPTS[fieldHint] || GUIDE_PROMPTS.all;
+            promptTimerRef.current = setInterval(() => setPromptIdx(i => (i + 1) % prompts.length), 6000);
             await startMicVisual();
             return;
         }
@@ -147,7 +205,14 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
         try {
             recognition.start();
             setStatus('recording');
+            setPromptIdx(0);
             timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
+
+            // Rota preguntas guía cada 6 segundos
+            const prompts = GUIDE_PROMPTS[fieldHint] || GUIDE_PROMPTS.all;
+            promptTimerRef.current = setInterval(() => {
+                setPromptIdx(i => (i + 1) % prompts.length);
+            }, 6000);
         } catch (e) {
             setErrMsg('No se pudo iniciar el reconocimiento de voz: ' + e.message);
             setStatus('error');
@@ -156,6 +221,7 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
 
     async function stopRecording() {
         clearInterval(timerRef.current);
+        clearInterval(promptTimerRef.current);
         cancelAnimationFrame(rafRef.current);
         streamRef.current?.getTracks().forEach(t => t.stop());
         setVolume(0);
@@ -359,12 +425,60 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
                         </div>
                     )}
 
-                    {/* Recording guide */}
-                    {isRecording && !useFallback && !liveText && (
-                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', textAlign: 'center', maxWidth: '380px', lineHeight: 1.65 }}>
-                            "{GUIDE_TEXTS[fieldHint] || GUIDE_TEXTS.all}"
-                        </p>
-                    )}
+                    {/* Teleprompter — preguntas guía rotando */}
+                    {isRecording && !useFallback && (() => {
+                        const prompts = GUIDE_PROMPTS[fieldHint] || GUIDE_PROMPTS.all;
+                        return (
+                            <div style={{ width: '100%', maxWidth: '440px' }}>
+                                {/* Pregunta activa */}
+                                <div style={{
+                                    padding: '14px 18px',
+                                    background: 'rgba(167,139,250,0.1)',
+                                    border: '1px solid rgba(167,139,250,0.3)',
+                                    borderRadius: '14px',
+                                    marginBottom: '8px',
+                                    animation: 'fadePrompt 0.4s ease',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                        <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '1px' }}>🎯</span>
+                                        <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', lineHeight: 1.5, margin: 0 }}>
+                                            {prompts[promptIdx]}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Próximas preguntas (dim) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {prompts.slice(promptIdx + 1, promptIdx + 3).map((p, i) => (
+                                        <div key={i} style={{
+                                            padding: '8px 14px',
+                                            background: 'rgba(255,255,255,0.025)',
+                                            borderRadius: '10px',
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                        }}>
+                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', flexShrink: 0 }}>Siguiente:</span>
+                                            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', margin: 0, lineHeight: 1.4 }}>{p}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Indicador de progreso de preguntas */}
+                                <div style={{ display: 'flex', gap: '4px', marginTop: '10px', justifyContent: 'center' }}>
+                                    {prompts.map((_, i) => (
+                                        <div key={i} style={{
+                                            width: i === promptIdx ? '18px' : '5px',
+                                            height: '4px', borderRadius: '2px',
+                                            background: i === promptIdx ? '#a78bfa' : 'rgba(255,255,255,0.12)',
+                                            transition: 'all 0.3s ease',
+                                        }} />
+                                    ))}
+                                </div>
+                                <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: '6px' }}>
+                                    La pregunta cambia automáticamente cada 6 segundos
+                                </p>
+                            </div>
+                        );
+                    })()}
 
                     {/* Stop button (recording) */}
                     {isRecording && !useFallback && (
@@ -410,6 +524,7 @@ export default function VoiceModal({ isOpen, onClose, fieldHint = 'all', project
             <style>{`
                 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
                 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+                @keyframes fadePrompt{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
             `}</style>
         </>
     );
