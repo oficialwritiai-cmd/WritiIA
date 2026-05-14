@@ -138,8 +138,38 @@ JSON: {"pillars":"pilar1\\npilar2\\n...","faqs":"pregunta1\\npregunta2\\n..."}`;
                 ? `Genera 7 pilares de contenido (2-5 palabras, uno por línea). Contexto: ${ctx}. No repetir: ${skip}. Idioma: ${lang}.\nJSON: {"suggestions":["p1","p2","p3","p4","p5","p6","p7"]}`
                 : `Genera 8 FAQs reales de la audiencia. Contexto: ${ctx}. No repetir: ${skip}. Idioma: ${lang}.\nJSON: {"suggestions":["q1","q2","q3","q4","q5","q6","q7","q8"]}`;
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
-            const result = parseClaudeResponse(raw);
-            return NextResponse.json({ suggestions: result.suggestions || [] });
+
+            let suggestions = [];
+            // Try multiple strategies to extract suggestions array
+            const candidates = typeof raw === 'string'
+                ? [raw, raw.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim()]
+                : [raw];
+
+            for (const candidate of candidates) {
+                try {
+                    const parsed = typeof candidate === 'object' ? candidate : JSON.parse(
+                        typeof candidate === 'string' && (candidate.startsWith('{') || candidate.startsWith('['))
+                            ? candidate
+                            : (candidate.match(/[\[{][\s\S]*[\]}]/) || [''])[0]
+                    );
+                    if (Array.isArray(parsed?.suggestions) && parsed.suggestions.length) {
+                        suggestions = parsed.suggestions.filter(s => typeof s === 'string' && s.trim());
+                        break;
+                    }
+                    if (Array.isArray(parsed) && parsed.length) {
+                        suggestions = parsed.filter(s => typeof s === 'string' && s.trim());
+                        break;
+                    }
+                } catch (_) {}
+            }
+
+            // Last resort: extract quoted strings from the raw response
+            if (!suggestions.length && typeof raw === 'string') {
+                const matches = raw.match(/"([^"]{5,80})"/g);
+                if (matches) suggestions = matches.map(m => m.slice(1,-1)).filter(s => !s.includes('{') && !s.includes('suggestions'));
+            }
+
+            return NextResponse.json({ suggestions });
         }
 
         // ── Auditoría de marca ────────────────────────────────────────
