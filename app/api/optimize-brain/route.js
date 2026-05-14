@@ -52,20 +52,12 @@ export async function POST(req) {
                 /\b(eh|mmm|bueno|o sea|entonces|sabes|pues)\b/i.test(value);
 
             const prompt = isVoiceTranscript
-                ? `Eres copywriter experto. Tienes audio transcrito (con muletillas) de alguien hablando sobre su negocio.
-CAMPO: "${fieldLabel}"
-TRANSCRIPCIÓN: "${value.slice(0, 800)}"
+                ? `Transcripción de voz sobre "${fieldLabel}": "${value.slice(0, 700)}"
 
-TAREA: Reescribe en 2-4 frases profesionales y claras. Extrae solo lo relevante.
-PROHIBIDO: copiar frases del original, incluir muletillas (eh, mmm, o sea, sabes, entonces).
-IDIOMA: ${lang}
+Escribe un resumen profesional de 2-3 frases en ${lang} que capture la esencia sin muletillas ni repeticiones. Responde SOLO con JSON: {"${fieldKey}":"resumen profesional aquí"}`
+                : `Texto a mejorar para "${fieldLabel}": "${value.slice(0, 500)}"
 
-Responde SOLO con JSON: {"${fieldKey}":"versión profesional aquí"}`
-                : `Reescribe este texto de forma más clara y profesional para el campo "${fieldLabel}".
-TEXTO: "${value.slice(0, 600)}"
-REGLAS: máximo 3 frases, idioma ${lang}, conserva los hechos clave, elimina relleno.
-PROHIBIDO: copiar el texto original palabra por palabra.
-JSON: {"${fieldKey}":"versión mejorada"}`;
+Reescríbelo más claro y profesional en máximo 3 frases en ${lang}. Responde SOLO con JSON: {"${fieldKey}":"texto mejorado aquí"}`;
 
             const raw = await improveBlockWithHaiku({ apiKey, systemPrompt: sys, userMessage: prompt });
             const improved = parseClaudeResponse(raw);
