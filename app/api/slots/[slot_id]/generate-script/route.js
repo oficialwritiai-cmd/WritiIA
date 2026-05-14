@@ -37,7 +37,7 @@ function extractJson(text) {
 async function callAnthropicWithRetries({ apiKey, systemPrompt, userMessage, maxRetries = 3 }) {
     const cleanKey = (apiKey || '').replace(/['"\s]/g, '').trim();
     let lastError = null;
-    let model = 'claude-3-5-sonnet-20240620';
+    let model = 'claude-sonnet-4-6';
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         if (attempt > 0) {
@@ -65,8 +65,8 @@ async function callAnthropicWithRetries({ apiKey, systemPrompt, userMessage, max
             if (!response.ok) {
                 const err = await response.json();
                 const errMsg = (err.error?.message || '').toLowerCase();
-                if ((errMsg.includes('model') || response.status === 400) && model !== 'claude-3-haiku-20240307') {
-                    model = 'claude-3-haiku-20240307';
+                if ((errMsg.includes('model') || response.status === 400) && model !== 'claude-haiku-4-5-20251001') {
+                    model = 'claude-haiku-4-5-20251001';
                     continue;
                 }
                 if (response.status === 429 || response.status === 529) {
