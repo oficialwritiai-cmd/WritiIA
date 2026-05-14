@@ -113,11 +113,16 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                                 WRITI analizará lo que escribiste y lo reformulará con frases más claras, sin texto relleno y listas para generar contenido. Siempre podrás revisar antes de aplicar.
                             </p>
                             {/* Preview current */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-                                {fields.map(({ key, label }) => currentData[key] && (
-                                    <div key={key} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px' }}>
-                                        <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{label}</p>
-                                        <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{currentData[key]}</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                                {fields.map(({ key, label }) => currentData[key] ? (
+                                    <div key={key} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', padding: '12px 14px' }}>
+                                        <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.28)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>{label}</p>
+                                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}>{currentData[key]}</p>
+                                    </div>
+                                ) : (
+                                    <div key={key} style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.07)', borderRadius: '11px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <p style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
+                                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', fontStyle: 'italic' }}>campo vacío — la IA lo generará</span>
                                     </div>
                                 ))}
                             </div>
@@ -152,12 +157,27 @@ export default function BrainImproveModal({ isOpen, onClose, target = 'brain', c
                                 <p style={{ fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}>Versión mejorada lista</p>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {fields.map(({ key, label }) => improved[key] && (
-                                    <div key={key} style={{ background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.18)', borderRadius: '12px', padding: '14px 16px' }}>
-                                        <p style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{label}</p>
-                                        <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{improved[key]}</p>
-                                    </div>
-                                ))}
+                                {fields.map(({ key, label }) => {
+                                    const original = currentData[key];
+                                    const newVal   = improved[key];
+                                    const changed  = newVal && newVal !== original;
+                                    if (!original && !newVal) return null; // skip entirely empty
+                                    return (
+                                        <div key={key} style={{
+                                            background: changed ? 'rgba(52,211,153,0.04)' : 'rgba(255,255,255,0.02)',
+                                            border: `1px solid ${changed ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                                            borderRadius: '12px', padding: '14px 16px',
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                <p style={{ fontSize: '0.68rem', color: changed ? '#34d399' : 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                                                {!changed && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)' }}>sin cambios</span>}
+                                            </div>
+                                            <p style={{ fontSize: '0.83rem', color: changed ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)', lineHeight: 1.55, whiteSpace: 'pre-wrap', margin: 0 }}>
+                                                {newVal || original}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
