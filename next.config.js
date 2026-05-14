@@ -37,7 +37,7 @@ const nextConfig = {
                     // Limit referer information leakage
                     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
                     // Restrict dangerous browser features (microphone, camera, geolocation)
-                    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
+                    { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), interest-cohort=()' },
                     // Content Security Policy (removed unsafe-eval)
                     { key: 'Content-Security-Policy', value: cspHeader.replace(/\n/g, '').replace(/\s+/g, ' ').trim() }
                 ]
