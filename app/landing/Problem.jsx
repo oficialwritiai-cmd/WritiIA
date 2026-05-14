@@ -48,7 +48,7 @@ const Problem = () => {
         <Reveal delay={300}>
           <div className="mt-20 lg:mt-24 max-w-4xl">
             <h3
-              className="text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.03em] text-white/80 font-medium"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.03em] text-white/80 font-medium"
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >
               <span className="block">{t("problem.outroA")}</span>

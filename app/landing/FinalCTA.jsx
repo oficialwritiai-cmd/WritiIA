@@ -13,10 +13,10 @@ const FinalCTA = () => {
     <section id="final" className="relative py-24 lg:py-32">
       <div className="mx-auto max-w-5xl px-5 lg:px-8">
         <Reveal>
-          <div className="liquid-glass-strong p-10 lg:p-16 text-center overflow-hidden relative">
+          <div className="liquid-glass-strong p-7 sm:p-10 lg:p-16 text-center overflow-hidden relative">
             <p className="micro-label" data-testid="final-eyebrow">{t("final.eyebrow")}</p>
             <h2
-              className="mt-5 text-4xl sm:text-5xl lg:text-6xl tracking-[-0.03em] text-white font-medium leading-[1.05]"
+              className="mt-5 text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-[-0.03em] text-white font-medium leading-[1.05]"
               style={{ fontFamily: "'Outfit', sans-serif" }}
               data-testid="final-title"
             >
@@ -45,7 +45,7 @@ const FinalCTA = () => {
               })}
             </div>
 
-            <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full pointer-events-none opacity-50"
+            <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[280px] h-[280px] sm:w-[520px] sm:h-[520px] rounded-full pointer-events-none opacity-50"
                  style={{ background: "radial-gradient(circle, rgba(167,139,250,0.18) 0%, rgba(0,0,0,0) 60%)" }} />
           </div>
         </Reveal>

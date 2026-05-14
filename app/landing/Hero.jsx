@@ -9,12 +9,12 @@ const Hero = () => {
   const dash = t("hero.dash");
 
   return (
-    <section id="top" className="relative min-h-screen w-full pt-28 lg:pt-32 pb-24 overflow-hidden">
+    <section id="top" className="relative min-h-screen w-full pt-24 sm:pt-28 lg:pt-32 pb-16 sm:pb-24 overflow-hidden">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 items-stretch">
           {/* LEFT */}
           <Reveal className="w-full lg:w-[52%]">
-            <div className="liquid-glass-strong p-7 sm:p-10 lg:p-12 h-full flex flex-col">
+            <div className="liquid-glass-strong p-6 sm:p-10 lg:p-12 h-full flex flex-col">
               <div className="flex items-center gap-2 mb-8">
                 <span className="pill" data-testid="hero-pill">
                   <span className="h-1.5 w-1.5 rounded-full bg-violet-400 ambient-pulse" />
@@ -23,7 +23,7 @@ const Hero = () => {
               </div>
 
               <h1
-                className="text-[42px] sm:text-5xl lg:text-[64px] xl:text-[72px] leading-[1.02] tracking-[-0.035em] text-white font-medium"
+                className="text-[36px] sm:text-5xl md:text-[56px] lg:text-[64px] xl:text-[72px] leading-[1.05] tracking-[-0.035em] text-white font-medium"
                 style={{ fontFamily: "'Outfit', sans-serif" }}
                 data-testid="hero-h1"
               >

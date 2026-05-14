@@ -26,7 +26,7 @@ const ValueStack = () => {
 
         <div className="mt-14 grid grid-cols-1 lg:grid-cols-12 gap-6">
           <Reveal className="lg:col-span-7">
-            <div className="liquid-glass p-7 lg:p-9 h-full">
+            <div className="liquid-glass p-5 sm:p-7 lg:p-9 h-full">
               <ul className="divide-y divide-white/[0.06]" data-testid="value-stack-list">
                 {items.map((it, i) => (
                   <li key={i} className="py-4 flex items-center justify-between gap-6">
@@ -58,7 +58,7 @@ const ValueStack = () => {
           </Reveal>
 
           <Reveal delay={150} className="lg:col-span-5">
-            <div className="liquid-glass-strong p-7 lg:p-9 h-full flex flex-col">
+            <div className="liquid-glass-strong p-5 sm:p-7 lg:p-9 h-full flex flex-col">
               <div className="flex items-center justify-between">
                 <span className="pill" data-testid="plan-title">
                   <Sparkles className="h-3.5 w-3.5 text-violet-300" />
@@ -67,7 +67,7 @@ const ValueStack = () => {
               </div>
               <div className="mt-7">
                 <p
-                  className="text-5xl sm:text-6xl text-white font-medium tracking-[-0.03em]"
+                  className="text-4xl sm:text-5xl md:text-6xl text-white font-medium tracking-[-0.03em]"
                   style={{ fontFamily: "'Outfit', sans-serif" }}
                 >
                   {t("value.planPrice")}
