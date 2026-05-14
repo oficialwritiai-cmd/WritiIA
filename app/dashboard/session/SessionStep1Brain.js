@@ -325,28 +325,40 @@ export default function SessionStep1Brain() {
     const isLastBlock  = blockIdx === BLOCKS.length - 1;
     const isFirstBlock = blockIdx === 0;
 
-    /* Guarda el bloque actual al navegar */
-    function saveCurrentBlock() {
+    /* Guarda el bloque actual al navegar — sync a project_brains + session */
+    async function saveCurrentBlock() {
         const { field } = currentBlock;
         const val = fields[field] || '';
-        if (!val.trim()) return;
-        if (field === 'pillars') {
+
+        if (field === 'pillars' || field === 'faqs') {
             const arr = val.split('\n').map(s=>s.trim()).filter(Boolean);
-            dispatch({ type:'SET_PILLARS', payload: arr });
-            debouncedSave({ content_pillars: arr });
-        } else if (field === 'faqs') {
-            const arr = val.split('\n').map(s=>s.trim()).filter(Boolean);
-            dispatch({ type:'SET_FAQS', payload: arr });
-            debouncedSave({ session_faqs: arr });
+            if (field === 'pillars') {
+                dispatch({ type:'SET_PILLARS', payload: arr });
+                debouncedSave({ content_pillars: arr });
+            } else {
+                dispatch({ type:'SET_FAQS', payload: arr });
+                debouncedSave({ session_faqs: arr });
+            }
         } else {
-            dispatch({ type:'SET_BRAIN', payload: {
-                ...brain,
-                biography:         fields.bio,
-                audience:          fields.audience,
-                products_services: fields.offer,
-                style_words:       fields.style,
-            }});
+            // Save brain fields to project_brains in Supabase
+            const updatedBrain = {
+                ...(brain || {}),
+                biography:         fields.bio      || brain?.biography     || '',
+                audience:          fields.audience  || brain?.audience      || '',
+                products_services: fields.offer     || brain?.products_services || '',
+                style_words:       fields.style     || brain?.style_words   || '',
+            };
+            dispatch({ type:'SET_BRAIN', payload: updatedBrain });
             debouncedSave();
+
+            if (projectId) {
+                try {
+                    await supabase.from('project_brains').upsert({
+                        ...updatedBrain,
+                        project_id: projectId,
+                    });
+                } catch (e) { console.error('[saveCurrentBlock]', e); }
+            }
         }
     }
 
@@ -475,10 +487,10 @@ export default function SessionStep1Brain() {
                     onClose={() => setSuggestOpen(false)}
                     type={suggestType}
                     brain={{
-                        biography:         fields.bio,
-                        audience:          fields.audience,
-                        products_services: fields.offer,
-                        style_words:       fields.style,
+                        biography:         fields.bio      || brain?.biography     || '',
+                        audience:          fields.audience  || brain?.audience      || '',
+                        products_services: fields.offer     || brain?.products_services || '',
+                        style_words:       fields.style     || brain?.style_words   || '',
                     }}
                     existing={(fields[suggestType]||'').split('\n').filter(Boolean)}
                     onAdd={handleAddSuggestions}
