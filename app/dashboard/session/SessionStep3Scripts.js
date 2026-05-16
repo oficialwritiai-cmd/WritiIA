@@ -2,42 +2,253 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/app/components/SessionContext';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Loader2, Sparkles, ChevronRight, Edit3, CheckCircle2, AlertCircle, Wand2, BookOpen, Save } from 'lucide-react';
+import {
+    Loader2, Sparkles, ChevronRight, CheckCircle2,
+    AlertCircle, RefreshCw, BookOpen, Copy, Check,
+    Zap, FileText, MessageSquare, Target
+} from 'lucide-react';
 
-const S = {
-    card: { background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'16px', padding:'20px', marginBottom:'14px', transition:'border-color 0.2s' },
-    btn: { display:'inline-flex', alignItems:'center', gap:'8px', background:'#7c3aed', color:'#fff', border:'none', borderRadius:'12px', padding:'12px 24px', fontSize:'0.88rem', fontWeight:700, cursor:'pointer', transition:'background 0.2s' },
-    btnSec: { display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' },
-    btnGreen: { display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(52,211,153,0.1)', color:'#34d399', border:'1px solid rgba(52,211,153,0.2)', borderRadius:'10px', padding:'8px 14px', fontSize:'0.78rem', fontWeight:700, cursor:'pointer' },
-    textarea: { width:'100%', background:'#111118', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', color:'#fff', padding:'12px 14px', fontSize:'0.85rem', lineHeight:1.65, resize:'vertical', outline:'none', fontFamily:'inherit', boxSizing:'border-box' },
-};
-
-function formatScript(s) {
-    if (!s) return '';
-    if (typeof s === 'string') return s;
-    const p = [];
-    if (s.title)          p.push(`🎬 ${s.title}\n`);
-    if (s.hook)           p.push(`⚡ HOOK:\n${s.hook}\n`);
-    if (s.structure?.length) {
-        p.push('📝 DESARROLLO:');
-        s.structure.forEach((b, i) => p.push(`\n${i+1}. ${b.point}\n${b.detail}`));
+/* ─── Parse script object into clean sections ─────── */
+function parseSections(raw) {
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+        return { fullText: raw };
     }
-    if (s.cta)            p.push(`\n\n📢 CTA:\n${s.cta}`);
-    if (s.post_copy?.headline) p.push(`\n\n📱 COPY REDES:\n${s.post_copy.headline}\n${s.post_copy.body||''}`);
-    return p.join('\n');
+    return {
+        title:     raw.title     || '',
+        hook:      raw.hook      || '',
+        structure: raw.structure || [],
+        cta:       raw.cta       || '',
+        copyPost:  raw.post_copy || null,
+        fullText:  '',
+    };
 }
 
+/* ─── Single script card ───────────────────────────── */
+function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, script, saved }) {
+    const [copied, setCopied]   = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const sections = script ? parseSections(script.raw) : null;
+
+    function copyText() {
+        const text = script?.text || '';
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
+
+    return (
+        <div style={{
+            background: '#13131a',
+            border: `1px solid ${script ? 'rgba(167,139,250,0.2)' : 'rgba(255,255,255,0.07)'}`,
+            borderRadius: '20px',
+            overflow: 'hidden',
+            transition: 'border-color 0.2s',
+            marginBottom: '16px',
+        }}>
+            {/* Card header */}
+            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: '16px', borderBottom: script ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                {/* Number badge */}
+                <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+                    background: script ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${script ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.85rem', fontWeight: 800,
+                    color: script ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                }}>
+                    {idx + 1}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                        {slot.content_type && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', borderRadius: '6px', padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                {slot.content_type}
+                            </span>
+                        )}
+                        {saved && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', borderRadius: '6px', padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                <BookOpen size={10} /> En Biblioteca
+                            </span>
+                        )}
+                    </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', lineHeight: 1.3, margin: 0 }}>
+                        {slot.idea_title}
+                    </h3>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    {script && (
+                        <>
+                            <button onClick={copyText} title="Copiar guion"
+                                style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: copied ? '#34d399' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                {copied ? <Check size={15} /> : <Copy size={15} />}
+                            </button>
+                            <button onClick={() => setExpanded(e => !e)}
+                                style={{ width: '34px', height: '34px', borderRadius: '9px', background: expanded ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${expanded ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.09)'}`, color: expanded ? '#a78bfa' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                                <FileText size={15} />
+                            </button>
+                        </>
+                    )}
+                    <button onClick={onGenerate} disabled={loading}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            background: loading ? 'rgba(255,255,255,0.04)' : script ? 'rgba(255,255,255,0.05)' : 'rgba(124,58,237,0.15)',
+                            color: loading ? '#555' : script ? 'rgba(255,255,255,0.4)' : '#a78bfa',
+                            border: `1px solid ${script ? 'rgba(255,255,255,0.09)' : 'rgba(124,58,237,0.25)'}`,
+                            borderRadius: '9px', padding: '7px 14px',
+                            fontSize: '0.78rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
+                        }}>
+                        {loading ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <RefreshCw size={13} />}
+                        {script ? 'Regenerar' : 'Generar'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Loading state */}
+            {loading && (
+                <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(167,139,250,0.04)' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(167,139,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Loader2 size={18} style={{ color: '#a78bfa', animation: 'spin 0.8s linear infinite' }} />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', marginBottom: '3px' }}>Escribiendo tu guion…</p>
+                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>La IA está personalizando el guion con tu cerebro IA</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Error */}
+            {error && !loading && (
+                <div style={{ padding: '16px 24px', display: 'flex', gap: '10px', alignItems: 'flex-start', background: 'rgba(248,113,113,0.05)' }}>
+                    <AlertCircle size={16} color="#f87171" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <p style={{ fontSize: '0.82rem', color: '#f87171' }}>{error}</p>
+                </div>
+            )}
+
+            {/* Script preview cards — always visible when script exists */}
+            {script && !loading && sections && (
+                <div style={{ padding: '0 24px 20px' }}>
+
+                    {/* Hook — always visible */}
+                    {sections.hook && (
+                        <div style={{ marginTop: '16px', padding: '14px 16px', background: 'rgba(167,139,250,0.07)', border: '1px solid rgba(167,139,250,0.15)', borderLeft: '3px solid #a78bfa', borderRadius: '0 12px 12px 0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                <Zap size={12} color="#a78bfa" />
+                                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Hook</span>
+                            </div>
+                            <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
+                                {sections.hook}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Structure blocks — shown when expanded or if short */}
+                    {sections.structure?.length > 0 && (
+                        <div style={{ marginTop: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                <MessageSquare size={12} color="rgba(255,255,255,0.3)" />
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    Desarrollo · {sections.structure.length} bloques
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {(expanded ? sections.structure : sections.structure.slice(0, 2)).map((block, i) => (
+                                    <div key={i} style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px' }}>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                                            {i + 1}. {block.point}
+                                        </p>
+                                        <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.55, margin: 0 }}>
+                                            {block.detail}
+                                        </p>
+                                    </div>
+                                ))}
+                                {!expanded && sections.structure.length > 2 && (
+                                    <button onClick={() => setExpanded(true)}
+                                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '10px', color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', cursor: 'pointer', textAlign: 'center' }}>
+                                        +{sections.structure.length - 2} bloques más — ver completo
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CTA */}
+                    {sections.cta && (
+                        <div style={{ marginTop: '12px', padding: '12px 16px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderLeft: '3px solid #34d399', borderRadius: '0 10px 10px 0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                                <Target size={12} color="#34d399" />
+                                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em' }}>CTA</span>
+                            </div>
+                            <p style={{ fontSize: '0.85rem', color: '#fff', margin: 0, lineHeight: 1.5 }}>{sections.cta}</p>
+                        </div>
+                    )}
+
+                    {/* Copy post */}
+                    {sections.copyPost && (sections.copyPost.headline || sections.copyPost.body) && expanded && (
+                        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'rgba(96,165,250,0.05)', border: '1px solid rgba(96,165,250,0.15)', borderRadius: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.1em' }}>📱 Copy Redes</span>
+                            </div>
+                            {sections.copyPost.headline && <p style={{ fontSize: '0.83rem', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>{sections.copyPost.headline}</p>}
+                            {sections.copyPost.body && <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: 0 }}>{sections.copyPost.body}</p>}
+                        </div>
+                    )}
+
+                    {/* Full text fallback */}
+                    {!sections.hook && !sections.structure?.length && sections.fullText && (
+                        <div style={{ marginTop: '16px' }}>
+                            <pre style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+                                {expanded ? sections.fullText : sections.fullText.slice(0, 300) + (sections.fullText.length > 300 ? '…' : '')}
+                            </pre>
+                            {!expanded && sections.fullText.length > 300 && (
+                                <button onClick={() => setExpanded(true)} style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: '0.8rem', cursor: 'pointer', marginTop: '6px', fontWeight: 600 }}>
+                                    Ver completo →
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Save to library button */}
+                    {!saved && (
+                        <button onClick={() => onSave(slot.id)} style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '9px', padding: '8px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                            <BookOpen size={13} /> Guardar en Biblioteca
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* No script yet */}
+            {!script && !loading && !error && (
+                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                            Haz clic en "Generar" para crear el guion con IA
+                        </p>
+                    </div>
+                    <button onClick={onGenerate}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                        <Sparkles size={14} /> Generar guion
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ─── Main Step 3 ─────────────────────────────────── */
 export default function SessionStep3Scripts() {
     const { state, dispatch, completeStep } = useSession();
     const { selectedSlotIds = [], projectId } = state;
     const supabase = createSupabaseClient();
 
     const [slots, setSlots]         = useState([]);
-    const [scripts, setScripts]     = useState({});   // { slotId: { id, text, raw } }
-    const [edited, setEdited]       = useState({});   // { slotId: string }
+    const [scripts, setScripts]     = useState({});
     const [loading, setLoading]     = useState({});
     const [errors, setErrors]       = useState({});
-    const [saved, setSaved]         = useState({});   // { slotId: bool } — saved to library
+    const [saved, setSaved]         = useState({});
     const [generatingAll, setAll]   = useState(false);
     const [advancing, setAdvancing] = useState(false);
 
@@ -52,10 +263,7 @@ export default function SessionStep3Scripts() {
         setLoading(p => ({ ...p, [slotId]: true }));
         setErrors(p => ({ ...p, [slotId]: '' }));
         try {
-            // Get slot data fresh from DB (avoid race condition with slots state)
-            const { data: slotData } = await supabase
-                .from('content_slots').select('*').eq('id', slotId).single();
-
+            const { data: slotData } = await supabase.from('content_slots').select('*').eq('id', slotId).single();
             const res = await fetch(`/api/slots/${slotId}/generate-script`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -64,15 +272,10 @@ export default function SessionStep3Scripts() {
             if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); return; }
             if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error generando guion.'); }
             const data = await res.json();
-
             const raw  = data.script || data;
-            const txt  = formatScript(raw);
+            const text = formatScript(raw);
             const scriptDbId = raw.id || null;
-
-            setScripts(p => ({ ...p, [slotId]: { id: scriptDbId, text: txt, raw } }));
-            setEdited(p => ({ ...p, [slotId]: txt }));
-
-            // Pass slotData directly to avoid race condition
+            setScripts(p => ({ ...p, [slotId]: { id: scriptDbId, text, raw } }));
             await saveToLibrary(slotId, raw, scriptDbId, slotData);
         } catch (e) {
             setErrors(p => ({ ...p, [slotId]: e.message }));
@@ -81,54 +284,31 @@ export default function SessionStep3Scripts() {
         }
     }
 
+    function formatScript(s) {
+        if (!s) return '';
+        if (typeof s === 'string') return s;
+        const p = [];
+        if (s.title)          p.push(`🎬 ${s.title}\n`);
+        if (s.hook)           p.push(`⚡ HOOK:\n${s.hook}\n`);
+        if (s.structure?.length) { p.push('📝 DESARROLLO:'); s.structure.forEach((b,i) => p.push(`\n${i+1}. ${b.point}\n${b.detail}`)); }
+        if (s.cta)            p.push(`\n\n📢 CTA:\n${s.cta}`);
+        if (s.post_copy?.headline) p.push(`\n\n📱 COPY:\n${s.post_copy.headline}\n${s.post_copy.body||''}`);
+        return p.join('\n');
+    }
+
     async function saveToLibrary(slotId, raw, scriptDbId, slotData) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
+        const title = slotData?.idea_title || raw.title || 'Guion';
         const fullText = formatScript(raw);
-        const title    = slotData?.idea_title || raw.title || 'Guion';
-
         const { error } = await supabase.from('library').insert({
-            user_id:          user.id,
-            project_id:       projectId || slotData?.project_id || null,
-            type:             'guion',
-            platform:         slotData?.platform || 'Reels',
-            goal:             slotData?.goal || 'engagement',
-            titulo:           title,
-            script_full_text: fullText,
-            content: {
-                titulo_angulo: title,
-                titulo_guion:  raw.title || title,
-                hook:          raw.hook || '',
-                gancho:        raw.hook || '',
-                desarrollo:    (raw.structure || []).map(b => `${b.point}: ${b.detail}`),
-                cta:           raw.cta || '',
-                copy_post:     raw.post_copy || {},
-            },
+            user_id: user.id, project_id: projectId || slotData?.project_id || null,
+            type: 'guion', platform: slotData?.platform || 'Reels', goal: 'engagement',
+            titulo: title, script_full_text: fullText,
+            content: { titulo_angulo: title, titulo_guion: raw.title || title, hook: raw.hook||'', gancho: raw.hook||'', desarrollo: (raw.structure||[]).map(b=>`${b.point}: ${b.detail}`), cta: raw.cta||'', copy_post: raw.post_copy||{} },
         });
-
-        if (error) {
-            setErrors(p => ({ ...p, [slotId]: `No se pudo guardar en Biblioteca: ${error.message}` }));
-        } else {
-            setSaved(p => ({ ...p, [slotId]: true }));
-        }
-    }
-
-    async function saveEdited(slotId) {
-        const txt = edited[slotId];
-        const s   = scripts[slotId];
-        if (!txt || !s) return;
-        // Update in scripts table if we have the DB id
-        if (s.id) {
-            await supabase.from('scripts').update({ content: txt }).eq('id', s.id);
-        }
-        // Update in library too
-        await supabase.from('library')
-            .update({ 'content->full_text': txt })
-            .eq('project_id', projectId)
-            .contains('metadata', { slot_id: slotId });
-
-        setSaved(p => ({ ...p, [slotId]: true }));
+        if (!error) setSaved(p => ({ ...p, [slotId]: true }));
+        else setErrors(p => ({ ...p, [slotId]: `Guardado en Biblioteca: ${error.message}` }));
     }
 
     async function generateAll() {
@@ -139,150 +319,76 @@ export default function SessionStep3Scripts() {
 
     async function handleAdvance() {
         setAdvancing(true);
-        // Save any pending edits
-        for (const s of slots) {
-            if (edited[s.id] !== scripts[s.id]?.text) await saveEdited(s.id);
-        }
         await completeStep(3);
         setAdvancing(false);
     }
 
     const allDone   = slots.length > 0 && slots.every(s => scripts[s.id]);
-    const anyLoad   = Object.values(loading).some(Boolean) || generatingAll;
     const doneCount = slots.filter(s => scripts[s.id]).length;
 
     if (!selectedSlotIds.length) return (
         <div style={{ textAlign:'center', padding:'60px 24px' }}>
             <p style={{ color:'#888', marginBottom:'16px' }}>No hay ideas seleccionadas.</p>
-            <button onClick={() => dispatch({ type:'SET_STEP', payload:2 })} style={S.btnSec}>← Volver a Ideas</button>
+            <button onClick={() => dispatch({ type:'SET_STEP', payload:2 })}
+                style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
+                ← Volver a Ideas
+            </button>
         </div>
     );
 
     return (
         <div>
             {/* Header */}
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', gap:'12px', flexWrap:'wrap' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px', gap:'12px', flexWrap:'wrap' }}>
                 <div>
                     <h2 style={{ fontSize:'1.5rem', fontWeight:800, color:'#fff', marginBottom:'6px', letterSpacing:'-0.02em' }}>✍️ Tus Guiones</h2>
-                    <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.88rem' }}>
-                        {doneCount}/{slots.length} guiones generados · se guardan automáticamente en tu Biblioteca
+                    <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.85rem' }}>
+                        {doneCount}/{slots.length} generados · Se guardan automáticamente en Biblioteca
                     </p>
                 </div>
-                <button onClick={generateAll} disabled={anyLoad || allDone}
-                    style={{ ...S.btn, opacity:(anyLoad||allDone)?0.6:1, cursor:(anyLoad||allDone)?'not-allowed':'pointer' }}>
-                    {generatingAll
-                        ? <><Loader2 size={16} style={{ animation:'spin 0.8s linear infinite' }} /> Generando {doneCount}/{slots.length}…</>
-                        : allDone
-                        ? <><CheckCircle2 size={16} /> Todos generados</>
-                        : <><Sparkles size={16} /> Generar todos</>
-                    }
+                <button onClick={generateAll} disabled={generatingAll || allDone}
+                    style={{
+                        display:'inline-flex', alignItems:'center', gap:'8px',
+                        background: allDone ? 'rgba(52,211,153,0.1)' : generatingAll ? 'rgba(255,255,255,0.05)' : '#7c3aed',
+                        color: allDone ? '#34d399' : generatingAll ? '#555' : '#fff',
+                        border: allDone ? '1px solid rgba(52,211,153,0.3)' : 'none',
+                        borderRadius:'12px', padding:'12px 22px', fontSize:'0.88rem', fontWeight:700,
+                        cursor:(generatingAll||allDone)?'not-allowed':'pointer',
+                    }}>
+                    {generatingAll ? <><Loader2 size={16} style={{ animation:'spin 0.8s linear infinite' }} /> Generando {doneCount}/{slots.length}…</>
+                    : allDone ? <><CheckCircle2 size={16}/> Todos generados</>
+                    : <><Sparkles size={16}/> Generar todos ({slots.length})</>}
                 </button>
             </div>
 
             {/* Script cards */}
-            {slots.map((slot, idx) => {
-                const isLoad = !!loading[slot.id];
-                const err    = errors[slot.id];
-                const sc     = scripts[slot.id];
-                const txt    = edited[slot.id] ?? sc?.text ?? '';
-                const isSaved = saved[slot.id];
+            {slots.map((slot, idx) => (
+                <ScriptCard
+                    key={slot.id}
+                    slot={slot}
+                    idx={idx}
+                    total={slots.length}
+                    loading={!!loading[slot.id]}
+                    error={errors[slot.id]}
+                    script={scripts[slot.id]}
+                    saved={!!saved[slot.id]}
+                    onGenerate={() => generateOne(slot.id)}
+                    onSave={(id) => {
+                        const s = scripts[id];
+                        if (s) saveToLibrary(id, s.raw, s.id, slots.find(sl=>sl.id===id));
+                    }}
+                />
+            ))}
 
-                return (
-                    <div key={slot.id} style={{ ...S.card, borderColor: sc ? (isSaved ? 'rgba(52,211,153,0.2)' : 'rgba(167,139,250,0.2)') : 'rgba(255,255,255,0.07)' }}>
-                        {/* Card header */}
-                        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'12px', marginBottom:'12px' }}>
-                            <div style={{ flex:1 }}>
-                                <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'4px', flexWrap:'wrap' }}>
-                                    <span style={{ fontSize:'0.65rem', color:'#a78bfa', fontWeight:700, background:'rgba(167,139,250,0.1)', borderRadius:'100px', padding:'2px 8px' }}>
-                                        {idx+1}/{slots.length}
-                                    </span>
-                                    {slot.content_type && <span style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.3)', fontWeight:600 }}>{slot.content_type}</span>}
-                                    {isSaved && (
-                                        <span style={{ fontSize:'0.65rem', color:'#34d399', fontWeight:700, background:'rgba(52,211,153,0.08)', borderRadius:'100px', padding:'2px 8px', display:'inline-flex', alignItems:'center', gap:'3px' }}>
-                                            <BookOpen size={10} /> Guardado en Biblioteca
-                                        </span>
-                                    )}
-                                </div>
-                                <h3 style={{ fontSize:'0.93rem', fontWeight:700, color:'#fff', lineHeight:1.3 }}>{slot.idea_title}</h3>
-                            </div>
-                            <button onClick={() => generateOne(slot.id)} disabled={isLoad}
-                                style={{ ...S.btnSec, flexShrink:0, fontSize:'0.75rem', color:sc?'rgba(255,255,255,0.4)':'#a78bfa', borderColor:sc?'rgba(255,255,255,0.08)':'rgba(167,139,250,0.25)' }}>
-                                {isLoad ? <Loader2 size={12} style={{ animation:'spin 0.8s linear infinite' }} /> : <Wand2 size={12} />}
-                                {sc ? 'Regenerar' : 'Generar'}
-                            </button>
-                        </div>
-
-                        {/* Loading */}
-                        {isLoad && (
-                            <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'14px', background:'rgba(167,139,250,0.05)', borderRadius:'10px' }}>
-                                <Loader2 size={16} style={{ color:'#a78bfa', animation:'spin 0.8s linear infinite', flexShrink:0 }} />
-                                <span style={{ fontSize:'0.82rem', color:'rgba(255,255,255,0.5)' }}>Escribiendo guion y guardando en Biblioteca…</span>
-                            </div>
-                        )}
-
-                        {/* Error */}
-                        {err && !isLoad && (
-                            <div style={{ padding:'10px 14px', background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:'10px', fontSize:'0.82rem', color:'#f87171', display:'flex', gap:'8px' }}>
-                                <AlertCircle size={14} style={{ flexShrink:0 }} /> {err}
-                            </div>
-                        )}
-
-                        {/* Script textarea */}
-                        {sc && !isLoad && (
-                            <div>
-                                <p style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.06em', fontWeight:700, marginBottom:'7px', display:'flex', alignItems:'center', gap:'5px' }}>
-                                    <Edit3 size={11} /> Edita tu guion — los cambios se guardan en Biblioteca
-                                </p>
-                                <textarea value={txt} rows={16} style={S.textarea}
-                                    onChange={e => { setEdited(p => ({ ...p, [slot.id]: e.target.value })); setSaved(p => ({ ...p, [slot.id]: false })); }}
-                                    onFocus={e => e.target.style.borderColor='rgba(167,139,250,0.4)'}
-                                    onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; saveEdited(slot.id); }}
-                                />
-                                <div style={{ display:'flex', gap:'8px', marginTop:'8px', flexWrap:'wrap' }}>
-                                    <button onClick={() => saveEdited(slot.id)} style={S.btnGreen}>
-                                        <Save size={12} /> {isSaved ? 'Guardado ✓' : 'Guardar en Biblioteca'}
-                                    </button>
-                                    {isSaved && (
-                                        <a href="/dashboard/library" target="_blank" style={{ ...S.btnSec, fontSize:'0.75rem', textDecoration:'none', color:'rgba(255,255,255,0.5)' }}>
-                                            <BookOpen size={12} /> Ver en Biblioteca
-                                        </a>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Generate button if no script yet */}
-                        {!sc && !isLoad && (
-                            <button onClick={() => generateOne(slot.id)}
-                                style={{ ...S.btn, background:'rgba(124,58,237,0.12)', color:'#a78bfa', border:'1px solid rgba(124,58,237,0.2)' }}>
-                                <Sparkles size={13} /> Generar guion
-                            </button>
-                        )}
-                    </div>
-                );
-            })}
-
-            {/* Footer actions */}
-            <div style={{ marginTop:'20px', paddingTop:'18px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:'12px', alignItems:'center', flexWrap:'wrap' }}>
+            {/* Footer */}
+            <div style={{ paddingTop:'20px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:'12px', alignItems:'center', flexWrap:'wrap' }}>
                 <button onClick={handleAdvance} disabled={advancing || !allDone}
-                    style={{ ...S.btn, opacity:(!allDone||advancing)?0.4:1, cursor:(!allDone||advancing)?'not-allowed':'pointer' }}
+                    style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:(!allDone||advancing)?'rgba(255,255,255,0.04)':'#7c3aed', color:(!allDone||advancing)?'#555':'#fff', border:'none', borderRadius:'12px', padding:'13px 26px', fontSize:'0.9rem', fontWeight:700, cursor:(!allDone||advancing)?'not-allowed':'pointer', transition:'background 0.2s' }}
                     onMouseEnter={e=>{ if(allDone)e.currentTarget.style.background='#6d28d9'; }}
-                    onMouseLeave={e=>e.currentTarget.style.background='#7c3aed'}>
-                    {advancing
-                        ? <><Loader2 size={16} style={{ animation:'spin 0.8s linear infinite' }} /> Guardando…</>
-                        : <>Continuar al Calendario <ChevronRight size={18} /></>
-                    }
+                    onMouseLeave={e=>e.currentTarget.style.background=allDone?'#7c3aed':'rgba(255,255,255,0.04)'}>
+                    {advancing ? <><Loader2 size={16} style={{ animation:'spin 0.8s linear infinite' }} /> Guardando…</> : <>Continuar al Calendario <ChevronRight size={18}/></>}
                 </button>
-                {!allDone && (
-                    <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.3)' }}>
-                        Genera todos los guiones para continuar ({doneCount}/{slots.length} listos)
-                    </p>
-                )}
-                {allDone && (
-                    <p style={{ fontSize:'0.78rem', color:'rgba(52,211,153,0.6)', display:'flex', alignItems:'center', gap:'5px' }}>
-                        <BookOpen size={12} /> Todos guardados en Biblioteca
-                    </p>
-                )}
+                {!allDone && <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.3)' }}>Genera todos los guiones para continuar ({doneCount}/{slots.length})</p>}
             </div>
             <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
         </div>

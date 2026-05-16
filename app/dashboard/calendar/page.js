@@ -10,6 +10,7 @@ import {
     CheckCircle2, Clock, Palette, Copy, ArrowRightLeft, Target
 } from 'lucide-react';
 import Logo from '@/app/components/Logo';
+import SheetEditor from '@/app/components/SheetEditor';
 import './calendar.css';
 import { useProject } from '@/app/components/ProjectContext';
 
@@ -52,6 +53,7 @@ function CalendarContent() {
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, eventId }
+    const [sheetItem, setSheetItem] = useState(null); // opens SheetEditor full-screen
 
     // Multi-Selection & Drag Logic
     const [selectedEvents, setSelectedEvents] = useState(new Set());
@@ -1241,7 +1243,21 @@ function CalendarContent() {
                             <button className="cal-close-icon" onClick={handleClosePanel}>
                                 <X size={24} />
                             </button>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                    onClick={() => setSheetItem({
+                                        id: selectedEvent?.id,
+                                        titulo: tempTitle,
+                                        platform: tempPlatform,
+                                        status: tempStatus,
+                                        script_full_text: tempNotes,
+                                        content: { titulo_angulo: tempTitle, hook: '', cta: '' },
+                                    })}
+                                    style={{ display:'inline-flex', alignItems:'center', gap:'5px', background:'rgba(167,139,250,0.12)', border:'1px solid rgba(167,139,250,0.25)', borderRadius:'8px', color:'#a78bfa', padding:'5px 10px', fontSize:'0.75rem', fontWeight:700, cursor:'pointer' }}
+                                    title="Abrir editor completo Notion"
+                                >
+                                    <Edit3 size={13} /> Editor completo
+                                </button>
                                 <button className="cal-close-icon" title="Compartir"><Share2 size={18} /></button>
                                 <button className="cal-close-icon" title="Opciones"><MoreVertical size={18} /></button>
                             </div>
@@ -1765,6 +1781,18 @@ function CalendarContent() {
                     to { transform: translate(-50%, 0); opacity: 1; }
                 }
             `}</style>
+
+            {/* SheetEditor — Notion-like full-screen editor for calendar events */}
+            {sheetItem && (
+                <SheetEditor
+                    sheetId={sheetItem.id || 'new'}
+                    item={sheetItem}
+                    onClose={() => { setSheetItem(null); loadData(); }}
+                    onSave={() => { setSheetItem(null); loadData(); }}
+                    userId={null}
+                    activeProjectId={activeProject?.id}
+                />
+            )}
         </div>
     );
 }
