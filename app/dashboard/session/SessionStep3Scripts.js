@@ -252,18 +252,37 @@ export default function SessionStep3Scripts() {
     const [generatingAll, setAll]   = useState(false);
     const [advancing, setAdvancing] = useState(false);
 
-    useEffect(() => { if (selectedSlotIds.length) loadSlots(); }, []);
+    useEffect(() => { if (selectedSlotIds.length) { loadSlots(); } }, []);
 
     async function loadSlots() {
-        const { data } = await supabase.from('content_slots').select('*').in('id', selectedSlotIds);
-        setSlots(data || []);
+        const { data: slotData } = await supabase.from('content_slots').select('*').in('id', selectedSlotIds);
+        setSlots(slotData || []);
+        // Load previously saved scripts from DB
+        const savedSlots = (slotData || []).filter(s => s.has_script && s.script_data);
+        if (savedSlots.length) {
+            for (const slot of savedSlots) {
+                const slotId = slot.id;
+                const sd = slot.script_data;
+                const raw = {
+                    hook: sd.hook || '',
+                    structure: Array.isArray(sd.desarrollo) ? sd.desarrollo.map(d => {
+                        const parts = d.split(': ');
+                        return { point: parts[0] || d, detail: parts.slice(1).join(': ') || d };
+                    }) : (Array.isArray(sd.puntos) ? sd.puntos : []),
+                    cta: sd.cta || '',
+                    post_copy: sd.copy_post || {},
+                };
+                const text = formatScript(raw);
+                setScripts(p => ({ ...p, [slotId]: { id: slot.script_id || null, text, raw } }));
+                setSaved(p => ({ ...p, [slotId]: true }));
+            }
+        }
     }
 
     async function generateOne(slotId) {
         setLoading(p => ({ ...p, [slotId]: true }));
         setErrors(p => ({ ...p, [slotId]: '' }));
         try {
-            const { data: slotData } = await supabase.from('content_slots').select('*').eq('id', slotId).single();
             const res = await fetch(`/api/slots/${slotId}/generate-script`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -274,9 +293,9 @@ export default function SessionStep3Scripts() {
             const data = await res.json();
             const raw  = data.script || data;
             const text = formatScript(raw);
-            const scriptDbId = raw.id || null;
-            setScripts(p => ({ ...p, [slotId]: { id: scriptDbId, text, raw } }));
-            await saveToLibrary(slotId, raw, scriptDbId, slotData);
+            setScripts(p => ({ ...p, [slotId]: { id: raw.id || null, text, raw } }));
+            // API already saved to library — mark as saved
+            setSaved(p => ({ ...p, [slotId]: true }));
         } catch (e) {
             setErrors(p => ({ ...p, [slotId]: e.message }));
         } finally {
@@ -296,19 +315,44 @@ export default function SessionStep3Scripts() {
         return p.join('\n');
     }
 
-    async function saveToLibrary(slotId, raw, scriptDbId, slotData) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const title = slotData?.idea_title || raw.title || 'Guion';
-        const fullText = formatScript(raw);
-        const { error } = await supabase.from('library').insert({
-            user_id: user.id, project_id: projectId || slotData?.project_id || null,
-            type: 'guion', platform: slotData?.platform || 'Reels', goal: 'engagement',
-            titulo: title, script_full_text: fullText,
-            content: { titulo_angulo: title, titulo_guion: raw.title || title, hook: raw.hook||'', gancho: raw.hook||'', desarrollo: (raw.structure||[]).map(b=>`${b.point}: ${b.detail}`), cta: raw.cta||'', copy_post: raw.post_copy||{} },
-        });
-        if (!error) setSaved(p => ({ ...p, [slotId]: true }));
-        else setErrors(p => ({ ...p, [slotId]: `Guardado en Biblioteca: ${error.message}` }));
+    async function saveToLibraryManual(slotId) {
+        // Manual save button: re-call the generate endpoint to ensure library is populated
+        // (The API always upserts to library on each call)
+        setLoading(p => ({ ...p, [slotId]: true }));
+        setErrors(p => ({ ...p, [slotId]: '' }));
+        try {
+            const s = scripts[slotId];
+            if (!s) return;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const slot = slots.find(sl => sl.id === slotId);
+            const title = slot?.idea_title || s.raw?.title || 'Guion';
+            const fullText = formatScript(s.raw);
+            const contentPayload = {
+                titulo_angulo: title, titulo_guion: s.raw?.title || title,
+                hook: s.raw?.hook || '', gancho: s.raw?.hook || '',
+                desarrollo: (s.raw?.structure || []).map(b => `${b.point}: ${b.detail}`),
+                cta: s.raw?.cta || '', copy_post: s.raw?.post_copy || {},
+            };
+            const { data: existing } = await supabase.from('library')
+                .select('id').eq('user_id', user.id).eq('type', 'guion').eq('titulo', title).limit(1);
+            let err;
+            if (existing?.length) {
+                ({ error: err } = await supabase.from('library')
+                    .update({ script_full_text: fullText, content: contentPayload })
+                    .eq('id', existing[0].id));
+            } else {
+                ({ error: err } = await supabase.from('library').insert({
+                    user_id: user.id, project_id: projectId || slot?.project_id || null,
+                    type: 'guion', platform: slot?.platform || 'Reels', goal: 'engagement',
+                    titulo: title, script_full_text: fullText, content: contentPayload,
+                }));
+            }
+            if (!err) setSaved(p => ({ ...p, [slotId]: true }));
+            else setErrors(p => ({ ...p, [slotId]: `Error guardando: ${err.message}` }));
+        } finally {
+            setLoading(p => ({ ...p, [slotId]: false }));
+        }
     }
 
     async function generateAll() {
@@ -373,10 +417,7 @@ export default function SessionStep3Scripts() {
                     script={scripts[slot.id]}
                     saved={!!saved[slot.id]}
                     onGenerate={() => generateOne(slot.id)}
-                    onSave={(id) => {
-                        const s = scripts[id];
-                        if (s) saveToLibrary(id, s.raw, s.id, slots.find(sl=>sl.id===id));
-                    }}
+                    onSave={(id) => saveToLibraryManual(id)}
                 />
             ))}
 

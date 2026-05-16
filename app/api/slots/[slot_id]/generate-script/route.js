@@ -236,48 +236,96 @@ export async function POST(request, { params }) {
             };
         }
 
-        // ─── Save script ─────────────────────────────────
-        const { data: savedScript, error: scriptErr } = await supabase
-            .from('scripts')
-            .insert({
-                user_id: verifiedUserId,
-                slot_id: slot_id,
-                project_id: slot.project_id,
-                platform: finalPlatform,
-                video_duration: videoDuration,
-                focus,
-                title: scriptData.title,
-                hook: scriptData.hook,
-                structure: scriptData.structure,
-                cta: scriptData.cta,
-                notes: scriptData.notes,
-                post_copy: scriptData.post_copy,
-                topic: slot.idea_title,
-                content: `Guion generado para ${slot.idea_title}`,
-                is_saved: true,
-                scheduled_date: slot.scheduled_date,
-            })
-            .select()
-            .single();
-
-        if (scriptErr) throw scriptErr;
-
-        await supabase.from('content_slots')
-            .update({
-                slot_status: 'script_ready',
-                has_script: true,
-                script_id: savedScript.id,
-                script_data: {
+        // ─── Save script to `scripts` table (non-fatal) ──────────────────
+        let savedScriptId = null;
+        try {
+            const { data: savedScript, error: scriptErr } = await supabase
+                .from('scripts')
+                .insert({
+                    user_id: verifiedUserId,
+                    slot_id: slot_id,
+                    project_id: slot.project_id,
+                    platform: finalPlatform,
+                    title: scriptData.title,
                     hook: scriptData.hook,
-                    desarrollo: scriptData.structure.map(p => `${p.point}: ${p.detail}`),
+                    structure: scriptData.structure,
                     cta: scriptData.cta,
-                    copy_post: scriptData.post_copy,
                     notes: scriptData.notes,
-                }
-            })
-            .eq('id', slot_id);
+                    post_copy: scriptData.post_copy,
+                    topic: slot.idea_title,
+                })
+                .select()
+                .single();
+            if (!scriptErr) savedScriptId = savedScript?.id;
+            else console.warn('[generate-script] scripts table save (non-fatal):', scriptErr.message);
+        } catch (e) {
+            console.warn('[generate-script] scripts table unavailable (non-fatal):', e.message);
+        }
 
-        return NextResponse.json({ ok: true, script: { id: savedScript.id, ...scriptData } });
+        // ─── Save to library (guaranteed) ────────────────────────────────
+        const fullText = [
+            scriptData.title ? `🎬 ${scriptData.title}` : '',
+            scriptData.hook  ? `\n⚡ HOOK:\n${scriptData.hook}` : '',
+            scriptData.structure?.length ? `\n📝 DESARROLLO:\n${scriptData.structure.map((b,i)=>`${i+1}. ${b.point}\n${b.detail}`).join('\n')}` : '',
+            scriptData.cta   ? `\n📢 CTA:\n${scriptData.cta}` : '',
+            scriptData.post_copy?.headline ? `\n📱 COPY:\n${scriptData.post_copy.headline}\n${scriptData.post_copy.body||''}` : '',
+        ].filter(Boolean).join('\n');
+
+        const contentPayload = {
+            titulo_angulo: scriptData.title || slot.idea_title,
+            titulo_guion:  scriptData.title || slot.idea_title,
+            hook:          scriptData.hook  || '',
+            gancho:        scriptData.hook  || '',
+            desarrollo:    (scriptData.structure || []).map(b => `${b.point}: ${b.detail}`),
+            cta:           scriptData.cta   || '',
+            copy_post:     scriptData.post_copy || {},
+        };
+
+        // Upsert into library (update if title already exists for this user)
+        const { data: existingLib } = await supabase.from('library')
+            .select('id')
+            .eq('user_id', verifiedUserId)
+            .eq('type', 'guion')
+            .eq('titulo', scriptData.title || slot.idea_title)
+            .limit(1);
+
+        if (existingLib?.length) {
+            await supabase.from('library')
+                .update({ script_full_text: fullText, content: contentPayload, platform: finalPlatform })
+                .eq('id', existingLib[0].id);
+        } else {
+            await supabase.from('library').insert({
+                user_id:          verifiedUserId,
+                project_id:       slot.project_id || null,
+                type:             'guion',
+                platform:         finalPlatform,
+                goal:             'engagement',
+                titulo:           scriptData.title || slot.idea_title,
+                script_full_text: fullText,
+                content:          contentPayload,
+            });
+        }
+
+        // ─── Update slot status (non-fatal) ──────────────────────────────
+        try {
+            await supabase.from('content_slots')
+                .update({
+                    has_script:  true,
+                    script_id:   savedScriptId,
+                    script_data: {
+                        hook:      scriptData.hook,
+                        desarrollo: (scriptData.structure || []).map(p => `${p.point}: ${p.detail}`),
+                        cta:       scriptData.cta,
+                        copy_post: scriptData.post_copy,
+                        notes:     scriptData.notes,
+                    },
+                })
+                .eq('id', slot_id);
+        } catch (e) {
+            console.warn('[generate-script] content_slots update (non-fatal):', e.message);
+        }
+
+        return NextResponse.json({ ok: true, script: { id: savedScriptId, ...scriptData } });
 
     } catch (err) {
         console.error('[slots/generate-script] Error:', err?.message);
