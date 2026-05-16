@@ -98,23 +98,22 @@ export default function SessionStep2Ideas() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Build selected ideas from their index keys
+            // Build selected ideas — only columns that exist in content_slots
             const toInsert = generatedIdeas
                 .filter((_, idx) => selectedSlotIds.includes(String(idx)))
                 .map(idea => ({
-                    user_id:         user.id,
-                    project_id:      projectId || null,
-                    session_id:      sessionId,
-                    idea_title:      idea.titulo || 'Sin título',
+                    user_id:          user.id,
+                    project_id:       projectId || null,
+                    idea_title:       idea.titulo || 'Sin título',
                     idea_description: [
                         idea.descripcion || '',
                         idea.hook  ? `Hook: ${idea.hook}` : '',
                         idea.pilar ? `Pilar: ${idea.pilar}` : '',
                         idea.cta   ? `CTA: ${idea.cta}` : '',
                     ].filter(Boolean).join('\n'),
-                    content_type: idea.tipo || 'Educativo',
-                    platform:     'Reels',
-                    status:       'idea_only',
+                    content_type:     idea.tipo || 'Educativo',
+                    platform:         'Reels',
+                    goal:             'engagement',
                 }));
 
             const { data: insertedSlots, error: insertErr } = await supabase
