@@ -38,23 +38,15 @@ export async function POST(req) {
 
         const { context, platforms, goal, count, projectId } = validation.data;
 
-        // ─────────────────────────────────────────────────────────────
-        // SECURITY: Auth via cookies (session) OR Bearer token fallback
-        // ─────────────────────────────────────────────────────────────
+        // ── Auth via cookies (same as brain-from-voice and optimize-brain) ──
         const cookieStore = cookies();
-        const supabaseCookie = createServerClient(
+        const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             { cookies: { get: (n) => cookieStore.get(n)?.value } }
         );
-        const { data: { user: cookieUser } } = await supabaseCookie.auth.getUser();
-
-        // Fallback to Bearer token if cookie auth fails
-        const { user: tokenUser, supabase: tokenSupabase } = cookieUser ? { user: cookieUser, supabase: supabaseCookie } : await getServerSession(req);
-        const user = cookieUser || tokenUser;
-        const supabase = cookieUser ? supabaseCookie : (tokenSupabase || supabaseCookie);
-
-        if (!user) return unauthorized();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
 
         if (projectId) {
             const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
