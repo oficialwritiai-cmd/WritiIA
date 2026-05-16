@@ -98,12 +98,29 @@ export default function SessionStep2Ideas() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
+            // plan_id is NOT NULL — create a minimal plan first
+            const { data: planData, error: planErr } = await supabase
+                .from('content_plans')
+                .insert({
+                    user_id:    user.id,
+                    project_id: projectId || null,
+                    month:      new Date().getMonth() + 1,
+                    year:       new Date().getFullYear(),
+                    frequency:  timeHorizon === '2weeks' ? '2weeks' : 'monthly',
+                    platforms:  ['Reels', 'TikTok', 'YouTube Shorts'],
+                    focus:      'Contenido de valor para la audiencia',
+                })
+                .select()
+                .single();
+            if (planErr) throw planErr;
+
             // Build selected ideas — only columns that exist in content_slots
             const toInsert = generatedIdeas
                 .filter((_, idx) => selectedSlotIds.includes(String(idx)))
                 .map(idea => ({
                     user_id:          user.id,
                     project_id:       projectId || null,
+                    plan_id:          planData.id,
                     idea_title:       idea.titulo || 'Sin título',
                     idea_description: [
                         idea.descripcion || '',
