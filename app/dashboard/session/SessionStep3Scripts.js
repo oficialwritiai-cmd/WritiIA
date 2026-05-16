@@ -84,28 +84,36 @@ export default function SessionStep3Scripts() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
+            const fullText = formatScript(raw);
+            const title    = slot?.idea_title || raw.title || 'Guion Matrix';
+
             const { error } = await supabase.from('library').insert({
-                user_id:       user.id,
-                project_id:    projectId || null,
-                type:          'guion',
-                platform:      slot?.platform || 'Reels',
-                goal:          'engagement',
-                titulo_angulo: slot?.idea_title || raw.title || 'Guion',
+                user_id:          user.id,
+                project_id:       projectId || null,
+                type:             'guion',
+                platform:         slot?.platform || 'Reels',
+                goal:             'engagement',
+                titulo:           title,
+                script_full_text: fullText,
                 content: {
-                    script_id:  scriptDbId,
-                    slot_id:    slotId,
-                    hook:       raw.hook || '',
-                    structure:  raw.structure || [],
-                    cta:        raw.cta || '',
-                    post_copy:  raw.post_copy || {},
-                    full_text:  formatScript(raw),
+                    titulo_angulo: title,
+                    titulo_guion:  raw.title || title,
+                    hook:          raw.hook || '',
+                    gancho:        raw.hook || '',
+                    desarrollo:    (raw.structure || []).map(b => `${b.point}: ${b.detail}`),
+                    cta:           raw.cta || '',
+                    copy_post:     raw.post_copy || {},
+                    script_id:     scriptDbId,
+                    slot_id:       slotId,
                 },
-                metadata: { source: 'matrix_session', slot_id: slotId },
-                tags:   ['matrix', slot?.content_type || 'Educativo'],
                 status: 'borrador',
             });
 
-            if (!error) setSaved(p => ({ ...p, [slotId]: true }));
+            if (error) {
+                console.error('[saveToLibrary] error:', error.message);
+            } else {
+                setSaved(p => ({ ...p, [slotId]: true }));
+            }
         } catch (e) {
             console.error('[saveToLibrary]', e);
         }
