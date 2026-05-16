@@ -186,8 +186,10 @@ function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, 
 
     const lengthRule = targetWords ? `\nREGLA DE LONGITUD ESTRICTA: Tu respuesta FINAL debe contener APROXIMADAMENTE ${targetWords} PALABRAS de contenido real (excluyendo formato JSON). Para lograr esto en duraciones largas (3, 5, 10 min), es OBLIGATORIO que los bloques de desarrollo sean MUY EXTENSOS, con descripciones ricas, guiones de actuación, ejemplos reales completos y storytelling. ESTÁ PROHIBIDO RESUMIR.` : '';
 
+    const currentYear = new Date().getFullYear();
     return `ROL:
 Eres guionista y estratega de contenido especializado en vídeos cortos y largos para creadores de marca personal. Tu objetivo es escribir guiones que suenen a PERSONA REAL, huyendo de los clichés motivacionales de la IA.
+FECHA ACTUAL: ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })} (año ${currentYear}). Usa siempre ${currentYear} como referencia temporal. Nunca menciones años anteriores como actuales.
 
 CONTEXTO DEL CREADOR Y NEGOCIO:
 ${brandContextString}

@@ -76,7 +76,9 @@ export async function POST(req) {
         ].filter(Boolean).join('\n');
 
         // ── Prompts virales ───────────────────────────────────────────
+        const currentYear = new Date().getFullYear(); // 2026
         const systemPrompt = `Eres un estratega de contenido VIRAL experto en Reels, TikTok y YouTube Shorts para coaches, consultores y creadores educativos en español.
+Fecha actual: ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}. Año: ${currentYear}. Toda referencia temporal debe usar ${currentYear} como año actual.
 
 CEREBRO IA DEL CREADOR:
 ${brainCtx || context}
