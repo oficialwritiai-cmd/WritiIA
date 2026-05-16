@@ -25,7 +25,7 @@ export default function SessionStep2Ideas() {
         }
     }, []);
 
-    async function generateIdeas() {
+    async function generateIdeas(appendMode = false) {
         setLoading(true);
         setError('');
         try {
@@ -68,9 +68,14 @@ export default function SessionStep2Ideas() {
             }
 
             const { ideas } = await res.json();
-            dispatch({ type: 'SET_IDEAS', payload: ideas });
-            // Reset selections when new ideas arrive
-            dispatch({ type: 'SET_SELECTED_SLOTS', payload: [] });
+            if (appendMode) {
+                // Append new ideas without losing selections
+                dispatch({ type: 'SET_IDEAS', payload: [...generatedIdeas, ...ideas] });
+            } else {
+                // First load: replace everything and reset selections
+                dispatch({ type: 'SET_IDEAS', payload: ideas });
+                dispatch({ type: 'SET_SELECTED_SLOTS', payload: [] });
+            }
         } catch (e) {
             console.error('[Step2] generateIdeas error:', e);
             setError(e.message);
@@ -82,7 +87,7 @@ export default function SessionStep2Ideas() {
     async function handleGenerateMore() {
         if (extraCount >= 2) return;
         setExtraCount(c => c + 1);
-        await generateIdeas();
+        await generateIdeas(true); // appendMode — keeps selections
     }
 
     async function handleAdvance() {
