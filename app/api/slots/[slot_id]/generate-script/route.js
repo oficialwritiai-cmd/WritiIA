@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import { z } from 'zod';
@@ -138,10 +140,14 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // SECURITY: Verify Session & Ownership (v4.9.0)
-        // ─────────────────────────────────────────────────────────────
-        const { user, supabase } = await getServerSession(request);
+        // ── Auth via cookies (browser) ────────────────────────────────
+        const cookieStore = cookies();
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            { cookies: { get: (n) => cookieStore.get(n)?.value } }
+        );
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return unauthorized();
 
         const { data: slot, error: slotErr } = await supabase
