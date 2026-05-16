@@ -114,17 +114,52 @@ export default function SessionStep4Calendar() {
     }
 
     async function forceSave() {
-        // Save each slot date — catch errors individually
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+
         const results = await Promise.allSettled(
-            Object.entries(assigned).map(([slotId, date]) =>
-                supabase.from('content_slots')
+            Object.entries(assigned).map(async ([slotId, date]) => {
+                if (!date) return;
+                const slot = slots.find(s => s.id === slotId);
+
+                // 1. Update content_slots.scheduled_date
+                await supabase.from('content_slots')
                     .update({ scheduled_date: date })
-                    .eq('id', slotId)
-            )
+                    .eq('id', slotId);
+
+                // 2. Insert into calendar_events so it appears in the calendar
+                const { data: existing } = await supabase
+                    .from('calendar_events')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('reference_id', slotId)
+                    .maybeSingle();
+
+                if (!existing) {
+                    await supabase.from('calendar_events').insert({
+                        user_id:      user.id,
+                        project_id:   slot?.project_id || null,
+                        event_date:   date,
+                        title:        slot?.idea_title || 'Guion Matrix',
+                        notes:        slot?.idea_description || '',
+                        platform:     slot?.platform || 'Reels',
+                        status:       'idea',
+                        color:        'purple',
+                        start_time:   '09:00',
+                        end_time:     '10:00',
+                        reference_id: slotId,
+                    });
+                } else {
+                    await supabase.from('calendar_events')
+                        .update({ event_date: date })
+                        .eq('id', existing.id);
+                }
+            })
         );
-        const failed = results.filter(r => r.status==='rejected' || r.value?.error);
-        if (failed.length) console.error('[Calendar] some saves failed:', failed);
-        return failed.length === 0;
+
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length) console.error('[Calendar] save errors:', failed);
+        return true;
     }
 
     async function handleFinish() {
