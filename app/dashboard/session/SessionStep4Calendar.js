@@ -1,42 +1,104 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/app/components/SessionContext';
+import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Loader2, Calendar, CheckCircle2, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle2, Sparkles, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
-function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
-function fmt(date) { return date.toISOString().split('T')[0]; }
-function fmtDisplay(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.toLocaleDateString('es-ES', { weekday:'short', day:'numeric', month:'short' });
-}
+/* ─── Helpers ─────────────────────────────────────────── */
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function fmt(d)    { return d.toISOString().split('T')[0]; }
+function parseDate(s) { return s ? new Date(s + 'T12:00:00') : null; }
+function dayName(d) { return ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.getDay()]; }
+function monthName(d) { return d.toLocaleDateString('es-ES',{month:'long'}); }
 
-// Generate Mon/Wed/Fri dates starting from today until we have `needed` dates
 function getPostingDays(needed) {
     const today = new Date(); today.setHours(0,0,0,0);
     const days = []; let offset = 0;
-    while (days.length < Math.max(needed, 1) && offset < 200) {
+    while (days.length < Math.max(needed, 1) && offset < 300) {
         const d = addDays(today, offset);
-        const dow = d.getDay(); // 1=Mon 3=Wed 5=Fri
-        if (dow === 1 || dow === 3 || dow === 5) days.push(d);
+        const dow = d.getDay();
+        if (dow===1||dow===3||dow===5) days.push(d);
         offset++;
     }
     return days;
 }
 
+/* ─── Week grid component ─────────────────────────────── */
+function WeekGrid({ weekStart, slots, assigned, onMove }) {
+    const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+    const today = fmt(new Date());
+
+    return (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'6px' }}>
+            {days.map(d => {
+                const ds       = fmt(d);
+                const isToday  = ds === today;
+                const isPast   = ds < today;
+                const daySlots = slots.filter(s => assigned[s.id] === ds);
+                const isPosting = d.getDay()===1||d.getDay()===3||d.getDay()===5;
+
+                return (
+                    <div key={ds} style={{
+                        minHeight:'90px', borderRadius:'10px', padding:'8px',
+                        background: isToday ? 'rgba(124,58,237,0.12)' : isPast ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+                        border:`1px solid ${isToday ? 'rgba(124,58,237,0.4)' : isPosting&&!isPast ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                        opacity: isPast ? 0.5 : 1,
+                        transition:'all 0.2s',
+                    }}>
+                        {/* Day header */}
+                        <div style={{ marginBottom:'6px', textAlign:'center' }}>
+                            <div style={{ fontSize:'0.62rem', fontWeight:700, color: isToday?'#a78bfa':'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                                {dayName(d)}
+                            </div>
+                            <div style={{ fontSize:'0.85rem', fontWeight: isToday?800:500, color: isToday?'#a78bfa':'rgba(255,255,255,0.6)' }}>
+                                {d.getDate()}
+                            </div>
+                        </div>
+
+                        {/* Slots on this day */}
+                        {daySlots.map(s => (
+                            <div key={s.id} style={{
+                                background:'rgba(167,139,250,0.15)', border:'1px solid rgba(167,139,250,0.3)',
+                                borderRadius:'6px', padding:'4px 6px', marginBottom:'4px',
+                                fontSize:'0.65rem', fontWeight:600, color:'#c4b5fd', lineHeight:1.3,
+                                cursor:'default',
+                            }}>
+                                {(s.idea_title||'').slice(0,35)}{s.idea_title?.length>35?'…':''}
+                            </div>
+                        ))}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+/* ─── Main ────────────────────────────────────────────── */
 export default function SessionStep4Calendar() {
     const { state, completeSession } = useSession();
-    const { selectedSlotIds = [], timeHorizon } = state;
+    const { selectedSlotIds=[], timeHorizon } = state;
     const supabase = createSupabaseClient();
+    const router   = useRouter();
 
     const [slots, setSlots]       = useState([]);
     const [assigned, setAssigned] = useState({});
     const [saving, setSaving]     = useState(false);
-    const [saved, setSaved]       = useState(false);
+    const [done, setDone]         = useState(false);
+    const [error, setError]       = useState('');
+    const [weekOffset, setWeekOffset] = useState(0);
 
-    const weeks   = timeHorizon === '2weeks' ? 2 : 4;
-    const todayStr = fmt(new Date());
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayStr = fmt(today);
+
+    // Week start = Monday of current week + offset
+    const weekStart = (() => {
+        const d = new Date(today);
+        const dow = d.getDay(); // 0=Sun
+        const diff = dow===0 ? -6 : 1-dow; // go to Monday
+        d.setDate(d.getDate() + diff + weekOffset*7);
+        return d;
+    })();
 
     useEffect(() => { if (selectedSlotIds.length) loadSlots(); }, []);
 
@@ -44,148 +106,137 @@ export default function SessionStep4Calendar() {
         const { data } = await supabase.from('content_slots').select('*').in('id', selectedSlotIds);
         if (!data) return;
         setSlots(data);
-        // Auto-assign dates — EVERY slot gets a date
-        const postingDays = getPostingDays(data.length);
+        // Auto-assign all slots
+        const days = getPostingDays(data.length);
         const auto = {};
-        data.forEach((s, i) => {
-            auto[s.id] = fmt(postingDays[i] || addDays(new Date(), (i * 2) + 1));
-        });
+        data.forEach((s, i) => { auto[s.id] = fmt(days[i]||addDays(today,i*2+1)); });
         setAssigned(auto);
     }
 
-    function moveSlot(slotId, date) {
-        setAssigned(p => ({ ...p, [slotId]: date }));
-    }
-
-    async function saveCalendar() {
-        setSaving(true);
-        for (const [slotId, date] of Object.entries(assigned)) {
-            await supabase.from('content_slots').update({ scheduled_date: date }).eq('id', slotId);
-        }
-        setSaved(true);
-        setSaving(false);
+    async function forceSave() {
+        // Save each slot date — catch errors individually
+        const results = await Promise.allSettled(
+            Object.entries(assigned).map(([slotId, date]) =>
+                supabase.from('content_slots')
+                    .update({ scheduled_date: date })
+                    .eq('id', slotId)
+            )
+        );
+        const failed = results.filter(r => r.status==='rejected' || r.value?.error);
+        if (failed.length) console.error('[Calendar] some saves failed:', failed);
+        return failed.length === 0;
     }
 
     async function handleFinish() {
-        await saveCalendar();
-        if (completeSession) await completeSession();
+        setSaving(true); setError('');
+        try {
+            await forceSave();
+            if (completeSession) await completeSession();
+            setDone(true);
+        } catch(e) {
+            setError('Error al guardar: ' + e.message);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    if (done) {
+        return (
+            <div style={{ textAlign:'center', padding:'60px 24px' }}>
+                <div style={{ fontSize:'3.5rem', marginBottom:'20px' }}>🎉</div>
+                <h2 style={{ fontSize:'2rem', fontWeight:900, color:'#fff', marginBottom:'12px' }}>¡Sesión Matrix completada!</h2>
+                <p style={{ color:'rgba(255,255,255,0.5)', maxWidth:'400px', margin:'0 auto 32px', lineHeight:1.65 }}>
+                    Tu contenido está planificado. {Object.keys(assigned).length} guiones guardados con fechas de publicación.
+                </p>
+                <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap' }}>
+                    <button onClick={()=>router.push('/dashboard/calendar')}
+                        style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'#7c3aed', color:'#fff', border:'none', borderRadius:'12px', padding:'13px 24px', fontSize:'0.9rem', fontWeight:700, cursor:'pointer' }}>
+                        <Calendar size={16}/> Ver mi Calendario
+                    </button>
+                    <button onClick={()=>router.push('/dashboard/library')}
+                        style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.7)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'12px', padding:'13px 24px', fontSize:'0.9rem', fontWeight:600, cursor:'pointer' }}>
+                        Ver Biblioteca
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     const assignedCount = Object.values(assigned).filter(Boolean).length;
+    const weekLabel = `${weekStart.getDate()} – ${addDays(weekStart,6).getDate()} ${monthName(weekStart)} ${weekStart.getFullYear()}`;
 
     return (
         <div>
             {/* Header */}
-            <div style={{ marginBottom:'28px' }}>
-                <h2 style={{ fontSize:'1.5rem', fontWeight:800, color:'#fff', marginBottom:'6px', letterSpacing:'-0.02em' }}>
-                    📅 Tu Calendario de Contenido
-                </h2>
-                <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.88rem' }}>
-                    {assignedCount} de {slots.length} guiones programados en Lun/Mié/Vie · Haz click en la fecha para cambiarla
-                </p>
-            </div>
-
-            {/* Slot list */}
-            {slots.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'40px' }}>
-                    <Loader2 size={22} style={{ animation:'spin 0.8s linear infinite', color:'#a78bfa' }} />
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'24px', gap:'12px', flexWrap:'wrap' }}>
+                <div>
+                    <h2 style={{ fontSize:'1.5rem', fontWeight:800, color:'#fff', marginBottom:'6px', letterSpacing:'-0.02em' }}>📅 Calendario de publicación</h2>
+                    <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.85rem' }}>
+                        {assignedCount}/{slots.length} guiones programados · Lun/Mié/Vie · Edita la fecha de cualquier guion abajo
+                    </p>
                 </div>
-            ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'28px' }}>
-                    {slots.map((slot, idx) => {
-                        const date    = assigned[slot.id] || '';
-                        const display = fmtDisplay(date);
-
-                        return (
-                            <div key={slot.id} style={{
-                                background:'rgba(255,255,255,0.025)',
-                                border:`1px solid ${date ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                                borderRadius:'14px', padding:'14px 18px',
-                                display:'flex', alignItems:'center', gap:'14px', flexWrap:'wrap',
-                                transition:'border-color 0.2s',
-                            }}>
-                                {/* Index */}
-                                <div style={{ width:'34px', height:'34px', borderRadius:'9px', background:'rgba(167,139,250,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                                    <span style={{ fontSize:'0.78rem', fontWeight:800, color:'#a78bfa' }}>{idx+1}</span>
-                                </div>
-
-                                {/* Title + type */}
-                                <div style={{ flex:1, minWidth:'140px' }}>
-                                    <p style={{ fontSize:'0.88rem', fontWeight:700, color:'#fff', marginBottom:'2px', lineHeight:1.3 }}>
-                                        {slot.idea_title}
-                                    </p>
-                                    <p style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.3)' }}>
-                                        {slot.content_type || 'Educativo'} · Reels
-                                    </p>
-                                </div>
-
-                                {/* Date picker + display */}
-                                <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
-                                    {date && (
-                                        <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
-                                            <CheckCircle2 size={14} color="#34d399" />
-                                            <span style={{ fontSize:'0.82rem', fontWeight:600, color:'#34d399' }}>
-                                                {display}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div style={{ position:'relative' }}>
-                                        <input
-                                            type="date"
-                                            value={date}
-                                            min={todayStr}
-                                            onChange={e => moveSlot(slot.id, e.target.value)}
-                                            style={{
-                                                background:'rgba(124,58,237,0.1)',
-                                                border:'1px solid rgba(124,58,237,0.3)',
-                                                borderRadius:'9px', color:'#a78bfa',
-                                                padding:'7px 10px', fontSize:'0.8rem',
-                                                cursor:'pointer', outline:'none',
-                                                fontFamily:'inherit',
-                                                colorScheme:'dark',
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Summary */}
-            <div style={{ background:'rgba(52,211,153,0.05)', border:'1px solid rgba(52,211,153,0.15)', borderRadius:'14px', padding:'14px 18px', marginBottom:'24px', display:'flex', alignItems:'center', gap:'12px' }}>
-                <Calendar size={18} color="#34d399" style={{ flexShrink:0 }} />
-                <p style={{ fontSize:'0.85rem', color:'rgba(255,255,255,0.7)', lineHeight:1.5 }}>
-                    <strong style={{ color:'#34d399' }}>{assignedCount} guiones</strong> programados automáticamente en Lunes, Miércoles y Viernes durante{' '}
-                    <strong style={{ color:'#34d399' }}>{weeks} semanas</strong>. Cambia cualquier fecha haciendo click en el selector.
-                </p>
-            </div>
-
-            {/* Actions */}
-            <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
                 <button onClick={handleFinish} disabled={saving}
-                    style={{
-                        display:'inline-flex', alignItems:'center', gap:'9px',
-                        background: saving ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg,#10b981,#059669)',
-                        color: saving ? '#555' : '#fff',
-                        border:'none', borderRadius:'13px', padding:'14px 28px',
-                        fontSize:'0.92rem', fontWeight:800, cursor: saving ? 'not-allowed' : 'pointer',
-                    }}>
-                    {saving
-                        ? <><Loader2 size={17} style={{ animation:'spin 0.8s linear infinite' }} /> Guardando…</>
-                        : <><Sparkles size={17} /> Guardar calendario y finalizar</>
-                    }
+                    style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:saving?'rgba(255,255,255,0.05)':'linear-gradient(135deg,#10b981,#059669)', color:saving?'#555':'#fff', border:'none', borderRadius:'12px', padding:'12px 22px', fontSize:'0.88rem', fontWeight:700, cursor:saving?'not-allowed':'pointer', flexShrink:0 }}>
+                    {saving ? <><Loader2 size={15} style={{animation:'spin 0.8s linear infinite'}}/> Guardando…</> : <><Sparkles size={15}/> Guardar y finalizar</>}
                 </button>
-                <button onClick={saveCalendar} disabled={saving}
-                    style={{ display:'inline-flex', alignItems:'center', gap:'7px', background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.5)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:'11px', padding:'11px 18px', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
-                    Guardar sin finalizar
-                </button>
+            </div>
+
+            {/* Week calendar */}
+            <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'16px', padding:'16px', marginBottom:'20px' }}>
+                {/* Week nav */}
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
+                    <button onClick={()=>setWeekOffset(w=>w-1)} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:'8px', color:'rgba(255,255,255,0.6)', width:'32px', height:'32px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <ChevronLeft size={16}/>
+                    </button>
+                    <span style={{ fontSize:'0.82rem', fontWeight:600, color:'rgba(255,255,255,0.55)' }}>{weekLabel}</span>
+                    <button onClick={()=>setWeekOffset(w=>w+1)} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:'8px', color:'rgba(255,255,255,0.6)', width:'32px', height:'32px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <ChevronRight size={16}/>
+                    </button>
+                </div>
+                <WeekGrid weekStart={weekStart} slots={slots} assigned={assigned} onMove={(id,d)=>setAssigned(p=>({...p,[id]:d}))} />
+            </div>
+
+            {/* Slot list with date pickers */}
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'24px' }}>
+                {slots.map((slot, idx) => {
+                    const date = assigned[slot.id]||'';
+                    const d    = parseDate(date);
+                    return (
+                        <div key={slot.id} style={{
+                            background:'rgba(255,255,255,0.025)', border:`1px solid ${date?'rgba(52,211,153,0.18)':'rgba(255,255,255,0.07)'}`,
+                            borderRadius:'12px', padding:'12px 16px',
+                            display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap',
+                        }}>
+                            <span style={{ width:'24px', height:'24px', borderRadius:'7px', background:'rgba(167,139,250,0.12)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:'0.68rem', fontWeight:800, color:'#a78bfa', flexShrink:0 }}>{idx+1}</span>
+                            <div style={{ flex:1, minWidth:'120px' }}>
+                                <p style={{ fontSize:'0.85rem', fontWeight:700, color:'#fff', margin:0, lineHeight:1.3 }}>{slot.idea_title}</p>
+                                <p style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.3)', margin:0 }}>{slot.content_type||'Educativo'}</p>
+                            </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
+                                {date && <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#34d399', display:'flex', alignItems:'center', gap:'4px' }}><CheckCircle2 size={13}/>{d?`${dayName(d)} ${d.getDate()} ${monthName(d).slice(0,3)}`:''}</span>}
+                                <input type="date" value={date} min={todayStr}
+                                    onChange={e=>setAssigned(p=>({...p,[slot.id]:e.target.value}))}
+                                    style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.25)', borderRadius:'8px', color:'#a78bfa', padding:'6px 10px', fontSize:'0.78rem', cursor:'pointer', outline:'none', colorScheme:'dark', fontFamily:'inherit' }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Summary + error */}
+            {error && <div style={{ padding:'12px 16px', background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:'10px', fontSize:'0.83rem', color:'#f87171', marginBottom:'16px' }}>{error}</div>}
+
+            <div style={{ background:'rgba(52,211,153,0.05)', border:'1px solid rgba(52,211,153,0.15)', borderRadius:'12px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'12px' }}>
+                <CheckCircle2 size={18} color="#34d399" style={{flexShrink:0}}/>
+                <p style={{ fontSize:'0.83rem', color:'rgba(255,255,255,0.65)', margin:0 }}>
+                    <strong style={{color:'#34d399'}}>{assignedCount} guiones</strong> listos para publicar · al guardar se envían al Calendario y a la Biblioteca
+                </p>
             </div>
 
             <style>{`
                 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-                input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(3) hue-rotate(200deg); cursor: pointer; }
+                input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.6) sepia(1) saturate(3) hue-rotate(200deg);cursor:pointer}
             `}</style>
         </div>
     );
