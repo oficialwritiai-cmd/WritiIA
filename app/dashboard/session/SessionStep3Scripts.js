@@ -82,48 +82,35 @@ export default function SessionStep3Scripts() {
     }
 
     async function saveToLibrary(slotId, raw, scriptDbId, slotData) {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { console.error('[library] no user'); return; }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-            // Use slotData passed directly (avoid race with slots state)
-            const realProjectId = slotData?.project_id || projectId || null;
-            const fullText = formatScript(raw);
-            const title    = slotData?.idea_title || raw.title || 'Guion Matrix';
+        const fullText = formatScript(raw);
+        const title    = slotData?.idea_title || raw.title || 'Guion';
 
-            console.log('[saveToLibrary] inserting:', { title, realProjectId, slotId });
+        const { error } = await supabase.from('library').insert({
+            user_id:          user.id,
+            project_id:       slotData?.project_id || null,
+            type:             'guion',
+            platform:         slotData?.platform || 'Reels',
+            goal:             slotData?.goal || 'engagement',
+            titulo:           title,
+            script_full_text: fullText,
+            content: {
+                titulo_angulo: title,
+                titulo_guion:  raw.title || title,
+                hook:          raw.hook || '',
+                gancho:        raw.hook || '',
+                desarrollo:    (raw.structure || []).map(b => `${b.point}: ${b.detail}`),
+                cta:           raw.cta || '',
+                copy_post:     raw.post_copy || {},
+            },
+        });
 
-            const { data: inserted, error } = await supabase.from('library').insert({
-                user_id:          user.id,
-                project_id:       realProjectId,
-                type:             'guion',
-                platform:         slotData?.platform || 'Reels',
-                goal:             'engagement',
-                titulo:           title,
-                script_full_text: fullText,
-                content: {
-                    titulo_angulo: title,
-                    titulo_guion:  raw.title || title,
-                    hook:          raw.hook || '',
-                    gancho:        raw.hook || '',
-                    desarrollo:    (raw.structure || []).map(b => `${b.point}: ${b.detail}`),
-                    cta:           raw.cta || '',
-                    copy_post:     raw.post_copy || {},
-                    script_id:     scriptDbId,
-                    slot_id:       slotId,
-                },
-                status: 'borrador',
-            }).select();
-
-            if (error) {
-                console.error('[saveToLibrary] ERROR:', error.message, error.details);
-                setErrors(p => ({ ...p, [slotId]: `Error guardando en Biblioteca: ${error.message}` }));
-            } else {
-                console.log('[saveToLibrary] OK:', inserted);
-                setSaved(p => ({ ...p, [slotId]: true }));
-            }
-        } catch (e) {
-            console.error('[saveToLibrary] exception:', e);
+        if (error) {
+            setErrors(p => ({ ...p, [slotId]: `No se pudo guardar en Biblioteca: ${error.message}` }));
+        } else {
+            setSaved(p => ({ ...p, [slotId]: true }));
         }
     }
 
@@ -251,10 +238,15 @@ export default function SessionStep3Scripts() {
                                     onFocus={e => e.target.style.borderColor='rgba(167,139,250,0.4)'}
                                     onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; saveEdited(slot.id); }}
                                 />
-                                <div style={{ display:'flex', gap:'8px', marginTop:'8px' }}>
+                                <div style={{ display:'flex', gap:'8px', marginTop:'8px', flexWrap:'wrap' }}>
                                     <button onClick={() => saveEdited(slot.id)} style={S.btnGreen}>
                                         <Save size={12} /> {isSaved ? 'Guardado ✓' : 'Guardar en Biblioteca'}
                                     </button>
+                                    {isSaved && (
+                                        <a href="/dashboard/library" target="_blank" style={{ ...S.btnSec, fontSize:'0.75rem', textDecoration:'none', color:'rgba(255,255,255,0.5)' }}>
+                                            <BookOpen size={12} /> Ver en Biblioteca
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         )}
