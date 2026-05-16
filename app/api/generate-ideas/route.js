@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 import { GenerateIdeasSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
@@ -37,9 +39,21 @@ export async function POST(req) {
         const { context, platforms, goal, count, projectId } = validation.data;
 
         // ─────────────────────────────────────────────────────────────
-        // SECURITY: Verify Session & Project Ownership (v4.9.0)
+        // SECURITY: Auth via cookies (session) OR Bearer token fallback
         // ─────────────────────────────────────────────────────────────
-        const { user, supabase } = await getServerSession(req);
+        const cookieStore = cookies();
+        const supabaseCookie = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            { cookies: { get: (n) => cookieStore.get(n)?.value } }
+        );
+        const { data: { user: cookieUser } } = await supabaseCookie.auth.getUser();
+
+        // Fallback to Bearer token if cookie auth fails
+        const { user: tokenUser, supabase: tokenSupabase } = cookieUser ? { user: cookieUser, supabase: supabaseCookie } : await getServerSession(req);
+        const user = cookieUser || tokenUser;
+        const supabase = cookieUser ? supabaseCookie : (tokenSupabase || supabaseCookie);
+
         if (!user) return unauthorized();
 
         if (projectId) {
