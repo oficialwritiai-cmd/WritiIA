@@ -106,16 +106,15 @@ export default function SessionStep2Ideas() {
                     project_id:      projectId || null,
                     session_id:      sessionId,
                     idea_title:      idea.titulo || 'Sin título',
-                    idea_description: idea.descripcion || '',
-                    content_type:    idea.tipo || 'Educativo',
-                    platform:        'Reels',
-                    status:          'idea_only',
-                    // Store hook + pilar + cta in script_content JSONB for later use
-                    script_content: {
-                        hook:  idea.hook  || '',
-                        pilar: idea.pilar || 'General',
-                        cta:   idea.cta   || '',
-                    },
+                    idea_description: [
+                        idea.descripcion || '',
+                        idea.hook  ? `Hook: ${idea.hook}` : '',
+                        idea.pilar ? `Pilar: ${idea.pilar}` : '',
+                        idea.cta   ? `CTA: ${idea.cta}` : '',
+                    ].filter(Boolean).join('\n'),
+                    content_type: idea.tipo || 'Educativo',
+                    platform:     'Reels',
+                    status:       'idea_only',
                 }));
 
             const { data: insertedSlots, error: insertErr } = await supabase
