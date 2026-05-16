@@ -90,7 +90,7 @@ export default function SessionStep3Scripts() {
 
         const { error } = await supabase.from('library').insert({
             user_id:          user.id,
-            project_id:       slotData?.project_id || null,
+            project_id:       projectId || slotData?.project_id || null,
             type:             'guion',
             platform:         slotData?.platform || 'Reels',
             goal:             slotData?.goal || 'engagement',
