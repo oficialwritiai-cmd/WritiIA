@@ -4,29 +4,22 @@ import { createServerClient } from '@supabase/ssr';
 import { GenerateIdeasSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
-import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
+import { verifyProjectAccess, forbidden } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
-const limiter = rateLimit({
-    interval: 60 * 1000,
-    uniqueTokenPerInterval: 500,
-});
+const limiter = rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 });
 
 export async function POST(req) {
     try {
         const ip = (req.headers.get('x-forwarded-for') || '127.0.0.1').split(',')[0].trim();
 
         let body;
-        try {
-            body = await req.json();
-        } catch {
-            return NextResponse.json({ error: 'Cuerpo de solicitud inválido.' }, { status: 400 });
-        }
+        try { body = await req.json(); }
+        catch { return NextResponse.json({ error: 'Cuerpo de solicitud inválido.' }, { status: 400 }); }
 
         const resObj = new NextResponse();
         try {
-            const rlKey = buildRateLimitKey(ip, body?.userId);
-            await limiter.check(resObj, 15, rlKey);
+            await limiter.check(resObj, 15, buildRateLimitKey(ip, body?.userId));
         } catch {
             return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429, headers: resObj.headers });
         }
@@ -36,9 +29,9 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { context, platforms, goal, count, projectId } = validation.data;
+        const { context, platforms, goal, count, projectId, contentPillars = [], sessionFAQs = [] } = validation.data;
 
-        // ── Auth via cookies (same as brain-from-voice and optimize-brain) ──
+        // ── Auth via cookies ──────────────────────────────────────────
         const cookieStore = cookies();
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -53,51 +46,63 @@ export async function POST(req) {
             if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
         }
 
-        const verifiedUserId = user.id;
-
-        // Charge Credits BEFORE AI call
-        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
+        // ── Credits ───────────────────────────────────────────────────
+        const creditResult = await chargeCredits(supabase, user.id, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
-        // Fetch Brand Brain: project-scoped first, fallback to global
+        // ── Fetch Brain ───────────────────────────────────────────────
         let brandBrain = null;
         if (projectId) {
             const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
             brandBrain = data;
         }
         if (!brandBrain) {
-            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', verifiedUserId).single();
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
             brandBrain = data;
         }
 
-        if (!brandBrain) {
-            return NextResponse.json({ error: 'Falta configuración de Cerebro IA (Paso 1).' }, { status: 400 });
-        }
+        // ── Build rich brain context ──────────────────────────────────
+        const brainCtx = [
+            brandBrain?.biography         && `Quién es: ${brandBrain.biography}`,
+            brandBrain?.audience          && `Audiencia: ${brandBrain.audience}`,
+            brandBrain?.products_services && `Oferta: ${brandBrain.products_services}`,
+            brandBrain?.style_words       && `Estilo: ${brandBrain.style_words}`,
+            brandBrain?.niche             && `Nicho: ${brandBrain.niche}`,
+            brandBrain?.learning_notes    && `Auditoría de marca: ${brandBrain.learning_notes}`,
+            contentPillars.length         && `Pilares de contenido: ${contentPillars.join(' · ')}`,
+            sessionFAQs.length            && `FAQs reales de la audiencia: ${sessionFAQs.slice(0, 10).join(' | ')}`,
+        ].filter(Boolean).join('\n');
 
-        const brandContextString = `Cerebro IA del creador: ${brandBrain.biography || ''}. Estilo: ${brandBrain.style_words || ''}.`;
+        // ── Prompts virales ───────────────────────────────────────────
+        const systemPrompt = `Eres un estratega de contenido VIRAL experto en Reels, TikTok y YouTube Shorts para coaches, consultores y creadores educativos en español.
 
-        const systemPrompt = `Eres un estratega de contenido viral experto.
-${brandContextString}
+CEREBRO IA DEL CREADOR:
+${brainCtx || context}
 
-Genera IDEAS DE CONTENIDO de alto impacto para redes sociales. 
-RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO. Este es el formato EXACTO que debes usar:
+TU MISIÓN: generar ideas que PAREN EL SCROLL. Cada idea debe:
+- Tener un hook que genere curiosidad, controversia o emoción en los primeros 3 segundos
+- Resolver un problema REAL y específico de esta audiencia concreta
+- Estar adaptada a video corto (60-90 segundos)
+- Variar los formatos: educativo directo, storytelling personal, lista de errores, opinión polémica, "yo antes vs ahora", revelación sorpresa, pregunta incómoda
 
+RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO, sin texto extra antes ni después:
 [
   {
-    "titulo": "Título corto y llamativo",
-    "hook": "Frase gancho para los primeros 3 segundos",
-    "descripcion": "Descripción detallada del contenido",
-    "plataforma": "Reels / TikTok / YouTube Shorts",
-    "tipo_contenido": "Educativo / Entretenimiento / Vlog / Storytelling",
-    "cta": "Llamado a la acción"
+    "titulo": "Título del video (máx 65 chars, que genere clic)",
+    "hook": "Las primeras 10-12 palabras del video que paran el scroll — directo, sin intro",
+    "descripcion": "De qué trata el video y por qué le importa a la audiencia (2-3 frases)",
+    "tipo": "Educativo|Storytelling|Lista|Opinión polémica|Antes vs Ahora|Error común|Revelación|Pregunta",
+    "pilar": "Pilar de contenido al que pertenece",
+    "cta": "Llamado a la acción específico (qué hacer al terminar el video)"
   }
 ]`;
 
-        const userPrompt = `Genera ${count} ideas para: ${context}. 
-Plataformas: ${platforms.join(', ')}. 
-Objetivo: ${goal}.`;
+        const userPrompt = `Genera exactamente ${count} ideas VIRALES y ESPECÍFICAS para esta audiencia.
+Contexto: ${context.slice(0, 400)}
+Plataformas: ${platforms.join(', ')}. Objetivo: ${goal}.
+CLAVE: Usa las FAQs reales y los pilares del Cerebro IA. CERO ideas genéricas. Cada idea debe sentirse escrita para esta persona concreta.`;
 
         const ideasData = await generateIdeasWithHaiku({
             apiKey: process.env.ANTHROPIC_API_KEY,
@@ -106,7 +111,6 @@ Objetivo: ${goal}.`;
         });
 
         const ideas = ideasData?.parsed || [];
-
         return NextResponse.json({ ideas });
 
     } catch (err) {

@@ -50,7 +50,7 @@ export default function SessionStep2Ideas() {
                     context,
                     platforms: ['Reels', 'TikTok', 'YouTube Shorts'],
                     goal: timeHorizon === '2weeks' ? 'Contenido para 2 semanas' : 'Contenido para 1 mes',
-                    count: 18,
+                    count: 24,
                     userId: user?.id,
                     projectId,
                     contentPillars: cleanPillars,
@@ -273,8 +273,13 @@ export default function SessionStep2Ideas() {
                                         </div>
                                         <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                             {idea.tipo && (
-                                                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', color: '#666', fontWeight: 600 }}>
+                                                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', background: 'rgba(124,58,237,0.1)', color: '#a78bfa', fontWeight: 600 }}>
                                                     {idea.tipo}
+                                                </span>
+                                            )}
+                                            {idea.pilar && (
+                                                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', background: 'rgba(255,255,255,0.04)', color: '#555', fontWeight: 600 }}>
+                                                    {idea.pilar}
                                                 </span>
                                             )}
                                         </div>
