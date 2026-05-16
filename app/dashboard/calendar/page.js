@@ -224,29 +224,60 @@ function CalendarContent() {
     useEffect(() => {
         async function loadLinkedScript() {
             if (!selectedEvent) { setLinkedScript(null); return; }
-            const hasScript = selectedEvent.has_script || selectedEvent.reference_id;
-            if (!hasScript) { setLinkedScript(null); return; }
             setLoadingScript(true);
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
-                const scriptId = selectedEvent.reference_id || selectedEvent.script_id || selectedEvent.id;
-                const { data: libData } = await supabase.from('library').select('*').eq('id', scriptId).single();
-                if (libData) {
-                    setLinkedScript(libData);
-                } else {
-                    const { data: slotData } = await supabase.from('content_slots').select('*').eq('id', selectedEvent.id).single();
-                    if (slotData?.script_content) {
-                        setLinkedScript({
-                            id: slotData.id, content: slotData.script_content,
-                            gancho: slotData.script_content?.hook || slotData.script_content?.gancho,
-                            desarrollo: slotData.script_content?.desarrollo || slotData.script_content?.puntos,
-                            cta: slotData.script_content?.cta || slotData.script_content?.cierre,
-                            copy_post: slotData.copy_content
-                        });
-                    }
+
+                // 1. Try direct library match by reference_id
+                if (selectedEvent.reference_id) {
+                    const { data: libById } = await supabase.from('library').select('*').eq('id', selectedEvent.reference_id).single();
+                    if (libById) { setLinkedScript(libById); return; }
                 }
-            } catch (err) { console.error('Error loading linked script:', err); }
+
+                // 2. Try by title match (reference_id = content_slot.id, not library.id)
+                if (selectedEvent.title) {
+                    const { data: byTitle } = await supabase.from('library')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('type', 'guion')
+                        .eq('titulo', selectedEvent.title)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    if (byTitle?.length) { setLinkedScript(byTitle[0]); return; }
+
+                    // 3. Partial title match (ilike)
+                    const { data: byIlike } = await supabase.from('library')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('type', 'guion')
+                        .ilike('titulo', `%${selectedEvent.title.slice(0, 30)}%`)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    if (byIlike?.length) { setLinkedScript(byIlike[0]); return; }
+                }
+
+                // 4. Fallback: content_slot script_data
+                const { data: slotData } = await supabase.from('content_slots').select('*')
+                    .eq('id', selectedEvent.reference_id || selectedEvent.id).single();
+                if (slotData?.script_data) {
+                    const sd = slotData.script_data;
+                    setLinkedScript({
+                        id: null,
+                        titulo: slotData.idea_title || selectedEvent.title,
+                        content: {
+                            hook: sd.hook || '',
+                            gancho: sd.hook || '',
+                            desarrollo: Array.isArray(sd.desarrollo) ? sd.desarrollo : [],
+                            cta: sd.cta || '',
+                            copy_post: sd.copy_post || null,
+                        },
+                        script_full_text: slotData.script_full_text || '',
+                    });
+                } else {
+                    setLinkedScript(null);
+                }
+            } catch (err) { console.error('Error loading linked script:', err); setLinkedScript(null); }
             finally { setLoadingScript(false); }
         }
         loadLinkedScript();
@@ -332,6 +363,18 @@ function CalendarContent() {
             if (selectedEvent && selectedEvent.id) {
                 if (selectedEvent.is_slot) {
                     const slotUpdates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, description: tempNotes, scheduled_date: selectedDate, start_time: tempStartTime, end_time: tempEndTime, slot_color: colorValue };
+                    if (linkedScript?.content) {
+                        const lc = linkedScript.content;
+                        slotUpdates.script_content = {
+                            gancho: lc.gancho || lc.hook || '',
+                            hook: lc.hook || lc.gancho || '',
+                            desarrollo: lc.desarrollo || [],
+                            cta: lc.cta || lc.cierre || '',
+                            cierre: lc.cierre || lc.cta || '',
+                            full_text: lc.full_text || '',
+                        };
+                        slotUpdates.copy_content = lc.copy_post || null;
+                    }
                     const { error: updateErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', selectedEvent.id);
                     if (updateErr) throw updateErr;
                     setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...slotUpdates, event_date: selectedDate, notes: tempNotes, color: colorValue } : ev));
@@ -340,6 +383,22 @@ function CalendarContent() {
                     const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
                     if (updateErr) throw updateErr;
                     setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...updates } : ev));
+                }
+                // Save linked script to library if exists
+                if (linkedScript?.id && linkedScript?.content) {
+                    const lc = linkedScript.content;
+                    const libPayload = {
+                        content: {
+                            gancho: lc.gancho || lc.hook || '',
+                            hook: lc.hook || lc.gancho || '',
+                            desarrollo: lc.desarrollo || [],
+                            cta: lc.cta || lc.cierre || '',
+                            cierre: lc.cierre || lc.cta || '',
+                            copy_post: lc.copy_post || null,
+                            full_text: lc.full_text || '',
+                        }
+                    };
+                    await supabase.from('library').update(libPayload).eq('id', linkedScript.id);
                 }
             } else {
                 const payload = { user_id: user.id, project_id: activeProject?.id, title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, type: 'idea', color: colorValue, start_time: tempStartTime, end_time: tempEndTime };
@@ -594,6 +653,8 @@ function CalendarContent() {
                                         const heightPx = durMin / 60 * HOUR_H;
                                         const c = colorOf(ev.color || 'purple');
                                         const isSelected = selectedEvents.has(ev.id);
+                                        const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
+                                        const platColor = platColors[ev.platform] || c.solid;
 
                                         return (
                                             <div
@@ -607,13 +668,13 @@ function CalendarContent() {
                                                 style={{
                                                     position: 'absolute',
                                                     top: topPx + 2,
-                                                    left: 2,
-                                                    right: 2,
-                                                    height: Math.max(heightPx - 4, 22),
+                                                    left: 3,
+                                                    right: 3,
+                                                    height: Math.max(heightPx - 4, 20),
                                                     background: c.bg,
-                                                    borderLeft: `3px solid ${c.solid}`,
-                                                    borderRadius: 6,
-                                                    padding: '3px 6px',
+                                                    borderLeft: `3px solid ${platColor}`,
+                                                    borderRadius: 5,
+                                                    padding: '2px 5px',
                                                     cursor: 'pointer',
                                                     zIndex: 5,
                                                     overflow: 'hidden',
@@ -622,11 +683,18 @@ function CalendarContent() {
                                                     userSelect: 'none',
                                                 }}
                                             >
-                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: c.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
-                                                    {ev.title}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                    {heightPx > 32 && ev.platform && ev.platform !== 'General' && (
+                                                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: platColor, textTransform: 'uppercase', letterSpacing: '0.04em', background: `${platColor}18`, borderRadius: 2, padding: '0 3px', lineHeight: '12px' }}>
+                                                            {ev.platform}
+                                                        </span>
+                                                    )}
+                                                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: c.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                                                        {ev.title}
+                                                    </span>
                                                 </div>
                                                 {heightPx > 36 && (
-                                                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                                                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', marginTop: 0 }}>
                                                         {(ev.start_time || '09:00').slice(0,5)}
                                                     </div>
                                                 )}
@@ -666,7 +734,7 @@ function CalendarContent() {
 
         // Padding cells
         for (let i = 0; i < startOffset; i++) {
-            cells.push(<div key={`pad-${i}`} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 90 }} />);
+            cells.push(<div key={`pad-${i}`} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 80 }} />);
         }
 
         // Day cells
@@ -680,7 +748,7 @@ function CalendarContent() {
             cells.push(
                 <div
                     key={d}
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 90, padding: '6px 4px', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' }}
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 80, padding: '5px 4px', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' }}
                     onClick={() => handleDayClick(ds)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => onDrop(e, ds)}
@@ -697,9 +765,11 @@ function CalendarContent() {
                         }}>{d}</span>
                         <span style={{ opacity: 0, fontSize: '0.6rem', color: '#555' }} className="cell-plus">+</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {dayEvs.slice(0, MAX_VISIBLE).map(ev => {
                             const c = colorOf(ev.color || 'purple');
+                            const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
+                            const pc = platColors[ev.platform] || c.solid;
                             return (
                                 <div
                                     key={ev.id}
@@ -709,19 +779,23 @@ function CalendarContent() {
                                     onContextMenu={e => handleContextMenu(e, ev.id)}
                                     style={{
                                         background: c.bg,
-                                        borderLeft: `3px solid ${c.solid}`,
-                                        borderRadius: 4,
-                                        padding: '1px 5px',
-                                        fontSize: '0.68rem',
+                                        borderLeft: `2.5px solid ${pc}`,
+                                        borderRadius: 3,
+                                        padding: '1px 4px',
+                                        fontSize: '0.65rem',
                                         fontWeight: 600,
                                         color: c.text,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         cursor: 'pointer',
-                                        boxShadow: selectedEvents.has(ev.id) ? `0 0 0 1.5px ${c.solid}` : 'none',
+                                        lineHeight: 1.4,
+                                        boxShadow: selectedEvents.has(ev.id) ? `0 0 0 1px ${c.solid}` : 'none',
                                     }}
                                 >
+                                    {ev.platform && ev.platform !== 'General' ? (
+                                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: pc, marginRight: 3 }}>◆</span>
+                                    ) : null}
                                     {ev.title}
                                 </div>
                             );
@@ -1104,7 +1178,7 @@ function CalendarContent() {
             )}
 
             {/* ── Main ── */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'margin-right 0.3s', marginRight: isPanelOpen && !isMobile ? 320 : 0 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'margin-right 0.3s', marginRight: isPanelOpen && !isMobile ? 440 : 0 }}>
 
                 {/* Topbar */}
                 <header style={{ height: 52, flexShrink: 0, background: '#13131a', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px' }}>
@@ -1197,24 +1271,43 @@ function CalendarContent() {
             {/* ── Detail Panel ── */}
             {isPanelOpen && (
                 <aside style={{
-                    position: 'fixed', top: 0, right: 0, bottom: 0, width: 320,
-                    background: '#111116', borderLeft: '1px solid rgba(255,255,255,0.07)',
+                    position: 'fixed', top: 0, right: 0, bottom: 0, width: 440,
+                    background: '#0f0f13', borderLeft: '1px solid rgba(255,255,255,0.06)',
                     display: 'flex', flexDirection: 'column', zIndex: 100,
-                    boxShadow: '-8px 0 30px rgba(0,0,0,0.4)',
+                    boxShadow: '-12px 0 40px rgba(0,0,0,0.5)',
                     animation: 'slideInPanel 0.25s cubic-bezier(0.16,1,0.3,1)',
                 }}>
                     {/* Panel header */}
-                    <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                            <button onClick={handleClosePanel} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', display: 'flex', padding: 2 }}><X size={18} /></button>
+                    <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                            <button onClick={handleClosePanel} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                <X size={14} /> Cerrar
+                            </button>
                             <div style={{ display: 'flex', gap: 6 }}>
                                 <button
-                                    onClick={() => setSheetItem({ id: selectedEvent?.id, titulo: tempTitle, platform: tempPlatform, status: tempStatus, script_full_text: tempNotes, content: { titulo_angulo: tempTitle, hook: '', cta: '' } })}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 7, color: '#a78bfa', padding: '4px 9px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                                    onClick={() => {
+                                        const libId = linkedScript?.id || (selectedEvent?.has_script ? selectedEvent?.reference_id : null);
+                                        const lc = linkedScript?.content || {};
+                                        setSheetItem({
+                                            id: libId || 'new',
+                                            titulo: tempTitle,
+                                            platform: tempPlatform,
+                                            status: tempStatus,
+                                            script_full_text: lc.script_full_text || tempNotes || lc.full_text || '',
+                                            content: {
+                                                titulo_angulo: tempTitle,
+                                                hook: lc.hook || lc.gancho || '',
+                                                gancho: lc.gancho || lc.hook || '',
+                                                desarrollo: lc.desarrollo || [],
+                                                cta: lc.cta || lc.cierre || '',
+                                                copy_post: lc.copy_post || null,
+                                                full_text: lc.full_text || '',
+                                            }
+                                        });
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 7, color: '#a78bfa', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
                                     <Edit3 size={12} /> Editor completo
                                 </button>
-                                <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', display: 'flex', padding: 2 }} title="Compartir"><Share2 size={15} /></button>
-                                <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', display: 'flex', padding: 2 }} title="Opciones"><MoreVertical size={15} /></button>
                             </div>
                         </div>
                         <textarea
@@ -1227,62 +1320,52 @@ function CalendarContent() {
                     </div>
 
                     {/* Panel body */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
-                        {/* Open full editor link */}
-                        {selectedEvent && (
-                            <button onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
-                                style={{ width: '100%', marginBottom: 16, background: 'rgba(124,58,237,0.1)', color: '#c4b5fd', border: '1px solid rgba(124,58,237,0.25)', padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer', gap: 7 }}>
-                                <Edit3 size={14} /> Abrir editor completo
-                            </button>
-                        )}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
 
-                        {/* Properties */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 16 }}>
-                            {[
-                                {
-                                    icon: <Globe size={13} />, label: 'Plataforma',
-                                    input: <select value={tempPlatform} onChange={e => setTempPlatform(e.target.value)} style={propSelectStyle}>
-                                        <option value="General">General</option>
-                                        <option value="TikTok">TikTok</option>
-                                        <option value="Instagram">Instagram</option>
-                                        <option value="YouTube">YouTube</option>
-                                        <option value="LinkedIn">LinkedIn</option>
-                                    </select>
-                                },
-                                {
-                                    icon: <CalendarIcon size={13} />, label: 'Fecha',
-                                    input: <input type="date" value={selectedDate || ''} onChange={e => setSelectedDate(e.target.value)} style={propInputStyle} />
-                                },
-                                {
-                                    icon: <CheckCircle2 size={13} />, label: 'Estado',
-                                    input: <select value={tempStatus} onChange={e => setTempStatus(e.target.value)} style={propSelectStyle}>
-                                        <option value="idea">Idea</option>
-                                        <option value="prep">En preparación</option>
-                                        <option value="rec">En grabación</option>
-                                        <option value="pub">Publicado</option>
-                                    </select>
-                                },
-                                {
-                                    icon: <Clock size={13} />, label: 'Horario',
-                                    input: <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                        <input type="time" value={tempStartTime} onChange={e => setTempStartTime(e.target.value)} style={{ ...propInputStyle, width: 90 }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem' }}>–</span>
-                                        <input type="time" value={tempEndTime} onChange={e => setTempEndTime(e.target.value)} style={{ ...propInputStyle, width: 90 }} />
-                                    </div>
-                                },
-                            ].map(({ icon, label, input }) => (
-                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 100, color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', flexShrink: 0 }}>
-                                        {icon} {label}
-                                    </div>
-                                    <div style={{ flex: 1 }}>{input}</div>
+                        {/* Properties grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, paddingBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 18 }}>
+                            <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Globe size={11} /> Plataforma
                                 </div>
-                            ))}
-
-                            {/* Color picker */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 100, color: 'rgba(255,255,255,0.3)', fontSize: '0.72rem', flexShrink: 0 }}>
-                                    <Palette size={13} /> Color
+                                <select value={tempPlatform} onChange={e => setTempPlatform(e.target.value)} style={propSelectStyle}>
+                                    <option value="General">General</option>
+                                    <option value="TikTok">TikTok</option>
+                                    <option value="Instagram">Instagram</option>
+                                    <option value="YouTube">YouTube</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <CheckCircle2 size={11} /> Estado
+                                </div>
+                                <select value={tempStatus} onChange={e => setTempStatus(e.target.value)} style={propSelectStyle}>
+                                    <option value="idea">💡 Idea</option>
+                                    <option value="prep">🔧 En preparación</option>
+                                    <option value="rec">🎬 En grabación</option>
+                                    <option value="pub">🚀 Publicado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <CalendarIcon size={11} /> Fecha
+                                </div>
+                                <input type="date" value={selectedDate || ''} onChange={e => setSelectedDate(e.target.value)} style={propInputStyle} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Clock size={11} /> Horario
+                                </div>
+                                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                                    <input type="time" value={tempStartTime} onChange={e => setTempStartTime(e.target.value)} style={{ ...propInputStyle, flex: 1 }} />
+                                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem' }}>→</span>
+                                    <input type="time" value={tempEndTime} onChange={e => setTempEndTime(e.target.value)} style={{ ...propInputStyle, flex: 1 }} />
+                                </div>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Palette size={11} /> Color
                                 </div>
                                 <div style={{ display: 'flex', gap: 6 }}>
                                     {THEME_COLORS.map(color => (
@@ -1294,7 +1377,7 @@ function CalendarContent() {
                                                 setEvents(prev => prev.map(ev => ev.id === selectedEvent.id ? { ...ev, color: color.id } : ev));
                                             }
                                         }}
-                                            style={{ width: 18, height: 18, borderRadius: '50%', background: color.hex, cursor: 'pointer', boxSizing: 'border-box', border: tempColor === color.id ? '2px solid #fff' : '2px solid transparent', transition: 'border 0.15s, transform 0.15s', transform: tempColor === color.id ? 'scale(1.2)' : 'scale(1)' }}
+                                            style={{ width: 22, height: 22, borderRadius: '50%', background: color.hex, cursor: 'pointer', boxSizing: 'border-box', border: tempColor === color.id ? '2px solid #fff' : '2px solid transparent', transition: 'all 0.15s', transform: tempColor === color.id ? 'scale(1.15)' : 'scale(1)' }}
                                             title={color.name}
                                         />
                                     ))}
@@ -1302,13 +1385,27 @@ function CalendarContent() {
                             </div>
                         </div>
 
-                        {/* Notes */}
-                        <textarea
-                            placeholder="Notas, objetivos o guion..."
-                            value={tempNotes}
-                            onChange={e => setTempNotes(e.target.value)}
-                            style={{ width: '100%', minHeight: 100, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#ccc', borderRadius: 10, padding: '12px', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.6, boxSizing: 'border-box', marginBottom: 16 }}
-                        />
+                        {/* Notas — expandido */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 18 }}>
+                            <div style={{ padding: '11px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                    <BookOpen size={14} color="rgba(255,255,255,0.3)" />
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Notas</span>
+                                </div>
+                                {selectedEvent && (
+                                    <button onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
+                                        style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <Edit3 size={11} /> Editar
+                                    </button>
+                                )}
+                            </div>
+                            <textarea
+                                placeholder="Escribe aquí ideas, objetivos, referencias o el guion completo..."
+                                value={tempNotes}
+                                onChange={e => setTempNotes(e.target.value)}
+                                style={{ width: '100%', minHeight: 100, background: 'transparent', border: 'none', color: '#ddd', padding: '14px 16px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.7, boxSizing: 'border-box' }}
+                            />
+                        </div>
 
                         {/* Linked script preview */}
                         {loadingScript ? (
@@ -1316,69 +1413,52 @@ function CalendarContent() {
                                 <div className="spinner-mini" style={{ margin: '0 auto 8px' }} />Cargando guion...
                             </div>
                         ) : linkedScript ? (
-                            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', marginBottom: 12 }}>
-                                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: 7 }}>
-                                    <BookOpen size={14} color="#7c3aed" />
-                                    <span style={{ fontWeight: 800, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c4b5fd' }}>Guion Vinculado</span>
+                            <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 12 }}>
+                                <div style={{ background: 'linear-gradient(90deg, rgba(124,58,237,0.08), transparent)', padding: '11px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <BookOpen size={14} color="#a78bfa" />
+                                        <span style={{ fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c4b5fd' }}>Guion Vinculado</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>auto-guarda</span>
                                 </div>
-                                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                    <ScriptBlock label="GANCHO" value={linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || ''} onChange={v => { const nc = { ...(linkedScript.content||{}) }; nc.gancho = v; nc.hook = v; setLinkedScript({ ...linkedScript, content: nc }); }} />
-                                    {(() => {
-                                        const des = linkedScript.content?.desarrollo || linkedScript.desarrollo || linkedScript.content?.puntos || linkedScript.puntos;
-                                        const arr = Array.isArray(des) ? des : (typeof des === 'string' ? des.split('\n').filter(Boolean) : ['']);
-                                        const final = arr.length > 0 ? arr : [''];
-                                        return (
-                                            <div>
-                                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>DESARROLLO</div>
-                                                {final.map((p, i) => (
-                                                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                                        <span style={{ color: '#7c3aed', fontWeight: 900, fontSize: '0.85rem', marginTop: 10 }}>{i+1}.</span>
-                                                        <textarea value={String(p).replace(/^\d+\.\s*/,'')} onChange={e => { const nd = [...final]; nd[i] = e.target.value; const nc = { ...(linkedScript.content||{}) }; nc.desarrollo = nd; setLinkedScript({ ...linkedScript, content: nc }); }}
-                                                            style={{ flex: 1, minHeight: 70, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: '#ccc', borderRadius: 8, padding: 10, fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
-                                                            placeholder={`Punto ${i+1}...`} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        );
-                                    })()}
-                                    <ScriptBlock label="CTA" value={linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || ''} onChange={v => { const nc = { ...(linkedScript.content||{}) }; nc.cierre = v; nc.cta = v; setLinkedScript({ ...linkedScript, content: nc }); }} />
-                                    {(() => {
-                                        const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
-                                        if (!copy) return null;
-                                        const headline = copy.titulo || copy.headline || '';
-                                        const caption  = copy.descripcion_larga || copy.body || copy.caption || copy.texto || '';
-                                        const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags : [];
-                                        return (
-                                            <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>COPY DEL POST</div>
-                                                <input type="text" value={headline} onChange={e => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.titulo = e.target.value; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
-                                                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: '#ccc', borderRadius: 7, padding: '8px 10px', fontSize: '0.8rem', outline: 'none', marginBottom: 8, boxSizing: 'border-box', fontFamily: 'Inter, sans-serif' }}
-                                                    placeholder="Título del post..." />
-                                                <textarea value={caption} onChange={e => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.descripcion_larga = e.target.value; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
-                                                    style={{ width: '100%', minHeight: 80, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: '#ccc', borderRadius: 7, padding: '8px 10px', fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', fontStyle: 'italic', boxSizing: 'border-box', marginBottom: 8 }}
-                                                    placeholder="Caption..." />
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
-                                                    {hashtags.map((tag, idx) => (
-                                                        <span key={idx} onClick={() => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.hashtags = hashtags.filter((_,i)=>i!==idx); nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
-                                                            style={{ color: '#a78bfa', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(124,58,237,0.12)', padding: '2px 7px', borderRadius: 4, cursor: 'pointer' }}>#{tag}</span>
-                                                    ))}
-                                                </div>
-                                                <input type="text" placeholder="Añadir hashtags (separados por coma)..."
-                                                    onKeyDown={e => { if (e.key === 'Enter') { const tags = e.target.value.split(',').map(t => t.trim().replace('#','')).filter(Boolean); const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.hashtags = [...new Set([...hashtags, ...tags])]; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); e.target.value = ''; } }}
-                                                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: '#ccc', borderRadius: 7, padding: '7px 10px', fontSize: '0.72rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'Inter, sans-serif' }} />
-                                            </div>
-                                        );
-                                    })()}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                        <button onClick={() => { const hook = linkedScript.content?.hook || linkedScript.content?.gancho || ''; const des = (Array.isArray(linkedScript.content?.desarrollo) ? linkedScript.content.desarrollo : (Array.isArray(linkedScript.desarrollo) ? linkedScript.desarrollo : [])).join('\n'); const cta = linkedScript.content?.cta || linkedScript.content?.cierre || ''; navigator.clipboard.writeText(`GANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}`); alert('Guion completo copiado ✓'); }}
+                                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                    <ScriptBlock
+                                        label="⚡ Hook"
+                                        color="#a78bfa"
+                                        value={linkedScript.content?.hook || linkedScript.content?.gancho || linkedScript.gancho || ''}
+                                        onChange={v => { const nc = { ...(linkedScript.content||{}) }; nc.gancho = v; nc.hook = v; setLinkedScript({ ...linkedScript, content: nc }); }}
+                                    />
+                                    <ScriptDesarrollo
+                                        linkedScript={linkedScript}
+                                        setLinkedScript={setLinkedScript}
+                                    />
+                                    <ScriptBlock
+                                        label="📢 CTA"
+                                        color="#34d399"
+                                        value={linkedScript.content?.cta || linkedScript.content?.cierre || linkedScript.cta || ''}
+                                        onChange={v => { const nc = { ...(linkedScript.content||{}) }; nc.cierre = v; nc.cta = v; setLinkedScript({ ...linkedScript, content: nc }); }}
+                                    />
+                                    <ScriptCopyPost
+                                        linkedScript={linkedScript}
+                                        setLinkedScript={setLinkedScript}
+                                    />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+                                        <button onClick={() => {
+                                            const hook = linkedScript.content?.hook || linkedScript.content?.gancho || '';
+                                            const des = (Array.isArray(linkedScript.content?.desarrollo) ? linkedScript.content.desarrollo : (Array.isArray(linkedScript.desarrollo) ? linkedScript.desarrollo : [])).join('\n');
+                                            const cta = linkedScript.content?.cta || linkedScript.content?.cierre || '';
+                                            navigator.clipboard.writeText(`GANCHO:\n${hook}\n\nDESARROLLO:\n${des}\n\nCTA:\n${cta}`);
+                                        }}
                                             style={btnSecondarySmall}><Copy size={11} /> Copiar guion</button>
-                                        <button onClick={() => { const copy = linkedScript.content?.copy_post || linkedScript.copy_post; const title = copy?.titulo || ''; const cap = copy?.descripcion_larga || copy?.body || ''; const tags = (copy?.hashtags||[]).map(t=>t.startsWith('#')?t:`#${t}`).join(' '); navigator.clipboard.writeText(`${title}\n\n${cap}\n\n${tags}`); alert('Copy de publicación copiado ✓'); }}
+                                        <button onClick={() => {
+                                            const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
+                                            const title = copy?.titulo || copy?.headline || '';
+                                            const cap = copy?.descripcion_larga || copy?.body || '';
+                                            const tags = (copy?.hashtags||[]).map(t=>t.startsWith('#')?t:`#${t}`).join(' ');
+                                            navigator.clipboard.writeText(`${title}\n\n${cap}\n\n${tags}`);
+                                        }}
                                             style={btnSecondarySmall}><Share2 size={11} /> Copiar copy</button>
                                     </div>
-                                    <button onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
-                                        style={{ width: '100%', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 9, padding: '9px 0', color: '#c4b5fd', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                        <Edit3 size={13} /> Abrir Editor Completo
-                                    </button>
                                 </div>
                             </div>
                         ) : selectedEvent && (
@@ -1399,7 +1479,7 @@ function CalendarContent() {
                     </div>
 
                     {/* Panel footer */}
-                    <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10 }}>
+                    <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10 }}>
                         {selectedEvent && (
                             <button onClick={() => handleDeleteEvent(selectedEvent.id)}
                                 style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444', borderRadius: 9, padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -1407,7 +1487,7 @@ function CalendarContent() {
                             </button>
                         )}
                         <button onClick={handleSavePanel}
-                            style={{ flex: 1, background: '#7c3aed', border: 'none', color: '#fff', borderRadius: 9, padding: '10px 0', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                            style={{ flex: 1, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: 9, padding: '11px 0', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
                             <Save size={15} /> {selectedEvent ? 'Guardar cambios' : 'Crear evento'}
                         </button>
                     </div>
@@ -1496,50 +1576,76 @@ function CalendarContent() {
                 />
             )}
 
-            {/* ── Global styles ── */}
-            <style jsx>{`
-                * { box-sizing: border-box; }
-                .week-scroll::-webkit-scrollbar { width: 6px; }
-                .week-scroll::-webkit-scrollbar-track { background: transparent; }
-                .week-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-                .week-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
-
-                @keyframes slideInPanel {
-                    from { opacity: 0; transform: translateX(20px); }
-                    to   { opacity: 1; transform: translateX(0); }
-                }
-                @keyframes slideUpBar {
-                    from { transform: translate(-50%, 40px); opacity: 0; }
-                    to   { transform: translate(-50%, 0);   opacity: 1; }
-                }
-
-                /* Mobile styles preserved */
-                .cal-mobile-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 8px; background: #111116; border-radius: 12px; margin-bottom: 12px; }
-                .cal-mobile-day-header { text-align: center; font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.3); padding: 6px 0; text-transform: uppercase; }
-                .cal-mobile-day { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 38px; padding-top: 4px; border-radius: 8px; position: relative; cursor: pointer; transition: background 0.15s; }
-                .cal-mobile-day:hover { background: rgba(255,255,255,0.03); }
-                .cal-mobile-day.selected .day-num-circle { background: #7c3aed; color: white; }
-                .cal-mobile-day.today .day-num-circle { border: 2px solid #7c3aed; color: #c4b5fd; }
-                .day-num-circle { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.7); }
-                .event-dot { width: 5px; height: 5px; border-radius: 50%; }
-                .cal-mobile-v2 { display: flex; flex-direction: column; height: 100%; }
-                .mobile-month-section { padding: 10px 10px 0; }
-                .mobile-agenda-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-                .agenda-day-header { padding: 10px 16px 6px; font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: capitalize; border-bottom: 1px solid rgba(255,255,255,0.05); }
-                .mobile-fab { position: fixed; bottom: 28px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: #7c3aed; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 24px rgba(124,58,237,0.45); z-index: 500; }
-            `}</style>
+            {/* ── Global styles — moved to calendar.css ── */}
         </div>
     );
 }
 
-// ─── Small helper components ──────────────────────────────────────────────────
-function ScriptBlock({ label, value, onChange }) {
+// ─── Helper: ScriptBlock — card con borde de color ───────────────────────────
+function ScriptBlock({ label, value, onChange, color = '#a78bfa' }) {
     return (
-        <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label}</div>
+        <div style={{ background: `rgba(255,255,255,0.02)`, borderRadius: 10, border: `1px solid rgba(255,255,255,0.05)`, borderLeft: `3px solid ${color}`, overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px 0', fontSize: '0.6rem', fontWeight: 800, color: color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</div>
             <textarea value={value} onChange={e => onChange(e.target.value)}
-                style={{ width: '100%', minHeight: 80, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: '#ccc', borderRadius: 8, padding: 10, fontSize: '0.8rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' }}
-                placeholder={`Escribe el ${label.toLowerCase()}...`} />
+                style={{ width: '100%', minHeight: 65, background: 'transparent', border: 'none', color: '#ddd', padding: '8px 12px 10px', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.6, boxSizing: 'border-box' }}
+                placeholder={`Escribe el ${label.replace(/^[^\s]*\s*/,'').toLowerCase()}...`} />
+        </div>
+    );
+}
+
+// ─── Helper: ScriptDesarrollo — bloques numerados ────────────────────────────
+function ScriptDesarrollo({ linkedScript, setLinkedScript }) {
+    const des = linkedScript.content?.desarrollo || linkedScript.desarrollo || linkedScript.content?.puntos || linkedScript.puntos;
+    const arr = Array.isArray(des) ? des : (typeof des === 'string' ? des.split('\n').filter(Boolean) : ['']);
+    const final = arr.length > 0 ? arr : [''];
+    return (
+        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px 0', fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                📝 Desarrollo · {final.length} bloque{final.length !== 1 ? 's' : ''}
+            </div>
+            <div style={{ padding: '6px 12px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {final.map((p, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <span style={{ color: '#7c3aed', fontWeight: 900, fontSize: '0.8rem', marginTop: 8, flexShrink: 0, width: 18, textAlign: 'center' }}>{i+1}</span>
+                        <textarea value={String(p).replace(/^\d+\.\s*/,'')} onChange={e => { const nd = [...final]; nd[i] = e.target.value; const nc = { ...(linkedScript.content||{}) }; nc.desarrollo = nd; setLinkedScript({ ...linkedScript, content: nc }); }}
+                            style={{ flex: 1, minHeight: 55, background: 'rgba(255,255,255,0.03)', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#ccc', padding: '8px 0', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.6, boxSizing: 'border-box' }}
+                            placeholder={`Punto ${i+1}...`} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Helper: ScriptCopyPost — headline + body + hashtags ─────────────────────
+function ScriptCopyPost({ linkedScript, setLinkedScript }) {
+    const copy = linkedScript.content?.copy_post || linkedScript.copy_post;
+    if (!copy) return null;
+    const headline = copy.titulo || copy.headline || '';
+    const caption  = copy.descripcion_larga || copy.body || copy.caption || copy.texto || '';
+    const hashtags = Array.isArray(copy.hashtags) ? copy.hashtags : [];
+    return (
+        <div style={{ background: 'rgba(96,165,250,0.04)', borderRadius: 10, border: '1px solid rgba(96,165,250,0.12)', borderLeft: '3px solid #60a5fa', overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px 0', fontSize: '0.6rem', fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>📱 Copy Redes</div>
+            <div style={{ padding: '8px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input type="text" value={headline} onChange={e => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.titulo = e.target.value; ncp.headline = e.target.value; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#fff', padding: '6px 0', fontSize: '0.85rem', fontWeight: 600, outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' }}
+                    placeholder="Título del post..." />
+                <textarea value={caption} onChange={e => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.descripcion_larga = e.target.value; ncp.body = e.target.value; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
+                    style={{ width: '100%', minHeight: 65, background: 'transparent', border: 'none', color: '#bbb', padding: '4px 0', fontSize: '0.82rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.6, boxSizing: 'border-box' }}
+                    placeholder="Caption..." />
+                {hashtags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {hashtags.map((tag, idx) => (
+                            <span key={idx} onClick={() => { const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.hashtags = hashtags.filter((_,i)=>i!==idx); nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); }}
+                                style={{ color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(124,58,237,0.12)', padding: '2px 7px', borderRadius: 4, cursor: 'pointer' }}>#{tag}</span>
+                        ))}
+                    </div>
+                )}
+                <input type="text" placeholder="Añadir hashtags (Enter para añadir)..."
+                    onKeyDown={e => { if (e.key === 'Enter') { const tags = e.target.value.split(',').map(t => t.trim().replace('#','')).filter(Boolean); const nc = { ...(linkedScript.content||{}) }; const ncp = { ...(nc.copy_post||{}) }; ncp.hashtags = [...new Set([...hashtags, ...tags])]; nc.copy_post = ncp; setLinkedScript({ ...linkedScript, content: nc }); e.target.value = ''; } }}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#999', padding: '4px 0', fontSize: '0.75rem', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' }} />
+            </div>
         </div>
     );
 }

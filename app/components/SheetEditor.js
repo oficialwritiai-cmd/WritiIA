@@ -1,33 +1,125 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { X, CheckCircle2, Loader2, Copy, Check, BookOpen, Zap, Target, MessageSquare, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { createSupabaseClient } from '@/lib/supabase';
 
-const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X'];
+const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X', 'General'];
 const STATUSES  = ['Borrador', 'Listo', 'Publicado', 'Idea'];
 
-const inp = {
-    width: '100%', background: 'transparent', border: 'none',
-    color: '#fff', outline: 'none', fontFamily: 'inherit',
-    resize: 'vertical', boxSizing: 'border-box',
-};
-const section = {
-    marginBottom: '32px',
-};
-const label = {
-    display: 'block', fontSize: '0.68rem', fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '0.08em',
-    color: 'rgba(255,255,255,0.3)', marginBottom: '8px',
-};
-const field = {
-    width: '100%', background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '10px', color: '#fff', padding: '12px 14px',
-    fontSize: '0.9rem', lineHeight: 1.65, resize: 'vertical',
-    outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-    transition: 'border-color 0.2s',
+/* ─── Token counter ──────────────────────────────────────────── */
+function countWords(str) {
+    return (str || '').trim().split(/\s+/).filter(Boolean).length;
+}
+
+/* ─── Notion block component ─────────────────────────────────── */
+function Block({ icon, label, color, accent, children, collapsible = false, defaultOpen = true }) {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div style={{
+            borderRadius: '16px',
+            border: `1px solid ${accent}22`,
+            background: `linear-gradient(135deg, ${accent}08 0%, transparent 100%)`,
+            overflow: 'hidden',
+            marginBottom: '20px',
+            transition: 'border-color 0.2s',
+        }}>
+            <div
+                onClick={collapsible ? () => setOpen(o => !o) : undefined}
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 20px 12px',
+                    borderBottom: open ? `1px solid ${accent}18` : 'none',
+                    cursor: collapsible ? 'pointer' : 'default',
+                    userSelect: 'none',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        background: `${accent}18`, border: `1px solid ${accent}30`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                    }}>
+                        {icon}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        {label}
+                    </span>
+                </div>
+                {collapsible && (
+                    <div style={{ color: 'rgba(255,255,255,0.2)', transition: 'transform 0.2s', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+                        <ChevronDown size={15} />
+                    </div>
+                )}
+            </div>
+            {open && (
+                <div style={{ padding: '16px 20px 20px' }}>
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ─── Inline textarea ────────────────────────────────────────── */
+function InlineArea({ value, onChange, placeholder, rows = 4, mono = false, large = false }) {
+    const ref = useRef(null);
+    useEffect(() => {
+        if (ref.current) {
+            ref.current.style.height = 'auto';
+            ref.current.style.height = ref.current.scrollHeight + 'px';
+        }
+    }, [value]);
+    return (
+        <textarea
+            ref={ref}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+            style={{
+                width: '100%', background: 'transparent', border: 'none',
+                color: large ? '#ffffff' : 'rgba(255,255,255,0.85)',
+                outline: 'none', fontFamily: mono ? "'JetBrains Mono', 'Fira Code', monospace" : "'Inter', sans-serif",
+                fontSize: large ? '1rem' : '0.92rem',
+                lineHeight: large ? 1.7 : 1.75,
+                resize: 'none', boxSizing: 'border-box',
+                fontWeight: large ? 500 : 400,
+                letterSpacing: large ? '-0.01em' : 'normal',
+            }}
+            onInput={e => {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+        />
+    );
+}
+
+/* ─── Property row ───────────────────────────────────────────── */
+function PropRow({ icon, label, children }) {
+    return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            padding: '10px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '110px', flexShrink: 0 }}>
+                <span style={{ color: 'rgba(255,255,255,0.25)', lineHeight: 0 }}>{icon}</span>
+                <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{label}</span>
+            </div>
+            <div style={{ flex: 1 }}>{children}</div>
+        </div>
+    );
+}
+
+const selectStyle = {
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px', color: '#fff', padding: '5px 10px',
+    fontSize: '0.82rem', cursor: 'pointer', outline: 'none',
+    fontFamily: "'Inter', sans-serif",
 };
 
+/* ─── Main SheetEditor ────────────────────────────────────────── */
 export default function SheetEditor({ sheetId, item: initialItem, onClose, onSave, userId, activeProjectId }) {
     const [title,      setTitle]      = useState('');
     const [platform,   setPlatform]   = useState('Reels');
@@ -37,19 +129,17 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     const [cta,        setCta]        = useState('');
     const [copyPost,   setCopyPost]   = useState('');
     const [fullText,   setFullText]   = useState('');
-    const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved
+    const [saveStatus, setSaveStatus] = useState('idle');
     const [itemId,     setItemId]     = useState(sheetId !== 'new' ? sheetId : null);
+    const [copied,     setCopied]     = useState(false);
+    const [showFull,   setShowFull]   = useState(false);
 
     const supabase  = createSupabaseClient();
     const timerRef  = useRef(null);
-    const isNew     = !itemId;
 
     useEffect(() => {
-        if (initialItem) {
-            populate(initialItem);
-        } else if (sheetId && sheetId !== 'new') {
-            loadSheet(sheetId);
-        }
+        if (initialItem) populate(initialItem);
+        else if (sheetId && sheetId !== 'new') loadSheet(sheetId);
     }, [sheetId, initialItem]);
 
     function populate(data) {
@@ -58,14 +148,14 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
         setPlatform(data.platform || 'Reels');
         setStatus(data.metadata?.status || data.status || 'Borrador');
         setHook(data.content?.hook || data.content?.gancho || '');
-        setDesarrollo((data.content?.desarrollo || []).join('\n'));
-        setCta(data.content?.cta || '');
+        const des = data.content?.desarrollo || [];
+        setDesarrollo(Array.isArray(des) ? des.join('\n') : String(des || ''));
+        setCta(data.content?.cta || data.content?.cierre || '');
+        const cp = data.content?.copy_post;
         setCopyPost(
-            data.content?.copy_post
-                ? (typeof data.content.copy_post === 'string'
-                    ? data.content.copy_post
-                    : `${data.content.copy_post.headline || ''}\n${data.content.copy_post.body || ''}`.trim())
-                : ''
+            cp ? (typeof cp === 'string' ? cp
+                : `${cp.headline || cp.titulo || ''}\n${cp.body || cp.descripcion_larga || ''}`.trim())
+            : ''
         );
         setFullText(data.script_full_text || data.content?.full_text || '');
     }
@@ -75,13 +165,10 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
         if (data) populate(data);
     }
 
-    // Auto-save debounced 1.5s after last change
     const triggerAutoSave = useCallback(() => {
         clearTimeout(timerRef.current);
         setSaveStatus('idle');
-        timerRef.current = setTimeout(() => {
-            performSave();
-        }, 1500);
+        timerRef.current = setTimeout(performSave, 1500);
     }, [title, platform, status, hook, desarrollo, cta, copyPost, fullText, itemId]);
 
     async function performSave() {
@@ -102,12 +189,9 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 metadata:         { status },
                 content: {
                     titulo_angulo: title,
-                    hook,
-                    gancho: hook,
+                    hook, gancho: hook,
                     desarrollo: desarrollo.split('\n').filter(d => d.trim()),
-                    cta,
-                    copy_post: copyPost,
-                    full_text: fullContent,
+                    cta, copy_post: copyPost, full_text: fullContent,
                 },
             };
 
@@ -115,161 +199,276 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 const { error } = await supabase.from('library').update(payload).eq('id', itemId);
                 if (error) throw error;
             } else {
+                let uid = userId;
+                if (!uid) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    uid = user?.id;
+                }
+                if (!uid) throw new Error('Usuario no autenticado');
                 const { data, error } = await supabase.from('library').insert({
-                    ...payload,
-                    user_id:    userId,
-                    project_id: activeProjectId || null,
+                    ...payload, user_id: uid, project_id: activeProjectId || null,
                 }).select().single();
                 if (error) throw error;
                 if (data) { setItemId(data.id); onSave?.(data); }
             }
             setSaveStatus('saved');
-            setTimeout(() => setSaveStatus('idle'), 2500);
+            setTimeout(() => setSaveStatus('idle'), 3000);
         } catch (e) {
             console.error('[SheetEditor] save error:', e);
             setSaveStatus('idle');
         }
     }
 
-    // Trigger auto-save on any field change
-    function onChange(setter) {
+    function change(setter) {
         return (val) => { setter(val); triggerAutoSave(); };
     }
+
+    function copyAll() {
+        const text = fullText || [
+            title      ? `🎬 ${title}` : '',
+            hook       ? `\n⚡ HOOK:\n${hook}` : '',
+            desarrollo ? `\n📝 DESARROLLO:\n${desarrollo}` : '',
+            cta        ? `\n📢 CTA:\n${cta}` : '',
+            copyPost   ? `\n📱 COPY:\n${copyPost}` : '',
+        ].filter(Boolean).join('\n');
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
+
+    const totalWords = countWords(hook) + countWords(desarrollo) + countWords(cta) + countWords(copyPost) + countWords(fullText);
+    const hasContent = hook || desarrollo || cta || copyPost || fullText;
 
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
             background: '#0c0c0e',
             display: 'flex', flexDirection: 'column',
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Inter', -apple-system, sans-serif",
         }}>
-            {/* ── Top bar ─────────────────────────────────── */}
+            {/* ── Topbar ─────────────────────────────────────── */}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 32px', height: '52px',
+                padding: '0 24px', height: '54px',
                 borderBottom: '1px solid rgba(255,255,255,0.06)',
-                background: '#13131a', flexShrink: 0,
+                background: 'rgba(13,13,20,0.95)',
+                backdropFilter: 'blur(12px)',
+                flexShrink: 0,
+                gap: '16px',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>Biblioteca</span>
-                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>/</span>
-                    <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {/* Breadcrumb */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                    <BookOpen size={14} color="rgba(255,255,255,0.2)" />
+                    <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)', fontWeight: 500 }}>Biblioteca</span>
+                    <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: '0.9rem' }}>/</span>
+                    <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '320px' }}>
                         {title || 'Sin título'}
                     </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {/* Auto-save indicator */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
-                        {saveStatus === 'saving' && <>
-                            <Loader2 size={13} style={{ color: '#a78bfa', animation: 'spin 0.8s linear infinite' }} />
-                            <span style={{ color: 'rgba(255,255,255,0.35)' }}>Guardando…</span>
-                        </>}
-                        {saveStatus === 'saved' && <>
-                            <CheckCircle2 size={13} color="#34d399" />
-                            <span style={{ color: '#34d399' }}>Guardado</span>
-                        </>}
-                        {saveStatus === 'idle' && (
-                            <span style={{ color: 'rgba(255,255,255,0.2)' }}>Auto-guardado activado</span>
+                {/* Right controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    {/* Auto-save */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)' }}>
+                        {saveStatus === 'saving' && (
+                            <><Loader2 size={12} style={{ color: '#a78bfa', animation: 'spin 0.8s linear infinite' }} /><span style={{ color: '#a78bfa' }}>Guardando…</span></>
                         )}
+                        {saveStatus === 'saved' && (
+                            <><CheckCircle2 size={12} color="#34d399" /><span style={{ color: '#34d399' }}>Guardado</span></>
+                        )}
+                        {saveStatus === 'idle' && <span>Auto-guardado</span>}
                     </div>
 
+                    {/* Word count */}
+                    {totalWords > 0 && (
+                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', padding: '3px 9px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            {totalWords} palabras
+                        </span>
+                    )}
+
+                    {/* Copy button */}
+                    {hasContent && (
+                        <button onClick={copyAll}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: copied ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copied ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px', color: copied ? '#34d399' : 'rgba(255,255,255,0.5)', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+                            {copied ? <Check size={13} /> : <Copy size={13} />}
+                            {copied ? 'Copiado' : 'Copiar todo'}
+                        </button>
+                    )}
+
+                    {/* Close */}
                     <button onClick={() => { clearTimeout(timerRef.current); onClose?.(); }}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'rgba(255,255,255,0.5)', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <X size={17} />
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                        <X size={16} />
                     </button>
                 </div>
             </div>
 
-            {/* ── Main content ─────────────────────────────── */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '48px 32px' }}>
-                <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+            {/* ── Two-column layout ─────────────────────────── */}
+            <div style={{ flex: 1, display: 'flex', overflowY: 'hidden', minHeight: 0 }}>
 
-                    {/* Meta row */}
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '32px', flexWrap: 'wrap' }}>
-                        {[
-                            { label: 'Plataforma', value: platform, set: onChange(setPlatform), opts: PLATFORMS },
-                            { label: 'Estado',     value: status,   set: onChange(setStatus),   opts: STATUSES },
-                        ].map(({ label: lbl, value, set, opts }) => (
-                            <div key={lbl}>
-                                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '4px' }}>{lbl}</span>
-                                <select value={value} onChange={e => set(e.target.value)}
-                                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', padding: '6px 10px', fontSize: '0.82rem', cursor: 'pointer', outline: 'none' }}>
-                                    {opts.map(o => <option key={o} value={o} style={{ background: '#1a1a24' }}>{o}</option>)}
-                                </select>
+                {/* ── LEFT: Properties sidebar ──────────────── */}
+                <div style={{
+                    width: '240px', flexShrink: 0,
+                    borderRight: '1px solid rgba(255,255,255,0.05)',
+                    background: 'rgba(255,255,255,0.01)',
+                    overflowY: 'auto',
+                    padding: '28px 20px',
+                    display: 'flex', flexDirection: 'column', gap: '4px',
+                }}>
+                    <p style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                        Propiedades
+                    </p>
+
+                    <PropRow icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>} label="Plataforma">
+                        <select value={platform} onChange={e => change(setPlatform)(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
+                            {PLATFORMS.map(p => <option key={p} value={p} style={{ background: '#1a1a24' }}>{p}</option>)}
+                        </select>
+                    </PropRow>
+
+                    <PropRow icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>} label="Estado">
+                        <select value={status} onChange={e => change(setStatus)(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
+                            {STATUSES.map(s => <option key={s} value={s} style={{ background: '#1a1a24' }}>{s}</option>)}
+                        </select>
+                    </PropRow>
+
+                    <PropRow icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>} label="Tipo">
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', background: 'rgba(167,139,250,0.1)', padding: '3px 9px', borderRadius: '6px', fontWeight: 600, color: '#a78bfa' }}>Guion</span>
+                    </PropRow>
+
+                    {/* Quick stats */}
+                    {totalWords > 0 && (
+                        <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.12)', borderRadius: '12px' }}>
+                            <p style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(167,139,250,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Estadísticas</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {[
+                                    { label: 'Palabras', value: totalWords },
+                                    { label: 'Hook', value: `${countWords(hook)} pal.` },
+                                    { label: 'Desarrollo', value: `${countWords(desarrollo)} pal.` },
+                                    { label: 'Lectura', value: `~${Math.max(1, Math.ceil(totalWords / 150))} min` },
+                                ].map(({ label, value }) => (
+                                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>{label}</span>
+                                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>{value}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
+                </div>
 
-                    {/* Title — big Notion-style */}
-                    <textarea
-                        value={title}
-                        onChange={e => onChange(setTitle)(e.target.value)}
-                        placeholder="Título del guion…"
-                        rows={2}
-                        style={{ ...inp, fontSize: '2.2rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.03em', marginBottom: '40px', color: '#fff', resize: 'none' }}
-                        onInput={e => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; }}
-                    />
+                {/* ── RIGHT: Content ──────────────────────────── */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px 80px' }}>
+                    <div style={{ maxWidth: '760px', margin: '0 auto' }}>
 
-                    {/* Hook */}
-                    <div style={section}>
-                        <span style={label}>⚡ Hook — primeras palabras</span>
-                        <textarea value={hook} rows={3} placeholder="Las palabras que paran el scroll en los primeros 3 segundos…"
-                            onChange={e => onChange(setHook)(e.target.value)}
-                            style={{ ...field, borderLeft: '3px solid #a78bfa', paddingLeft: '16px', fontSize: '1.05rem', fontWeight: 500 }}
-                            onFocus={e => e.target.style.borderColor='rgba(167,139,250,0.5)'}
-                            onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
+                        {/* Big Notion-style title */}
+                        <textarea
+                            value={title}
+                            onChange={e => change(setTitle)(e.target.value)}
+                            placeholder="Sin título…"
+                            rows={1}
+                            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                            style={{
+                                width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                                color: '#ffffff', fontFamily: "'Inter', sans-serif",
+                                fontSize: '2.6rem', fontWeight: 900, lineHeight: 1.15,
+                                letterSpacing: '-0.04em', resize: 'none', boxSizing: 'border-box',
+                                marginBottom: '40px',
+                            }}
                         />
-                    </div>
 
-                    {/* Desarrollo */}
-                    <div style={section}>
-                        <span style={label}>📝 Desarrollo — cuerpo del guion</span>
-                        <textarea value={desarrollo} rows={12} placeholder="Desarrollo completo del guion. Puedes usar formato libre o bloques numerados…"
-                            onChange={e => onChange(setDesarrollo)(e.target.value)}
-                            style={{ ...field, fontSize: '0.92rem', lineHeight: 1.75 }}
-                            onFocus={e => e.target.style.borderColor='rgba(255,255,255,0.2)'}
-                            onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
-                        />
-                    </div>
+                        {/* ── Hook block ───────────────────────── */}
+                        <Block
+                            icon={<Zap size={14} color="#a78bfa" />}
+                            label="Hook — Para el scroll"
+                            color="white"
+                            accent="#a78bfa"
+                        >
+                            <InlineArea
+                                value={hook}
+                                onChange={change(setHook)}
+                                placeholder="Las primeras 10–15 palabras que paran el scroll. Deben generar curiosidad, impacto o emoción en los primeros 3 segundos…"
+                                rows={3}
+                                large
+                            />
+                        </Block>
 
-                    {/* CTA */}
-                    <div style={section}>
-                        <span style={label}>📢 CTA — llamada a la acción</span>
-                        <textarea value={cta} rows={2} placeholder="¿Qué quieres que haga el espectador al terminar el video?"
-                            onChange={e => onChange(setCta)(e.target.value)}
-                            style={{ ...field, borderLeft: '3px solid #34d399', paddingLeft: '16px' }}
-                            onFocus={e => e.target.style.borderColor='rgba(52,211,153,0.4)'}
-                            onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
-                        />
-                    </div>
+                        {/* ── Desarrollo block ─────────────────── */}
+                        <Block
+                            icon={<MessageSquare size={14} color="rgba(255,255,255,0.5)" />}
+                            label="Desarrollo — Cuerpo del guion"
+                            color="white"
+                            accent="rgba(255,255,255,0.3)"
+                        >
+                            <InlineArea
+                                value={desarrollo}
+                                onChange={change(setDesarrollo)}
+                                placeholder={`1. Primer punto clave del video\n2. Segundo punto con ejemplo o historia\n3. Tercer punto con el dato que sorprende\n\nEscribe libremente o usa bloques numerados…`}
+                                rows={10}
+                            />
+                        </Block>
 
-                    {/* Copy redes */}
-                    <div style={section}>
-                        <span style={label}>📱 Copy para redes sociales</span>
-                        <textarea value={copyPost} rows={4} placeholder="Copy para el pie de foto o descripción del video en redes…"
-                            onChange={e => onChange(setCopyPost)(e.target.value)}
-                            style={{ ...field, borderLeft: '3px solid #60a5fa', paddingLeft: '16px' }}
-                            onFocus={e => e.target.style.borderColor='rgba(96,165,250,0.4)'}
-                            onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
-                        />
-                    </div>
+                        {/* ── CTA block ────────────────────────── */}
+                        <Block
+                            icon={<Target size={14} color="#34d399" />}
+                            label="CTA — Llamada a la acción"
+                            color="white"
+                            accent="#34d399"
+                        >
+                            <InlineArea
+                                value={cta}
+                                onChange={change(setCta)}
+                                placeholder="¿Qué quieres que haga el espectador? Sé directo y específico…"
+                                rows={2}
+                            />
+                        </Block>
 
-                    {/* Full text (collapsed by default) */}
-                    <div style={{ ...section, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px' }}>
-                        <span style={label}>📄 Guion completo (texto libre)</span>
-                        <textarea value={fullText} rows={16} placeholder="Pega aquí el guion completo o edítalo libremente…"
-                            onChange={e => onChange(setFullText)(e.target.value)}
-                            style={{ ...field, fontSize: '0.88rem', lineHeight: 1.75, fontFamily: "'JetBrains Mono', monospace" }}
-                            onFocus={e => e.target.style.borderColor='rgba(255,255,255,0.2)'}
-                            onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.08)'}
-                        />
-                    </div>
+                        {/* ── Copy redes block ─────────────────── */}
+                        <Block
+                            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>}
+                            label="Copy para redes sociales"
+                            color="white"
+                            accent="#60a5fa"
+                            collapsible
+                            defaultOpen={!!copyPost}
+                        >
+                            <InlineArea
+                                value={copyPost}
+                                onChange={change(setCopyPost)}
+                                placeholder="Título del post / Caption para Instagram, TikTok, YouTube…\n\n#hashtag1 #hashtag2 #hashtag3"
+                                rows={4}
+                            />
+                        </Block>
 
+                        {/* ── Guion completo block ─────────────── */}
+                        <Block
+                            icon={<FileText size={14} color="rgba(255,255,255,0.3)" />}
+                            label="Guion completo (texto libre)"
+                            color="white"
+                            accent="rgba(255,255,255,0.15)"
+                            collapsible
+                            defaultOpen={!!fullText && !hook}
+                        >
+                            <InlineArea
+                                value={fullText}
+                                onChange={change(setFullText)}
+                                placeholder="Pega o escribe aquí el guion completo en formato libre…"
+                                rows={14}
+                                mono
+                            />
+                        </Block>
+
+                    </div>
                 </div>
             </div>
 
-            <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+            <style>{`
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                ::-webkit-scrollbar { width: 6px; height: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+                ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+                textarea::placeholder { color: rgba(255,255,255,0.2) !important; }
+            `}</style>
         </div>
     );
 }
