@@ -98,7 +98,7 @@ export default function SessionStep2Ideas() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // plan_id is NOT NULL — create a minimal plan first
+            // plan_id NOT NULL — create plan first (exact same structure as generate-plan route)
             const { data: planData, error: planErr } = await supabase
                 .from('content_plans')
                 .insert({
@@ -106,32 +106,32 @@ export default function SessionStep2Ideas() {
                     project_id: projectId || null,
                     month:      new Date().getMonth() + 1,
                     year:       new Date().getFullYear(),
-                    frequency:  timeHorizon === '2weeks' ? '2weeks' : 'monthly',
+                    frequency:  'diaria',
                     platforms:  ['Reels', 'TikTok', 'YouTube Shorts'],
-                    focus:      'Contenido de valor para la audiencia',
+                    focus:      timeHorizon === '2weeks' ? 'Contenido para 2 semanas' : 'Contenido mensual',
                 })
                 .select()
                 .single();
-            if (planErr) throw planErr;
+            if (planErr) throw new Error(`Error creando plan: ${planErr.message}`);
 
-            // Build selected ideas — only columns that exist in content_slots
-            const toInsert = generatedIdeas
-                .filter((_, idx) => selectedSlotIds.includes(String(idx)))
-                .map(idea => ({
-                    user_id:          user.id,
-                    project_id:       projectId || null,
-                    plan_id:          planData.id,
-                    idea_title:       idea.titulo || 'Sin título',
-                    idea_description: [
-                        idea.descripcion || '',
-                        idea.hook  ? `Hook: ${idea.hook}` : '',
-                        idea.pilar ? `Pilar: ${idea.pilar}` : '',
-                        idea.cta   ? `CTA: ${idea.cta}` : '',
-                    ].filter(Boolean).join('\n'),
-                    content_type:     idea.tipo || 'Educativo',
-                    platform:         'Reels',
-                    goal:             'engagement',
-                }));
+            // Build slots — exact same columns as generate-plan route
+            const selectedIdeas = generatedIdeas.filter((_, idx) => selectedSlotIds.includes(String(idx)));
+            const toInsert = selectedIdeas.map((idea, index) => ({
+                plan_id:          planData.id,
+                user_id:          user.id,
+                project_id:       projectId || null,
+                day_number:       index + 1,
+                platform:         'Reels',
+                content_type:     idea.tipo || 'Educativo',
+                idea_title:       idea.titulo || 'Sin título',
+                idea_description: [
+                    idea.descripcion || '',
+                    idea.hook  ? `Hook: ${idea.hook}` : '',
+                    idea.pilar ? `Pilar: ${idea.pilar}` : '',
+                    idea.cta   ? `CTA: ${idea.cta}` : '',
+                ].filter(Boolean).join('\n'),
+                goal:             'engagement',
+            }));
 
             const { data: insertedSlots, error: insertErr } = await supabase
                 .from('content_slots')
