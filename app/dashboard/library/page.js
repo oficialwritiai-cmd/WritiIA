@@ -68,6 +68,7 @@ export default function LibraryPage() {
     const [error, setError]                 = useState('');
     const [toast, setToast]                 = useState(null);
     const [showSheetEditor, setShowSheetEditor] = useState(false);
+    const [selectedItem, setSelectedItem]   = useState(null); // item opened in SheetEditor
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [clearing, setClearing]           = useState(false);
 
@@ -402,8 +403,9 @@ export default function LibraryPage() {
                         return (
                             <div
                                 key={item.id}
-                                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: C.radius, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', transition: 'border-color 0.2s, background 0.2s', position: 'relative' }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderHover; e.currentTarget.style.background = C.cardHover; }}
+                                onClick={() => { setSelectedItem(item); setShowSheetEditor(true); }}
+                                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: C.radius, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', transition: 'border-color 0.2s, background 0.2s', position: 'relative', cursor: 'pointer' }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.background = 'rgba(124,58,237,0.06)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.card; }}
                             >
                                 {/* Top row: badges + favorite */}
@@ -533,12 +535,13 @@ export default function LibraryPage() {
                 </div>
             )}
 
-            {/* ── Sheet Editor Modal ─────────────────────────────────────────── */}
+            {/* ── Sheet Editor — opens on card click OR new ───────────────── */}
             {showSheetEditor && (
                 <SheetEditor
-                    sheetId="new"
-                    onClose={() => setShowSheetEditor(false)}
-                    onSave={() => { setShowSheetEditor(false); loadScripts(); }}
+                    sheetId={selectedItem ? selectedItem.id : 'new'}
+                    item={selectedItem || null}
+                    onClose={() => { setShowSheetEditor(false); setSelectedItem(null); loadScripts(); }}
+                    onSave={(saved) => { setShowSheetEditor(false); setSelectedItem(null); loadScripts(); }}
                     userId={currentUserId}
                     activeProjectId={activeProject?.id}
                 />
