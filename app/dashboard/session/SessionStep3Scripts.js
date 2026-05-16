@@ -52,6 +52,10 @@ export default function SessionStep3Scripts() {
         setLoading(p => ({ ...p, [slotId]: true }));
         setErrors(p => ({ ...p, [slotId]: '' }));
         try {
+            // Get slot data fresh from DB (avoid race condition with slots state)
+            const { data: slotData } = await supabase
+                .from('content_slots').select('*').eq('id', slotId).single();
+
             const res = await fetch(`/api/slots/${slotId}/generate-script`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -61,7 +65,6 @@ export default function SessionStep3Scripts() {
             if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error generando guion.'); }
             const data = await res.json();
 
-            // API saves to 'scripts' table automatically — data.script.id is the scripts.id
             const raw  = data.script || data;
             const txt  = formatScript(raw);
             const scriptDbId = raw.id || null;
@@ -69,8 +72,8 @@ export default function SessionStep3Scripts() {
             setScripts(p => ({ ...p, [slotId]: { id: scriptDbId, text: txt, raw } }));
             setEdited(p => ({ ...p, [slotId]: txt }));
 
-            // Auto-save to library right after generation
-            await saveToLibrary(slotId, raw, scriptDbId);
+            // Pass slotData directly to avoid race condition
+            await saveToLibrary(slotId, raw, scriptDbId, slotData);
         } catch (e) {
             setErrors(p => ({ ...p, [slotId]: e.message }));
         } finally {
@@ -78,20 +81,23 @@ export default function SessionStep3Scripts() {
         }
     }
 
-    async function saveToLibrary(slotId, raw, scriptDbId) {
+    async function saveToLibrary(slotId, raw, scriptDbId, slotData) {
         try {
-            const slot = slots.find(s => s.id === slotId);
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) { console.error('[library] no user'); return; }
 
+            // Use slotData passed directly (avoid race with slots state)
+            const realProjectId = slotData?.project_id || projectId || null;
             const fullText = formatScript(raw);
-            const title    = slot?.idea_title || raw.title || 'Guion Matrix';
+            const title    = slotData?.idea_title || raw.title || 'Guion Matrix';
 
-            const { error } = await supabase.from('library').insert({
+            console.log('[saveToLibrary] inserting:', { title, realProjectId, slotId });
+
+            const { data: inserted, error } = await supabase.from('library').insert({
                 user_id:          user.id,
-                project_id:       projectId || null,
+                project_id:       realProjectId,
                 type:             'guion',
-                platform:         slot?.platform || 'Reels',
+                platform:         slotData?.platform || 'Reels',
                 goal:             'engagement',
                 titulo:           title,
                 script_full_text: fullText,
@@ -107,15 +113,17 @@ export default function SessionStep3Scripts() {
                     slot_id:       slotId,
                 },
                 status: 'borrador',
-            });
+            }).select();
 
             if (error) {
-                console.error('[saveToLibrary] error:', error.message);
+                console.error('[saveToLibrary] ERROR:', error.message, error.details);
+                setErrors(p => ({ ...p, [slotId]: `Error guardando en Biblioteca: ${error.message}` }));
             } else {
+                console.log('[saveToLibrary] OK:', inserted);
                 setSaved(p => ({ ...p, [slotId]: true }));
             }
         } catch (e) {
-            console.error('[saveToLibrary]', e);
+            console.error('[saveToLibrary] exception:', e);
         }
     }
 
