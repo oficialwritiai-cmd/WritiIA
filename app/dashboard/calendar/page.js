@@ -291,13 +291,21 @@ function CalendarContent() {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString().split('T')[0];
             const lastDay  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0).toISOString().split('T')[0];
 
-            let eventQuery = supabase.from('calendar_events').select('*').eq('user_id', user.id).gte('event_date', firstDay).lte('event_date', lastDay);
-            if (activeProject) eventQuery = eventQuery.eq('project_id', activeProject.id);
-            const { data: eventData } = await eventQuery;
+            // Show ALL events for the user — no project filter so nothing disappears
+            const { data: eventData } = await supabase
+                .from('calendar_events')
+                .select('*')
+                .eq('user_id', user.id)
+                .gte('event_date', firstDay)
+                .lte('event_date', lastDay)
+                .order('event_date', { ascending: true });
 
-            let slotsQuery = supabase.from('content_slots').select('*').eq('user_id', user.id).gte('scheduled_date', firstDay).lte('scheduled_date', lastDay);
-            if (activeProject) slotsQuery = slotsQuery.eq('project_id', activeProject.id);
-            const { data: slotData } = await slotsQuery;
+            const { data: slotData } = await supabase
+                .from('content_slots')
+                .select('*')
+                .eq('user_id', user.id)
+                .gte('scheduled_date', firstDay)
+                .lte('scheduled_date', lastDay);
 
             const normalizedSlots = (slotData || []).map(slot => ({
                 id: slot.id, user_id: slot.user_id, project_id: slot.project_id,
