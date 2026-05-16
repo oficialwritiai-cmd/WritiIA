@@ -401,6 +401,42 @@ export default function SessionStep1Brain() {
     if (brainSaved && brain) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* Fast-track banner — skip directly to ideas if brain is ready */}
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(52,211,153,0.08), rgba(16,185,129,0.04))',
+                    border: '1px solid rgba(52,211,153,0.25)',
+                    borderRadius: '16px', padding: '16px 20px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '16px', flexWrap: 'wrap',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🧠</span>
+                        <div>
+                            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#34d399', marginBottom: '2px' }}>
+                                Tu Cerebro IA está activo y listo
+                            </p>
+                            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                                No necesitas rellenarlo de nuevo. Puedes ir directo a generar ideas.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleConfirm}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            background: '#10b981', color: '#fff', border: 'none',
+                            borderRadius: '12px', padding: '12px 22px',
+                            fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
+                            whiteSpace: 'nowrap', transition: 'background 0.2s',
+                            flexShrink: 0,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#059669'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#10b981'}
+                    >
+                        ⚡ Saltar directo a Ideas
+                    </button>
+                </div>
                 <div>
                     <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: '6px' }}>
                         🧠 Tu Cerebro IA

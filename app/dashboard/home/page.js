@@ -423,11 +423,13 @@ export default function DashboardHomePage() {
                 <ActionCard
                     number={2}
                     icon={Sparkles}
-                    title="Plan mensual de contenido"
-                    desc="En 4 pasos sacas ideas, guiones y un mini calendario de 2–4 semanas listo para grabar."
-                    btnLabel="Iniciar Sesión WRITI"
+                    title="Nueva sesión Matrix"
+                    desc={brain?.biography
+                        ? "Tu Cerebro IA ya está listo ⚡ — saltas directo a generar nuevas ideas, guiones y fechas en minutos."
+                        : "Define tu Cerebro IA una vez y genera ideas + guiones + calendario en 4 pasos."}
+                    btnLabel={brain?.biography ? "⚡ Generar nuevas ideas" : "Iniciar Matrix"}
                     accent="#7c3aed"
-                    ribbon="Recomendado"
+                    ribbon={brain?.biography ? "Tu cerebro está activo" : "Recomendado"}
                     onClick={() => activeProject
                         ? router.push(`/dashboard/session?project=${activeProject.id}`)
                         : setShowModal(true)
