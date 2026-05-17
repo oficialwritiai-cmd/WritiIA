@@ -3,7 +3,7 @@
  * Version: v1.17.6.2 (Omega Asistente Fix)
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
@@ -423,17 +423,19 @@ export default function DashboardLayout({ children }) {
         : '/dashboard/session';
 
     const navItems = [
-        { href: '/dashboard/home', icon: Home, label: t('nav.home') },
-        { href: '/dashboard/asistente', icon: MessageSquare, label: t('nav.assistant'), highlight: true },
-        { href: sessionHref, icon: Sparkles, label: 'Matrix', highlight: true },
-        { href: '/dashboard', icon: PenLine, label: t('nav.new_script') },
-        { href: '/dashboard/copys', icon: Type, label: t('nav.copys') },
-        { href: '/dashboard/estrategia', icon: Target, label: t('nav.strategy') },
-        { href: '/dashboard/ideas-virales', icon: Megaphone, label: t('nav.viral_ideas') },
-        { href: '/dashboard/library', icon: BookOpen, label: t('nav.library') },
-        { href: '/dashboard/calendar', icon: CalendarDays, label: t('nav.calendar') },
-        { href: '/dashboard/stats', icon: BarChart2, label: t('nav.stats') },
-        { href: '/dashboard/settings', icon: Settings, label: t('nav.settings') },
+        // ── Principal ──────────────────────────────────
+        { href: '/dashboard/home',          icon: Home,          label: t('nav.home') },
+        { href: sessionHref,                icon: Sparkles,      label: 'Matrix',              highlight: true },
+        { href: '/dashboard/library',       icon: BookOpen,      label: t('nav.library') },
+        { href: '/dashboard/calendar',      icon: CalendarDays,  label: t('nav.calendar') },
+        { href: '/dashboard/settings',      icon: Settings,      label: t('nav.settings') },
+        // ── Secundario ─────────────────────────────────
+        { href: '/dashboard/asistente',     icon: MessageSquare, label: t('nav.assistant'),    secondary: true },
+        { href: '/dashboard',               icon: PenLine,       label: t('nav.new_script'),   secondary: true },
+        { href: '/dashboard/copys',         icon: Type,          label: 'Textos rápidos',      secondary: true },
+        { href: '/dashboard/ideas-virales', icon: Megaphone,     label: t('nav.viral_ideas'),  secondary: true },
+        { href: '/dashboard/estrategia',    icon: Target,        label: t('nav.strategy'),     secondary: true },
+        { href: '/dashboard/stats',         icon: BarChart2,     label: t('nav.stats'),        secondary: true },
     ];
 
     // User avatar initial
@@ -479,108 +481,118 @@ export default function DashboardLayout({ children }) {
                         const Icon = item.icon;
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                         return (
-                            <Link
-                                key={item.href + item.label}
-                                href={item.href}
-                                onMouseEnter={() => setHoveredItem(item.label)}
-                                onMouseLeave={() => setHoveredItem(null)}
-                                style={{
-                                    position: 'relative',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: sidebarHovered ? 'flex-start' : 'center',
-                                    paddingLeft: sidebarHovered ? '14px' : 0,
-                                    gap: '10px',
-                                    width: '100%',
-                                    height: '44px',
-                                    borderRadius: '10px',
-                                    background: isActive
-                                        ? 'rgba(124,58,237,0.18)'
-                                        : item.highlight && !isActive
-                                            ? 'rgba(124,58,237,0.08)'
-                                            : 'transparent',
-                                    color: isActive
-                                        ? '#a78bfa'
-                                        : item.highlight
-                                            ? '#a78bfa'
-                                            : 'rgba(255,255,255,0.38)',
-                                    transition: 'background 0.15s ease, color 0.15s ease',
-                                    textDecoration: 'none',
-                                    border: isActive
-                                        ? '1px solid rgba(124,58,237,0.35)'
-                                        : item.highlight && !isActive
-                                            ? '1px solid rgba(124,58,237,0.2)'
-                                            : '1px solid transparent',
-                                    boxSizing: 'border-box',
-                                }}
-                                className="sidebar-nav-link"
-                            >
-                                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
-
-                                {sidebarHovered && (
-                                    <span style={{
-                                        fontSize: '0.82rem',
-                                        fontWeight: 600,
-                                        color: 'inherit',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                    }}>
-                                        {item.label}
-                                    </span>
-                                )}
-
-                                {/* Active indicator dot */}
-                                {isActive && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        left: '-8px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        width: '3px',
-                                        height: '20px',
-                                        borderRadius: '0 2px 2px 0',
-                                        background: '#7c3aed',
-                                    }} />
-                                )}
-
-                                {/* Highlight pulse dot */}
-                                {item.highlight && !isActive && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        top: '8px',
-                                        right: '8px',
-                                        width: '5px',
-                                        height: '5px',
-                                        borderRadius: '50%',
-                                        background: '#a78bfa',
-                                        boxShadow: '0 0 6px #a78bfa',
-                                    }} />
-                                )}
-
-                                {/* Tooltip — only when collapsed */}
-                                {!sidebarHovered && hoveredItem === item.label && (
+                            <React.Fragment key={item.href + item.label}>
+                                {/* Separador entre principal y secundario */}
+                                {item.secondary && navItems.findIndex(i => i.secondary) === navItems.indexOf(item) && (
                                     <div style={{
-                                        position: 'absolute',
-                                        left: '56px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: '#1e1e26',
-                                        color: 'white',
-                                        padding: '6px 10px',
-                                        borderRadius: '7px',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 600,
-                                        whiteSpace: 'nowrap',
-                                        zIndex: 200,
-                                        pointerEvents: 'none',
-                                        boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
-                                        border: '1px solid rgba(255,255,255,0.08)',
-                                        letterSpacing: '0.01em',
-                                    }}>
-                                        {item.label}
-                                    </div>
+                                        margin: '8px 10px',
+                                        height: '1px',
+                                        background: 'rgba(255,255,255,0.06)',
+                                    }} />
                                 )}
-                            </Link>
+                                <Link
+                                    href={item.href}
+                                    onMouseEnter={() => setHoveredItem(item.label)}
+                                    onMouseLeave={() => setHoveredItem(null)}
+                                    style={{
+                                        position: 'relative',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: sidebarHovered ? 'flex-start' : 'center',
+                                        paddingLeft: sidebarHovered ? '14px' : 0,
+                                        gap: '10px',
+                                        width: '100%',
+                                        height: '44px',
+                                        borderRadius: '10px',
+                                        background: isActive
+                                            ? 'rgba(124,58,237,0.18)'
+                                            : item.highlight && !isActive
+                                                ? 'rgba(124,58,237,0.08)'
+                                                : 'transparent',
+                                        color: isActive
+                                            ? '#a78bfa'
+                                            : item.highlight
+                                                ? '#a78bfa'
+                                                : 'rgba(255,255,255,0.38)',
+                                        opacity: item.secondary && !isActive ? 0.5 : 1,
+                                        transition: 'background 0.15s ease, color 0.15s ease, opacity 0.15s ease',
+                                        textDecoration: 'none',
+                                        border: isActive
+                                            ? '1px solid rgba(124,58,237,0.35)'
+                                            : item.highlight && !isActive
+                                                ? '1px solid rgba(124,58,237,0.2)'
+                                                : '1px solid transparent',
+                                        boxSizing: 'border-box',
+                                    }}
+                                    className="sidebar-nav-link"
+                                >
+                                    <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
+
+                                    {sidebarHovered && (
+                                        <span style={{
+                                            fontSize: '0.82rem',
+                                            fontWeight: 600,
+                                            color: 'inherit',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                        }}>
+                                            {item.label}
+                                        </span>
+                                    )}
+
+                                    {/* Active indicator dot */}
+                                    {isActive && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            left: '-8px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            width: '3px',
+                                            height: '20px',
+                                            borderRadius: '0 2px 2px 0',
+                                            background: '#7c3aed',
+                                        }} />
+                                    )}
+
+                                    {/* Highlight pulse dot */}
+                                    {item.highlight && !isActive && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: '8px',
+                                            right: '8px',
+                                            width: '5px',
+                                            height: '5px',
+                                            borderRadius: '50%',
+                                            background: '#a78bfa',
+                                            boxShadow: '0 0 6px #a78bfa',
+                                        }} />
+                                    )}
+
+                                    {/* Tooltip — only when collapsed */}
+                                    {!sidebarHovered && hoveredItem === item.label && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '56px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            background: '#1e1e26',
+                                            color: 'white',
+                                            padding: '6px 10px',
+                                            borderRadius: '7px',
+                                            fontSize: '0.72rem',
+                                            fontWeight: 600,
+                                            whiteSpace: 'nowrap',
+                                            zIndex: 200,
+                                            pointerEvents: 'none',
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            letterSpacing: '0.01em',
+                                        }}>
+                                            {item.label}
+                                        </div>
+                                    )}
+                                </Link>
+                            </React.Fragment>
                         );
                     })}
                 </nav>

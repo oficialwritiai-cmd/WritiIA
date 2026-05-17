@@ -78,6 +78,9 @@ export default function SessionLayout() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '1.4rem' }}>🔮</span>
                     <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>Matrix</h1>
+                    <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', margin: '2px 0 0', fontWeight: 500 }}>
+                        Tu sesión mensual de contenido
+                    </p>
                     <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: '100px', padding: '3px 10px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         Tu Cerebro IA · Activo
                     </span>
