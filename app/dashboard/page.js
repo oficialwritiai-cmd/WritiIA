@@ -59,6 +59,7 @@ export default function DashboardPage() {
     const [opinion, setOpinion] = useState('');
     const [story, setStory] = useState('');
     const [hookType, setHookType] = useState('curiosidad extrema');
+    const [showOptional, setShowOptional] = useState(false);
     const [intensity, setIntensity] = useState(3);
     const [videoDuration, setVideoDuration] = useState('60 seg');
     const [singleFrequency, setSingleFrequency] = useState('3 publicaciones por semana');
@@ -2685,36 +2686,63 @@ export default function DashboardPage() {
 
                     {/* Wizard Step 4: Tu Idea */}
                     {wizardStep === 4 && (
-                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+                            {/* ── ZONA OBLIGATORIA ─────────────────────── */}
+                            {/* Campo principal — protagonista */}
                             <div>
-                                <span className="wz-label">💡 Idea o tema que quieres empujar</span>
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                    <AIPolishedTextarea className="textarea-field wz-input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Cómo ganar 1.000 seguidores en 30 días sin pagar ads" style={{ minHeight: '90px', flex: 1 }} />
+                                <span className="wz-label" style={{ fontSize: '0.95rem', fontWeight: 800 }}>💡 ¿Sobre qué quieres crear contenido hoy?</span>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginTop: '8px' }}>
+                                    <AIPolishedTextarea className="textarea-field wz-input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ej: Por qué el 90% de los coaches fracasan en redes" style={{ minHeight: '100px', flex: 1, fontSize: '1rem' }} />
                                     <VoiceDictation onResult={(text) => setTopic(prev => prev ? `${prev} ${text}` : text)} />
                                 </div>
                             </div>
-                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+
+                            {/* Tono + Gancho */}
+                            <div className="dashboard-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tono de marca</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    <p style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '10px' }}>Tono de marca</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
                                         {TONOS_MARCA.map(t => (
-                                            <button key={t} onClick={() => setToneBrand(t)} style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: toneBrand === t ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: toneBrand === t ? 'black' : 'white', fontWeight: toneBrand === t ? 700 : 400 }}>{t}</button>
+                                            <button key={t} onClick={() => setToneBrand(t)} style={{ padding: '7px 12px', fontSize: '0.78rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: toneBrand === t ? 'var(--accent-gradient)' : 'rgba(255,255,255,0.1)', color: toneBrand === t ? 'black' : 'white', fontWeight: toneBrand === t ? 700 : 400 }}>{t}</button>
                                         ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Tipo de gancho preferido</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    <p style={{ fontSize: '0.82rem', fontWeight: 700, marginBottom: '10px' }}>Tipo de gancho</p>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
                                         {HOOK_TYPES.map(h => (
-                                            <button key={h} onClick={() => setHookType(h)} style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: hookType === h ? '#9D00FF' : 'rgba(255,255,255,0.1)', color: 'white', fontWeight: hookType === h ? 700 : 400 }}>{h}</button>
+                                            <button key={h} onClick={() => setHookType(h)} style={{ padding: '7px 12px', fontSize: '0.78rem', borderRadius: '6px', border: 'none', cursor: 'pointer', background: hookType === h ? '#9D00FF' : 'rgba(255,255,255,0.1)', color: 'white', fontWeight: hookType === h ? 700 : 400 }}>{h}</button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Intensidad del hook: {intensity}/5</p>
+
+                            {/* Intensidad mejorada */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px 20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <p style={{ fontSize: '0.82rem', fontWeight: 700, margin: 0 }}>Intensidad del hook</p>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: intensity <= 2 ? '#34d399' : intensity <= 3 ? '#f59e0b' : '#ef4444', background: intensity <= 2 ? 'rgba(52,211,153,0.1)' : intensity <= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', padding: '2px 10px', borderRadius: '20px' }}>
+                                        {intensity === 1 ? 'Suave' : intensity === 2 ? 'Moderado' : intensity === 3 ? 'Equilibrado' : intensity === 4 ? 'Intenso' : 'Máximo impacto'}
+                                    </span>
+                                </div>
                                 <input type="range" min="1" max="5" value={intensity} onChange={(e) => setIntensity(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#9D00FF' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'rgba(255,255,255,0.25)', marginTop: '4px' }}>
+                                    <span>Suave</span><span>Equilibrado</span><span>Máximo impacto</span>
+                                </div>
                             </div>
+
+                            {/* ── SEPARADOR ────────────────────────────── */}
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px' }}>
+                                <button onClick={() => setShowOptional(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '10px', color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', padding: '10px 18px', width: '100%', justifyContent: 'center', transition: 'all 0.2s' }}>
+                                    <span>{showOptional ? '▲' : '+'}</span>
+                                    {showOptional ? 'Ocultar contexto personal' : '+ Añadir contexto personal (mejora el guión)'}
+                                </button>
+                            </div>
+
+                            {/* ── ZONA OPCIONAL ────────────────────────── */}
+                            {showOptional && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'countUp 0.25s ease' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                                 <div>
                                     <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Experiencia real / historia que quieres contar <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Recomendado)</span></p>
@@ -2920,17 +2948,24 @@ export default function DashboardPage() {
                                 <span className="wz-label">📊 Métrica de éxito <span style={{ color: 'rgba(255,255,255,0.25)' }}>(opcional)</span></span>
                                 <input className="input-field wz-input" placeholder="Ej: 500 seguidores en 30 días" value={successMetric} onChange={e => setSuccessMetric(e.target.value)} />
                             </div>
-                            <div>
-                                <span className="wz-label">📦 Cantidad de guiones</span>
-                                <div className="wz-chips">
-                                    {[1,2,3,4].map(q => (
-                                        <button key={q} className={`wz-chip${quantity === q ? ' active' : ''}`} onClick={() => setQuantity(q)}>{q} guión{q > 1 ? 'es' : ''}</button>
-                                    ))}
+                            </div>)} {/* ── Fin zona opcional ── */}
+
+                            {/* Cantidad + Botón generar */}
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>Cantidad:</span>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        {[1,2,3,4].map(q => (
+                                            <button key={q} onClick={() => setQuantity(q)} style={{ width: '38px', height: '38px', borderRadius: '9px', border: `1px solid ${quantity === q ? '#9D00FF' : 'rgba(255,255,255,0.12)'}`, background: quantity === q ? 'rgba(157,0,255,0.15)' : 'rgba(255,255,255,0.04)', color: quantity === q ? '#c084fc' : 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>{q}</button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                <button onClick={() => setWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
-                                <button onClick={handleGenerateSingle} className="btn-primary btn-premium-glow" style={{ flex: 2, height: '56px', fontSize: '1.05rem', fontWeight: 800 }}>⚡ Generar guion con IA →</button>
+                                <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px' }}>
+                                    <button onClick={() => setWizardStep(3)} className="btn-secondary" style={{ flex: 'none', padding: '0 20px', height: '56px' }}>← Atrás</button>
+                                    <button onClick={handleGenerateSingle} className="btn-primary btn-premium-glow" style={{ flex: 1, height: '56px', fontSize: '1rem', fontWeight: 800, animation: 'pulse 2.5s infinite' }}>
+                                        ⚡ Generar {quantity} guión{quantity > 1 ? 'es' : ''} con tu Cerebro IA
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
