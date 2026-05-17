@@ -2189,45 +2189,56 @@ export default function DashboardPage() {
                     <button onClick={() => window.dispatchEvent(new CustomEvent('open-credits'))} style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}>Comprar más</button>
                 </div>
             </div>
-            <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                {[
-                    { label: 'Generaciones Realizadas', val: stats.monthGenerations, sub: 'Mes actual', color: '#9D00FF' },
-                    { label: 'Guiones Guardados', val: stats.saved, sub: 'Total histórico', color: '#F59E0B' },
-                ].map((s, i) => (
-                    <div key={i} className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{s.label}</p>
-                        <h3 style={{ fontSize: '2rem', marginBottom: '4px' }}>{s.val}</h3>
-                        <p style={{ fontSize: '0.75rem', color: s.color, fontWeight: 600 }}>{s.sub}</p>
-                    </div>
-                ))}
+            <style>{`
+                @keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+            `}</style>
+            <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease' }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Este mes</p>
+                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>⚡ {stats.monthGenerations}</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#9D00FF', fontWeight: 600 }}>guiones creados este mes</p>
+                </div>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.1s both' }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Biblioteca</p>
+                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>📚 {stats.saved}</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 600 }}>guiones en tu biblioteca</p>
+                </div>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.2s both' }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Tiempo ahorrado</p>
+                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>~{Math.round((stats.monthGenerations || stats.saved || 0) * 0.75)}h</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 600 }}>vs escribir manualmente</p>
+                </div>
             </div>
 
             {/* Mode Switcher */}
             {step === 1 && (
                 <div style={{ display: 'flex', gap: '8px', padding: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', width: 'fit-content', margin: '0 auto 10px' }}>
                     <button
-                        onClick={() => { 
-                            setGenerationMode('single'); 
-                            setTopic(''); 
-                            setWizardStep(1); 
+                        onClick={() => {
+                            setGenerationMode('single');
+                            setTopic('');
+                            setWizardStep(1);
                             setStep(1);
                             setScripts([]);
                         }}
-                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7ECECA' : 'transparent', color: generationMode === 'single' ? '#000' : 'white', border: 'none', cursor: 'pointer' }}
+                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7c3aed' : 'rgba(255,255,255,0.04)', color: generationMode === 'single' ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }}
                     >
-                        Guiones de un tema
+                        <div>Guiones de un tema</div>
+                        {generationMode === 'single' && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 400 }}>Genera 3-5 guiones sobre cualquier tema en 2 minutos</div>}
                     </button>
                     <button
-                        onClick={() => { 
-                            setGenerationMode('plan'); 
-                            setTopic(''); 
-                            setPlanWizardStep(1); 
-                            setStep(1); 
+                        onClick={() => {
+                            setGenerationMode('plan');
+                            setTopic('');
+                            setPlanWizardStep(1);
+                            setStep(1);
                             setPlanSlots([]);
                         }}
-                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'plan' ? '#7ECECA' : 'transparent', color: generationMode === 'plan' ? '#000' : 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'plan' ? '#7c3aed' : 'rgba(255,255,255,0.04)', color: generationMode === 'plan' ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0px' }}
                     >
-                        <CalendarDays size={18} /> Plan mensual de contenido
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CalendarDays size={18} /> Plan mensual de contenido</div>
+                        {generationMode === 'plan' && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 400 }}>Planifica todo tu mes con ideas + guiones + calendario</div>}
                     </button>
                 </div>
             )}
@@ -2290,9 +2301,21 @@ export default function DashboardPage() {
                         <div className="wz-progress-bar">
                             <div className="wz-progress-fill" style={{ width: `${(wizardStep / 4) * 100}%` }} />
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            {[1,2,3,4].map((w,i) => (
-                                <div key={w} style={{ width: 8, height: 8, borderRadius: '50%', background: wizardStep >= w ? '#9D00FF' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            {[
+                                { n: 1, time: '~2 min' },
+                                { n: 2, time: '~1 min' },
+                                { n: 3, time: '~2 min' },
+                                { n: 4, time: '~3 min' },
+                            ].map(({ n, time }) => (
+                                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {wizardStep > n ? (
+                                        <span style={{ color: '#34d399', fontWeight: 800, fontSize: '0.85rem' }}>✓</span>
+                                    ) : (
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: wizardStep >= n ? '#9D00FF' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
+                                    )}
+                                    <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)' }}>{time}</span>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -2307,9 +2330,15 @@ export default function DashboardPage() {
                             {hasBrain ? (
                                 <div style={{ padding: '24px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                        <p style={{ fontWeight: 700, color: '#7ECECA' }}>✓ Cerebro IA configurado</p>
-                                        <button onClick={() => setEditingBrain(!editingBrain)} style={{ background: 'none', border: 'none', color: '#7ECECA', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                            {editingBrain ? 'Cancelar' : 'Editar'}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <p style={{ fontWeight: 700, color: '#7ECECA', margin: 0 }}>✓ Cerebro IA configurado</p>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', padding: '2px 8px', borderRadius: '20px', border: '1px solid rgba(52,211,153,0.2)', animation: 'pulse 2s infinite' }}>
+                                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
+                                                Activo
+                                            </span>
+                                        </div>
+                                        <button onClick={() => setEditingBrain(!editingBrain)} style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, padding: '5px 14px', borderRadius: '8px' }}>
+                                            {editingBrain ? 'Cancelar' : '✏️ Editar'}
                                         </button>
                                     </div>
                                     {editingBrain ? (
@@ -4602,7 +4631,10 @@ export default function DashboardPage() {
                                             {p.name}
                                         </button>
                                     )) : (
-                                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>No hay preajustes guardados aún.</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>
+                                            <span>💾</span>
+                                            <span>Guarda esta configuración para reutilizarla</span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
