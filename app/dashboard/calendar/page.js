@@ -292,7 +292,7 @@ function CalendarContent() {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString().split('T')[0];
             const lastDay  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0).toISOString().split('T')[0];
 
-            // Show ALL events for the user — no project filter so nothing disappears
+            // Solo calendar_events — los slots del Matrix siempre tienen un calendar_event asociado
             const { data: eventData } = await supabase
                 .from('calendar_events')
                 .select('*')
@@ -301,23 +301,7 @@ function CalendarContent() {
                 .lte('event_date', lastDay)
                 .order('event_date', { ascending: true });
 
-            const { data: slotData } = await supabase
-                .from('content_slots')
-                .select('*')
-                .eq('user_id', user.id)
-                .gte('scheduled_date', firstDay)
-                .lte('scheduled_date', lastDay);
-
-            const normalizedSlots = (slotData || []).map(slot => ({
-                id: slot.id, user_id: slot.user_id, project_id: slot.project_id,
-                event_date: slot.scheduled_date,
-                title: slot.title || slot.idea_title || 'Idea de Contenido',
-                notes: slot.description || '', platform: slot.platform || 'General',
-                status: slot.status || 'idea', start_time: slot.start_time || '09:00',
-                end_time: slot.end_time || '10:00', color: slot.slot_color || 'pink', is_slot: true
-            }));
-
-            setEvents([...(eventData || []), ...normalizedSlots]);
+            setEvents(eventData || []);
             setSelectedEvents(new Set());
 
             // library items are loaded on-demand via linked script logic — no local state needed
@@ -373,17 +357,10 @@ function CalendarContent() {
             const colorValue = tempColor || 'purple';
 
             if (selectedEvent?.id) {
-                if (selectedEvent.is_slot) {
-                    const { error } = await supabase.from('content_slots')
-                        .update({ scheduled_date: selectedDate, idea_title: tempTitle || 'Sin título', platform: tempPlatform })
-                        .eq('id', selectedEvent.id);
-                    if (error) throw new Error('content_slots: ' + error.message);
-                } else {
-                    const { error } = await supabase.from('calendar_events')
-                        .update({ title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, color: colorValue, start_time: tempStartTime, end_time: tempEndTime })
-                        .eq('id', selectedEvent.id);
-                    if (error) throw new Error('calendar_events: ' + error.message);
-                }
+                const { error } = await supabase.from('calendar_events')
+                    .update({ title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, color: colorValue, start_time: tempStartTime, end_time: tempEndTime })
+                    .eq('id', selectedEvent.id);
+                if (error) throw new Error('Error guardando: ' + error.message);
             } else {
                 if (!selectedDate) throw new Error('Selecciona una fecha primero');
                 const { error } = await supabase.from('calendar_events').insert({
