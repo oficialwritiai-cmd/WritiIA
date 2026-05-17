@@ -365,59 +365,42 @@ function CalendarContent() {
     };
 
     const handleSavePanel = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const colorValue = tempColor || 'purple';
+        setToastMsg('Guardando…');
         try {
-            if (selectedEvent && selectedEvent.id) {
+            const { data: { user }, error: authErr } = await supabase.auth.getUser();
+            if (authErr || !user) throw new Error('Sin sesión — recarga la página');
+
+            const colorValue = tempColor || 'purple';
+
+            if (selectedEvent?.id) {
                 if (selectedEvent.is_slot) {
-                    // content_slots only has: scheduled_date, idea_title, platform
-                    // start_time, end_time, status, slot_color do NOT exist in this table
-                    const slotUpdates = {
-                        scheduled_date: selectedDate,
-                        idea_title:     tempTitle || selectedEvent.title || 'Sin título',
-                        platform:       tempPlatform,
-                    };
-                    const { error: updateErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', selectedEvent.id);
-                    if (updateErr) throw updateErr;
-                    setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, event_date: selectedDate, title: slotUpdates.idea_title, platform: slotUpdates.platform } : ev));
+                    const { error } = await supabase.from('content_slots')
+                        .update({ scheduled_date: selectedDate, idea_title: tempTitle || 'Sin título', platform: tempPlatform })
+                        .eq('id', selectedEvent.id);
+                    if (error) throw new Error('content_slots: ' + error.message);
                 } else {
-                    const updates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, color: colorValue, start_time: tempStartTime, end_time: tempEndTime };
-                    const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
-                    if (updateErr) throw updateErr;
-                    setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...updates } : ev));
-                }
-                // Save linked script to library if exists
-                if (linkedScript?.id && linkedScript?.content) {
-                    const lc = linkedScript.content;
-                    const libPayload = {
-                        content: {
-                            gancho: lc.gancho || lc.hook || '',
-                            hook: lc.hook || lc.gancho || '',
-                            desarrollo: lc.desarrollo || [],
-                            cta: lc.cta || lc.cierre || '',
-                            cierre: lc.cierre || lc.cta || '',
-                            copy_post: lc.copy_post || null,
-                            full_text: lc.full_text || '',
-                        }
-                    };
-                    await supabase.from('library').update(libPayload).eq('id', linkedScript.id);
+                    const { error } = await supabase.from('calendar_events')
+                        .update({ title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, color: colorValue, start_time: tempStartTime, end_time: tempEndTime })
+                        .eq('id', selectedEvent.id);
+                    if (error) throw new Error('calendar_events: ' + error.message);
                 }
             } else {
-                const payload = { user_id: user.id, project_id: activeProject?.id, title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, type: 'idea', color: colorValue, start_time: tempStartTime, end_time: tempEndTime };
-                const { data: newEv, error: insertErr } = await supabase.from('calendar_events').insert(payload).select().single();
-                if (insertErr) throw insertErr;
-                if (newEv) setEvents([...events, newEv]);
+                if (!selectedDate) throw new Error('Selecciona una fecha primero');
+                const { error } = await supabase.from('calendar_events').insert({
+                    user_id: user.id, title: tempTitle || 'Sin título',
+                    status: tempStatus, platform: tempPlatform, notes: tempNotes,
+                    event_date: selectedDate, type: 'idea', color: colorValue,
+                    start_time: tempStartTime, end_time: tempEndTime,
+                });
+                if (error) throw new Error('Crear evento: ' + error.message);
             }
-            // Show toast then close
-            setToastMsg('✓ Guardado correctamente');
-            setTimeout(() => setToastMsg(''), 2500);
-            setIsPanelOpen(false);
-            setTimeout(() => loadData(), 500);
+
+            setToastMsg('✓ Guardado');
+            setTimeout(() => { setToastMsg(''); setIsPanelOpen(false); loadData(); }, 1200);
         } catch (err) {
-            console.error('Error saving panel:', err);
-            setToastMsg('⚠ Error: ' + err.message);
-            setTimeout(() => setToastMsg(''), 4000);
+            console.error('[Calendar save]', err.message);
+            setToastMsg('❌ ' + err.message);
+            setTimeout(() => setToastMsg(''), 6000);
         }
     };
 
