@@ -145,9 +145,14 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     });
 
     useEffect(() => {
-        if (initialItem) populate(initialItem);
-        else if (sheetId && sheetId !== 'new') loadSheet(sheetId);
-    }, [sheetId, initialItem]);
+        const hasRealId = sheetId && sheetId !== 'new';
+        if (hasRealId) {
+            // Always load fresh from DB when we have a real ID
+            loadSheet(sheetId);
+        } else if (initialItem) {
+            populate(initialItem);
+        }
+    }, [sheetId]);
 
     function populate(data) {
         // Never set itemId to the string 'new' — that causes silent save failures
@@ -455,7 +460,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                     )}
 
                     {/* Close */}
-                    <button onClick={() => { clearTimeout(timerRef.current); onClose?.(); }}
+                    <button onClick={async () => { clearTimeout(timerRef.current); await performSave(); onClose?.(); }}
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)', width: '34px', height: '34px', borderRadius: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                         <X size={16} />
                     </button>
