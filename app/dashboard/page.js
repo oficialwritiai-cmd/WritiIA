@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
+import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
@@ -4301,6 +4301,42 @@ export default function DashboardPage() {
                                                 color: 'rgba(255,255,255,0.8)', cursor: 'pointer',
                                             }}
                                         ><Copy size={15} /> Copiar</button>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { Document, Paragraph, TextRun, HeadingLevel, Packer, BorderStyle } = await import('docx');
+                                                    const hook = s.hook || s.gancho || '';
+                                                    const desarrollo = Array.isArray(s.desarrollo) ? s.desarrollo : [];
+                                                    const cta = s.cta || s.cierre || '';
+                                                    const titulo = s.titulo_guion || s.titulo_angulo || 'Guion';
+                                                    const children = [
+                                                        new Paragraph({ children: [new TextRun({ text: 'WRITI.AI — Guion generado', size: 18, color: '9ca3af' })], spacing: { after: 80 } }),
+                                                        new Paragraph({ children: [new TextRun({ text: titulo, bold: true, size: 52, color: '111827' })], spacing: { after: 200 } }),
+                                                        new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'e5e7eb' } }, spacing: { after: 200 } }),
+                                                        ...(hook ? [
+                                                            new Paragraph({ children: [new TextRun({ text: '⚡ HOOK', bold: true, size: 22, color: '7c3aed' })], spacing: { before: 200, after: 80 } }),
+                                                            new Paragraph({ children: [new TextRun({ text: hook, size: 26, bold: true, color: '1f2937' })], spacing: { after: 200 } }),
+                                                        ] : []),
+                                                        ...(desarrollo.length ? [
+                                                            new Paragraph({ children: [new TextRun({ text: '📝 DESARROLLO', bold: true, size: 22, color: '374151' })], spacing: { before: 200, after: 80 } }),
+                                                            ...desarrollo.map((p, i) => new Paragraph({ children: [new TextRun({ text: `${i+1}. ${p}`, size: 24, color: '374151' })], spacing: { before: 60, after: 60 }, bullet: { level: 0 } })),
+                                                        ] : []),
+                                                        ...(cta ? [
+                                                            new Paragraph({ children: [new TextRun({ text: '📢 CTA', bold: true, size: 22, color: '059669' })], spacing: { before: 200, after: 80 } }),
+                                                            new Paragraph({ children: [new TextRun({ text: cta, size: 24, bold: true, color: '059669' })], spacing: { after: 120 } }),
+                                                        ] : []),
+                                                    ];
+                                                    const doc = new Document({ creator: 'WRITI.AI', title: titulo, sections: [{ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children }] });
+                                                    const blob = await Packer.toBlob(doc);
+                                                    const url = URL.createObjectURL(blob);
+                                                    const a = document.createElement('a');
+                                                    a.href = url; a.download = `${titulo.replace(/[^a-z0-9]/gi,'-').toLowerCase()}.docx`;
+                                                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                                                } catch(e) { alert('Error al generar Word: ' + e.message); }
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700, background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.25)', color: '#7dd3fc', cursor: 'pointer' }}
+                                            title="Descargar como Word (.docx)"
+                                        ><Download size={15} /> .docx</button>
                                         <button
                                             onClick={() => handleSaveScript(s)}
                                             style={{

@@ -1218,8 +1218,8 @@ function CalendarContent() {
                     {/* Actions */}
                     <button
                         onClick={() => { setIsSelectMode(m => !m); if (isSelectMode) setSelectedEvents(new Set()); }}
-                        style={{ background: isSelectMode ? 'rgba(124,58,237,0.2)' : 'transparent', border: `1px solid ${isSelectMode ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.1)'}`, color: isSelectMode ? '#c4b5fd' : 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontWeight: isSelectMode ? 700 : 400, transition: 'all 0.2s' }}>
-                        <CheckCircle2 size={13} /> {isSelectMode ? 'Cancelar' : 'Seleccionar'}
+                        style={{ background: isSelectMode ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${isSelectMode ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.12)'}`, color: isSelectMode ? '#c4b5fd' : 'rgba(255,255,255,0.65)', borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 600, transition: 'all 0.2s' }}>
+                        <CheckCircle2 size={13} /> {isSelectMode ? 'Cancelar selección' : '☑ Seleccionar varios'}
                     </button>
                     <button onClick={handleExport}
                         style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1368,18 +1368,17 @@ function CalendarContent() {
                                 <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
                                     <Palette size={11} /> Color
                                 </div>
-                                <div style={{ display: 'flex', gap: 6 }}>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {THEME_COLORS.map(color => (
-                                        <div key={color.id} onClick={async () => {
+                                        <button key={color.id} onClick={async () => {
                                             setTempColor(color.id);
                                             if (selectedEvent?.id) {
-                                                if (selectedEvent.is_slot) await supabase.from('content_slots').update({ slot_color: color.id }).eq('id', selectedEvent.id);
-                                                else await supabase.from('calendar_events').update({ color: color.id }).eq('id', selectedEvent.id);
+                                                await supabase.from('calendar_events').update({ color: color.id }).eq('id', selectedEvent.id);
                                                 setEvents(prev => prev.map(ev => ev.id === selectedEvent.id ? { ...ev, color: color.id } : ev));
                                             }
                                         }}
-                                            style={{ width: 22, height: 22, borderRadius: '50%', background: color.hex, cursor: 'pointer', boxSizing: 'border-box', border: tempColor === color.id ? '2px solid #fff' : '2px solid transparent', transition: 'all 0.15s', transform: tempColor === color.id ? 'scale(1.15)' : 'scale(1)' }}
                                             title={color.name}
+                                            style={{ width: 28, height: 28, borderRadius: '50%', background: color.hex, cursor: 'pointer', border: tempColor === color.id ? '3px solid #fff' : '3px solid transparent', transition: 'all 0.15s', transform: tempColor === color.id ? 'scale(1.2)' : 'scale(1)', boxShadow: tempColor === color.id ? `0 0 8px ${color.hex}` : 'none', outline: 'none' }}
                                         />
                                     ))}
                                 </div>
@@ -1483,8 +1482,8 @@ function CalendarContent() {
                     <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10 }}>
                         {selectedEvent && (
                             <button onClick={() => handleDeleteEvent(selectedEvent.id)}
-                                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444', borderRadius: 9, padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                <Trash2 size={16} />
+                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 9, padding: '11px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', fontWeight: 600 }}>
+                                <Trash2 size={14} /> Eliminar
                             </button>
                         )}
                         <button onClick={handleSavePanel}
