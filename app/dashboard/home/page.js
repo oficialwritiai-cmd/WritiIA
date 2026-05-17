@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
@@ -37,9 +37,22 @@ const actionCardBase = {
 };
 
 /* ─── Stat Card ─────────────────────────────────────── */
-function StatCard({ icon: Icon, label, value, color = '#a78bfa', sublabel }) {
+function StatCard({ icon: Icon, label, value, color = '#a78bfa', sublabel, onClick }) {
+    const [hovered, setHovered] = React.useState(false);
     return (
-        <div style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+        <div
+            style={{
+                ...card,
+                display: 'flex', alignItems: 'flex-start', gap: '16px',
+                cursor: onClick ? 'pointer' : 'default',
+                border: onClick && hovered ? `1px solid ${color}30` : card.border,
+                background: onClick && hovered ? `${color}06` : card.background,
+                transition: 'all 0.2s ease',
+            }}
+            onClick={onClick}
+            onMouseEnter={() => onClick && setHovered(true)}
+            onMouseLeave={() => onClick && setHovered(false)}
+        >
             <div style={{
                 width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
                 background: `${color}18`,
@@ -58,6 +71,81 @@ function StatCard({ icon: Icon, label, value, color = '#a78bfa', sublabel }) {
                 {sublabel && (
                     <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>{sublabel}</p>
                 )}
+            </div>
+        </div>
+    );
+}
+
+/* ─── Scripts Stat Card (con CTA cuando es 0) ───────── */
+function ScriptsStatCard({ value, router }) {
+    const [hovered, setHovered] = React.useState(false);
+    const isEmpty = !value || value === 0;
+    const color = '#34d399';
+
+    if (isEmpty) {
+        return (
+            <div style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative' }}>
+                <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+                    background: `${color}18`, border: `1px solid ${color}28`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <FileText size={20} color={color} strokeWidth={1.8} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                        Guiones guardados
+                    </p>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', lineHeight: 1, marginBottom: '10px' }}>
+                        Aun sin guiones
+                    </p>
+                    <button
+                        onClick={() => router.push('/dashboard/session')}
+                        onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = color; }}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            background: 'transparent', color: color,
+                            border: `1px solid ${color}50`, borderRadius: '8px',
+                            padding: '6px 12px', fontSize: '0.72rem', fontWeight: 700,
+                            cursor: 'pointer', transition: 'all 0.2s ease',
+                        }}
+                    >
+                        <Sparkles size={12} strokeWidth={2} /> Crear mi primer guion
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            style={{
+                ...card, display: 'flex', alignItems: 'flex-start', gap: '16px',
+                cursor: 'pointer',
+                border: hovered ? `1px solid ${color}30` : card.border,
+                background: hovered ? `${color}06` : card.background,
+                transition: 'all 0.2s ease',
+            }}
+            onClick={() => router.push('/dashboard/library')}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            <div style={{
+                width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+                background: `${color}18`, border: `1px solid ${color}28`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+                <FileText size={20} color={color} strokeWidth={1.8} />
+            </div>
+            <div>
+                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Guiones guardados
+                </p>
+                <p style={{ fontSize: '1.7rem', fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: '4px' }}>
+                    {value}
+                </p>
+                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>listos para grabar</p>
             </div>
         </div>
     );
@@ -194,11 +282,11 @@ export default function DashboardHomePage() {
             .eq('user_id', user.id)
             .gte('created_at', monthStart.toISOString());
 
-        // Stats: scripts saved
+        // Stats: scripts saved (tabla library, type = 'guion')
         const { count: scriptCount } = await supabase
-            .from('content_slots').select('*', { count: 'exact', head: true })
+            .from('library').select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .not('script_content', 'is', null);
+            .eq('type', 'guion');
 
         // Active session
         const { data: activeSessions } = await supabase
@@ -285,6 +373,50 @@ export default function DashboardHomePage() {
         <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '32px 28px 60px' }}>
 
             {/* ── HERO ─────────────────────────────────────────── */}
+            {/* Banner: Cerebro IA no configurado */}
+            {!brain?.biography && (
+                <div style={{
+                    background: 'rgba(124,58,237,0.08)',
+                    border: '1px solid rgba(124,58,237,0.3)',
+                    borderRadius: '16px', padding: '18px 24px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '16px', flexWrap: 'wrap', marginBottom: '28px',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{
+                            width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
+                            background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <Brain size={20} color="#a78bfa" strokeWidth={1.8} />
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>
+                                Configura tu Cerebro IA
+                            </p>
+                            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>
+                                8 minutos y tendras contenido completamente personalizado para tu marca
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : setShowModal(true)}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            background: '#7c3aed', color: '#fff',
+                            border: 'none', borderRadius: '10px',
+                            padding: '11px 20px', fontSize: '0.82rem', fontWeight: 700,
+                            cursor: 'pointer', transition: 'all 0.2s ease',
+                            whiteSpace: 'nowrap', boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                        <Sparkles size={15} strokeWidth={2} /> Empezar ahora <ArrowRight size={14} />
+                    </button>
+                </div>
+            )}
+
             <div style={{ marginBottom: '40px' }}>
                 <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '10px' }}>
                     {getTimeOfDay()}, {getUserName()} ·{' '}
@@ -305,36 +437,98 @@ export default function DashboardHomePage() {
                     Organiza tus historias, guiones y planes mensuales desde un solo lugar. WRITI convierte tus ideas en un sistema.
                 </p>
 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button
-                        onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : setShowModal(true)}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            background: '#7c3aed', color: '#fff',
-                            border: 'none', borderRadius: '12px',
-                            padding: '13px 24px', fontSize: '0.88rem', fontWeight: 700,
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                            boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                    >
-                        <Sparkles size={16} strokeWidth={2} /> Iniciar Sesión WRITI
-                    </button>
-                    <button
-                        onClick={() => router.push('/dashboard/home')}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)',
-                            border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
-                            padding: '13px 24px', fontSize: '0.88rem', fontWeight: 600,
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                    >
-                        <FileText size={16} strokeWidth={1.8} /> Crear guiones rápidos
-                    </button>
+                {/* CTA dinamico segun estado */}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {brain?.biography && stats.scripts > 0 ? (
+                        /* Estado 3: cerebro + guiones → ir al calendario */
+                        <>
+                            <button
+                                onClick={() => router.push('/dashboard/calendar')}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: '#7c3aed', color: '#fff',
+                                    border: 'none', borderRadius: '12px',
+                                    padding: '13px 24px', fontSize: '0.88rem', fontWeight: 700,
+                                    cursor: 'pointer', transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                <Calendar size={16} strokeWidth={2} /> Ver tu calendario <ArrowRight size={15} />
+                            </button>
+                            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle2 size={13} color="#34d399" />
+                                {stats.scripts} guion{stats.scripts !== 1 ? 'es' : ''} listo{stats.scripts !== 1 ? 's' : ''}
+                            </span>
+                        </>
+                    ) : brain?.biography && stats.scripts === 0 ? (
+                        /* Estado 2: cerebro configurado pero sin guiones */
+                        <>
+                            <button
+                                onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : setShowModal(true)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: '#7c3aed', color: '#fff',
+                                    border: 'none', borderRadius: '12px',
+                                    padding: '13px 24px', fontSize: '0.88rem', fontWeight: 700,
+                                    cursor: 'pointer', transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                <Sparkles size={16} strokeWidth={2} /> Genera tu primer guion <ArrowRight size={15} />
+                            </button>
+                            <button
+                                onClick={() => router.push('/dashboard/library')}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)',
+                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                                    padding: '13px 24px', fontSize: '0.88rem', fontWeight: 600,
+                                    cursor: 'pointer', transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                            >
+                                <FolderOpen size={16} strokeWidth={1.8} /> Ver biblioteca
+                            </button>
+                        </>
+                    ) : (
+                        /* Estado 1: sin cerebro → flujo Matrix */
+                        <>
+                            <button
+                                onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : setShowModal(true)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: '#7c3aed', color: '#fff',
+                                    border: 'none', borderRadius: '12px',
+                                    padding: '13px 24px', fontSize: '0.88rem', fontWeight: 700,
+                                    cursor: 'pointer', transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#6d28d9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            >
+                                <Sparkles size={16} strokeWidth={2} /> Iniciar Sesion WRITI
+                            </button>
+                            <button
+                                onClick={() => router.push('/dashboard/home')}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)',
+                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                                    padding: '13px 24px', fontSize: '0.88rem', fontWeight: 600,
+                                    cursor: 'pointer', transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                            >
+                                <FileText size={16} strokeWidth={1.8} /> Crear guiones rapidos
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -385,13 +579,7 @@ export default function DashboardHomePage() {
                     color="#a78bfa"
                     sublabel="planificaciones"
                 />
-                <StatCard
-                    icon={FileText}
-                    label="Guiones guardados"
-                    value={stats.scripts}
-                    color="#34d399"
-                    sublabel="listos para grabar"
-                />
+                <ScriptsStatCard value={stats.scripts} router={router} />
                 <StatCard
                     icon={Zap}
                     label="Créditos IA"
@@ -458,7 +646,7 @@ export default function DashboardHomePage() {
                     border: '1px solid rgba(255,255,255,0.07)',
                     borderRadius: '20px', padding: '28px',
                     display: 'grid', gridTemplateColumns: '1fr auto', gap: '24px',
-                    alignItems: 'center',
+                    alignItems: 'start',
                 }} className="brain-card">
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
@@ -474,21 +662,92 @@ export default function DashboardHomePage() {
                                     {activeProject?.name || 'Sin proyecto activo'}
                                 </h3>
                                 <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)' }}>
-                                    Cerebro IA · {brain?.bio ? 'configurado' : 'pendiente de configurar'}
+                                    Cerebro IA · {brain?.biography ? 'configurado' : 'pendiente de configurar'}
                                 </p>
                             </div>
                         </div>
 
-                        {brain?.content_pillars || brain?.target_audience || brain?.voice_style ? (
+                        {/* Barra de progreso del Cerebro IA */}
+                        {(() => {
+                            const fields = [
+                                brain?.biography,
+                                brain?.audience,
+                                brain?.products_services,
+                                brain?.style_words,
+                                brain?.content_pillars,
+                                brain?.faqs,
+                            ];
+                            const filled = fields.filter(f => {
+                                if (!f) return false;
+                                if (Array.isArray(f)) return f.length > 0;
+                                if (typeof f === 'string') return f.trim().length > 0;
+                                return true;
+                            }).length;
+                            const pct = Math.round((filled / 6) * 100);
+                            const isComplete = pct === 100;
+
+                            return (
+                                <div style={{ marginBottom: '16px' }}>
+                                    {isComplete ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                            <CheckCircle2 size={15} color="#34d399" />
+                                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#34d399' }}>
+                                                Cerebro IA completo
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                                                Tu Cerebro IA esta al <span style={{ color: '#a78bfa', fontWeight: 700 }}>{pct}%</span>
+                                            </span>
+                                            <button
+                                                onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : setShowModal(true)}
+                                                style={{
+                                                    background: 'none', border: 'none',
+                                                    color: '#a78bfa', fontSize: '0.72rem', fontWeight: 700,
+                                                    cursor: 'pointer', padding: 0,
+                                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                    textDecoration: 'underline', textDecorationStyle: 'dotted',
+                                                    textUnderlineOffset: '3px',
+                                                }}
+                                            >
+                                                completar <ArrowRight size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div style={{
+                                        height: '5px', background: 'rgba(255,255,255,0.07)',
+                                        borderRadius: '100px', overflow: 'hidden',
+                                    }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${pct}%`,
+                                            background: isComplete
+                                                ? 'linear-gradient(90deg, #34d399, #6ee7b7)'
+                                                : 'linear-gradient(90deg, #7c3aed, #a78bfa)',
+                                            borderRadius: '100px',
+                                            transition: 'width 0.6s ease',
+                                        }} />
+                                    </div>
+                                    {!isComplete && (
+                                        <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.2)', marginTop: '6px' }}>
+                                            {filled} de 6 bloques completados
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {brain?.content_pillars || brain?.audience || brain?.style_words ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                {brain.target_audience && (
+                                {brain.audience && (
                                     <span style={{ fontSize: '0.72rem', padding: '4px 10px', borderRadius: '100px', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa', fontWeight: 600 }}>
-                                        {String(brain.target_audience).slice(0, 40)}
+                                        {String(brain.audience).slice(0, 40)}
                                     </span>
                                 )}
-                                {brain.voice_style && (
+                                {brain.style_words && (
                                     <span style={{ fontSize: '0.72rem', padding: '4px 10px', borderRadius: '100px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', fontWeight: 600 }}>
-                                        {String(brain.voice_style).slice(0, 30)}
+                                        {String(brain.style_words).slice(0, 30)}
                                     </span>
                                 )}
                                 {brain.content_pillars && (
@@ -501,7 +760,7 @@ export default function DashboardHomePage() {
                             </div>
                         ) : (
                             <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>
-                                Aún no has configurado tu Cerebro IA. Es el primer paso para que WRITI genere contenido en tu voz.
+                                Aun no has configurado tu Cerebro IA. Es el primer paso para que WRITI genere contenido en tu voz.
                             </p>
                         )}
                     </div>
