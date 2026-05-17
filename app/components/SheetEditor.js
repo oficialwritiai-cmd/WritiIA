@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, CheckCircle2, Loader2, Copy, Check, BookOpen, Zap, Target, MessageSquare, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, CheckCircle2, Loader2, Copy, Check, BookOpen, Zap, Target, MessageSquare, FileText, ChevronDown, Download } from 'lucide-react';
 import { createSupabaseClient } from '@/lib/supabase';
 
 const PLATFORMS = ['Reels', 'TikTok', 'Shorts', 'YouTube', 'LinkedIn', 'X', 'General'];
@@ -136,6 +136,12 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
 
     const supabase  = createSupabaseClient();
     const timerRef  = useRef(null);
+    // Ref keeps latest values for auto-save — avoids stale closure bug
+    const latestRef = useRef({ title, platform, status, hook, desarrollo, cta, copyPost, fullText, itemId, userId, activeProjectId });
+
+    useEffect(() => {
+        latestRef.current = { title, platform, status, hook, desarrollo, cta, copyPost, fullText, itemId, userId, activeProjectId };
+    });
 
     useEffect(() => {
         if (initialItem) populate(initialItem);
@@ -165,51 +171,52 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
         if (data) populate(data);
     }
 
-    const triggerAutoSave = useCallback(() => {
+    // Auto-save reads from ref — always uses latest values regardless of closure
+    function triggerAutoSave() {
         clearTimeout(timerRef.current);
-        setSaveStatus('idle');
         timerRef.current = setTimeout(performSave, 800);
-    }, [title, platform, status, hook, desarrollo, cta, copyPost, fullText, itemId]);
+    }
 
     async function performSave() {
+        const d = latestRef.current;
         setSaveStatus('saving');
         try {
-            const fullContent = fullText || [
-                hook       ? `⚡ HOOK:\n${hook}` : '',
-                desarrollo ? `📝 DESARROLLO:\n${desarrollo}` : '',
-                cta        ? `📢 CTA:\n${cta}` : '',
-                copyPost   ? `📱 COPY:\n${copyPost}` : '',
+            const fullContent = d.fullText || [
+                d.hook       ? `⚡ HOOK:\n${d.hook}` : '',
+                d.desarrollo ? `📝 DESARROLLO:\n${d.desarrollo}` : '',
+                d.cta        ? `📢 CTA:\n${d.cta}` : '',
+                d.copyPost   ? `📱 COPY:\n${d.copyPost}` : '',
             ].filter(Boolean).join('\n\n');
 
             const payload = {
-                titulo:           title || 'Sin título',
-                platform,
+                titulo:           d.title || 'Sin título',
+                platform:         d.platform,
                 type:             'guion',
                 script_full_text: fullContent,
-                metadata:         { status },
+                metadata:         { status: d.status },
                 content: {
-                    titulo_angulo: title,
-                    hook, gancho: hook,
-                    desarrollo: desarrollo.split('\n').filter(d => d.trim()),
-                    cta, copy_post: copyPost, full_text: fullContent,
+                    titulo_angulo: d.title,
+                    hook: d.hook, gancho: d.hook,
+                    desarrollo: d.desarrollo.split('\n').filter(l => l.trim()),
+                    cta: d.cta, copy_post: d.copyPost, full_text: fullContent,
                 },
             };
 
-            if (itemId) {
-                const { error } = await supabase.from('library').update(payload).eq('id', itemId);
+            if (d.itemId) {
+                const { error } = await supabase.from('library').update(payload).eq('id', d.itemId);
                 if (error) throw error;
             } else {
-                let uid = userId;
+                let uid = d.userId;
                 if (!uid) {
                     const { data: { user } } = await supabase.auth.getUser();
                     uid = user?.id;
                 }
                 if (!uid) throw new Error('Usuario no autenticado');
-                const { data, error } = await supabase.from('library').insert({
-                    ...payload, user_id: uid, project_id: activeProjectId || null,
+                const { data: ins, error } = await supabase.from('library').insert({
+                    ...payload, user_id: uid, project_id: d.activeProjectId || null,
                 }).select().single();
                 if (error) throw error;
-                if (data) { setItemId(data.id); onSave?.(data); }
+                if (ins) { setItemId(ins.id); onSave?.(ins); }
             }
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus('idle'), 3000);
@@ -224,16 +231,147 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     }
 
     function copyAll() {
-        const text = fullText || [
-            title      ? `🎬 ${title}` : '',
-            hook       ? `\n⚡ HOOK:\n${hook}` : '',
-            desarrollo ? `\n📝 DESARROLLO:\n${desarrollo}` : '',
-            cta        ? `\n📢 CTA:\n${cta}` : '',
-            copyPost   ? `\n📱 COPY:\n${copyPost}` : '',
+        const d = latestRef.current;
+        const text = d.fullText || [
+            d.title      ? `🎬 ${d.title}` : '',
+            d.hook       ? `\n⚡ HOOK:\n${d.hook}` : '',
+            d.desarrollo ? `\n📝 DESARROLLO:\n${d.desarrollo}` : '',
+            d.cta        ? `\n📢 CTA:\n${d.cta}` : '',
+            d.copyPost   ? `\n📱 COPY:\n${d.copyPost}` : '',
         ].filter(Boolean).join('\n');
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    }
+
+    async function downloadDocx() {
+        const d = latestRef.current;
+        try {
+            const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, BorderStyle, ShadingType } = await import('docx');
+
+            const heading = (text, level = HeadingLevel.HEADING_2, color = '7c3aed') => new Paragraph({
+                heading: level,
+                children: [new TextRun({ text, bold: true, color, size: level === HeadingLevel.TITLE ? 48 : 28 })],
+                spacing: { before: 240, after: 120 },
+            });
+
+            const body = (text, color = '333333') => new Paragraph({
+                children: [new TextRun({ text: text || '', size: 24, color })],
+                spacing: { before: 60, after: 60 },
+            });
+
+            const divider = () => new Paragraph({
+                children: [new TextRun({ text: '' })],
+                border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'e5e7eb' } },
+                spacing: { before: 200, after: 200 },
+            });
+
+            const sectionLabel = (emoji, label, color = '7c3aed') => new Paragraph({
+                children: [
+                    new TextRun({ text: `${emoji} `, size: 26 }),
+                    new TextRun({ text: label.toUpperCase(), bold: true, size: 22, color, allCaps: true }),
+                ],
+                spacing: { before: 300, after: 80 },
+            });
+
+            const children = [
+                // Cover
+                new Paragraph({ children: [new TextRun({ text: 'WRITI.AI', size: 18, color: '9ca3af' })], spacing: { after: 80 } }),
+                new Paragraph({
+                    children: [new TextRun({ text: d.title || 'Sin título', bold: true, size: 52, color: '111827' })],
+                    spacing: { after: 120 },
+                }),
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: `Plataforma: `, size: 22, color: '6b7280' }),
+                        new TextRun({ text: d.platform, size: 22, bold: true, color: '4b5563' }),
+                        new TextRun({ text: `   ·   Estado: `, size: 22, color: '6b7280' }),
+                        new TextRun({ text: d.status, size: 22, bold: true, color: '4b5563' }),
+                        new TextRun({ text: `   ·   Generado con WRITI.AI`, size: 22, color: '9ca3af' }),
+                    ],
+                    spacing: { after: 200 },
+                }),
+                divider(),
+
+                // Hook
+                ...(d.hook ? [
+                    sectionLabel('⚡', 'Hook — Para el scroll', '7c3aed'),
+                    new Paragraph({
+                        children: [new TextRun({ text: d.hook, size: 26, bold: true, color: '1f2937', italics: false })],
+                        spacing: { before: 60, after: 180 },
+                    }),
+                    divider(),
+                ] : []),
+
+                // Desarrollo
+                ...(d.desarrollo ? [
+                    sectionLabel('📝', 'Desarrollo', '374151'),
+                    ...d.desarrollo.split('\n').filter(l => l.trim()).map((line, i) =>
+                        new Paragraph({
+                            children: [new TextRun({ text: line, size: 24, color: '374151' })],
+                            spacing: { before: 40, after: 40 },
+                            bullet: { level: 0 },
+                        })
+                    ),
+                    divider(),
+                ] : []),
+
+                // CTA
+                ...(d.cta ? [
+                    sectionLabel('📢', 'CTA — Llamada a la acción', '059669'),
+                    new Paragraph({
+                        children: [new TextRun({ text: d.cta, size: 24, bold: true, color: '059669' })],
+                        spacing: { before: 60, after: 180 },
+                    }),
+                ] : []),
+
+                // Copy redes
+                ...(d.copyPost ? [
+                    divider(),
+                    sectionLabel('📱', 'Copy para redes sociales', '0ea5e9'),
+                    ...d.copyPost.split('\n').map(line =>
+                        new Paragraph({
+                            children: [new TextRun({ text: line, size: 22, color: '374151' })],
+                            spacing: { before: 40, after: 40 },
+                        })
+                    ),
+                ] : []),
+
+                // Full text fallback
+                ...(d.fullText && !d.hook ? [
+                    divider(),
+                    sectionLabel('📄', 'Guion completo', '374151'),
+                    ...d.fullText.split('\n').map(line =>
+                        new Paragraph({
+                            children: [new TextRun({ text: line || ' ', size: 23, color: '374151' })],
+                            spacing: { before: 30, after: 30 },
+                        })
+                    ),
+                ] : []),
+            ];
+
+            const doc = new Document({
+                creator: 'WRITI.AI',
+                title: d.title || 'Guion',
+                sections: [{
+                    properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+                    children,
+                }],
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(d.title || 'guion').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('[DOCX] Error:', e);
+            alert('Error al generar el documento: ' + e.message);
+        }
     }
 
     const totalWords = countWords(hook) + countWords(desarrollo) + countWords(cta) + countWords(copyPost) + countWords(fullText);
@@ -292,6 +430,17 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: copied ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copied ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '8px', color: copied ? '#34d399' : 'rgba(255,255,255,0.5)', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
                             {copied ? <Check size={13} /> : <Copy size={13} />}
                             {copied ? 'Copiado' : 'Copiar todo'}
+                        </button>
+                    )}
+
+                    {/* Download DOCX */}
+                    {hasContent && (
+                        <button onClick={downloadDocx} title="Descargar como Word (.docx)"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(255,255,255,0.5)', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(14,165,233,0.1)'; e.currentTarget.style.color = '#7dd3fc'; e.currentTarget.style.borderColor = 'rgba(14,165,233,0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                            <Download size={13} />
+                            Descargar .docx
                         </button>
                     )}
 

@@ -372,7 +372,7 @@ function CalendarContent() {
                 if (selectedEvent.is_slot) {
                     // Only update fields that exist in content_slots schema
                     // script_content and copy_content are NOT valid columns — do not include them
-                    const slotUpdates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, description: tempNotes, scheduled_date: selectedDate, start_time: tempStartTime, end_time: tempEndTime, slot_color: colorValue };
+                    const slotUpdates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, scheduled_date: selectedDate, start_time: tempStartTime, end_time: tempEndTime, slot_color: colorValue };
                     const { error: updateErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', selectedEvent.id);
                     if (updateErr) throw updateErr;
                     setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...slotUpdates, event_date: selectedDate, notes: tempNotes, color: colorValue } : ev));
