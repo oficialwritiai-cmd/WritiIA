@@ -370,19 +370,9 @@ function CalendarContent() {
         try {
             if (selectedEvent && selectedEvent.id) {
                 if (selectedEvent.is_slot) {
+                    // Only update fields that exist in content_slots schema
+                    // script_content and copy_content are NOT valid columns — do not include them
                     const slotUpdates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, description: tempNotes, scheduled_date: selectedDate, start_time: tempStartTime, end_time: tempEndTime, slot_color: colorValue };
-                    if (linkedScript?.content) {
-                        const lc = linkedScript.content;
-                        slotUpdates.script_content = {
-                            gancho: lc.gancho || lc.hook || '',
-                            hook: lc.hook || lc.gancho || '',
-                            desarrollo: lc.desarrollo || [],
-                            cta: lc.cta || lc.cierre || '',
-                            cierre: lc.cierre || lc.cta || '',
-                            full_text: lc.full_text || '',
-                        };
-                        slotUpdates.copy_content = lc.copy_post || null;
-                    }
                     const { error: updateErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', selectedEvent.id);
                     if (updateErr) throw updateErr;
                     setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...slotUpdates, event_date: selectedDate, notes: tempNotes, color: colorValue } : ev));
@@ -652,8 +642,8 @@ function CalendarContent() {
                                         </div>
                                     )}
 
-                                    {/* Events */}
-                                    {dayEvs.map(ev => {
+                                    {/* Events — offset overlapping events horizontally */}
+                                    {dayEvs.map((ev, evIdx) => {
                                         const [sh, sm] = (ev.start_time || '09:00').split(':').map(Number);
                                         const [eh, em] = (ev.end_time   || '10:00').split(':').map(Number);
                                         const topPx  = (sh * 60 + sm) / 60 * HOUR_H;
@@ -663,6 +653,26 @@ function CalendarContent() {
                                         const isSelected = selectedEvents.has(ev.id);
                                         const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
                                         const platColor = platColors[ev.platform] || c.solid;
+
+                                        // Count events that overlap with this one to compute side-by-side columns
+                                        const overlapping = dayEvs.filter((other, otherIdx) => {
+                                            if (otherIdx === evIdx) return false;
+                                            const [os, oSm] = (other.start_time || '09:00').split(':').map(Number);
+                                            const [oe, oEm] = (other.end_time   || '10:00').split(':').map(Number);
+                                            const oStart = os * 60 + oSm;
+                                            const oEnd   = oe * 60 + oEm;
+                                            const evStart = sh * 60 + sm;
+                                            const evEnd   = eh * 60 + em;
+                                            return oStart < evEnd && oEnd > evStart;
+                                        });
+                                        const colTotal = overlapping.length + 1;
+                                        const colIdx2  = overlapping.filter((_, i) => {
+                                            const prev = dayEvs.indexOf(overlapping[i]);
+                                            return prev < evIdx;
+                                        }).length;
+                                        const colW   = 100 / colTotal;
+                                        const leftPct  = colW * colIdx2 + 0.5;
+                                        const widthPct = colW - 1;
 
                                         return (
                                             <div
@@ -676,19 +686,20 @@ function CalendarContent() {
                                                 style={{
                                                     position: 'absolute',
                                                     top: topPx + 2,
-                                                    left: 3,
-                                                    right: 3,
+                                                    left: `calc(${leftPct}% + 2px)`,
+                                                    width: `calc(${widthPct}% - 2px)`,
                                                     height: Math.max(heightPx - 4, 20),
                                                     background: c.bg,
                                                     borderLeft: `3px solid ${platColor}`,
                                                     borderRadius: 5,
                                                     padding: '2px 5px',
                                                     cursor: 'pointer',
-                                                    zIndex: 5,
+                                                    zIndex: 5 + evIdx,
                                                     overflow: 'hidden',
                                                     boxShadow: isSelected ? `0 0 0 2px ${c.solid}` : 'none',
                                                     transition: 'box-shadow 0.15s',
                                                     userSelect: 'none',
+                                                    boxSizing: 'border-box',
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
@@ -773,7 +784,7 @@ function CalendarContent() {
                         }}>{d}</span>
                         <span style={{ opacity: 0, fontSize: '0.6rem', color: '#555' }} className="cell-plus">+</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {dayEvs.slice(0, MAX_VISIBLE).map(ev => {
                             const c = colorOf(ev.color || 'purple');
                             const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
@@ -787,17 +798,21 @@ function CalendarContent() {
                                     onContextMenu={e => handleContextMenu(e, ev.id)}
                                     style={{
                                         background: c.bg,
-                                        borderLeft: `2.5px solid ${pc}`,
+                                        borderLeft: `2px solid ${pc}`,
                                         borderRadius: 3,
-                                        padding: '1px 4px',
-                                        fontSize: '0.65rem',
+                                        padding: '2px 5px',
+                                        fontSize: '0.72rem',
                                         fontWeight: 600,
                                         color: c.text,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         cursor: 'pointer',
-                                        lineHeight: 1.4,
+                                        lineHeight: 1,
+                                        height: '18px',
+                                        maxHeight: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         boxShadow: selectedEvents.has(ev.id) ? `0 0 0 1px ${c.solid}` : 'none',
                                     }}
                                 >
@@ -809,7 +824,7 @@ function CalendarContent() {
                             );
                         })}
                         {overflow > 0 && (
-                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', paddingLeft: 4, fontWeight: 600 }}>+{overflow} más</div>
+                            <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', paddingLeft: 4, fontWeight: 600, lineHeight: 1, marginTop: 1 }}>+{overflow} más</div>
                         )}
                     </div>
                 </div>
@@ -1228,6 +1243,11 @@ function CalendarContent() {
                     </div>
 
                     {/* Actions */}
+                    <button
+                        onClick={() => { setIsSelectMode(m => !m); if (isSelectMode) setSelectedEvents(new Set()); }}
+                        style={{ background: isSelectMode ? 'rgba(124,58,237,0.2)' : 'transparent', border: `1px solid ${isSelectMode ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.1)'}`, color: isSelectMode ? '#c4b5fd' : 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontWeight: isSelectMode ? 700 : 400, transition: 'all 0.2s' }}>
+                        <CheckCircle2 size={13} /> {isSelectMode ? 'Cancelar' : 'Seleccionar'}
+                    </button>
                     <button onClick={handleExport}
                         style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: 8, padding: '5px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <Share2 size={13} /> Exportar
@@ -1525,11 +1545,16 @@ function CalendarContent() {
 
             {/* ── Bulk action bar ── */}
             {selectedEvents.size > 0 && (
-                <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: '#1a1a22', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.5)', borderRadius: 50, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 18, zIndex: 2000, animation: 'slideUpBar 0.3s cubic-bezier(0.18,0.89,0.32,1.28)' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{selectedEvents.size} seleccionado{selectedEvents.size !== 1 ? 's' : ''}</span>
-                    <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.1)' }} />
+                <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1e1e2a', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 20px 60px rgba(0,0,0,0.7)', borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 14, zIndex: 2000, animation: 'slideUpBar 0.3s cubic-bezier(0.18,0.89,0.32,1.28)', minWidth: 360 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(124,58,237,0.2)', border: '1px solid rgba(124,58,237,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#c4b5fd' }}>{selectedEvents.size}</span>
+                        </div>
+                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>evento{selectedEvents.size !== 1 ? 's' : ''} seleccionado{selectedEvents.size !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
                     <select value={bulkStatusChange} onChange={e => handleBulkStatusChange(e.target.value)}
-                        style={{ background: '#111116', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', padding: '5px 10px', fontSize: '0.8rem', borderRadius: 8, outline: 'none' }}>
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', padding: '6px 10px', fontSize: '0.78rem', borderRadius: 8, outline: 'none', cursor: 'pointer', flex: 1 }}>
                         <option value="">Cambiar estado...</option>
                         <option value="idea">Idea</option>
                         <option value="prep">En preparación</option>
@@ -1537,12 +1562,12 @@ function CalendarContent() {
                         <option value="pub">Publicado</option>
                     </select>
                     <button onClick={handleDeleteSelected}
-                        style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', borderRadius: 8, padding: '5px 11px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Trash2 size={14} /> Eliminar
+                        style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', borderRadius: 9, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        <Trash2 size={14} /> Eliminar seleccionados
                     </button>
-                    <button onClick={() => setSelectedEvents(new Set())}
-                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', display: 'flex' }}>
-                        <X size={18} />
+                    <button onClick={() => { setSelectedEvents(new Set()); setIsSelectMode(false); }}
+                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <X size={14} /> Cancelar
                     </button>
                 </div>
             )}

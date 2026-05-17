@@ -168,7 +168,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     const triggerAutoSave = useCallback(() => {
         clearTimeout(timerRef.current);
         setSaveStatus('idle');
-        timerRef.current = setTimeout(performSave, 1500);
+        timerRef.current = setTimeout(performSave, 800);
     }, [title, platform, status, hook, desarrollo, cta, copyPost, fullText, itemId]);
 
     async function performSave() {
