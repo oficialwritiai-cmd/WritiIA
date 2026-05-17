@@ -370,12 +370,16 @@ function CalendarContent() {
         try {
             if (selectedEvent && selectedEvent.id) {
                 if (selectedEvent.is_slot) {
-                    // Only update fields that exist in content_slots schema
-                    // script_content and copy_content are NOT valid columns — do not include them
-                    const slotUpdates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, scheduled_date: selectedDate, start_time: tempStartTime, end_time: tempEndTime, slot_color: colorValue };
+                    // content_slots only has: scheduled_date, idea_title, platform
+                    // start_time, end_time, status, slot_color do NOT exist in this table
+                    const slotUpdates = {
+                        scheduled_date: selectedDate,
+                        idea_title:     tempTitle || selectedEvent.title || 'Sin título',
+                        platform:       tempPlatform,
+                    };
                     const { error: updateErr } = await supabase.from('content_slots').update(slotUpdates).eq('id', selectedEvent.id);
                     if (updateErr) throw updateErr;
-                    setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, ...slotUpdates, event_date: selectedDate, notes: tempNotes, color: colorValue } : ev));
+                    setEvents(events.map(ev => ev.id === selectedEvent.id ? { ...ev, event_date: selectedDate, title: slotUpdates.idea_title, platform: slotUpdates.platform } : ev));
                 } else {
                     const updates = { title: tempTitle || 'Sin título', status: tempStatus, platform: tempPlatform, notes: tempNotes, event_date: selectedDate, color: colorValue, start_time: tempStartTime, end_time: tempEndTime };
                     const { error: updateErr } = await supabase.from('calendar_events').update(updates).eq('id', selectedEvent.id);
