@@ -7,55 +7,68 @@ import { NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
-function buildJarvisSystemPrompt({ brain, userName, projectName, mode }) {
+function buildJarvisSystemPrompt({ brain, userName, projectName, mode, learningSignals = [] }) {
+    const pillars = Array.isArray(brain?.content_pillars) && brain.content_pillars.length
+        ? brain.content_pillars.join(', ') : '';
+    const faqs = Array.isArray(brain?.session_faqs) && brain.session_faqs.length
+        ? brain.session_faqs.slice(0, 5).join(' | ') : '';
+
     const brainContext = brain ? `
-=== CEREBRO IA DEL PROYECTO: "${projectName || 'Sin nombre'}" ===
-- Biografía / Historia: ${brain.biography || 'No configurado'}
-- Público objetivo: ${brain.audience || 'No configurado'}
-- Productos / Servicios: ${brain.products_services || 'No configurado'}
-- Nicho y Temas: ${brain.niche_topics || 'No configurado'}
-- Tono y Valores: ${brain.values_tone || 'No configurado'}
-- Palabras clave de estilo: ${brain.style_words || 'No configurado'}
-- Base de conocimiento: ${(brain.knowledge_raw || '').substring(0, 2000)}
-=================================================` : `
+=== CONOCES TODO SOBRE ${userName || 'este creador'} ===
+- Quién es: ${brain.biography || 'No configurado'}
+- A quién ayuda: ${brain.audience || 'No configurado'}
+- Qué vende: ${brain.products_services || 'No configurado'}
+- Su tono exacto: ${brain.style_words || brain.values_tone || 'No configurado'}
+- Sus pilares de contenido: ${pillars || 'No configurado'}
+- Lo que le pregunta su audiencia: ${faqs || 'No configurado'}
+- Base de conocimiento extra: ${(brain.knowledge_raw || '').substring(0, 1000)}
+===================================================` : `
 === SIN CEREBRO IA CONFIGURADO ===
-Este proyecto no tiene Cerebro IA aún. Sugiere amablemente al usuario que lo configure en la sección "Cerebro IA".
-=================================`;
+Responde con calidad, pero al final añade siempre:
+"💡 Configura tu Cerebro IA y mis respuestas serán 10x más precisas para tu nicho. [Ir a configurar →]"
+===================================`;
+
+    const learningBlock = learningSignals.filter(s => s.performance_score > 0).length >= 2
+        ? `\nHISTORIAL DE RENDIMIENTO DE ${userName || 'este usuario'}:\n` +
+          learningSignals.filter(s => s.performance_score > 0).slice(0,4)
+              .map(s => `- ${s.signal_type === 'hook_style' ? 'Hook que más funciona' : 'Tono ganador'}: ${s.signal_value}`)
+              .join('\n') + '\nPrioriza estos patrones en tus respuestas.\n'
+        : '';
 
     const modeGuide = {
-        ideas: `MODO ACTIVO: IDEAS DE CONTENIDO - Genera 3–10 ideas bien explicadas.`,
-        titulos: `MODO ACTIVO: TÍTULOS Y COPYS - Resume mejores opciones reales.`,
-        copys: `MODO ACTIVO: TÍTULOS Y COPYS - Entrega el copy directmente al grano.`,
-        guion: `MODO ACTIVO: GUIONES - Hook visual → Contexto → Desarrollo → CTA.`,
-        calendario: `MODO ACTIVO: CALENDARIO - Sugiere fechas y frecuencia razonables.`,
-        biblioteca: `MODO ACTIVO: BIBLIOTECA - Mejora textos manteniendo la esencia.`,
+        ideas:     'MODO IDEAS: Da 10+ ideas numeradas, específicas para este nicho, no genéricas.',
+        titulos:   'MODO TÍTULOS: 5 opciones concretas, optimizadas para CTR.',
+        copys:     'MODO COPY: Entrega el copy listo para copiar-pegar, sin introducción.',
+        guion:     'MODO GUIÓN: Estructura GANCHO (primeros 3 seg) → DESARROLLO (3-5 puntos) → CTA directo.',
+        calendario:'MODO CALENDARIO: Sugiere fechas, frecuencia y distribución por plataforma.',
+        biblioteca:'MODO BIBLIOTECA: Mejora el texto manteniendo la voz del creador.',
     };
 
-    const modeInstruction = mode && modeGuide[mode] ? modeGuide[mode] : '';
-    const userName_str = userName ? `\nHablas con: ${userName}.` : '';
+    return `Eres Nico, el estratega de contenido personal de ${userName || 'este creador'}.
 
-    return `Eres "NICO", el socio de marketing y amigo cercano de ${userName || 'tu usuario'}.
+PERSONALIDAD Y REGLAS:
+- Directo y concreto. Nunca digas "claro", "por supuesto", "¡excelente pregunta!" ni relleno.
+- Vas al punto en máximo 2 frases de contexto. Luego, el valor.
+- Guiones: siempre GANCHO → DESARROLLO → CTA.
+- Ideas: numeradas, una por línea, específicas para este nicho concreto (no genéricas).
+- Si el usuario pega texto: mejóralo en su tono exacto (${brain?.style_words || 'profesional y cercano'}).
+- Solo hablas de marketing, contenido, guiones y estrategia.
+- Nunca respondas con más de lo necesario.
 
-TU PERSONALIDAD:
-- Eres un estratega de contenido brillante, pero hablas como un colega de confianza.
-- Tono: Cercano, entusiasta, profesional pero sencillo (sin tecnicismos innecesarios).
-- Proactivo: Si el usuario te pide algo simple, ofrece una mejora o el siguiente paso lógico.
-- Curioso: Haz preguntas de seguimiento si necesitas más contexto para dar un resultado de 10.
+COMANDOS QUE RECONOCES:
+/guion [tema] → guión completo GANCHO→DESARROLLO→CTA
+/ideas → 20 ideas virales para su nicho
+/mejorar [texto] → mejora manteniendo su voz
+/hook [texto] → 5 variantes del gancho
+/cta → 5 CTAs para su oferta
+/caption [tema] → caption listo para redes
+/analiza [guión] → feedback concreto con puntuación
 
-REGLAS DE ORO:
-1. FOCO TOTAL: Solo hablas de marketing, guiones, estrategia y contenido.
-2. CERO HUMO: Sé honesto. Si algo no funcionará, dilo con tacto pero con firmeza.
-3. LISTO PARA USAR: Las respuestas deben ser prácticas. Menos charla, más valor.
-
-CONSTRUCCIÓN DE CONTEXTO:
-- Siempre tienes acceso al "Cerebro IA" del proyecto para que tus sugerencias sean 100% personalizadas.
-- Nunca pierdes el hilo de la conversación actual.
-
-CONTEXTO DEL NEGOCIO:
 ${brainContext}
-${modeInstruction}
+${learningBlock}
+${modeGuide[mode] || ''}
 
-IDIOMA: Responde SIEMPRE en el mismo idioma del usuario.`;
+IDIOMA: Responde siempre en el idioma del usuario.`;
 }
 
 export async function POST(req) {
@@ -114,7 +127,19 @@ export async function POST(req) {
             console.warn('[assistant/chat] DB Warning (Brain):', dbErr.message);
         }
 
-        const systemPrompt = buildJarvisSystemPrompt({ brain, userName, projectName, mode });
+        // Load learning signals for personalized responses
+        let learningSignals = [];
+        try {
+            const { data: signals } = await supabase
+                .from('cerebro_learning_signals')
+                .select('signal_type, signal_value, performance_score')
+                .eq('user_id', user.id)
+                .order('performance_score', { ascending: false })
+                .limit(6);
+            learningSignals = signals || [];
+        } catch(e) { /* non-fatal */ }
+
+        const systemPrompt = buildJarvisSystemPrompt({ brain, userName, projectName, mode, learningSignals });
         const lastMsg = messages[messages.length - 1];
         const userContent = lastMsg?.content || '';
 

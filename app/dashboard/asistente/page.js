@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Send, Mic, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X, Paperclip, ChevronDown, Menu, Plus, History, Trash2, MessageSquare } from 'lucide-react';
+import { Send, Mic, Calendar, Lightbulb, PenLine, Type, Sparkles, Save, X, Paperclip, ChevronDown, Menu, Plus, History, Trash2, MessageSquare, Copy, Brain } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 // ── Typing Indicator ──────────────────────────────────────
@@ -116,17 +116,17 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
 
             <div style={{
                 maxWidth: '85%',
-                padding: '16px 20px',
-                borderRadius: isUser ? '20px 20px 4px 20px' : '4px 20px 20px 20px',
+                padding: '14px 18px',
+                borderRadius: isUser ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
                 background: isUser
-                    ? 'rgba(255,255,255,0.06)'
-                    : 'transparent',
+                    ? 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(109,40,217,0.2))'
+                    : 'rgba(255,255,255,0.03)',
                 border: isUser
-                    ? '1px solid rgba(255,255,255,0.1)'
-                    : 'none',
+                    ? '1px solid rgba(124,58,237,0.3)'
+                    : '1px solid rgba(255,255,255,0.07)',
                 color: 'white',
-                fontSize: '1.05rem',
-                lineHeight: '1.6',
+                fontSize: '0.95rem',
+                lineHeight: '1.65',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
             }}>
@@ -135,7 +135,12 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript, onPlanify, onGenerateTit
 
             {/* Action Buttons for AI messages */}
             {!isUser && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', maxWidth: '85%' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px', maxWidth: '85%' }}>
+                    {/* Copiar siempre visible */}
+                    <button onClick={() => navigator.clipboard.writeText(msg.content)}
+                        style={{ fontSize: '0.75rem', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Copy size={11} /> Copiar
+                    </button>
                     {(ctx.isIdea || ctx.isDefault) && (
                         <button
                             onClick={() => handleAction('idea', onSaveIdea)}
@@ -230,6 +235,33 @@ export default function AsistentePage() {
     const textareaRef = useRef(null);
     const supabase = createSupabaseClient();
     const { activeProject } = useProject();
+
+    const [inputFocused, setInputFocused] = useState(false);
+    const [placeholderIdx, setPlaceholderIdx] = useState(0);
+    const [showCommands, setShowCommands] = useState(false);
+
+    const PLACEHOLDERS = [
+        'Pega tu guión para mejorarlo...',
+        '¿Sobre qué quieres crear hoy?',
+        'Dame ideas para mi nicho...',
+        'Reescribe este hook más agresivo...',
+        'Escribe / para ver comandos rápidos',
+    ];
+
+    const SLASH_COMMANDS = [
+        { cmd: '/guion', desc: 'Genera un guión completo sobre un tema' },
+        { cmd: '/ideas', desc: '20 ideas virales para tu nicho' },
+        { cmd: '/mejorar', desc: 'Mejora cualquier texto que pegues' },
+        { cmd: '/hook', desc: '5 variantes del gancho' },
+        { cmd: '/cta', desc: '5 CTAs para tu oferta' },
+        { cmd: '/caption', desc: 'Caption listo para redes sociales' },
+        { cmd: '/analiza', desc: 'Feedback detallado de un guión' },
+    ];
+
+    useEffect(() => {
+        const t = setInterval(() => setPlaceholderIdx(i => (i + 1) % PLACEHOLDERS.length), 3000);
+        return () => clearInterval(t);
+    }, []);
 
     const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
@@ -497,6 +529,14 @@ export default function AsistentePage() {
                     0%, 100% { opacity: 0.3; transform: scale(0.8); }
                     50% { opacity: 1; transform: scale(1.2); }
                 }
+                @keyframes nicoGlow {
+                    0%,100% { box-shadow: 0 0 10px rgba(124,58,237,0.4); }
+                    50% { box-shadow: 0 0 24px rgba(14,165,233,0.55); }
+                }
+                @keyframes nicoPulse {
+                    0%,100% { opacity:1; transform: scale(1); }
+                    50% { opacity:0.4; transform: scale(0.8); }
+                }
                 .action-card {
                     background: rgba(255,255,255,0.03);
                     border: 1px solid rgba(255,255,255,0.08);
@@ -650,46 +690,71 @@ export default function AsistentePage() {
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '72px', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#050505', zIndex: 110 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '250px' }}>
-                        <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#7ECECA', padding: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button className="mobile-only" onClick={() => setIsSidebarOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '8px' }}>
                             <History size={20} />
                         </button>
-                        <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 900, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '-0.02em' }}>Nico Asistente ⚡</h2>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: 'nicoGlow 3s ease-in-out infinite' }}>
+                            <Brain size={18} color="#fff" />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>Nico</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', display: 'inline-block', animation: 'nicoPulse 2s infinite' }} />
+                                <span style={{ fontSize: '0.65rem', color: '#34d399', fontWeight: 600 }}>Activo</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div className="chat-container" style={{ position: 'absolute', top: '72px', left: 0, right: 0, bottom: '0', overflowY: 'auto', display: 'flex', flexDirection: 'column', zIndex: 10, paddingBottom: '140px', overflowX: 'hidden' }}>
                     
-                    {/* Welcome Screen - Personalized v1.17.6 Layout Enforcement */}
-                    {((!messages || messages.length === 0)) && (
-                        <div className="welcome-screen" style={{ padding: '150px 24px 80px', textAlign: 'center', maxWidth: '800px', margin: '0 auto', width: '100%', overflow: 'visible' }}>
-                            <div style={{ 
-                                width: '64px', 
-                                height: '64px', 
-                                background: 'radial-gradient(circle, #7ECECA 0%, #5BBAD8 100%)', 
-                                borderRadius: '50%', 
-                                margin: '0 auto 24px',
-                                boxShadow: '0 0 50px rgba(126, 206, 202, 0.7)',
-                                animation: 'pulse 3s infinite ease-in-out'
-                            }} />
-                            <h1 style={{ fontSize: isMobile ? '1.8rem' : '4rem', fontWeight: 950, margin: '0 0 16px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff' }}>
-                                Hola{userName ? `, ${userName}` : ''} 👋
-                            </h1>
-                            <p style={{ fontSize: isMobile ? '1rem' : '1.3rem', color: '#888', margin: '0 auto 48px', maxWidth: '600px', lineHeight: 1.6, fontWeight: 500 }}>
-                                Bienvenido a la v1.17.7. Nico es más inteligente que nunca. ⚡
-                            </p>
+                    {/* Welcome Screen */}
+                    {((!messages || messages.length === 0)) && (() => {
+                        const hour = new Date().getHours();
+                        const subtitle = hour < 12 ? '¿Listo para crear contenido?' : hour < 20 ? '¿Qué creamos hoy?' : 'Planifiquemos mañana';
+                        const WELCOME_CARDS = [
+                            { icon: <PenLine size={20} color="#a78bfa" />, title: 'Crear guión', desc: 'Dime tu tema y lo tenemos en 30 seg', prompt: 'Crea un guión completo para Reels sobre: ' },
+                            { icon: <Lightbulb size={20} color="#f59e0b" />, title: '20 ideas para mi nicho', desc: 'Ideas virales personalizadas', prompt: '/ideas' },
+                            { icon: <Sparkles size={20} color="#34d399" />, title: 'Mejorar mi gancho', desc: 'Pega tu texto y lo potenciamos', prompt: 'Mejora este gancho: ' },
+                            { icon: <MessageSquare size={20} color="#60a5fa" />, title: 'Analizar un guión', desc: 'Feedback real y concreto', prompt: '/analiza ' },
+                        ];
+                        return (
+                        <div className="welcome-screen" style={{ padding: '80px 24px 80px', textAlign: 'center', maxWidth: '620px', margin: '0 auto', width: '100%' }}>
+                            {/* Greeting */}
+                            <div style={{ marginBottom: '32px' }}>
+                                <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.04em', color: '#fff' }}>
+                                    Hola, {userName?.split(' ')[0] || 'creador'} 👋
+                                </h1>
+                                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{subtitle}</p>
+                            </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', width: '100%', maxWidth: '850px', margin: '0 auto' }}>
-                                {ORBITA_CARDS.map((card, idx) => (
-                                    <div key={idx} className="action-card" onClick={() => sendMessage(card.prompt, card.mode)} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', padding: '24px', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
-                                        <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>{card.icon}</div>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{card.title}</h3>
-                                        <p style={{ fontSize: '0.85rem', color: '#777', margin: 0, lineHeight: '1.5' }}>{card.desc}</p>
-                                    </div>
+                            {/* Avatar animado */}
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'nicoGlow 3s ease-in-out infinite', position: 'relative' }}>
+                                    <Brain size={36} color="#fff" />
+                                    <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#34d399', border: '2px solid #050505', animation: 'nicoPulse 2s infinite' }} />
+                                </div>
+                            </div>
+
+                            {/* Cards contextuales */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                {WELCOME_CARDS.map((card, i) => (
+                                    <button key={i} onClick={() => setInput(card.prompt)}
+                                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.08)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.25)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}>
+                                        {card.icon}
+                                        <div>
+                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', margin: '0 0 3px' }}>{card.title}</p>
+                                            <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', margin: 0, lineHeight: 1.4 }}>{card.desc}</p>
+                                        </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Chat Messages */}
                     {((messages && messages.length > 0) || !historyLoaded) && (
@@ -725,25 +790,47 @@ export default function AsistentePage() {
                     paddingRight: isMobile ? '80px' : '24px' // Clear space for floating widgets
                 }}>
                     <div style={{ width: '100%', maxWidth: '860px', margin: '0 auto' }}>
+                        {/* Comandos / */}
+                        {showCommands && input.startsWith('/') && (
+                            <div style={{ background: '#1a1a24', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '14px', overflow: 'hidden', marginBottom: '8px', boxShadow: '0 -8px 32px rgba(0,0,0,0.5)' }}>
+                                {SLASH_COMMANDS.filter(c => c.cmd.startsWith(input.split(' ')[0])).map(c => (
+                                    <button key={c.cmd} onClick={() => { setInput(c.cmd + ' '); setShowCommands(false); textareaRef.current?.focus(); }}
+                                        style={{ width: '100%', padding: '10px 16px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#fff', textAlign: 'left', cursor: 'pointer', display: 'flex', gap: '14px', alignItems: 'center' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.08)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#a78bfa', fontWeight: 700, flexShrink: 0 }}>{c.cmd}</span>
+                                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>{c.desc}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
                         <div style={{
                             display: 'flex', alignItems: 'flex-end',
-                            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '24px', padding: '8px 12px 8px 18px',
-                            transition: '0.3s',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                            position: 'relative'
+                            background: 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${inputFocused ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                            borderRadius: '20px', padding: '8px 12px 8px 18px',
+                            transition: 'border-color 0.2s, box-shadow 0.2s',
+                            boxShadow: inputFocused ? '0 0 0 3px rgba(124,58,237,0.12)' : '0 8px 32px rgba(0,0,0,0.4)',
+                            position: 'relative',
                         }}>
                             <textarea
                                 ref={textareaRef}
                                 value={input}
-                                onChange={e => setInput(e.target.value)}
+                                onChange={e => {
+                                    setInput(e.target.value);
+                                    setShowCommands(e.target.value.startsWith('/'));
+                                }}
+                                onFocus={() => setInputFocused(true)}
+                                onBlur={() => { setInputFocused(false); setTimeout(() => setShowCommands(false), 150); }}
                                 onKeyDown={handleKeyDown}
-                                placeholder={isTyping ? "Nico está pensando..." : "Escribe tu pregunta o pega tu guion..."}
+                                placeholder={isTyping ? 'Nico está pensando...' : PLACEHOLDERS[placeholderIdx]}
                                 rows={1}
                                 style={{
-                                    flex: 1, background: 'none', border: 'none', outline: 'none', color: isTyping ? '#555' : 'white',
+                                    flex: 1, background: 'none', border: 'none', outline: 'none',
+                                    color: isTyping ? '#555' : 'white',
                                     fontSize: '1rem', lineHeight: '1.5', resize: 'none', maxHeight: '150px',
-                                    overflowY: 'auto', fontFamily: 'inherit', padding: '12px 0', alignSelf: 'center'
+                                    overflowY: 'auto', fontFamily: 'inherit', padding: '12px 0', alignSelf: 'center',
                                 }}
                                 onInput={e => {
                                     e.target.style.height = 'auto';
@@ -752,30 +839,30 @@ export default function AsistentePage() {
                                 disabled={isTyping}
                             />
                             {isTyping && (
-                                <div style={{ position: 'absolute', top: '-30px', left: '20px', fontSize: '0.8rem', color: '#7ECECA', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'msgFadeIn 0.3s ease' }}>
-                                    <Sparkles size={14} className="animate-pulse" /> Nico está escribiendo...
+                                <div style={{ position: 'absolute', top: '-28px', left: '20px', fontSize: '0.75rem', color: '#a78bfa', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Sparkles size={12} /> Nico está escribiendo...
                                 </div>
                             )}
-                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center', paddingBottom: '4px' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0, paddingLeft: '8px', alignSelf: 'center', paddingBottom: '2px' }}>
                                 <button
                                     onClick={() => sendMessage()}
                                     disabled={isTyping || !input.trim()}
-                                    className="send-btn"
                                     style={{
-                                        height: '42px', width: '42px', borderRadius: '50%', border: 'none',
-                                        background: !input.trim() || isTyping ? 'rgba(255,255,255,0.1)' : '#fff',
-                                        color: !input.trim() || isTyping ? '#555' : '#000',
+                                        height: '40px', width: '40px', borderRadius: '50%', border: 'none',
+                                        background: !input.trim() || isTyping ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                                        color: !input.trim() || isTyping ? '#444' : '#fff',
                                         cursor: !input.trim() || isTyping ? 'not-allowed' : 'pointer',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        transition: '0.2s', flexShrink: 0
+                                        transition: 'all 0.2s', flexShrink: 0,
+                                        boxShadow: (!input.trim() || isTyping) ? 'none' : '0 4px 12px rgba(124,58,237,0.4)',
                                     }}
                                 >
-                                    <Send size={20} />
+                                    <Send size={18} />
                                 </button>
                             </div>
                         </div>
-                        <p style={{ textAlign: 'center', fontSize: '0.65rem', color: '#444', marginTop: '10px' }}>
-                            Nico socio de marketing · Ilimitado
+                        <p style={{ textAlign: 'center', fontSize: '0.62rem', color: 'rgba(255,255,255,0.15)', marginTop: '8px' }}>
+                            Escribe <span style={{ color: '#a78bfa', fontWeight: 700 }}>/</span> para ver comandos rápidos
                         </p>
                     </div>
                 </div>
