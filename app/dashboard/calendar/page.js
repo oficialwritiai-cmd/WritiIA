@@ -572,38 +572,64 @@ function CalendarContent() {
     }
 
     // ── Week view ──────────────────────────────────────────────────────────────
+    // Events from Matrix (is_slot) always get 09:00-10:00 default → show them
+    // in an "all-day" strip above the hour grid instead of stacking at 9am.
+    const isAllDay = (ev) => ev.is_slot === true;
+
     const renderWeekView = () => {
         const weekStart = getWeekStart(currentDate);
         const weekDays  = getWeekDays(weekStart);
         const hours     = Array.from({ length: 24 }, (_, i) => i);
-        const HOUR_H    = 60; // px per hour
+        const HOUR_H    = 60;
         const now       = new Date();
         const todayS    = todayStr();
+        const nowMin    = now.getHours() * 60 + now.getMinutes();
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                {/* Week column headers */}
+                {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#13131a', flexShrink: 0 }}>
                     <div style={{ width: 52 }} />
                     {weekDays.map((day, i) => {
-                        const ds    = toDateStr(day);
-                        const isT   = ds === todayS;
-                        const dName = DAY_HEADERS_SHORT[i];
+                        const ds  = toDateStr(day);
+                        const isT = ds === todayS;
                         return (
                             <div key={ds} style={{ textAlign: 'center', padding: '10px 4px', cursor: 'pointer', borderLeft: '1px solid rgba(255,255,255,0.05)' }} onClick={() => openNewEvent(ds)}>
-                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: isT ? '#7c3aed' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{dName}</div>
-                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: isT ? '#7c3aed' : 'transparent', color: isT ? '#fff' : 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontWeight: 700, fontSize: '0.9rem' }}>
-                                    {day.getDate()}
-                                </div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: isT ? '#7c3aed' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{DAY_HEADERS_SHORT[i]}</div>
+                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: isT ? '#7c3aed' : 'transparent', color: isT ? '#fff' : 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', fontWeight: 700, fontSize: '0.9rem' }}>{day.getDate()}</div>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Scrollable grid */}
+                {/* All-day strip for Matrix slots */}
+                <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8, paddingTop: 4, paddingBottom: 4 }}>
+                        <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.18)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Todo el día</span>
+                    </div>
+                    {weekDays.map((day) => {
+                        const ds  = toDateStr(day);
+                        const evs = eventsForDate(ds).filter(isAllDay);
+                        return (
+                            <div key={ds} style={{ borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '3px 3px', display: 'flex', flexDirection: 'column', gap: 2, minHeight: evs.length ? 'auto' : 24 }}>
+                                {evs.slice(0, 3).map(ev => {
+                                    const c = colorOf(ev.color || 'purple');
+                                    return (
+                                        <div key={ev.id} onClick={e => handleEventClick(e, ev)}
+                                            style={{ background: c.bg, borderLeft: `2px solid ${c.solid}`, borderRadius: 3, padding: '1px 4px', fontSize: '0.63rem', fontWeight: 600, color: c.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', lineHeight: '15px' }}>
+                                            {ev.title}
+                                        </div>
+                                    );
+                                })}
+                                {evs.length > 3 && <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.25)', paddingLeft: 3, lineHeight: '13px' }}>+{evs.length - 3} más</div>}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Scrollable hour grid — only non-slot timed events */}
                 <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }} className="week-scroll">
                     <div style={{ display: 'grid', gridTemplateColumns: '52px repeat(7, 1fr)', position: 'relative' }}>
-                        {/* Hour labels */}
                         <div style={{ gridColumn: 1, gridRow: '1 / span 24' }}>
                             {hours.map(h => (
                                 <div key={h} style={{ height: HOUR_H, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 8, paddingTop: 2, boxSizing: 'border-box' }}>
@@ -611,112 +637,50 @@ function CalendarContent() {
                                 </div>
                             ))}
                         </div>
-
-                        {/* Day columns */}
                         {weekDays.map((day, colIdx) => {
-                            const ds   = toDateStr(day);
-                            const isT  = ds === todayS;
-                            const dayEvs = eventsForDate(ds);
-
-                            // Current time line
-                            const nowMinutes = now.getHours() * 60 + now.getMinutes();
-                            const nowTop     = (nowMinutes / 60) * HOUR_H;
-
+                            const ds      = toDateStr(day);
+                            const isT     = ds === todayS;
+                            const timedEvs = eventsForDate(ds).filter(e => !isAllDay(e));
                             return (
                                 <div key={ds} style={{ gridColumn: colIdx + 2, position: 'relative', background: isT ? 'rgba(124,58,237,0.03)' : 'transparent', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-                                    {/* Hour cells (clickable) */}
                                     {hours.map(h => (
-                                        <div
-                                            key={h}
-                                            style={{ height: HOUR_H, borderTop: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', cursor: 'pointer' }}
-                                            onClick={() => openNewEvent(ds, h)}
-                                            onDragOver={e => e.preventDefault()}
-                                            onDrop={e => onDrop(e, ds)}
-                                        />
+                                        <div key={h} style={{ height: HOUR_H, borderTop: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', cursor: 'pointer' }}
+                                            onClick={() => openNewEvent(ds, h)} onDragOver={e => e.preventDefault()} onDrop={e => onDrop(e, ds)} />
                                     ))}
-
-                                    {/* Now line */}
                                     {isT && (
-                                        <div style={{ position: 'absolute', top: nowTop, left: 0, right: 0, height: 2, background: '#7c3aed', zIndex: 10, pointerEvents: 'none' }}>
+                                        <div style={{ position: 'absolute', top: (nowMin / 60) * HOUR_H, left: 0, right: 0, height: 2, background: '#7c3aed', zIndex: 10, pointerEvents: 'none' }}>
                                             <div style={{ position: 'absolute', left: -5, top: -4, width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
                                         </div>
                                     )}
-
-                                    {/* Events — offset overlapping events horizontally */}
-                                    {dayEvs.map((ev, evIdx) => {
+                                    {timedEvs.map((ev, evIdx) => {
                                         const [sh, sm] = (ev.start_time || '09:00').split(':').map(Number);
                                         const [eh, em] = (ev.end_time   || '10:00').split(':').map(Number);
-                                        const topPx  = (sh * 60 + sm) / 60 * HOUR_H;
-                                        const durMin = Math.max(30, (eh * 60 + em) - (sh * 60 + sm));
+                                        const topPx    = (sh * 60 + sm) / 60 * HOUR_H;
+                                        const durMin   = Math.max(30, (eh * 60 + em) - (sh * 60 + sm));
                                         const heightPx = durMin / 60 * HOUR_H;
-                                        const c = colorOf(ev.color || 'purple');
-                                        const isSelected = selectedEvents.has(ev.id);
+                                        const c        = colorOf(ev.color || 'purple');
                                         const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
-                                        const platColor = platColors[ev.platform] || c.solid;
-
-                                        // Count events that overlap with this one to compute side-by-side columns
-                                        const overlapping = dayEvs.filter((other, otherIdx) => {
-                                            if (otherIdx === evIdx) return false;
-                                            const [os, oSm] = (other.start_time || '09:00').split(':').map(Number);
-                                            const [oe, oEm] = (other.end_time   || '10:00').split(':').map(Number);
-                                            const oStart = os * 60 + oSm;
-                                            const oEnd   = oe * 60 + oEm;
-                                            const evStart = sh * 60 + sm;
-                                            const evEnd   = eh * 60 + em;
-                                            return oStart < evEnd && oEnd > evStart;
+                                        const platColor  = platColors[ev.platform] || c.solid;
+                                        const overlap    = timedEvs.filter((o, oi) => {
+                                            if (oi === evIdx) return false;
+                                            const [os, osm] = (o.start_time || '09:00').split(':').map(Number);
+                                            const [oe, oem] = (o.end_time   || '10:00').split(':').map(Number);
+                                            return (os * 60 + osm) < (eh * 60 + em) && (oe * 60 + oem) > (sh * 60 + sm);
                                         });
-                                        const colTotal = overlapping.length + 1;
-                                        const colIdx2  = overlapping.filter((_, i) => {
-                                            const prev = dayEvs.indexOf(overlapping[i]);
-                                            return prev < evIdx;
-                                        }).length;
-                                        const colW   = 100 / colTotal;
-                                        const leftPct  = colW * colIdx2 + 0.5;
-                                        const widthPct = colW - 1;
-
+                                        const colTotal  = overlap.length + 1;
+                                        const colPos    = overlap.filter((o) => timedEvs.indexOf(o) < evIdx).length;
+                                        const colW      = 100 / colTotal;
                                         return (
-                                            <div
-                                                key={ev.id}
+                                            <div key={ev.id}
                                                 draggable={!isDragging}
                                                 onDragStart={e => onDragStart(e, ev.id)}
                                                 onMouseDown={e => { e.stopPropagation(); handleEventMouseDown(e, ev.id); }}
                                                 onMouseEnter={() => handleEventMouseEnter(ev.id)}
                                                 onClick={e => handleEventClick(e, ev)}
                                                 onContextMenu={e => handleContextMenu(e, ev.id)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: topPx + 2,
-                                                    left: `calc(${leftPct}% + 2px)`,
-                                                    width: `calc(${widthPct}% - 2px)`,
-                                                    height: Math.max(heightPx - 4, 20),
-                                                    background: c.bg,
-                                                    borderLeft: `3px solid ${platColor}`,
-                                                    borderRadius: 5,
-                                                    padding: '2px 5px',
-                                                    cursor: 'pointer',
-                                                    zIndex: 5 + evIdx,
-                                                    overflow: 'hidden',
-                                                    boxShadow: isSelected ? `0 0 0 2px ${c.solid}` : 'none',
-                                                    transition: 'box-shadow 0.15s',
-                                                    userSelect: 'none',
-                                                    boxSizing: 'border-box',
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                                    {heightPx > 32 && ev.platform && ev.platform !== 'General' && (
-                                                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: platColor, textTransform: 'uppercase', letterSpacing: '0.04em', background: `${platColor}18`, borderRadius: 2, padding: '0 3px', lineHeight: '12px' }}>
-                                                            {ev.platform}
-                                                        </span>
-                                                    )}
-                                                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: c.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
-                                                        {ev.title}
-                                                    </span>
-                                                </div>
-                                                {heightPx > 36 && (
-                                                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', marginTop: 0 }}>
-                                                        {(ev.start_time || '09:00').slice(0,5)}
-                                                    </div>
-                                                )}
+                                                style={{ position: 'absolute', top: topPx + 2, left: `${colW * colPos + 0.5}%`, width: `${colW - 1}%`, height: Math.max(heightPx - 4, 20), background: c.bg, borderLeft: `3px solid ${platColor}`, borderRadius: 5, padding: '2px 5px', cursor: 'pointer', zIndex: 5 + evIdx, overflow: 'hidden', boxShadow: selectedEvents.has(ev.id) ? `0 0 0 2px ${c.solid}` : 'none', userSelect: 'none', boxSizing: 'border-box' }}>
+                                                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: c.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', lineHeight: 1.3 }}>{ev.title}</span>
+                                                {heightPx > 36 && <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>{(ev.start_time || '09:00').slice(0,5)}</span>}
                                             </div>
                                         );
                                     })}
@@ -840,17 +804,38 @@ function CalendarContent() {
 
     // ── Day view ───────────────────────────────────────────────────────────────
     const renderDayView = () => {
-        const ds     = toDateStr(currentDate);
-        const hours  = Array.from({ length: 24 }, (_, i) => i);
-        const HOUR_H = 60;
-        const now    = new Date();
-        const todayS = todayStr();
-        const isT    = ds === todayS;
-        const dayEvs = eventsForDate(ds);
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const ds       = toDateStr(currentDate);
+        const hours    = Array.from({ length: 24 }, (_, i) => i);
+        const HOUR_H   = 60;
+        const now      = new Date();
+        const isT      = ds === todayStr();
+        const allEvs   = eventsForDate(ds);
+        const allDayEv = allEvs.filter(isAllDay);
+        const timedEv  = allEvs.filter(e => !isAllDay(e));
+        const nowMin   = now.getHours() * 60 + now.getMinutes();
 
         return (
-            <div style={{ flex: 1, overflowY: 'auto' }} className="week-scroll">
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                {allDayEv.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 8 }}>
+                            <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.18)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Todo el día</span>
+                        </div>
+                        <div style={{ padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+                            {allDayEv.map(ev => {
+                                const c = colorOf(ev.color || 'purple');
+                                return (
+                                    <div key={ev.id} onClick={e => handleEventClick(e, ev)}
+                                        style={{ background: c.bg, borderLeft: `3px solid ${c.solid}`, borderRadius: 5, padding: '5px 10px', fontSize: '0.82rem', fontWeight: 600, color: c.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        {ev.title}
+                                        {ev.platform && ev.platform !== 'General' && <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>{ev.platform}</span>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+                <div style={{ flex: 1, overflowY: 'auto' }} className="week-scroll">
                 <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '52px 1fr' }}>
                     <div>
                         {hours.map(h => (
@@ -864,11 +849,11 @@ function CalendarContent() {
                             <div key={h} style={{ height: HOUR_H, borderTop: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', cursor: 'pointer' }} onClick={() => openNewEvent(ds, h)} />
                         ))}
                         {isT && (
-                            <div style={{ position: 'absolute', top: (nowMinutes / 60) * HOUR_H, left: 0, right: 0, height: 2, background: '#7c3aed', zIndex: 10 }}>
+                            <div style={{ position: 'absolute', top: (nowMin / 60) * HOUR_H, left: 0, right: 0, height: 2, background: '#7c3aed', zIndex: 10 }}>
                                 <div style={{ position: 'absolute', left: -5, top: -4, width: 10, height: 10, borderRadius: '50%', background: '#7c3aed' }} />
                             </div>
                         )}
-                        {dayEvs.map(ev => {
+                        {timedEv.map(ev => {
                             const [sh, sm] = (ev.start_time || '09:00').split(':').map(Number);
                             const [eh, em] = (ev.end_time   || '10:00').split(':').map(Number);
                             const topPx    = (sh * 60 + sm) / 60 * HOUR_H;
@@ -887,6 +872,7 @@ function CalendarContent() {
                             );
                         })}
                     </div>
+                </div>
                 </div>
             </div>
         );
