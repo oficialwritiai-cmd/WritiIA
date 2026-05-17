@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
