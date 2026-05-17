@@ -215,12 +215,16 @@ export default function SessionStep1Brain() {
         brainSaveTimer.current = setTimeout(async () => {
             if (!projectId) return;
             try {
+                const pillarsArr = fields.pillars.split('\n').map(s => s.trim()).filter(Boolean);
+                const faqsArr    = fields.faqs.split('\n').map(s => s.trim()).filter(Boolean);
                 await supabase.from('project_brains').upsert({
                     project_id:        projectId,
                     biography:         updatedFields.bio      || '',
                     audience:          updatedFields.audience  || '',
                     products_services: updatedFields.offer     || '',
                     style_words:       updatedFields.style     || '',
+                    content_pillars:   pillarsArr,
+                    session_faqs:      faqsArr,
                 });
             } catch (e) { console.error('[debouncedBrainSave]', e); }
         }, 1500);
@@ -354,12 +358,14 @@ export default function SessionStep1Brain() {
         dispatch({ type: 'SET_FAQS',         payload: faqsArr });
         dispatch({ type: 'SET_TIME_HORIZON', payload: horizon });
 
-        // Persist brain to Supabase so it survives navigation
+        // Persist brain + pillars + FAQs to Supabase so they survive navigation
         if (projectId) {
             try {
                 await supabase.from('project_brains').upsert({
                     ...updatedBrain,
-                    project_id: projectId,
+                    project_id:       projectId,
+                    content_pillars:  pillarsArr,
+                    session_faqs:     faqsArr,
                 });
             } catch (e) { console.error('[handleConfirm] brain upsert:', e); }
         }

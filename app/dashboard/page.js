@@ -563,14 +563,17 @@ export default function DashboardPage() {
         // Load params from URL on initial load or navigation
         const params = searchParams;
 
-        // Voice story mode — pre-fill experienciaReal and jump to generation form
+        // Voice story mode — read from sessionStorage (never URL, keeps text private)
         if (params.get('mode') === 'voice-story') {
-            const story = params.get('story');
+            const story = typeof window !== 'undefined'
+                ? sessionStorage.getItem('writi_voice_story') || ''
+                : '';
             if (story) {
+                try { sessionStorage.removeItem('writi_voice_story'); } catch(e) {}
                 setGenerationMode('single');
                 setExperienciaReal(story);
                 setWizardStep(4);
-                setShowOptional(true); // show optional fields so story is visible
+                setShowOptional(true);
             }
         }
 

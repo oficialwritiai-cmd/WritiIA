@@ -215,16 +215,19 @@ export async function POST(request, { params }) {
         const finalPlatform = platform || slot.platform || 'Reels';
         const userMessage = `Genera el guion para: ${slot.idea_title}. Contexto: ${slot.idea_description || ''}. Plataforma: ${finalPlatform} (${videoDuration}). Enfoque: ${focus}. CTA: ${ctaIdea || ''}.${instruction ? ` INSTRUCCIONES DE MEJORA: ${instruction}` : ''}`;
 
-        // ─── 4. Charge Credits BEFORE calling AI ─────────────────────────────
-        const creditResult = await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_SCRIPT_SLOT, 'generate_script_slot', slot.project_id);
-        if (!creditResult.success) {
+        // ─── 4. Check credits BEFORE calling AI (read-only) ──────────────────
+        const { data: profileCheck } = await supabase
+            .from('users_profiles').select('credits_balance').eq('id', verifiedUserId).single();
+        const balance = profileCheck?.credits_balance ?? 999;
+        const cost    = CREDIT_COSTS.GENERATE_SCRIPT_SLOT ?? 1;
+        if (balance < cost) {
             return NextResponse.json({
-                error: 'No tienes créditos suficientes para generar este guion. Compra más créditos para continuar.',
-                code: 'INSUFFICIENT_CREDITS',
+                error: 'No tienes créditos suficientes para generar este guion.',
+                code:  'INSUFFICIENT_CREDITS',
             }, { status: 402 });
         }
 
-        // ─── 5. Call AI ─────────────────────────────────────────
+        // ─── 5. Call AI first, charge AFTER success ───────────────────────────
         let rawText;
         try {
             rawText = await callAnthropicWithRetries({
@@ -236,6 +239,9 @@ export async function POST(request, { params }) {
             await supabase.from('content_slots').update({ slot_status: 'script_error' }).eq('id', slot_id);
             return NextResponse.json({ error: 'La IA no pudo generar el guion.', code: 'AI_FAILED' }, { status: 503 });
         }
+
+        // Charge credits only after AI succeeds — no loss if AI fails
+        await chargeCredits(supabase, verifiedUserId, CREDIT_COSTS.GENERATE_SCRIPT_SLOT, 'generate_script_slot', slot.project_id).catch(e => console.error('[credits] charge failed post-AI:', e.message));
 
         let scriptData = extractJson(rawText);
 

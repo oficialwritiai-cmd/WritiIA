@@ -113,12 +113,9 @@ export default function VoiceStoryPage() {
     function generateFromStory() {
         const story = editedText.trim();
         if (!story) return;
-        // Pass story to the generation page via URL param
-        const params = new URLSearchParams({
-            story: story,
-            mode: 'voice-story',
-        });
-        router.push(`/dashboard?${params.toString()}`);
+        // Store in sessionStorage — keeps text private, not in URL or browser history
+        try { sessionStorage.setItem('writi_voice_story', story); } catch(e) {}
+        router.push('/dashboard?mode=voice-story');
     }
 
     const displayText = transcript + (interim ? interim : '');
