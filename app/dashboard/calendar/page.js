@@ -731,28 +731,30 @@ function CalendarContent() {
             cells.push(
                 <div
                     key={d}
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 70, padding: '4px 3px', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' }}
+                    style={{ borderTop: `1px solid ${isT ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)'}`, minHeight: 80, padding: '5px 6px 6px', cursor: 'pointer', position: 'relative', transition: 'background 0.12s', background: isT ? 'rgba(124,58,237,0.04)' : 'transparent' }}
                     onClick={() => handleDayClick(ds)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => onDrop(e, ds)}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onMouseEnter={e => { if (!isT) e.currentTarget.style.background = 'rgba(255,255,255,0.025)'; }}
+                    onMouseLeave={e => { if (!isT) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    {/* Day number */}
+                    <div style={{ marginBottom: 3, textAlign: 'right' }}>
                         <span style={{
-                            width: 24, height: 24, borderRadius: '50%',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 22, height: 22, borderRadius: '50%',
                             background: isT ? '#7c3aed' : 'transparent',
-                            color: isT ? '#fff' : 'rgba(255,255,255,0.7)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.8rem', fontWeight: isT ? 700 : 400
+                            color: isT ? '#fff' : dayEvs.length > 0 ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.3)',
+                            fontSize: '0.75rem', fontWeight: isT ? 700 : dayEvs.length > 0 ? 500 : 400,
                         }}>{d}</span>
-                        <span style={{ opacity: 0, fontSize: '0.6rem', color: '#555' }} className="cell-plus">+</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Event pills — Google Calendar style: dot + text, no bg fill */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {dayEvs.slice(0, MAX_VISIBLE).map(ev => {
                             const c = colorOf(ev.color || 'purple');
                             const platColors = { TikTok: '#ff0050', Instagram: '#e1306c', YouTube: '#ff0000', LinkedIn: '#0a66c2' };
-                            const pc = platColors[ev.platform] || c.solid;
+                            const dotColor = platColors[ev.platform] || c.solid;
+                            const isSel = selectedEvents.has(ev.id);
                             return (
                                 <div
                                     key={ev.id}
@@ -761,32 +763,22 @@ function CalendarContent() {
                                     onClick={e => { e.stopPropagation(); handleEventClick(e, ev); }}
                                     onContextMenu={e => handleContextMenu(e, ev.id)}
                                     style={{
-                                        background: c.bg,
-                                        borderLeft: `2px solid ${pc}`,
-                                        borderRadius: 2,
-                                        padding: '0 4px',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 600,
-                                        color: c.text,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        cursor: 'pointer',
-                                        lineHeight: '15px',
-                                        height: '15px',
-                                        display: 'block',
-                                        boxShadow: selectedEvents.has(ev.id) ? `0 0 0 1px ${c.solid}` : 'none',
+                                        display: 'flex', alignItems: 'center', gap: 4,
+                                        height: 16, overflow: 'hidden', cursor: 'pointer',
+                                        borderRadius: 3, padding: '0 3px',
+                                        background: isSel ? `${dotColor}22` : 'transparent',
+                                        outline: isSel ? `1px solid ${dotColor}55` : 'none',
                                     }}
                                 >
-                                    {ev.platform && ev.platform !== 'General' ? (
-                                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: pc, marginRight: 3 }}>◆</span>
-                                    ) : null}
-                                    {ev.title}
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 500, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
+                                        {ev.title}
+                                    </span>
                                 </div>
                             );
                         })}
                         {overflow > 0 && (
-                            <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)', paddingLeft: 4, fontWeight: 600, lineHeight: 1, marginTop: 1 }}>+{overflow} más</div>
+                            <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.3)', paddingLeft: 3, lineHeight: '14px', fontWeight: 600 }}>+{overflow} más</div>
                         )}
                     </div>
                 </div>
