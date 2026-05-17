@@ -55,6 +55,7 @@ export const runtime = 'nodejs';
 
 import SupportWidget from '@/app/components/SupportWidget';
 import { Providers } from '@/app/components/Providers';
+import PostHogProvider from '@/app/components/PostHogProvider';
 
 const schemaOrg = {
     '@context': 'https://schema.org',
@@ -86,10 +87,12 @@ export default function RootLayout({ children }) {
                 />
             </head>
             <body>
-                <Providers>
-                    {children}
-                </Providers>
-                <SupportWidget />
+                <PostHogProvider>
+                    <Providers>
+                        {children}
+                    </Providers>
+                    <SupportWidget />
+                </PostHogProvider>
             </body>
         </html>
     );

@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 // SECURITY: Content Security Policy
 // 'unsafe-eval' is added only in development for Next.js HMR/Fast Refresh.
 // Production keeps it excluded to prevent XSS/code injection attacks.
@@ -12,7 +14,7 @@ const cspHeader = `
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
-    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.stripe.com;
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.stripe.com https://*.sentry.io https://app.posthog.com https://eu.posthog.com;
     media-src 'self' https://d8j0ntlcm91z4.cloudfront.net;
     upgrade-insecure-requests;
 `;
@@ -38,7 +40,7 @@ const nextConfig = {
                     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
                     // Restrict dangerous browser features (microphone, camera, geolocation)
                     { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), interest-cohort=()' },
-                    // Content Security Policy (removed unsafe-eval)
+                    // Content Security Policy
                     { key: 'Content-Security-Policy', value: cspHeader.replace(/\n/g, '').replace(/\s+/g, ' ').trim() }
                 ]
             }
@@ -46,4 +48,12 @@ const nextConfig = {
     }
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+    // Sentry build-time options
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    // Disable source map upload in development to avoid noise
+    disableServerWebpackPlugin: process.env.NODE_ENV !== 'production',
+    disableClientWebpackPlugin: process.env.NODE_ENV !== 'production',
+});
