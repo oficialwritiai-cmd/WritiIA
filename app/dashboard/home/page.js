@@ -569,7 +569,7 @@ export default function DashboardHomePage() {
 
             {/* ── STATS ────────────────────────────────────────── */}
             <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px',
+                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px',
                 marginBottom: '40px',
             }} className="stats-grid">
                 <StatCard
@@ -580,6 +580,13 @@ export default function DashboardHomePage() {
                     sublabel="planificaciones"
                 />
                 <ScriptsStatCard value={stats.scripts} router={router} />
+                <StatCard
+                    icon={Clock}
+                    label="Horas ahorradas"
+                    value={stats.scripts > 0 ? `${Math.round(stats.scripts * 0.75)} hrs` : '0 hrs'}
+                    color="#34d399"
+                    sublabel={stats.scripts > 0 ? 'vs escribir manualmente' : 'empieza a generar'}
+                />
                 <StatCard
                     icon={Zap}
                     label="Créditos IA"
@@ -959,11 +966,15 @@ export default function DashboardHomePage() {
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
                 @media (max-width: 768px) {
-                    .stats-grid  { grid-template-columns: 1fr !important; }
+                    .stats-grid  { grid-template-columns: repeat(2, 1fr) !important; }
                     .action-grid { grid-template-columns: 1fr !important; }
                     .brain-card  { grid-template-columns: 1fr !important; }
                 }
+                @media (max-width: 480px) {
+                    .stats-grid  { grid-template-columns: 1fr !important; }
+                }
                 @media (max-width: 1024px) {
+                    .stats-grid  { grid-template-columns: repeat(2, 1fr) !important; }
                     .action-grid { grid-template-columns: repeat(2, 1fr) !important; }
                 }
             `}</style>

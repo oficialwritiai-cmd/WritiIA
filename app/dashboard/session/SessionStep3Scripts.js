@@ -5,8 +5,14 @@ import { createSupabaseClient } from '@/lib/supabase';
 import {
     Loader2, Sparkles, ChevronRight, CheckCircle2,
     AlertCircle, RefreshCw, BookOpen, Copy, Check,
-    Zap, FileText, MessageSquare, Target
+    Zap, FileText, MessageSquare, Target, GitBranch, ChevronDown, ChevronUp
 } from 'lucide-react';
+
+const VARIANT_OPTIONS = [
+    { id: 'storytelling', label: 'Storytelling personal', emoji: '🎭' },
+    { id: 'educativo',    label: 'Educativo directo',     emoji: '📚' },
+    { id: 'provocador',   label: 'Provocador / gancho fuerte', emoji: '🔥' },
+];
 
 /* ─── Parse script object into clean sections ─────── */
 function parseSections(raw) {
@@ -25,10 +31,13 @@ function parseSections(raw) {
 }
 
 /* ─── Single script card ───────────────────────────── */
-function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, script, saved }) {
-    const [copied, setCopied]   = useState(false);
-    const [expanded, setExpanded] = useState(false);
+function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, script, saved,
+    variant, loadingVariant, showVariantPicker, onToggleVariantPicker, onSelectVariant }) {
+    const [copied, setCopied]         = useState(false);
+    const [expanded, setExpanded]     = useState(false);
+    const [variantExpanded, setVariantExpanded] = useState(true);
     const sections = script ? parseSections(script.raw) : null;
+    const variantSections = variant ? parseSections(variant.raw) : null;
 
     function copyText() {
         const text = script?.text || '';
@@ -79,7 +88,7 @@ function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, scri
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {script && (
                         <>
                             <button onClick={copyText} title="Copiar guion"
@@ -90,6 +99,57 @@ function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, scri
                                 style={{ width: '34px', height: '34px', borderRadius: '9px', background: expanded ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${expanded ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.09)'}`, color: expanded ? '#a78bfa' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
                                 <FileText size={15} />
                             </button>
+                            {/* Variant picker trigger */}
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={onToggleVariantPicker}
+                                    title="Generar variante"
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                        background: showVariantPicker ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)',
+                                        color: showVariantPicker ? '#f59e0b' : 'rgba(255,255,255,0.4)',
+                                        border: `1px solid ${showVariantPicker ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.09)'}`,
+                                        borderRadius: '9px', padding: '7px 12px',
+                                        fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                                    }}>
+                                    <GitBranch size={13} />
+                                    Variante
+                                    {showVariantPicker ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                                </button>
+                                {/* Inline dropdown */}
+                                {showVariantPicker && (
+                                    <div style={{
+                                        position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                                        background: '#1a1a24', border: '1px solid rgba(245,158,11,0.25)',
+                                        borderRadius: '12px', padding: '6px', zIndex: 50,
+                                        minWidth: '220px', boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                                    }}>
+                                        {VARIANT_OPTIONS.map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                onClick={() => onSelectVariant(opt.id)}
+                                                disabled={loadingVariant}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                                    width: '100%', padding: '10px 12px',
+                                                    background: 'transparent', border: 'none',
+                                                    color: loadingVariant ? '#555' : 'rgba(255,255,255,0.8)',
+                                                    fontSize: '0.82rem', fontWeight: 600, cursor: loadingVariant ? 'not-allowed' : 'pointer',
+                                                    borderRadius: '8px', textAlign: 'left', transition: 'background 0.15s',
+                                                }}
+                                                onMouseEnter={e => { if (!loadingVariant) e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; }}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                <span style={{ fontSize: '1rem' }}>{opt.emoji}</span>
+                                                {opt.label}
+                                                {loadingVariant && variant?.type === opt.id && (
+                                                    <Loader2 size={12} style={{ marginLeft: 'auto', animation: 'spin 0.8s linear infinite' }} />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </>
                     )}
                     <button onClick={onGenerate} disabled={loading}
@@ -217,6 +277,62 @@ function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, scri
                             <BookOpen size={13} /> Guardar en Biblioteca
                         </button>
                     )}
+
+                    {/* Variant loading state */}
+                    {loadingVariant && (
+                        <div style={{ marginTop: '14px', padding: '14px 16px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Loader2 size={15} style={{ color: '#f59e0b', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Generando variante…</p>
+                        </div>
+                    )}
+
+                    {/* Variant result */}
+                    {variant && !loadingVariant && (
+                        <div style={{ marginTop: '14px', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '14px', overflow: 'hidden' }}>
+                            <button
+                                onClick={() => setVariantExpanded(v => !v)}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(245,158,11,0.08)', border: 'none', cursor: 'pointer', color: '#f59e0b' }}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', fontWeight: 700 }}>
+                                    <GitBranch size={13} />
+                                    Variante: {VARIANT_OPTIONS.find(o => o.id === variant.type)?.emoji}{' '}
+                                    {VARIANT_OPTIONS.find(o => o.id === variant.type)?.label}
+                                </span>
+                                {variantExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {variantExpanded && variantSections && (
+                                <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.04)' }}>
+                                    {variantSections.hook && (
+                                        <div style={{ marginBottom: '10px', padding: '12px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)', borderLeft: '3px solid #f59e0b', borderRadius: '0 10px 10px 0' }}>
+                                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>Hook</div>
+                                            <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.6, margin: 0 }}>{variantSections.hook}</p>
+                                        </div>
+                                    )}
+                                    {variantSections.structure?.length > 0 && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                                            {variantSections.structure.map((block, i) => (
+                                                <div key={i} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '9px' }}>
+                                                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '3px' }}>{i + 1}. {block.point}</p>
+                                                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, margin: 0 }}>{block.detail}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {variantSections.cta && (
+                                        <div style={{ padding: '10px 14px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderLeft: '3px solid #34d399', borderRadius: '0 10px 10px 0' }}>
+                                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>CTA</div>
+                                            <p style={{ fontSize: '0.85rem', color: '#fff', margin: 0 }}>{variantSections.cta}</p>
+                                        </div>
+                                    )}
+                                    {!variantSections.hook && !variantSections.structure?.length && variantSections.fullText && (
+                                        <pre style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}>
+                                            {variantSections.fullText}
+                                        </pre>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -251,6 +367,11 @@ export default function SessionStep3Scripts() {
     const [saved, setSaved]         = useState({});
     const [generatingAll, setAll]   = useState(false);
     const [advancing, setAdvancing] = useState(false);
+
+    // Variant state
+    const [variants, setVariants]               = useState({});       // { slotId: { type, text, raw } }
+    const [loadingVariant, setLoadingVariant]   = useState({});       // { slotId: bool }
+    const [showVariantPicker, setShowVariantPicker] = useState({});   // { slotId: bool }
 
     useEffect(() => { if (selectedSlotIds.length) { loadSlots(); } }, []);
 
@@ -355,6 +476,32 @@ export default function SessionStep3Scripts() {
         }
     }
 
+    async function generateVariant(slotId, variantType) {
+        setLoadingVariant(p => ({ ...p, [slotId]: true }));
+        setShowVariantPicker(p => ({ ...p, [slotId]: false }));
+        try {
+            const res = await fetch(`/api/slots/${slotId}/generate-script`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoDuration: '60 seg', focus: 'autoridad', variant: variantType }),
+            });
+            if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); return; }
+            if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error generando variante.'); }
+            const data = await res.json();
+            const raw  = data.script || data;
+            const text = formatScript(raw);
+            setVariants(p => ({ ...p, [slotId]: { type: variantType, text, raw } }));
+        } catch (e) {
+            setErrors(p => ({ ...p, [slotId]: e.message }));
+        } finally {
+            setLoadingVariant(p => ({ ...p, [slotId]: false }));
+        }
+    }
+
+    function toggleVariantPicker(slotId) {
+        setShowVariantPicker(p => ({ ...p, [slotId]: !p[slotId] }));
+    }
+
     async function generateAll() {
         setAll(true);
         for (const s of slots) { if (!scripts[s.id]) await generateOne(s.id); }
@@ -418,6 +565,11 @@ export default function SessionStep3Scripts() {
                     saved={!!saved[slot.id]}
                     onGenerate={() => generateOne(slot.id)}
                     onSave={(id) => saveToLibraryManual(id)}
+                    variant={variants[slot.id]}
+                    loadingVariant={!!loadingVariant[slot.id]}
+                    showVariantPicker={!!showVariantPicker[slot.id]}
+                    onToggleVariantPicker={() => toggleVariantPicker(slot.id)}
+                    onSelectVariant={(type) => generateVariant(slot.id, type)}
                 />
             ))}
 

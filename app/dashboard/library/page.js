@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle } from 'lucide-react';
+import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle, Share2 } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
 import SheetEditor from '@/app/components/SheetEditor';
 
@@ -467,16 +467,36 @@ export default function LibraryPage() {
                                     <div style={{ display: 'flex', gap: '6px' }}>
                                         {/* Copy */}
                                         <button
-                                            onClick={() => copyToClipboard(item)}
+                                            onClick={(e) => { e.stopPropagation(); copyToClipboard(item); }}
                                             title="Copiar texto completo"
                                             style={{ display: 'flex', alignItems: 'center', gap: '5px', height: '32px', padding: '0 12px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, color: C.textSecondary, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
                                             <Copy size={13} />
                                             Copiar
                                         </button>
+                                        {/* Share */}
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                    const res = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ libraryId: item.id }) });
+                                                    const { url, error: apiErr } = await res.json();
+                                                    if (apiErr) { showToast('Error al generar link', 'error'); return; }
+                                                    const fullUrl = window.location.origin + url;
+                                                    navigator.clipboard.writeText(fullUrl);
+                                                    showToast('Link copiado al portapapeles', 'success');
+                                                } catch {
+                                                    showToast('Error al generar link', 'error');
+                                                }
+                                            }}
+                                            title="Compartir guion"
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '7px', background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <Share2 size={13} />
+                                        </button>
                                         {/* Delete */}
                                         <button
-                                            onClick={() => deleteItem(item.id)}
+                                            onClick={(e) => { e.stopPropagation(); deleteItem(item.id); }}
                                             title="Eliminar"
                                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '7px', background: C.redBg, border: `1px solid ${C.redBorder}`, color: C.red, cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
