@@ -4496,7 +4496,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {Array.isArray(planSlots) && planSlots.map((slot, i) => {
                                 const isExpanded = expandedSlots.has(slot.id);
                                 const sd = slot.script_data;
@@ -4545,27 +4545,23 @@ export default function DashboardPage() {
                                     key={slot.id}
                                     className="premium-card plan-slot-card"
                                     style={{
-                                        border: selectedSlots.has(slot.id) ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                                        background: selectedSlots.has(slot.id) ? 'rgba(124,58,237,0.06)' : 'rgba(255,255,255,0.03)',
-                                        opacity: selectedSlots.has(slot.id) ? 1 : 0.65,
-                                        borderRadius: '16px',
+                                        border: selectedSlots.has(slot.id) ? '1px solid rgba(124,58,237,0.35)' : '1px solid rgba(255,255,255,0.07)',
+                                        background: selectedSlots.has(slot.id) ? 'rgba(124,58,237,0.05)' : 'rgba(255,255,255,0.02)',
+                                        borderRadius: '14px',
                                         overflow: 'hidden',
-                                        animation: `cardFadeIn 0.3s ease ${i * 0.04}s both`,
-                                        transition: 'transform 0.2s, border-color 0.2s, opacity 0.2s',
+                                        animation: `cardFadeIn 0.25s ease ${Math.min(i * 0.03, 0.5)}s both`,
+                                        transition: 'border-color 0.15s',
                                     }}
-                                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    {/* Header row: REVIEW & EDIT */}
+                                    {/* Header row */}
                                     <div
                                         style={{
-                                            padding: '20px 24px',
+                                            padding: '14px 18px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             cursor: 'pointer',
                                             userSelect: 'none',
-                                            background: 'rgba(255,255,255,0.02)'
                                         }}
                                     >
                                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }} onClick={toggleExpand}>
@@ -4609,11 +4605,10 @@ export default function DashboardPage() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white', margin: 0 }}>{slot.idea_title}</h3>
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{slot.platform}</span>
-                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>|</span>
-                                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{slot.content_type}</span>
+                                                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white', margin: 0, lineHeight: 1.3 }}>{slot.idea_title}</h3>
+                                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                                                    {slot.platform && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>{slot.platform}</span>}
+                                                    {slot.content_type && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>{slot.content_type}</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -4650,143 +4645,57 @@ export default function DashboardPage() {
                                         </div>
                                     </div>
 
-                                    {/* Expanded Script Content */}
+                                    {/* Expanded Script Content — single column clean */}
                                     {isExpanded && slot.has_script && sd && (
-                                        <div style={{ padding: '0 24px 24px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-                                                {/* Left Column: Script */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                    {/* Hook */}
-                                                    <div style={{ background: 'rgba(255, 215, 0, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255, 215, 0, 0.15)' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                            <span style={{ fontSize: '1rem' }}>🎯</span>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gancho / Hook</span>
-                                                        </div>
-                                                        <p style={{ fontSize: '0.9rem', color: 'white', lineHeight: '1.6', margin: 0, fontWeight: 600 }}>{hookText || 'Sin gancho'}</p>
-                                                    </div>
+                                        <div style={{ padding: '0 18px 18px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
 
-                                                    {/* Desarrollo */}
-                                                    <div style={{ background: 'rgba(126, 206, 202, 0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(126, 206, 202, 0.1)' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                                            <span style={{ fontSize: '1rem' }}>📝</span>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#7ECECA', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Desarrollo</span>
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                            {desarrolloArr.length > 0 ? desarrolloArr.map((punto, pidx) => (
-                                                                <div key={pidx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                                                                    <span style={{ background: 'rgba(126, 206, 202, 0.15)', color: '#7ECECA', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}>{pidx + 1}</span>
-                                                                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.5', margin: 0 }}>
-                                                                        {typeof punto === 'object' ? JSON.stringify(punto) : punto}
-                                                                    </p>
+                                                {/* Hook */}
+                                                {hookText && (
+                                                    <div style={{ borderLeft: '3px solid #a78bfa', paddingLeft: '14px', background: 'rgba(167,139,250,0.04)', borderRadius: '0 10px 10px 0', padding: '12px 14px 12px 14px' }}>
+                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '5px' }}>⚡ Hook</span>
+                                                        <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{hookText}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Desarrollo */}
+                                                {desarrolloArr.length > 0 && (
+                                                    <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '12px 14px' }}>
+                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>Desarrollo</span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            {desarrolloArr.slice(0, 3).map((punto, pidx) => (
+                                                                <div key={pidx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                                                    <span style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0, marginTop: '2px' }}>{pidx + 1}</span>
+                                                                    <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, margin: 0 }}>{typeof punto === 'object' ? JSON.stringify(punto) : punto}</p>
                                                                 </div>
-                                                            )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Sin desarrollo</p>}
+                                                            ))}
+                                                            {desarrolloArr.length > 3 && <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', margin: '4px 0 0 28px' }}>+{desarrolloArr.length - 3} puntos más</p>}
                                                         </div>
                                                     </div>
+                                                )}
 
-                                                    {/* CTA */}
-                                                    <div style={{ background: 'rgba(255, 77, 77, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255, 77, 77, 0.15)' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                            <span style={{ fontSize: '1rem' }}>🔥</span>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#FF4D4D', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CTA / Cierre</span>
-                                                        </div>
-                                                        <p style={{ fontSize: '0.9rem', color: 'white', lineHeight: '1.6', margin: 0, fontWeight: 600 }}>{ctaText || 'Sin CTA'}</p>
+                                                {/* CTA */}
+                                                {ctaText && (
+                                                    <div style={{ borderLeft: '3px solid #34d399', background: 'rgba(52,211,153,0.04)', borderRadius: '0 10px 10px 0', padding: '10px 14px' }}>
+                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '4px' }}>CTA</span>
+                                                        <p style={{ fontSize: '0.85rem', color: '#fff', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>{ctaText}</p>
                                                     </div>
-                                                </div>
+                                                )}
 
-                                                {/* Right Column: Copy Post */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                    <div style={{ background: 'rgba(157, 0, 255, 0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(157, 0, 255, 0.15)', flex: 1 }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                                            <span style={{ fontSize: '1rem' }}>📱</span>
-                                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#9D00FF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Copy para Post</span>
-                                                        </div>
-                                                        {copyPost.titulo && (
-                                                            <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', marginBottom: '8px' }}>{copyPost.titulo}</p>
-                                                        )}
-                                                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', marginBottom: '12px', whiteSpace: 'pre-wrap' }}>
-                                                            {copyPost.descripcion_larga || 'Sin descripción'}
-                                                        </p>
-                                                        {hashtagsArr.length > 0 && (
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                                                {hashtagsArr.map((tag, tidx) => (
-                                                                    <span key={tidx} style={{ fontSize: '0.7rem', padding: '3px 10px', background: 'rgba(157, 0, 255, 0.1)', color: '#9D00FF', borderRadius: '100px', border: '1px solid rgba(157, 0, 255, 0.2)', fontWeight: 600 }}>
-                                                                        #{tag.replace(/^#/, '')}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Action Buttons */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                        <button
-                                                            onClick={handleSavePlanSlot}
-                                                            disabled={isSaved}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '14px 20px',
-                                                                fontSize: '0.9rem',
-                                                                fontWeight: 800,
-                                                                borderRadius: '12px',
-                                                                border: 'none',
-                                                                cursor: isSaved ? 'default' : 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                gap: '8px',
-                                                                background: isSaved ? 'rgba(0,255,0,0.1)' : 'var(--accent-gradient)',
-                                                                color: isSaved ? '#00ff00' : 'black',
-                                                                boxShadow: isSaved ? 'none' : '0 0 20px rgba(126, 206, 202, 0.3)',
-                                                                transition: '0.2s'
-                                                            }}
-                                                        >
-                                                            {isSaved ? <><CheckCircle size={18} /> Guardado en Biblioteca</> : <><Bookmark size={18} /> Guardar en Biblioteca</>}
-                                                        </button>
-                                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                                            <button
-                                                                onClick={handleCopyPlanSlot}
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '10px 16px',
-                                                                    fontSize: '0.8rem',
-                                                                    fontWeight: 700,
-                                                                    borderRadius: '10px',
-                                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                                    background: 'rgba(255,255,255,0.03)',
-                                                                    color: 'rgba(255,255,255,0.8)',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: '6px',
-                                                                    transition: '0.2s'
-                                                                }}
-                                                            >
-                                                                <Copy size={14} /> Copiar Todo
-                                                            </button>
-                                                            <button
-                                                                onClick={() => router.push('/dashboard/calendar')}
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '10px 16px',
-                                                                    fontSize: '0.8rem',
-                                                                    fontWeight: 700,
-                                                                    borderRadius: '10px',
-                                                                    border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                                    background: 'rgba(126, 206, 202, 0.05)',
-                                                                    color: '#7ECECA',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: '6px',
-                                                                    transition: '0.2s'
-                                                                }}
-                                                            >
-                                                                <Calendar size={14} /> Ver Calendario
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                {/* Actions */}
+                                                <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
+                                                    <button onClick={handleSavePlanSlot} disabled={isSaved}
+                                                        style={{ flex: 1, padding: '9px 0', borderRadius: '9px', border: isSaved ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(124,58,237,0.3)', background: isSaved ? 'rgba(52,211,153,0.08)' : 'rgba(124,58,237,0.1)', color: isSaved ? '#34d399' : '#a78bfa', fontSize: '0.78rem', fontWeight: 700, cursor: isSaved ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                                        {isSaved ? <><CheckCircle size={13} /> Guardado</> : <><Bookmark size={13} /> Guardar</>}
+                                                    </button>
+                                                    <button onClick={handleCopyPlanSlot}
+                                                        style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <Copy size={13} /> Copiar
+                                                    </button>
+                                                    <button onClick={() => router.push('/dashboard/calendar')}
+                                                        style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid rgba(126,206,202,0.2)', background: 'rgba(126,206,202,0.05)', color: '#7ECECA', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <Calendar size={13} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
