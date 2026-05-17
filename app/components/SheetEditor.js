@@ -130,6 +130,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     const [copyPost,   setCopyPost]   = useState('');
     const [fullText,   setFullText]   = useState('');
     const [saveStatus, setSaveStatus] = useState('idle');
+    const [saveError,  setSaveError]  = useState('');
     const [itemId,     setItemId]     = useState(sheetId !== 'new' ? sheetId : null);
     const [copied,     setCopied]     = useState(false);
     const [showFull,   setShowFull]   = useState(false);
@@ -191,40 +192,42 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
 
             const payload = {
                 titulo:           d.title || 'Sin título',
-                platform:         d.platform,
+                platform:         d.platform || 'Reels',
                 type:             'guion',
                 script_full_text: fullContent,
-                metadata:         { status: d.status },
                 content: {
                     titulo_angulo: d.title,
-                    hook: d.hook, gancho: d.hook,
+                    hook: d.hook || '', gancho: d.hook || '',
                     desarrollo: (d.desarrollo || '').split('\n').filter(l => l.trim()),
-                    cta: d.cta, copy_post: d.copyPost, full_text: fullContent,
+                    cta: d.cta || '', copy_post: d.copyPost || null,
+                    full_text: fullContent,
                 },
             };
 
-            // Only treat as existing record if itemId is a real UUID (not null/undefined/'new')
             const hasRealId = d.itemId && d.itemId !== 'new';
             if (hasRealId) {
                 const { error } = await supabase.from('library').update(payload).eq('id', d.itemId);
-                if (error) throw error;
+                if (error) throw new Error(`Update falló: ${error.message}`);
             } else {
-                // Always fetch user from auth — userId prop can be null
                 const { data: { user } } = await supabase.auth.getUser();
                 const uid = user?.id;
-                if (!uid) throw new Error('No hay sesión activa');
+                if (!uid) throw new Error('No hay sesión activa — recarga la página');
                 const { data: ins, error } = await supabase.from('library').insert({
-                    ...payload, user_id: uid, project_id: d.activeProjectId || null,
+                    ...payload,
+                    user_id:    uid,
+                    project_id: d.activeProjectId || null,
+                    goal:       'engagement',
                 }).select().single();
-                if (error) throw error;
+                if (error) throw new Error(`Insert falló: ${error.message}`);
                 if (ins) { setItemId(ins.id); onSave?.(ins); }
             }
             setSaveStatus('saved');
+            setSaveError('');
             setTimeout(() => setSaveStatus('idle'), 3000);
         } catch (e) {
             console.error('[SheetEditor] save error:', e);
             setSaveStatus('error');
-            setTimeout(() => setSaveStatus('idle'), 4000);
+            setSaveError(e.message);
         }
     }
 
@@ -417,7 +420,9 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                             <><CheckCircle2 size={12} color="#34d399" /><span style={{ color: '#34d399' }}>Guardado ✓</span></>
                         )}
                         {saveStatus === 'error' && (
-                            <span style={{ color: '#f87171', fontWeight: 700 }}>⚠ Error al guardar</span>
+                            <span style={{ color: '#f87171', fontWeight: 700 }} title={saveError}>
+                                ⚠ {saveError || 'Error al guardar'}
+                            </span>
                         )}
                         {saveStatus === 'idle' && <span>Auto-guardado activo</span>}
                     </div>
