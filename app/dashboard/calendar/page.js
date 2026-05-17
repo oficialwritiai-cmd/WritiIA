@@ -764,14 +764,14 @@ function CalendarContent() {
                                     onContextMenu={e => handleContextMenu(e, ev.id)}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 4,
-                                        height: 16, overflow: 'hidden', cursor: 'pointer',
-                                        borderRadius: 3, padding: '0 3px',
-                                        background: isSel ? `${dotColor}22` : 'transparent',
-                                        outline: isSel ? `1px solid ${dotColor}55` : 'none',
+                                        height: 17, overflow: 'hidden', cursor: 'pointer',
+                                        borderRadius: 4, padding: '0 5px',
+                                        background: isSel ? `${dotColor}30` : `${dotColor}18`,
+                                        border: `1px solid ${dotColor}35`,
                                     }}
                                 >
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 500, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
+                                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                    <span style={{ fontSize: '0.63rem', fontWeight: 600, color: c.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
                                         {ev.title}
                                     </span>
                                 </div>
