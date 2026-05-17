@@ -154,6 +154,8 @@ export default function DashboardPage() {
     const [sourceType, setSourceType] = useState(null);
     const [sourceReferenceId, setSourceReferenceId] = useState(null);
     const [scriptFeedback, setScriptFeedback] = useState({}); // { [scriptIdx]: 'like' | 'dislike' }
+    const [activeScriptTab, setActiveScriptTab] = useState(0);
+    const [planPhase, setPlanPhase] = useState(1);
 
     const handleFeedback = async (idx, type) => {
         if (scriptFeedback[idx]) return; // Already voted
@@ -2194,6 +2196,7 @@ export default function DashboardPage() {
             <style>{`
                 @keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+                @keyframes cardFadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease', position: 'relative', overflow: 'hidden' }}>
@@ -3074,8 +3077,12 @@ export default function DashboardPage() {
                     {planWizardStep === 1 && (
                         <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>📱 Plataformas y Frecuencia</h2>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>¿Dónde publicas y con qué ritmo?</p>
+                                <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px' }}>
+                                    Construyamos tu mes
+                                </h2>
+                                <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                                    4 pasos. 20 minutos. Un mes listo para grabar.
+                                </p>
                             </div>
                             <div>
                                 <span className="wz-label">Plataformas (multi-selección)</span>
@@ -3218,25 +3225,40 @@ export default function DashboardPage() {
                     {planWizardStep === 2 && (
                         <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>🎯 Estrategia del Mes</h2>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>Elige tu estrategia</h2>
                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Metas, estilos e intensidad de contenido.</p>
                             </div>
 
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px' }}>Objetivos principales (Selecciona varios)</p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                    {OBJETIVOS_PLAN.map(o => (
-                                        <button 
-                                            key={o} 
-                                            onClick={() => {
-                                                if (monthlyGoals.includes(o)) setMonthlyGoals(monthlyGoals.filter(i => i !== o));
-                                                else setMonthlyGoals([...monthlyGoals, o]);
-                                            }}
-                                            className={`pwz-chip${monthlyGoals.includes(o) ? ' active' : ''}`}
-                                        >
-                                            {o}
-                                        </button>
-                                    ))}
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '16px' }}>Objetivos principales (Selecciona varios)</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
+                                    {[
+                                        { id: 'Más Alcance / Visibilidad', label: 'Más visibilidad', icon: '🔥' },
+                                        { id: 'Más Leads / DMs / Listas', label: 'Generar leads', icon: '🎯' },
+                                        { id: 'Más Ventas (Producto/Servicio)', label: 'Cerrar ventas', icon: '💰' },
+                                        { id: 'Posicionamiento / Autoridad', label: 'Autoridad', icon: '🏆' },
+                                    ].map(obj => {
+                                        const isSelected = monthlyGoals.includes(obj.id);
+                                        return (
+                                            <button key={obj.id}
+                                                onClick={() => {
+                                                    if (monthlyGoals.includes(obj.id)) setMonthlyGoals(monthlyGoals.filter(g => g !== obj.id));
+                                                    else setMonthlyGoals([...monthlyGoals, obj.id]);
+                                                }}
+                                                style={{
+                                                    padding: '20px 16px', borderRadius: '14px', textAlign: 'left',
+                                                    border: `1px solid ${isSelected ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                                                    background: isSelected ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.03)',
+                                                    cursor: 'pointer', transition: 'all 0.15s',
+                                                }}>
+                                                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{obj.icon}</div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: isSelected ? '#a78bfa' : 'rgba(255,255,255,0.7)' }}>
+                                                    {obj.label}
+                                                </div>
+                                                {isSelected && <div style={{ fontSize: '0.65rem', color: '#a78bfa', marginTop: '4px' }}>Seleccionado</div>}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -3521,7 +3543,7 @@ export default function DashboardPage() {
 
             {
                 step === 3 && generationMode === 'single' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '100px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '40px', paddingBottom: '120px' }}>
                         {/* Header Editor */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
@@ -3534,14 +3556,29 @@ export default function DashboardPage() {
                                 <button onClick={() => setStep(1)} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem' }}>
                                     <RefreshCcw size={16} /> Volver
                                 </button>
-                                <button onClick={handleSaveAll} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}>
-                                    Guardar todos
-                                </button>
                             </div>
                         </div>
 
+                        {/* Script Tabs */}
+                        {scripts.length > 1 && (
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                {scripts.map((_, tabIdx) => (
+                                    <button key={tabIdx} onClick={() => setActiveScriptTab(tabIdx)} style={{
+                                        padding: '8px 18px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700,
+                                        background: activeScriptTab === tabIdx ? '#7c3aed' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${activeScriptTab === tabIdx ? '#7c3aed' : 'rgba(255,255,255,0.1)'}`,
+                                        color: activeScriptTab === tabIdx ? '#fff' : 'rgba(255,255,255,0.4)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                    }}>Guion {tabIdx + 1}</button>
+                                ))}
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                            {Array.isArray(scripts) && scripts.map((s, i) => (
+                            {Array.isArray(scripts) && scripts.filter((_, i) => scripts.length === 1 || i === activeScriptTab).map((s, _mapIdx) => {
+                            const i = scripts.length === 1 ? 0 : activeScriptTab;
+                            return (
                                 <div key={i} className="premium-card" style={{
                                     padding: '0',
                                     background: '#101010',
@@ -3619,124 +3656,33 @@ export default function DashboardPage() {
                                             </button>
                                         </div>
                                     )}
-                                    {/* BANNER DE CONFIRMACIÓN DE DESPLIEGUE v2.5.3 */}
+                                    {/* Header rediseñado */}
                                     <div style={{
-                                        padding: '8px 24px',
-                                        background: 'linear-gradient(90deg, #7ECECA, #22c55e)',
-                                        color: '#000',
-                                        textAlign: 'center',
-                                        fontWeight: 900,
-                                        fontSize: '0.8rem',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '2px',
-                                        borderRadius: '0 0 12px 12px',
-                                        marginBottom: '20px',
-                                        boxShadow: '0 4px 15px rgba(126, 206, 202, 0.3)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '10px'
-                                    }}>
-                                        <Sparkles size={16} /> MODO PROFESIONAL ACTIVADO — v2.5.3 <Sparkles size={16} />
-                                    </div>
-
-                                    {/* Wizard Header */}
-                                    <div className="card-header-wizard" style={{
-                                        padding: '24px 32px 0 32px',
+                                        padding: '20px 28px',
+                                        background: 'rgba(124,58,237,0.08)',
+                                        borderBottom: '1px solid rgba(124,58,237,0.12)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
-                                        alignItems: 'center'
+                                        alignItems: 'flex-start',
                                     }}>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <div style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: '12px',
-                                                background: 'var(--accent-gradient)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                boxShadow: '0 4px 12px rgba(126, 206, 202, 0.2)'
-                                            }}>
-                                                <span style={{ fontWeight: 900, color: '#000', fontSize: '1.2rem' }}>{i + 1}</span>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>{s.titulo_guion || s.titulo_angulo || `Guion ${i + 1}`}</h3>
+                                                <span style={{ background: 'rgba(124,58,237,0.2)', color: '#a78bfa', borderRadius: '20px', padding: '3px 10px', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Modo Pro</span>
                                             </div>
-                                            <div>
-                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'white' }}>{s.titulo_guion || s.titulo_angulo || `Guion ${i + 1}`}</h3>
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        background: 'rgba(255,255,255,0.03)',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid rgba(255,255,255,0.05)'
-                                                    }}>
-                                                        <Clock size={12} color="rgba(255,255,255,0.5)" />
-                                                        <input
-                                                            type="text"
-                                                            value={s.video_duration || videoDuration}
-                                                            onChange={(e) => {
-                                                                const news = [...scripts];
-                                                                news[i].video_duration = e.target.value;
-                                                                setScripts(news);
-                                                            }}
-                                                            style={{
-                                                                background: 'transparent',
-                                                                border: 'none',
-                                                                color: 'rgba(255,255,255,0.5)',
-                                                                fontSize: '0.7rem',
-                                                                fontWeight: 700,
-                                                                width: '40px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <span className="badge" style={{
-                                                        background: 'rgba(255, 255, 255, 0.05)',
-                                                        color: 'rgba(255,255,255,0.6)',
-                                                        fontSize: '0.7rem',
-                                                        padding: '4px 10px',
-                                                        whiteSpace: 'nowrap'
-                                                    }}>{platform}</span>
-                                                </div>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>
+                                                    <Clock size={11} /> {s.video_duration || videoDuration}
+                                                </span>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>
+                                                    {platform}
+                                                </span>
+                                                {s.titulo_angulo && s.titulo_angulo !== s.titulo_guion && (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>
+                                                        {s.titulo_angulo}
+                                                    </span>
+                                                )}
                                             </div>
-                                        </div>
-
-                                        {/* Brain Learning Feedback Loop */}
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <button
-                                                onClick={() => handleFeedback(i, 'like')}
-                                                disabled={scriptFeedback[i]}
-                                                style={{
-                                                    width: '36px', height: '36px', borderRadius: '50%',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    background: scriptFeedback[i] === 'like' ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.02)',
-                                                    border: scriptFeedback[i] === 'like' ? '1px solid #4ade80' : '1px solid rgba(255,255,255,0.05)',
-                                                    color: scriptFeedback[i] === 'like' ? '#4ade80' : 'rgba(255,255,255,0.3)',
-                                                    cursor: scriptFeedback[i] ? 'default' : 'pointer',
-                                                    transition: '0.2s'
-                                                }}
-                                                title="Me gusta este estilo (Entrenar IA)"
-                                            >
-                                                <ThumbsUp size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleFeedback(i, 'dislike')}
-                                                disabled={scriptFeedback[i]}
-                                                style={{
-                                                    width: '36px', height: '36px', borderRadius: '50%',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    background: scriptFeedback[i] === 'dislike' ? 'rgba(248, 113, 113, 0.2)' : 'rgba(255,255,255,0.02)',
-                                                    border: scriptFeedback[i] === 'dislike' ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.05)',
-                                                    color: scriptFeedback[i] === 'dislike' ? '#f87171' : 'rgba(255,255,255,0.3)',
-                                                    cursor: scriptFeedback[i] ? 'default' : 'pointer',
-                                                    transition: '0.2s'
-                                                }}
-                                                title="No me gusta (Entrenar IA)"
-                                            >
-                                                <ThumbsDown size={16} />
-                                            </button>
                                         </div>
                                     </div>
 
@@ -3745,56 +3691,52 @@ export default function DashboardPage() {
 
                                         {/* GANCHO */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>GANCHO</label>
-                                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                    {previousScripts && (
-                                                        <button onClick={handleUndo} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Deshacer</button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleRefineBlock(i, 'gancho')}
-                                                        disabled={refiningBlock === `${i}-gancho`}
-                                                        title="Mejorar gancho con IA"
-                                                        style={{
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '50%',
-                                                            background: refiningBlock === `${i}-gancho` ? 'transparent' : 'rgba(126, 206, 202, 0.1)',
-                                                            color: '#7ECECA',
-                                                            border: refiningBlock === `${i}-gancho` ? 'none' : '1px solid rgba(126, 206, 202, 0.2)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            cursor: 'pointer',
-                                                            transition: '0.2s'
-                                                        }}
-                                                    >
-                                                        {refiningBlock === `${i}-gancho` ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                                                    </button>
-                                                </div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
+                                                {previousScripts && (
+                                                    <button onClick={handleUndo} style={{ background: 'transparent', border: 'none', color: '#a78bfa', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}>Deshacer</button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRefineBlock(i, 'gancho')}
+                                                    disabled={refiningBlock === `${i}-gancho`}
+                                                    title="Mejorar gancho con IA"
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '5px 12px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 700,
+                                                        background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)',
+                                                        color: '#a78bfa', cursor: 'pointer', transition: '0.2s'
+                                                    }}
+                                                >
+                                                    {refiningBlock === `${i}-gancho` ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                    Mejorar
+                                                </button>
                                             </div>
-                                            <textarea
-                                                value={s.hook || s.gancho || ''}
-                                                disabled={refiningBlock === `${i}-gancho`}
-                                                onChange={(e) => {
-                                                    const news = [...scripts];
-                                                    news[i].hook = e.target.value;
-                                                    news[i].gancho = e.target.value;
-                                                    setScripts(news);
-                                                }}
-                                                className="textarea-field"
-                                                style={{
-                                                    minHeight: '80px',
-                                                    fontSize: '1.25rem',
-                                                    fontWeight: 700,
-                                                    background: '#080808',
-                                                    border: '1px solid #1E1E1E',
-                                                    fontFamily: 'monospace',
-                                                    padding: '20px',
-                                                    transition: '0.3s'
-                                                }}
-                                            />
-                                            {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(126, 206, 202, 0.5)' }}>Versión mejorada. Mejores restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
+                                            <div style={{
+                                                background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)',
+                                                borderLeft: '3px solid #7c3aed', borderRadius: '0 12px 12px 0',
+                                                padding: '16px 20px',
+                                            }}>
+                                                <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                                                    Gancho
+                                                </div>
+                                                <textarea
+                                                    value={s.hook || s.gancho || ''}
+                                                    disabled={refiningBlock === `${i}-gancho`}
+                                                    onChange={(e) => {
+                                                        const news = [...scripts];
+                                                        news[i].hook = e.target.value;
+                                                        news[i].gancho = e.target.value;
+                                                        setScripts(news);
+                                                    }}
+                                                    rows={3}
+                                                    style={{
+                                                        width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                                                        color: '#fff', fontSize: '1rem', fontWeight: 600, lineHeight: 1.7,
+                                                        resize: 'none', fontFamily: 'inherit', opacity: refiningBlock === `${i}-gancho` ? 0.5 : 1,
+                                                        transition: '0.3s'
+                                                    }}
+                                                />
+                                            </div>
+                                            {improvementCounts[`${i}-gancho`] > 0 && <span style={{ fontSize: '0.65rem', color: 'rgba(124, 58, 237, 0.6)' }}>Versión mejorada. Mejoras restantes: {3 - improvementCounts[`${i}-gancho`]}</span>}
                                         </div>
 
                                         {/* DESARROLLO (3 PUNTOS) */}
@@ -4243,7 +4185,99 @@ export default function DashboardPage() {
                                         </div>
                                     )}
                                     </div>
-                            ))}
+                            );
+                            })}
+                        </div>
+
+                        {/* Sticky Action Bar */}
+                        <div style={{
+                            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+                            background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(12px)',
+                            borderTop: '1px solid rgba(255,255,255,0.08)',
+                            padding: '12px 24px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        }}>
+                            {(() => {
+                                const activeIdx = scripts.length === 1 ? 0 : activeScriptTab;
+                                const s = scripts[activeIdx];
+                                if (!s) return null;
+                                return (
+                                    <>
+                                        <button
+                                            onClick={() => handleFeedback(activeIdx, 'like')}
+                                            disabled={!!scriptFeedback[activeIdx]}
+                                            style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: scriptFeedback[activeIdx] === 'like' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.04)',
+                                                border: scriptFeedback[activeIdx] === 'like' ? '1px solid #4ade80' : '1px solid rgba(255,255,255,0.1)',
+                                                color: scriptFeedback[activeIdx] === 'like' ? '#4ade80' : 'rgba(255,255,255,0.5)',
+                                                cursor: scriptFeedback[activeIdx] ? 'default' : 'pointer',
+                                            }}
+                                            title="Me gusta este estilo"
+                                        ><ThumbsUp size={16} /></button>
+                                        <button
+                                            onClick={() => handleFeedback(activeIdx, 'dislike')}
+                                            disabled={!!scriptFeedback[activeIdx]}
+                                            style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: scriptFeedback[activeIdx] === 'dislike' ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.04)',
+                                                border: scriptFeedback[activeIdx] === 'dislike' ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.1)',
+                                                color: scriptFeedback[activeIdx] === 'dislike' ? '#f87171' : 'rgba(255,255,255,0.5)',
+                                                cursor: scriptFeedback[activeIdx] ? 'default' : 'pointer',
+                                            }}
+                                            title="No me gusta"
+                                        ><ThumbsDown size={16} /></button>
+                                        <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
+                                        <button
+                                            id={`copy-sticky-${activeIdx}`}
+                                            onClick={() => copyToClipboard(`GUION: ${s.titulo_guion || s.titulo_angulo}\n\nHOOK: ${s.hook || s.gancho}\n\nDESARROLLO:\n${(s.desarrollo || []).join('\n')}\n\nCIERRE: ${s.cierre}\n\nCTA: ${s.cta}\n\n--- COPY POST ---\n${s.copy_post?.titulo}\n\n${s.copy_post?.descripcion_larga}\n\nHashtags: ${s.copy_post?.hashtags?.map(h => '#' + h).join(' ')}`, `sticky-${activeIdx}`)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                padding: '10px 18px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700,
+                                                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                                                color: 'rgba(255,255,255,0.8)', cursor: 'pointer',
+                                            }}
+                                        ><Copy size={15} /> Copiar</button>
+                                        <button
+                                            onClick={() => handleSaveScript(s)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                padding: '10px 18px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700,
+                                                background: savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
+                                                border: '1px solid rgba(124,58,237,0.3)',
+                                                color: '#a78bfa', cursor: 'pointer',
+                                            }}
+                                        >
+                                            {savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? <CheckCircle size={15} /> : <Bookmark size={15} />}
+                                            {savedScriptsIds.has(s.id || s.titulo_guion || s.titulo_angulo) ? 'Guardado' : 'Guardar'}
+                                        </button>
+                                        <button
+                                            onClick={() => sourceReferenceId ? handleDirectSourceSave(s) : (planningIdx === activeIdx ? setPlanningIdx(null) : handleOpenPlannerIdx(s, activeIdx))}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '8px',
+                                                padding: '10px 22px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 800,
+                                                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                                                border: '1px solid #7c3aed',
+                                                color: '#fff', cursor: 'pointer',
+                                                boxShadow: '0 4px 14px rgba(124,58,237,0.35)',
+                                            }}
+                                        ><Calendar size={15} /> {sourceReferenceId ? 'Guardar en Origen' : 'Planificar'}</button>
+                                        {handleSaveAll && scripts.length > 1 && (
+                                            <button
+                                                onClick={handleSaveAll}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                                    padding: '10px 18px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 700,
+                                                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                                                    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                                                }}
+                                            >Guardar todos</button>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
                 )
@@ -4331,7 +4365,7 @@ export default function DashboardPage() {
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
                             {Array.isArray(planSlots) && planSlots.map((slot, i) => {
                                 const isExpanded = expandedSlots.has(slot.id);
                                 const sd = slot.script_data;
@@ -4380,13 +4414,16 @@ export default function DashboardPage() {
                                     key={slot.id}
                                     className="premium-card plan-slot-card"
                                     style={{
-                                        border: selectedSlots.has(slot.id) ? '1px solid #7ECECA' : '1px solid rgba(255,255,255,0.05)',
-                                        background: selectedSlots.has(slot.id) ? 'rgba(126, 206, 202, 0.03)' : 'transparent',
-                                        opacity: selectedSlots.has(slot.id) ? 1 : 0.6,
-                                        transition: '0.2s',
+                                        border: selectedSlots.has(slot.id) ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                                        background: selectedSlots.has(slot.id) ? 'rgba(124,58,237,0.06)' : 'rgba(255,255,255,0.03)',
+                                        opacity: selectedSlots.has(slot.id) ? 1 : 0.65,
+                                        borderRadius: '16px',
                                         overflow: 'hidden',
-                                        marginBottom: '12px'
+                                        animation: `cardFadeIn 0.3s ease ${i * 0.04}s both`,
+                                        transition: 'transform 0.2s, border-color 0.2s, opacity 0.2s',
                                     }}
+                                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
                                     {/* Header row: REVIEW & EDIT */}
                                     <div
