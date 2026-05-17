@@ -2196,20 +2196,38 @@ export default function DashboardPage() {
                 @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
             `}</style>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Este mes</p>
-                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>⚡ {stats.monthGenerations}</h3>
-                    <p style={{ fontSize: '0.75rem', color: '#9D00FF', fontWeight: 600 }}>guiones creados este mes</p>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #7c3aed, transparent)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Zap size={18} color="#a78bfa" fill="#a78bfa" />
+                        </div>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Este mes</p>
+                    </div>
+                    <h3 style={{ fontSize: '2.6rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '4px', color: '#fff' }}>{stats.monthGenerations}</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#a78bfa', fontWeight: 600, margin: 0 }}>guiones creados</p>
                 </div>
-                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.1s both' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Biblioteca</p>
-                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>📚 {stats.saved}</h3>
-                    <p style={{ fontSize: '0.75rem', color: '#F59E0B', fontWeight: 600 }}>guiones en tu biblioteca</p>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.1s both', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #f59e0b, transparent)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <BookOpen size={18} color="#f59e0b" />
+                        </div>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Biblioteca</p>
+                    </div>
+                    <h3 style={{ fontSize: '2.6rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '4px', color: '#fff' }}>{stats.saved}</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, margin: 0 }}>guiones guardados</p>
                 </div>
-                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.2s both' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Tiempo ahorrado</p>
-                    <h3 style={{ fontSize: '2.4rem', marginBottom: '4px' }}>~{Math.round((stats.monthGenerations || stats.saved || 0) * 0.75)}h</h3>
-                    <p style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 600 }}>vs escribir manualmente</p>
+                <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease 0.2s both', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #34d399, transparent)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(52,211,153,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Clock size={18} color="#34d399" />
+                        </div>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Tiempo ahorrado</p>
+                    </div>
+                    <h3 style={{ fontSize: '2.6rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '4px', color: '#fff' }}>~{Math.round((stats.monthGenerations || stats.saved || 0) * 0.75)}h</h3>
+                    <p style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 600, margin: 0 }}>vs escribir manualmente</p>
                 </div>
             </div>
 
@@ -2329,6 +2347,11 @@ export default function DashboardPage() {
                     {/* Wizard Step 1: Marca Personal */}
                     {wizardStep === 1 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {hasBrain && (
+                                <button onClick={() => setWizardStep(4)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 20px rgba(124,58,237,0.35)', marginBottom: '8px' }}>
+                                    <Zap size={18} fill="#fff" /> Crear guión ahora — saltar configuración
+                                </button>
+                            )}
                             {hasBrain ? (
                                 <div style={{ padding: '24px', background: 'rgba(126, 206, 202, 0.05)', borderRadius: '16px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
