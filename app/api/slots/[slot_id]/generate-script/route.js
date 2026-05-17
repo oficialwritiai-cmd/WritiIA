@@ -89,7 +89,16 @@ async function callAnthropicWithRetries({ apiKey, systemPrompt, userMessage, max
     throw lastError || new Error('Error al conectar con la IA');
 }
 
-function buildSystemPrompt(brandBrain) {
+function buildSystemPrompt(brandBrain, learningSignals = []) {
+    let learningBlock = '';
+    if (learningSignals.length >= 3) {
+        const topHook = learningSignals.find(s => s.signal_type === 'hook_style' && s.performance_score > 0);
+        const topTone = learningSignals.find(s => s.signal_type === 'tone' && s.performance_score > 0);
+        if (topHook || topTone) {
+            learningBlock = `\n\nHISTORIAL DE RENDIMIENTO DEL USUARIO:\nEste usuario tiene mejor rendimiento con:${topHook ? `\n- Hook style: ${topHook.signal_value} (score: ${topHook.performance_score.toFixed(1)})` : ''}${topTone ? `\n- Tono: ${topTone.signal_value} (score: ${topTone.performance_score.toFixed(1)})` : ''}\nPrioriza estas características en el guión.`;
+        }
+    }
+
     return `Eres un experto en creación de contenido digital y guionista profesional de alto nivel.
 Tu misión: escribir un guion completo, auténtico y adaptado a la plataforma indicada.
 
@@ -121,7 +130,7 @@ FORMATO JSON:
     "hashtags": ["#tag1"]
   },
   "notes": "..."
-}`;
+}${learningBlock}`;
 }
 
 export async function POST(request, { params }) {
@@ -189,7 +198,20 @@ export async function POST(request, { params }) {
             .eq('id', slot_id);
 
         const { platform, videoDuration, focus, ctaIdea, instruction } = validation.data;
-        const systemPrompt = buildSystemPrompt(brandBrain);
+
+        // Cargar señales de aprendizaje del Cerebro IA
+        let learningSignals = [];
+        try {
+            const { data: signals } = await supabase
+                .from('cerebro_learning_signals')
+                .select('*')
+                .eq('user_id', verifiedUserId)
+                .order('performance_score', { ascending: false })
+                .limit(10);
+            learningSignals = signals || [];
+        } catch(e) { /* non-fatal */ }
+
+        const systemPrompt = buildSystemPrompt(brandBrain, learningSignals);
         const finalPlatform = platform || slot.platform || 'Reels';
         const userMessage = `Genera el guion para: ${slot.idea_title}. Contexto: ${slot.idea_description || ''}. Plataforma: ${finalPlatform} (${videoDuration}). Enfoque: ${focus}. CTA: ${ctaIdea || ''}.${instruction ? ` INSTRUCCIONES DE MEJORA: ${instruction}` : ''}`;
 

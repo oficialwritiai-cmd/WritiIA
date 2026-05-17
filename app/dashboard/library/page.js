@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle, Share2 } from 'lucide-react';
+import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle, Share2, ThumbsUp, ThumbsDown, BarChart2, CheckCircle2, X } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
 import SheetEditor from '@/app/components/SheetEditor';
 
@@ -71,6 +71,10 @@ export default function LibraryPage() {
     const [selectedItem, setSelectedItem]   = useState(null); // item opened in SheetEditor
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [clearing, setClearing]           = useState(false);
+    const [performances, setPerformances]   = useState({});
+    const [metricsModal, setMetricsModal]   = useState(null);
+    const [metricsForm, setMetricsForm]     = useState({ views: '', likes_count: '', comments_count: '', shares_count: '', published_at: '', notes: '' });
+    const [savingPerf, setSavingPerf]       = useState(false);
 
     const supabase = createSupabaseClient();
     const router   = useRouter();
@@ -106,6 +110,15 @@ export default function LibraryPage() {
 
             if (fetchError) throw fetchError;
             setScripts(data || []);
+
+            // Cargar performances
+            try {
+                const res = await fetch('/api/performance');
+                const { performances: perfs = [] } = await res.json().catch(() => ({}));
+                const perfMap = {};
+                perfs.forEach(p => { perfMap[p.script_id] = p; });
+                setPerformances(perfMap);
+            } catch { /* non-fatal */ }
         } catch (err) {
             console.error(err);
             setError('Error al cargar la biblioteca.');
@@ -251,6 +264,22 @@ export default function LibraryPage() {
         if (!iso) return '';
         return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
     };
+
+    // ── Feedback handler ──────────────────────────────────────────────────────
+    async function handleFeedback(scriptId, rating) {
+        try {
+            const res = await fetch('/api/performance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scriptId, rating }),
+            });
+            if (!res.ok) throw new Error('Error al guardar');
+            setPerformances(p => ({ ...p, [scriptId]: { ...(p[scriptId] || {}), rating } }));
+            showToast(rating === 'like' ? '¡Genial! Tu Cerebro IA aprende de esto' : 'Anotado. Evitaremos este estilo', 'success');
+        } catch(e) {
+            showToast('Error al guardar feedback', 'error');
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
@@ -459,6 +488,36 @@ export default function LibraryPage() {
                                     </p>
                                 )}
 
+                                {/* Feedback row */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap' }}>
+                                    {performances[item.id]?.rating === 'like' ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '20px', padding: '3px 10px' }}>
+                                            <CheckCircle2 size={11} /> Funcionó
+                                        </span>
+                                    ) : performances[item.id]?.rating === 'dislike' ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 700, color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '20px', padding: '3px 10px' }}>
+                                            <X size={11} /> No funcionó
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <button onClick={(e) => { e.stopPropagation(); handleFeedback(item.id, 'like'); }}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '4px 10px', cursor: 'pointer' }}>
+                                                <ThumbsUp size={12} /> Funcionó
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleFeedback(item.id, 'dislike'); }}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', padding: '4px 10px', cursor: 'pointer' }}>
+                                                <ThumbsDown size={12} /> No funcionó
+                                            </button>
+                                        </>
+                                    )}
+                                    {(performances[item.id]?.rating === 'like' || performances[item.id]?.views) && (
+                                        <button onClick={(e) => { e.stopPropagation(); setMetricsForm({ views: performances[item.id]?.views || '', likes_count: performances[item.id]?.likes_count || '', comments_count: performances[item.id]?.comments_count || '', shares_count: performances[item.id]?.shares_count || '', published_at: performances[item.id]?.published_at || '', notes: performances[item.id]?.notes || '' }); setMetricsModal(item.id); }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: performances[item.id]?.views ? '#60a5fa' : 'rgba(255,255,255,0.35)', background: performances[item.id]?.views ? 'rgba(96,165,250,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${performances[item.id]?.views ? 'rgba(96,165,250,0.2)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '7px', padding: '4px 10px', cursor: 'pointer', marginLeft: 'auto' }}>
+                                            <BarChart2 size={11} /> {performances[item.id]?.views ? 'Ver métricas' : '+ Añadir métricas'}
+                                        </button>
+                                    )}
+                                </div>
+
                                 {/* Footer: date + actions */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '12px', borderTop: `1px solid ${C.border}` }}>
                                     <span style={{ fontSize: '0.75rem', color: C.textMuted }}>
@@ -552,6 +611,57 @@ export default function LibraryPage() {
             {toast && (
                 <div style={{ position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#dc2626' : '#16a34a', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 700, fontSize: '0.875rem', boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 10000, whiteSpace: 'nowrap' }}>
                     {toast.msg}
+                </div>
+            )}
+
+            {/* ── Modal de métricas ─────────────────────────────────────────── */}
+            {metricsModal && (
+                <div onClick={e => { if (e.target === e.currentTarget) setMetricsModal(null); }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: '#141416', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '32px', maxWidth: '460px', width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>¿Cómo le fue a este vídeo?</h3>
+                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', marginBottom: '24px' }}>Opcional — ayuda a tu Cerebro IA a aprender</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                            {[
+                                { key: 'views', label: 'Visualizaciones', placeholder: 'Ej: 12500' },
+                                { key: 'likes_count', label: 'Likes', placeholder: 'Ej: 847' },
+                                { key: 'comments_count', label: 'Comentarios', placeholder: 'Ej: 134' },
+                                { key: 'shares_count', label: 'Compartidos', placeholder: 'Ej: 89' },
+                            ].map(({ key, label, placeholder }) => (
+                                <div key={key}>
+                                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</label>
+                                    <input type="number" value={metricsForm[key]} onChange={e => setMetricsForm(f => ({ ...f, [key]: e.target.value }))}
+                                        placeholder={placeholder}
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', padding: '10px 12px', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ marginBottom: '14px' }}>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fecha de publicación</label>
+                            <input type="date" value={metricsForm.published_at} onChange={e => setMetricsForm(f => ({ ...f, published_at: e.target.value }))}
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', padding: '10px 12px', fontSize: '0.88rem', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }} />
+                        </div>
+                        <div style={{ marginBottom: '24px' }}>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nota personal</label>
+                            <textarea value={metricsForm.notes} onChange={e => setMetricsForm(f => ({ ...f, notes: e.target.value }))}
+                                placeholder="Ej: El gancho funcionó muy bien, el CTA no tanto"
+                                rows={2}
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', padding: '10px 12px', fontSize: '0.88rem', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        <button onClick={async () => {
+                            setSavingPerf(true);
+                            try {
+                                await fetch('/api/performance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scriptId: metricsModal, ...metricsForm, views: metricsForm.views ? parseInt(metricsForm.views) : undefined, likes_count: metricsForm.likes_count ? parseInt(metricsForm.likes_count) : undefined, comments_count: metricsForm.comments_count ? parseInt(metricsForm.comments_count) : undefined, shares_count: metricsForm.shares_count ? parseInt(metricsForm.shares_count) : undefined }) });
+                                setPerformances(p => ({ ...p, [metricsModal]: { ...(p[metricsModal] || {}), ...metricsForm } }));
+                                showToast('Tu Cerebro IA es ahora más preciso', 'success');
+                                setMetricsModal(null);
+                            } finally { setSavingPerf(false); }
+                        }} disabled={savingPerf}
+                            style={{ width: '100%', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '12px', padding: '13px', fontWeight: 700, fontSize: '0.9rem', cursor: savingPerf ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            {savingPerf ? 'Guardando...' : 'Guardar métricas'}
+                        </button>
+                        <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', marginTop: '10px' }}>Tus métricas son privadas y solo mejoran tu Cerebro IA</p>
+                    </div>
                 </div>
             )}
 

@@ -230,6 +230,7 @@ export default function DashboardHomePage() {
     const [brain, setBrain]             = useState(null);
     const [stats, setStats]             = useState({ sessions: 0, scripts: 0, activeSession: null });
     const [loading, setLoading]         = useState(true);
+    const [learningSignals, setLearningSignals] = useState([]);
     const [showModal, setShowModal]     = useState(false);
     const [newName, setNewName]         = useState('');
     const [newDesc, setNewDesc]         = useState('');
@@ -299,6 +300,12 @@ export default function DashboardHomePage() {
             scripts:  scriptCount ?? 0,
             activeSession: activeSessions?.[0] ?? null,
         });
+
+        // Cargar señales de aprendizaje del Cerebro IA
+        fetch('/api/performance')
+            .then(r => r.json())
+            .then(({ signals = [] }) => setLearningSignals(signals))
+            .catch(() => {});
 
         setLoading(false);
     }
@@ -594,6 +601,46 @@ export default function DashboardHomePage() {
                     color="#fbbf24"
                     sublabel={profile?.plan === 'pro' ? 'plan PRO activo' : 'plan actual'}
                 />
+            </div>
+
+            {/* ── WIDGET APRENDIZAJE IA ────────────────────────── */}
+            <div style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: '16px', padding: '20px 24px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Brain size={18} color="#a78bfa" />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', margin: 0 }}>Tu Cerebro IA está aprendiendo</p>
+                        <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>Basado en tu feedback de guiones</p>
+                    </div>
+                </div>
+                {learningSignals.length < 3 ? (
+                    <div>
+                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '99px', marginBottom: '10px' }}>
+                            <div style={{ height: '100%', width: `${Math.min(learningSignals.length / 3 * 100, 100)}%`, background: 'linear-gradient(90deg, #7c3aed, #a78bfa)', borderRadius: '99px', transition: 'width 0.5s ease' }} />
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', marginBottom: '12px' }}>
+                            Dale feedback a {3 - learningSignals.length} guion{3 - learningSignals.length !== 1 ? 'es' : ''} más para activar el aprendizaje automático
+                        </p>
+                        <a href="/dashboard/library" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+                            Ver Biblioteca →
+                        </a>
+                    </div>
+                ) : (
+                    <div>
+                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginBottom: '10px', fontWeight: 600 }}>Lo que mejor te funciona:</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                            {learningSignals.filter(s => s.performance_score > 0).slice(0, 4).map(s => (
+                                <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: s.signal_type === 'hook_style' ? '#a78bfa' : '#34d399', background: s.signal_type === 'hook_style' ? 'rgba(167,139,250,0.1)' : 'rgba(52,211,153,0.1)', border: `1px solid ${s.signal_type === 'hook_style' ? 'rgba(167,139,250,0.2)' : 'rgba(52,211,153,0.2)'}`, borderRadius: '20px', padding: '4px 12px' }}>
+                                    {s.signal_type === 'hook_style' ? '⚡' : '🎭'} {s.signal_value}
+                                </span>
+                            ))}
+                        </div>
+                        <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)', margin: 0 }}>
+                            Basado en {learningSignals.reduce((sum, s) => sum + (s.sample_count || 0), 0)} guiones evaluados
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* ── ACTION CARDS ─────────────────────────────────── */}
