@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
+import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
 import SuccessModal from '@/app/components/SuccessModal';
 import { saveToLibrary } from '@/lib/library';
@@ -2684,9 +2685,21 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* Wizard Step 4: Tu Idea */}
+                    {/* Wizard Step 4: Tu Idea — nuevo flujo por fases */}
                     {wizardStep === 4 && (
                         <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <ScriptWizardFlow
+                            topic={topic} setTopic={setTopic}
+                            toneBrand={toneBrand} setToneBrand={setToneBrand}
+                            hookType={hookType} setHookType={setHookType}
+                            platform={platform} setPlatform={setPlatform}
+                            quantity={quantity} setQuantity={setQuantity}
+                            experienciaReal={experienciaReal} setExperienciaReal={setExperienciaReal}
+                            onBack={() => setWizardStep(3)}
+                            onGenerate={handleGenerateSingle}
+                        />
+                        {/* Hidden original fields kept for compat — DO NOT REMOVE */}
+                        <div style={{ display: 'none' }}>
 
                             {/* ── ZONA OBLIGATORIA ─────────────────────── */}
                             {/* Campo principal — protagonista */}
@@ -2967,6 +2980,7 @@ export default function DashboardPage() {
                                     </button>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     )}
                 </div>
