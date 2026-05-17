@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain } from 'lucide-react';
+import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
@@ -156,6 +156,7 @@ export default function DashboardPage() {
     const [scriptFeedback, setScriptFeedback] = useState({}); // { [scriptIdx]: 'like' | 'dislike' }
     const [activeScriptTab, setActiveScriptTab] = useState(0);
     const [planPhase, setPlanPhase] = useState(1);
+    const [planAdvancedOpen, setPlanAdvancedOpen] = useState(false);
 
     const handleFeedback = async (idx, type) => {
         if (scriptFeedback[idx]) return; // Already voted
@@ -3233,10 +3234,12 @@ export default function DashboardPage() {
                                 <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '16px' }}>Objetivos principales (Selecciona varios)</p>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
                                     {[
-                                        { id: 'Más Alcance / Visibilidad', label: 'Más visibilidad', icon: '🔥' },
-                                        { id: 'Más Leads / DMs / Listas', label: 'Generar leads', icon: '🎯' },
-                                        { id: 'Más Ventas (Producto/Servicio)', label: 'Cerrar ventas', icon: '💰' },
-                                        { id: 'Posicionamiento / Autoridad', label: 'Autoridad', icon: '🏆' },
+                                        { id: 'Más Alcance / Visibilidad', label: 'Visibilidad', icon: <Eye size={24} /> },
+                                        { id: 'Más Leads / DMs / Listas', label: 'Leads', icon: <Target size={24} /> },
+                                        { id: 'Más Ventas (Producto/Servicio)', label: 'Ventas', icon: <TrendingUp size={24} /> },
+                                        { id: 'Posicionamiento / Autoridad', label: 'Autoridad', icon: <Award size={24} /> },
+                                        { id: 'Educación / Tutoriales', label: 'Educacion', icon: <BookOpen size={24} /> },
+                                        { id: 'Conexión / Comunidad', label: 'Conexion', icon: <Heart size={24} /> },
                                     ].map(obj => {
                                         const isSelected = monthlyGoals.includes(obj.id);
                                         return (
@@ -3246,12 +3249,12 @@ export default function DashboardPage() {
                                                     else setMonthlyGoals([...monthlyGoals, obj.id]);
                                                 }}
                                                 style={{
-                                                    padding: '20px 16px', borderRadius: '14px', textAlign: 'left',
+                                                    padding: '20px', borderRadius: '14px', textAlign: 'left',
                                                     border: `1px solid ${isSelected ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.08)'}`,
                                                     background: isSelected ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.03)',
                                                     cursor: 'pointer', transition: 'all 0.15s',
                                                 }}>
-                                                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{obj.icon}</div>
+                                                <div style={{ marginBottom: '8px', color: isSelected ? '#a78bfa' : 'rgba(255,255,255,0.4)' }}>{obj.icon}</div>
                                                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: isSelected ? '#a78bfa' : 'rgba(255,255,255,0.7)' }}>
                                                     {obj.label}
                                                 </div>
@@ -3262,75 +3265,89 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Temas clave a empujar</p>
-                                    <textarea 
-                                        className="textarea-field" 
-                                        placeholder="Ej: Detrás de cámaras, errores comunes, mindset realista..." 
-                                        value={keyThemes} 
-                                        onChange={(e) => setKeyThemes(e.target.value)} 
-                                        rows={3} 
-                                    />
-                                    {keyThemes.length >= 2 && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <input 
-                                                    className="input-field"
-                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
-                                                    placeholder="Instrucción (ej: hazlo más profesional...)"
-                                                    value={aiRefineInstructions['keyThemes'] || ''}
-                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, keyThemes: e.target.value }))}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !polishingField) {
-                                                            handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes']);
-                                                        }
-                                                    }}
-                                                />
-                                                <button 
-                                                    onClick={() => handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes'])} 
-                                                    disabled={polishingField === 'keyThemes'}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                        fontWeight: 700, cursor: polishingField === 'keyThemes' ? 'default' : 'pointer',
-                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                        color: '#7ECECA', transition: '0.2s'
-                                                    }}
-                                                >
-                                                    {polishingField === 'keyThemes' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                                    {aiRefineInstructions['keyThemes'] ? 'Aplicar' : 'Mejorar'}
-                                                </button>
+                            {/* Campos avanzados colapsables */}
+                            <div style={{ borderRadius: '14px', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                                <button
+                                    onClick={() => setPlanAdvancedOpen(v => !v)}
+                                    style={{
+                                        width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        padding: '14px 20px', background: 'rgba(255,255,255,0.02)', border: 'none',
+                                        cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 700,
+                                    }}
+                                >
+                                    <span>+ Configuracion avanzada</span>
+                                    {planAdvancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </button>
+                                {planAdvancedOpen && (
+                                    <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div>
+                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Temas clave a empujar</p>
+                                            <textarea
+                                                className="textarea-field"
+                                                placeholder="Ej: Detrás de cámaras, errores comunes, mindset realista..."
+                                                value={keyThemes}
+                                                onChange={(e) => setKeyThemes(e.target.value)}
+                                                rows={3}
+                                            />
+                                            {keyThemes.length >= 2 && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
+                                                            placeholder="Instrucción (ej: hazlo más profesional...)"
+                                                            value={aiRefineInstructions['keyThemes'] || ''}
+                                                            onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, keyThemes: e.target.value }))}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !polishingField) {
+                                                                    handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes']);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleImproveField(keyThemes, setKeyThemes, 'keyThemes', aiRefineInstructions['keyThemes'])}
+                                                            disabled={polishingField === 'keyThemes'}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
+                                                                fontWeight: 700, cursor: polishingField === 'keyThemes' ? 'default' : 'pointer',
+                                                                background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
+                                                                color: '#7ECECA', transition: '0.2s'
+                                                            }}
+                                                        >
+                                                            {polishingField === 'keyThemes' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                            {aiRefineInstructions['keyThemes'] ? 'Aplicar' : 'Mejorar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Métrica de éxito mensual</p>
+                                            <input
+                                                className="input-field wz-input"
+                                                placeholder="Ej: 50 nuevos seguidores, 10 llamadas de venta..."
+                                                value={successMetric}
+                                                onChange={(e) => setSuccessMetric(e.target.value)}
+                                            />
+                                            <p style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '20px', marginBottom: '12px' }}>Estilo de contenido</p>
+                                            <div className="pwz-chips">
+                                                {ESTILOS_PLAN.map(s => (
+                                                    <button
+                                                        key={s}
+                                                        onClick={() => {
+                                                            if (contentStyles.includes(s)) setContentStyles(contentStyles.filter(i => i !== s));
+                                                            else setContentStyles([...contentStyles, s]);
+                                                        }}
+                                                        className={`pwz-chip${contentStyles.includes(s) ? ' active-teal' : ''}`}
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                    )}
-
-
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Métrica de éxito mensual</p>
-                                    <input 
-                                        className="input-field wz-input" 
-                                        placeholder="Ej: 50 nuevos seguidores, 10 llamadas de venta..." 
-                                        value={successMetric} 
-                                        onChange={(e) => setSuccessMetric(e.target.value)} 
-                                    />
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '20px', marginBottom: '12px' }}>Estilo de contenido</p>
-                                    <div className="pwz-chips">
-                                        {ESTILOS_PLAN.map(s => (
-                                            <button 
-                                                key={s} 
-                                                onClick={() => {
-                                                    if (contentStyles.includes(s)) setContentStyles(contentStyles.filter(i => i !== s));
-                                                    else setContentStyles([...contentStyles, s]);
-                                                }}
-                                                className={`pwz-chip${contentStyles.includes(s) ? ' active-teal' : ''}`}
-                                            >
-                                                {s}
-                                            </button>
-                                        ))}
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Integrated Idea Bank Selection */}
@@ -3443,29 +3460,15 @@ export default function DashboardPage() {
                     {planWizardStep === 3 && (
                         <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>🔊 Tu Voz y Canales</h2>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em' }}>Tu Voz y Canales</h2>
                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Frecuencia, plataformas y tu estilo de comunicación.</p>
                             </div>
 
-
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                <div>
-                                    <span className="wz-label">Filtro: Lo que NO queremos <span style={{fontWeight:400, color:'var(--text-muted)', textTransform:'none'}}>(voto de silencio)</span></span>
-                                    <input className="input-field wz-input" placeholder="Ej: No quiero frases motivacionales vacías..." value={howNotToSound} onChange={(e) => setHowNotToSound(e.target.value)} />
-                                </div>
-                                <div>
-                                    <span className="wz-label">Mantra / Idea repetida</span>
-                                    <input className="input-field wz-input" placeholder="Ej: La consistencia siempre gana al talento." value={brandMantra} onChange={(e) => setBrandMantra(e.target.value)} />
-                                </div>
-                            </div>
-
                             <div>
-                                <span className="wz-label">⚡ Presión de contenido</span>
+                                <span className="wz-label">Presion de contenido</span>
                                 <div style={{ display: 'flex', gap: 12 }}>
-                                    {[{val:'Suave (Orgánico)', icon:'🌱', sub:'Atracción'},{val:'Media (Estrategia)', icon:'🎯', sub:'Equilibrio'},{val:'Fuerte (Lanzamiento)', icon:'🚀', sub:'Conversión'}].map(p => (
+                                    {[{val:'Suave (Orgánico)', sub:'Atraccion'},{val:'Media (Estrategia)', sub:'Equilibrio'},{val:'Fuerte (Lanzamiento)', sub:'Conversion'}].map(p => (
                                         <button key={p.val} className={`pwz-intensity${planFocus === p.val ? ' active' : ''}`} onClick={() => setPlanFocus(p.val)}>
-                                            <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{p.icon}</div>
                                             <div style={{ fontSize: '0.78rem', fontWeight: 800 }}>{p.sub}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{p.val.split('(')[1]?.replace(')','')}</div>
                                         </button>
@@ -3473,10 +3476,37 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
+                            {/* Campos de voz avanzados colapsables */}
+                            <div style={{ borderRadius: '14px', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                                <button
+                                    onClick={() => setPlanAdvancedOpen(v => !v)}
+                                    style={{
+                                        width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        padding: '14px 20px', background: 'rgba(255,255,255,0.02)', border: 'none',
+                                        cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 700,
+                                    }}
+                                >
+                                    <span>+ Configuracion avanzada de voz</span>
+                                    {planAdvancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </button>
+                                {planAdvancedOpen && (
+                                    <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div>
+                                            <span className="wz-label">Filtro: Lo que NO queremos <span style={{fontWeight:400, color:'var(--text-muted)', textTransform:'none'}}>(voto de silencio)</span></span>
+                                            <input className="input-field wz-input" placeholder="Ej: No quiero frases motivacionales vacías..." value={howNotToSound} onChange={(e) => setHowNotToSound(e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <span className="wz-label">Mantra / Idea repetida</span>
+                                            <input className="input-field wz-input" placeholder="Ej: La consistencia siempre gana al talento." value={brandMantra} onChange={(e) => setBrandMantra(e.target.value)} />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="wz-nav-sticky" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setPlanWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>← Atrás</button>
+                                <button onClick={() => setPlanWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>Atras</button>
                                 <button onClick={handleAnalyzeBrief} disabled={isAnalyzingBrief} className="btn-primary btn-premium-glow" style={{ flex: 2, height: '56px', fontSize: '1.1rem' }}>
-                                    {isAnalyzingBrief ? <><Loader size={20} className="animate-spin" /> Analizando... </> : '⚡ Analizar con IA para Continuar →'}
+                                    {isAnalyzingBrief ? <><Loader size={20} className="animate-spin" /> Analizando... </> : 'Analizar con IA para Continuar'}
                                 </button>
                             </div>
                         </div>
@@ -3486,7 +3516,7 @@ export default function DashboardPage() {
                     {planWizardStep === 4 && (
                         <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em', color: '#7ECECA' }}>✨ Estrategia Confirmada</h2>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em', color: '#7ECECA' }}>Estrategia Confirmada</h2>
                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>La IA ha interpretado tu briefing. Revisa antes de generar.</p>
                             </div>
 
@@ -3520,7 +3550,7 @@ export default function DashboardPage() {
                             <div className="wz-nav-sticky" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                 <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>← Re-ajustar</button>
                                 <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '64px', fontSize: '1.2rem', fontWeight: 900 }}>
-                                    ¡Generar Plan Mensual AHORA! 🚀
+                                    Generar Plan Mensual AHORA
                                 </button>
                             </div>
                         </div>
@@ -3740,15 +3770,16 @@ export default function DashboardPage() {
                                         </div>
 
                                         {/* DESARROLLO (3 PUNTOS) */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>DESARROLLO ({(s.desarrollo || []).length} PUNTOS ACCIONABLES)</label>
+                                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '20px 24px', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0px' }}>
+                                                <MessageSquare size={14} color="#a78bfa" />
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Desarrollo</span>
                                             </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 {Array.isArray(s.desarrollo) && s.desarrollo.map((item, idx) => (
                                                     <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                                        <div style={{ marginTop: '14px', fontSize: '0.8rem', fontWeight: 900, color: 'rgba(255,255,255,0.2)', minWidth: '20px' }}>{idx < 9 ? `0${idx + 1}` : idx + 1}</div>
+                                                        <div style={{ marginTop: '10px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(124,58,237,0.2)', color: '#a78bfa', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx < 9 ? `0${idx + 1}` : idx + 1}</div>
                                                         <div style={{ flex: 1, position: 'relative' }}>
                                                             <textarea
                                                                 value={typeof s.desarrollo[idx] === 'object' ? JSON.stringify(s.desarrollo[idx]) : (s.desarrollo[idx] || '')}
@@ -3761,11 +3792,20 @@ export default function DashboardPage() {
                                                                 }}
                                                                 className="textarea-field"
                                                                 style={{
-                                                                    minHeight: '60px',
+                                                                    width: '100%',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                                                    outline: 'none',
+                                                                    color: 'rgba(255,255,255,0.88)',
                                                                     fontSize: '0.95rem',
-                                                                    background: '#080808',
-                                                                    border: '1px solid #1E1E1E',
-                                                                    padding: '12px 48px 12px 16px'
+                                                                    lineHeight: 1.75,
+                                                                    fontFamily: "'Inter', sans-serif",
+                                                                    resize: 'none',
+                                                                    padding: '0',
+                                                                    boxSizing: 'border-box',
+                                                                    minHeight: '60px',
+                                                                    paddingRight: '40px',
                                                                 }}
                                                             />
                                                             <button
@@ -3791,9 +3831,12 @@ export default function DashboardPage() {
                                         </div>
 
                                         {/* CTA */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>LLAMADA A LA ACCIÓN (CTA)</label>
+                                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '20px 24px', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <Target size={14} color="#34d399" />
+                                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Llamada a la Accion</span>
+                                                </div>
                                                 <button
                                                     onClick={() => handleRefineBlock(i, 'cta')}
                                                     disabled={refiningBlock === `${i}-cta`}
@@ -3813,7 +3856,7 @@ export default function DashboardPage() {
                                                     {refiningBlock === `${i}-cta` ? <Loader size={16} className="animate-spin" /> : <Sparkles size={16} />}
                                                 </button>
                                             </div>
-                                            <input
+                                            <textarea
                                                 value={s.cta}
                                                 disabled={refiningBlock === `${i}-cta`}
                                                 onChange={(e) => {
@@ -3821,20 +3864,30 @@ export default function DashboardPage() {
                                                     news[i].cta = e.target.value;
                                                     setScripts(news);
                                                 }}
-                                                className="input-field"
+                                                rows={2}
                                                 style={{
-                                                    fontSize: '1rem',
-                                                    fontWeight: 600,
-                                                    background: '#080808',
-                                                    border: '1px solid #1E1E1E',
-                                                    padding: '16px'
+                                                    width: '100%',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                                    outline: 'none',
+                                                    color: 'rgba(255,255,255,0.88)',
+                                                    fontSize: '0.95rem',
+                                                    lineHeight: 1.75,
+                                                    fontFamily: "'Inter', sans-serif",
+                                                    resize: 'none',
+                                                    padding: '0',
+                                                    boxSizing: 'border-box',
                                                 }}
                                             />
                                         </div>
 
                                         {/* CIERRE */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em' }}>CIERRE / REMATE</label>
+                                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '14px', padding: '20px 24px', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                                <Flag size={14} color="#60a5fa" />
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Cierre / Remate</span>
+                                            </div>
                                             <textarea
                                                 value={s.cierre || ''}
                                                 onChange={(e) => {
@@ -3842,13 +3895,21 @@ export default function DashboardPage() {
                                                     news[i].cierre = e.target.value;
                                                     setScripts(news);
                                                 }}
-                                                className="textarea-field"
+                                                rows={2}
                                                 style={{
+                                                    width: '100%',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                                    outline: 'none',
+                                                    color: 'rgba(255,255,255,0.88)',
+                                                    fontSize: '0.95rem',
+                                                    lineHeight: 1.75,
+                                                    fontFamily: "'Inter', sans-serif",
+                                                    resize: 'none',
+                                                    padding: '0',
+                                                    boxSizing: 'border-box',
                                                     minHeight: '60px',
-                                                    fontSize: '1rem',
-                                                    background: '#080808',
-                                                    border: '1px solid #1E1E1E',
-                                                    padding: '16px'
                                                 }}
                                             />
                                         </div>
