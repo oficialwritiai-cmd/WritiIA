@@ -562,6 +562,18 @@ export default function DashboardPage() {
     useEffect(() => {
         // Load params from URL on initial load or navigation
         const params = searchParams;
+
+        // Voice story mode — pre-fill experienciaReal and jump to generation form
+        if (params.get('mode') === 'voice-story') {
+            const story = params.get('story');
+            if (story) {
+                setGenerationMode('single');
+                setExperienciaReal(story);
+                setWizardStep(4);
+                setShowOptional(true); // show optional fields so story is visible
+            }
+        }
+
         if (params.get('mode') === 'single') {
             setGenerationMode('single');
             const topicParam = params.get('topic');
