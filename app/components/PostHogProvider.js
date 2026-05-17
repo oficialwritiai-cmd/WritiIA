@@ -5,9 +5,10 @@ import { useEffect } from 'react';
 
 export default function PostHogProvider({ children }) {
   useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
+    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    if (typeof window !== 'undefined' && key) {
+      posthog.init(key, {
+        api_host: 'https://us.i.posthog.com',
         capture_pageview: true,
         capture_pageleave: true,
         autocapture: false,
@@ -16,6 +17,6 @@ export default function PostHogProvider({ children }) {
     }
   }, []);
 
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return <>{children}</>;
+  if (typeof window === 'undefined') return <>{children}</>;
   return <PHProvider client={posthog}>{children}</PHProvider>;
 }
