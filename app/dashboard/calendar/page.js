@@ -399,8 +399,7 @@ function CalendarContent() {
             setTimeout(() => { setToastMsg(''); setIsPanelOpen(false); loadData(); }, 1200);
         } catch (err) {
             console.error('[Calendar save]', err.message);
-            alert('ERROR GUARDAR: ' + err.message);
-            setToastMsg('');
+            setToastMsg('❌ ' + err.message);
         }
     };
 
@@ -1577,8 +1576,8 @@ function CalendarContent() {
                 <SheetEditor
                     sheetId={sheetItem.id || 'new'}
                     item={sheetItem}
-                    onClose={() => { setSheetItem(null); loadData(); }}
-                    onSave={() => { setSheetItem(null); loadData(); }}
+                    onClose={() => { setSheetItem(null); loadData(); const ev = selectedEvent; setSelectedEvent(null); setTimeout(() => setSelectedEvent(ev), 50); }}
+                    onSave={(saved) => { setSheetItem(null); if (saved) setLinkedScript(saved); loadData(); }}
                     userId={null}
                     activeProjectId={activeProject?.id}
                 />

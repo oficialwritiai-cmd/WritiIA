@@ -228,7 +228,6 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
             console.error('[SheetEditor] save error:', e);
             setSaveStatus('error');
             setSaveError(e.message);
-            alert('ERROR EDITOR: ' + e.message);
         }
     }
 
