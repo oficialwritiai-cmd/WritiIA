@@ -76,7 +76,7 @@ function CalendarContent() {
 
     // -- State --
     const [currentDate, setCurrentDate]   = useState(new Date());
-    const [viewMode, setViewMode]         = useState('week'); // 'week' | 'month' | 'day'
+    const [viewMode, setViewMode]         = useState('month'); // 'week' | 'month' | 'day'
     const [events, setEvents]   = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingSmartPlan, setLoadingSmartPlan] = useState(false);
@@ -717,7 +717,7 @@ function CalendarContent() {
 
         // Padding cells
         for (let i = 0; i < startOffset; i++) {
-            cells.push(<div key={`pad-${i}`} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 80 }} />);
+            cells.push(<div key={`pad-${i}`} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 70 }} />);
         }
 
         // Day cells
@@ -731,7 +731,7 @@ function CalendarContent() {
             cells.push(
                 <div
                     key={d}
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 80, padding: '5px 4px', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' }}
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 70, padding: '4px 3px', cursor: 'pointer', position: 'relative', transition: 'background 0.15s' }}
                     onClick={() => handleDayClick(ds)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => onDrop(e, ds)}
@@ -763,20 +763,18 @@ function CalendarContent() {
                                     style={{
                                         background: c.bg,
                                         borderLeft: `2px solid ${pc}`,
-                                        borderRadius: 3,
-                                        padding: '2px 5px',
-                                        fontSize: '0.72rem',
+                                        borderRadius: 2,
+                                        padding: '0 4px',
+                                        fontSize: '0.65rem',
                                         fontWeight: 600,
                                         color: c.text,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         cursor: 'pointer',
-                                        lineHeight: 1,
-                                        height: '18px',
-                                        maxHeight: '18px',
-                                        display: 'flex',
-                                        alignItems: 'center',
+                                        lineHeight: '15px',
+                                        height: '15px',
+                                        display: 'block',
                                         boxShadow: selectedEvents.has(ev.id) ? `0 0 0 1px ${c.solid}` : 'none',
                                     }}
                                 >
