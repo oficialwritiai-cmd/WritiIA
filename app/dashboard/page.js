@@ -3525,48 +3525,70 @@ export default function DashboardPage() {
                     )}
 
                     {/* STEP 4: ANÁLISIS IA Y GENERAR */}
-                    {planWizardStep === 4 && (
-                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em', color: '#7ECECA' }}>Estrategia Confirmada</h2>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>La IA ha interpretado tu briefing. Revisa antes de generar.</p>
-                            </div>
+                    {planWizardStep === 4 && (() => {
+                        // Parse briefAnalysis markdown into clean blocks
+                        const raw = briefAnalysis || '';
+                        // Extract bold sections (**text**: content) as strategy pillars
+                        const pillars = [];
+                        const boldPattern = /\*\*([^*]+)\*\*:?\s*([^*\n]+(?:\n(?!\*\*)[^\n]*)*)/g;
+                        let m;
+                        while ((m = boldPattern.exec(raw)) !== null) {
+                            const label = m[1].trim().replace(/^#+\s*/, '');
+                            const body  = m[2].trim().replace(/\*\*/g, '').replace(/^[""]|[""]$/g, '');
+                            if (label && body && body.length > 20) pillars.push({ label, body });
+                        }
+                        // Fallback: split by sentences if no bold found
+                        const fallbackLines = pillars.length === 0
+                            ? raw.replace(/\*\*/g, '').replace(/^#+[^\n]*/gm, '').split(/\.\s+/).filter(s => s.trim().length > 30).slice(0, 4)
+                            : [];
 
-                            <div style={{ 
-                                background: 'rgba(126, 206, 202, 0.05)', 
-                                padding: '32px', 
-                                borderRadius: '24px', 
-                                border: '1px solid rgba(126, 206, 202, 0.2)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}>
-                                <Sparkles size={40} style={{ position: 'absolute', top: '-10px', right: '-10px', color: 'rgba(126, 206, 202, 0.1)' }} />
-                                <p style={{ 
-                                    fontSize: '1.2rem', 
-                                    fontWeight: 500, 
-                                    lineHeight: '1.6', 
-                                    color: '#fff', 
-                                    textAlign: 'center',
-                                    fontStyle: 'italic'
-                                }}>
-                                    "{briefAnalysis}"
-                                </p>
-                            </div>
+                        const PILLAR_COLORS = ['#a78bfa', '#34d399', '#60a5fa', '#f59e0b'];
+                        const PILLAR_ICONS  = ['🎯', '📈', '⚡', '🔑'];
 
+                        return (
+                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Header */}
                             <div style={{ textAlign: 'center' }}>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                                    Se generarán aproximadamente {planFrequency.split(' ')[0] === '3' ? 12 : planFrequency.split(' ')[0] === '7' ? 28 : 16} ideas de contenido alineadas con esta estrategia.
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '20px', padding: '4px 14px', marginBottom: '12px' }}>
+                                    <Sparkles size={13} color="#a78bfa" />
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Estrategia lista</span>
+                                </div>
+                                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '6px', letterSpacing: '-0.02em', color: '#fff' }}>Tu plan del mes</h2>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>La IA ha definido tu estrategia. Revisa y genera.</p>
+                            </div>
+
+                            {/* Strategy pillars */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {(pillars.length > 0 ? pillars : fallbackLines.map(t => ({ label: '', body: t }))).slice(0, 4).map((item, i) => (
+                                    <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${PILLAR_COLORS[i] || '#a78bfa'}22`, borderLeft: `3px solid ${PILLAR_COLORS[i] || '#a78bfa'}`, borderRadius: '0 12px 12px 0', padding: '14px 18px' }}>
+                                        {item.label && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
+                                                <span>{PILLAR_ICONS[i] || '▸'}</span>
+                                                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: PILLAR_COLORS[i] || '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{item.label}</span>
+                                            </div>
+                                        )}
+                                        <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, margin: 0 }}>{item.body}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Ideas estimate */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: '12px', padding: '12px 20px' }}>
+                                <CheckCircle size={15} color="#34d399" />
+                                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                    Se generarán ~{planFrequency.split(' ')[0] === '3' ? 12 : planFrequency.split(' ')[0] === '7' ? 28 : 16} ideas de contenido alineadas con esta estrategia
                                 </p>
                             </div>
 
-                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>← Re-ajustar</button>
-                                <button onClick={handleGeneratePlan} className="btn-primary" style={{ flex: 2, height: '64px', fontSize: '1.2rem', fontWeight: 900 }}>
-                                    Generar Plan Mensual AHORA
+                            <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 'none', padding: '0 20px', height: '52px' }}>← Ajustar</button>
+                                <button onClick={handleGeneratePlan} className="btn-primary btn-premium-glow" style={{ flex: 1, height: '52px', fontSize: '0.95rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <Zap size={18} /> Generar mi plan mensual
                                 </button>
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
 
