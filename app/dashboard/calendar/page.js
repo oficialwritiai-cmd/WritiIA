@@ -399,8 +399,8 @@ function CalendarContent() {
             setTimeout(() => { setToastMsg(''); setIsPanelOpen(false); loadData(); }, 1200);
         } catch (err) {
             console.error('[Calendar save]', err.message);
-            setToastMsg('❌ ' + err.message);
-            setTimeout(() => setToastMsg(''), 6000);
+            alert('ERROR GUARDAR: ' + err.message);
+            setToastMsg('');
         }
     };
 
