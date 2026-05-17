@@ -96,6 +96,7 @@ function CalendarContent() {
     // Context menu
     const [contextMenu, setContextMenu] = useState(null);
     const [sheetItem, setSheetItem]     = useState(null);
+    const [toastMsg,  setToastMsg]      = useState('');
 
     // Multi-select & drag
     const [selectedEvents, setSelectedEvents] = useState(new Set());
@@ -408,11 +409,15 @@ function CalendarContent() {
                 if (insertErr) throw insertErr;
                 if (newEv) setEvents([...events, newEv]);
             }
+            // Show toast then close
+            setToastMsg('✓ Guardado correctamente');
+            setTimeout(() => setToastMsg(''), 2500);
             setIsPanelOpen(false);
             setTimeout(() => loadData(), 500);
         } catch (err) {
             console.error('Error saving panel:', err);
-            alert('Error al guardar: ' + err.message);
+            setToastMsg('⚠ Error: ' + err.message);
+            setTimeout(() => setToastMsg(''), 4000);
         }
     };
 
@@ -1574,6 +1579,13 @@ function CalendarContent() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* ── Toast ── */}
+            {toastMsg && (
+                <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: toastMsg.startsWith('⚠') ? '#dc2626' : '#16a34a', color: '#fff', padding: '12px 24px', borderRadius: '50px', fontWeight: 700, fontSize: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 99999, whiteSpace: 'nowrap' }}>
+                    {toastMsg}
                 </div>
             )}
 

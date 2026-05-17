@@ -149,7 +149,8 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
     }, [sheetId, initialItem]);
 
     function populate(data) {
-        setItemId(data.id || null);
+        // Never set itemId to the string 'new' — that causes silent save failures
+        setItemId(data.id && data.id !== 'new' ? data.id : null);
         setTitle(data.titulo || data.title || '');
         setPlatform(data.platform || 'Reels');
         setStatus(data.metadata?.status || data.status || 'Borrador');
@@ -197,21 +198,21 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 content: {
                     titulo_angulo: d.title,
                     hook: d.hook, gancho: d.hook,
-                    desarrollo: d.desarrollo.split('\n').filter(l => l.trim()),
+                    desarrollo: (d.desarrollo || '').split('\n').filter(l => l.trim()),
                     cta: d.cta, copy_post: d.copyPost, full_text: fullContent,
                 },
             };
 
-            if (d.itemId) {
+            // Only treat as existing record if itemId is a real UUID (not null/undefined/'new')
+            const hasRealId = d.itemId && d.itemId !== 'new';
+            if (hasRealId) {
                 const { error } = await supabase.from('library').update(payload).eq('id', d.itemId);
                 if (error) throw error;
             } else {
-                let uid = d.userId;
-                if (!uid) {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    uid = user?.id;
-                }
-                if (!uid) throw new Error('Usuario no autenticado');
+                // Always fetch user from auth — userId prop can be null
+                const { data: { user } } = await supabase.auth.getUser();
+                const uid = user?.id;
+                if (!uid) throw new Error('No hay sesión activa');
                 const { data: ins, error } = await supabase.from('library').insert({
                     ...payload, user_id: uid, project_id: d.activeProjectId || null,
                 }).select().single();
@@ -222,7 +223,8 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
             setTimeout(() => setSaveStatus('idle'), 3000);
         } catch (e) {
             console.error('[SheetEditor] save error:', e);
-            setSaveStatus('idle');
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus('idle'), 4000);
         }
     }
 
@@ -412,9 +414,12 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                             <><Loader2 size={12} style={{ color: '#a78bfa', animation: 'spin 0.8s linear infinite' }} /><span style={{ color: '#a78bfa' }}>Guardando…</span></>
                         )}
                         {saveStatus === 'saved' && (
-                            <><CheckCircle2 size={12} color="#34d399" /><span style={{ color: '#34d399' }}>Guardado</span></>
+                            <><CheckCircle2 size={12} color="#34d399" /><span style={{ color: '#34d399' }}>Guardado ✓</span></>
                         )}
-                        {saveStatus === 'idle' && <span>Auto-guardado</span>}
+                        {saveStatus === 'error' && (
+                            <span style={{ color: '#f87171', fontWeight: 700 }}>⚠ Error al guardar</span>
+                        )}
+                        {saveStatus === 'idle' && <span>Auto-guardado activo</span>}
                     </div>
 
                     {/* Word count */}
