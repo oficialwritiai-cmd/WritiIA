@@ -372,6 +372,27 @@ function CalendarContent() {
                 if (error) throw new Error('Crear evento: ' + error.message);
             }
 
+            // Guardar guion (hook/desarrollo/cta) en library si hay contenido
+            if (linkedScript?.content) {
+                const lc = linkedScript.content;
+                const hasContent = lc.hook || lc.gancho || (lc.desarrollo?.length) || lc.cta;
+                if (hasContent) {
+                    const scriptPayload = {
+                        content: { hook: lc.hook || lc.gancho || '', gancho: lc.gancho || lc.hook || '', desarrollo: lc.desarrollo || [], cta: lc.cta || lc.cierre || '', copy_post: lc.copy_post || null },
+                        script_full_text: lc.full_text || `HOOK:\n${lc.hook||''}\n\nDESARROLLO:\n${(lc.desarrollo||[]).join('\n')}\n\nCTA:\n${lc.cta||''}`,
+                        titulo: tempTitle || 'Sin título',
+                        platform: tempPlatform || 'General',
+                        type: 'guion',
+                    };
+                    if (linkedScript.id) {
+                        await supabase.from('library').update(scriptPayload).eq('id', linkedScript.id);
+                    } else {
+                        const { data: ins } = await supabase.from('library').insert({ ...scriptPayload, user_id: user.id, goal: 'engagement' }).select().single();
+                        if (ins) setLinkedScript({ ...linkedScript, id: ins.id });
+                    }
+                }
+            }
+
             setToastMsg('✓ Guardado');
             setTimeout(() => { setToastMsg(''); setIsPanelOpen(false); loadData(); }, 1200);
         } catch (err) {
