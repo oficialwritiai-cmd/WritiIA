@@ -281,7 +281,8 @@ export async function POST(request, { params }) {
             copy_post:     scriptData.post_copy || {},
         };
 
-        // Upsert into library (update if title already exists for this user)
+        // Upsert into library and get the library item ID for sync
+        let libraryItemId = null;
         const { data: existingLib } = await supabase.from('library')
             .select('id')
             .eq('user_id', verifiedUserId)
@@ -290,11 +291,12 @@ export async function POST(request, { params }) {
             .limit(1);
 
         if (existingLib?.length) {
+            libraryItemId = existingLib[0].id;
             await supabase.from('library')
                 .update({ script_full_text: fullText, content: contentPayload, platform: finalPlatform })
-                .eq('id', existingLib[0].id);
+                .eq('id', libraryItemId);
         } else {
-            await supabase.from('library').insert({
+            const { data: newLib } = await supabase.from('library').insert({
                 user_id:          verifiedUserId,
                 project_id:       slot.project_id || null,
                 type:             'guion',
@@ -303,7 +305,17 @@ export async function POST(request, { params }) {
                 titulo:           scriptData.title || slot.idea_title,
                 script_full_text: fullText,
                 content:          contentPayload,
-            });
+            }).select('id').single();
+            libraryItemId = newLib?.id || null;
+        }
+
+        // ─── Sync: update calendar_events.reference_id → library item ────
+        // This makes calendar ↔ library bidirectionally linked by real ID
+        if (libraryItemId) {
+            await supabase.from('calendar_events')
+                .update({ reference_id: libraryItemId })
+                .eq('reference_id', slot_id)
+                .eq('user_id', verifiedUserId);
         }
 
         // ─── Update slot status (non-fatal) ──────────────────────────────

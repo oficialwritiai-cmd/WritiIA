@@ -387,8 +387,16 @@ function CalendarContent() {
                     if (linkedScript.id) {
                         await supabase.from('library').update(scriptPayload).eq('id', linkedScript.id);
                     } else {
-                        const { data: ins } = await supabase.from('library').insert({ ...scriptPayload, user_id: user.id, goal: 'engagement' }).select().single();
-                        if (ins) setLinkedScript({ ...linkedScript, id: ins.id });
+                        const { data: ins } = await supabase.from('library')
+                            .insert({ ...scriptPayload, user_id: user.id, goal: 'engagement' })
+                            .select().single();
+                        if (ins) {
+                            setLinkedScript({ ...linkedScript, id: ins.id });
+                            // Link calendar event → library item by real ID
+                            await supabase.from('calendar_events')
+                                .update({ reference_id: ins.id })
+                                .eq('id', selectedEvent.id);
+                        }
                     }
                 }
             }
@@ -1575,7 +1583,20 @@ function CalendarContent() {
                     sheetId={sheetItem.id || 'new'}
                     item={sheetItem}
                     onClose={() => { setSheetItem(null); loadData(); const ev = selectedEvent; setSelectedEvent(null); setTimeout(() => setSelectedEvent(ev), 50); }}
-                    onSave={(saved) => { setSheetItem(null); if (saved) setLinkedScript(saved); loadData(); }}
+                    onSave={async (saved) => {
+                        setSheetItem(null);
+                        if (saved) {
+                            setLinkedScript(saved);
+                            // Link calendar event → library item by real ID
+                            if (selectedEvent?.id && saved.id) {
+                                const sb = createSupabaseClient();
+                                await sb.from('calendar_events')
+                                    .update({ reference_id: saved.id })
+                                    .eq('id', selectedEvent.id);
+                            }
+                        }
+                        loadData();
+                    }}
                     userId={null}
                     activeProjectId={activeProject?.id}
                 />
