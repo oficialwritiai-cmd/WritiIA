@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
-import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle, Share2, ThumbsUp, ThumbsDown, BarChart2, CheckCircle2, X } from 'lucide-react';
+import { Search, Star, Trash2, Loader2, Copy, RefreshCw, BookOpen, Sparkles, AlertTriangle, Share2, ThumbsUp, ThumbsDown, BarChart2, CheckCircle2, X, CalendarPlus } from 'lucide-react';
 import { useProject } from '@/app/components/ProjectContext';
 import SheetEditor from '@/app/components/SheetEditor';
 
@@ -68,9 +68,13 @@ export default function LibraryPage() {
     const [error, setError]                 = useState('');
     const [toast, setToast]                 = useState(null);
     const [showSheetEditor, setShowSheetEditor] = useState(false);
-    const [selectedItem, setSelectedItem]   = useState(null); // item opened in SheetEditor
+    const [selectedItem, setSelectedItem]   = useState(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [clearing, setClearing]           = useState(false);
+    const [planModal, setPlanModal]         = useState(null);
+    const [planDate, setPlanDate]           = useState(new Date().toISOString().split('T')[0]);
+    const [planPlatform, setPlanPlatform]   = useState('Reels');
+    const [planSaving, setPlanSaving]       = useState(false);
     const [performances, setPerformances]   = useState({});
     const [metricsModal, setMetricsModal]   = useState(null);
     const [metricsForm, setMetricsForm]     = useState({ views: '', likes_count: '', comments_count: '', shares_count: '', published_at: '', notes: '' });
@@ -213,6 +217,35 @@ export default function LibraryPage() {
         navigator.clipboard.writeText(text);
         showToast('Copiado al portapapeles', 'success');
     };
+
+    async function savePlanToCalendar() {
+        if (!planModal || !planDate) return;
+        setPlanSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Sin sesión');
+            const { error } = await supabase.from('calendar_events').insert({
+                user_id:     user.id,
+                title:       planModal.titulo || 'Guion sin título',
+                event_date:  planDate,
+                platform:    planPlatform,
+                status:      'idea',
+                color:       'purple',
+                type:        'idea',
+                reference_id: planModal.id,
+                notes:       planModal.content?.hook || planModal.script_full_text?.slice(0, 200) || '',
+                start_time:  '09:00',
+                end_time:    '10:00',
+            });
+            if (error) throw error;
+            showToast('Añadido al calendario', 'success');
+            setPlanModal(null);
+        } catch(e) {
+            showToast('Error: ' + e.message, 'error');
+        } finally {
+            setPlanSaving(false);
+        }
+    }
 
     const showToast = (msg, type) => {
         setToast({ msg, type });
@@ -524,6 +557,15 @@ export default function LibraryPage() {
                                         {formatDate(item.created_at)}
                                     </span>
                                     <div style={{ display: 'flex', gap: '6px' }}>
+                                        {/* Planificar */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setPlanDate(new Date().toISOString().split('T')[0]); setPlanPlatform(item.platform || 'Reels'); setPlanModal(item); }}
+                                            title="Añadir al calendario"
+                                            style={{ display: 'flex', alignItems: 'center', gap: '5px', height: '32px', padding: '0 12px', borderRadius: '7px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <CalendarPlus size={13} />
+                                            Planificar
+                                        </button>
                                         {/* Copy */}
                                         <button
                                             onClick={(e) => { e.stopPropagation(); copyToClipboard(item); }}
@@ -661,6 +703,51 @@ export default function LibraryPage() {
                             {savingPerf ? 'Guardando...' : 'Guardar métricas'}
                         </button>
                         <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', marginTop: '10px' }}>Tus métricas son privadas y solo mejoran tu Cerebro IA</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal Planificar en Calendario ─────────────────────────── */}
+            {planModal && (
+                <div onClick={e => { if (e.target === e.currentTarget) setPlanModal(null); }}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: '#141416', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '20px', padding: '32px', maxWidth: '420px', width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CalendarPlus size={20} color="#34d399" />
+                            </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#fff' }}>Planificar en Calendario</h3>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>{planModal.titulo || 'Sin título'}</p>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>Fecha</label>
+                                <input type="date" value={planDate} onChange={e => setPlanDate(e.target.value)}
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', padding: '10px 12px', fontSize: '0.88rem', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>Plataforma</label>
+                                <select value={planPlatform} onChange={e => setPlanPlatform(e.target.value)}
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', padding: '10px 12px', fontSize: '0.88rem', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>
+                                    {['Reels', 'TikTok', 'YouTube Shorts', 'LinkedIn', 'General'].map(p => (
+                                        <option key={p} value={p} style={{ background: '#1a1a24' }}>{p}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+                            <button onClick={() => setPlanModal(null)}
+                                style={{ flex: 1, height: '44px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>
+                                Cancelar
+                            </button>
+                            <button onClick={savePlanToCalendar} disabled={planSaving}
+                                style={{ flex: 2, height: '44px', background: 'linear-gradient(135deg, #059669, #34d399)', border: 'none', color: '#fff', borderRadius: '10px', fontWeight: 700, cursor: planSaving ? 'not-allowed' : 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <CalendarPlus size={15} />
+                                {planSaving ? 'Guardando…' : 'Añadir al Calendario'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

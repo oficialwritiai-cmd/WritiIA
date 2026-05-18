@@ -346,54 +346,13 @@ export default function DashboardLayout({ children }) {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                <div className="emergency-spinner"></div>
-                    {loadingStatus} (v6.7.0)
+            <div style={{ minHeight: '100vh', background: '#0c0c0e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', fontFamily: "'Inter', sans-serif" }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid rgba(124,58,237,0.2)', borderTop: '3px solid #7c3aed', borderRadius: '50%', animation: 'wSpin 0.8s linear infinite' }} />
+                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.82rem', fontWeight: 500, margin: 0 }}>
+                    WRITI.AI
+                </p>
 
-                <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease', marginTop: '30px', padding: '0 20px' }}>
-                    <p style={{ color: '#666', marginBottom: '20px', maxWidth: '350px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                        Si el acelerador de IA tarda demasiado, puedes forzar la entrada manual:
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-                        <button
-                            onClick={() => setLoading(false)}
-                            className="btn-primary"
-                            style={{ background: 'var(--accent-gradient)', color: 'black', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)' }}
-                        >
-                            ⚠️ FORZAR ENTRADA AL DASHBOARD
-                        </button>
-                        <button
-                            onClick={() => window.location.reload(true)}
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px 20px', borderRadius: '12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
-                        >
-                            LIMPIAR CACHÉ Y RECARGAR
-                        </button>
-                    </div>
-                </div>
-
-                <style jsx>{`
-                    .emergency-spinner {
-                        width: 60px;
-                        height: 60px;
-                        border: 4px solid rgba(255, 215, 0, 0.1);
-                        border-top: 4px solid #FFD700;
-                        border-radius: 50%;
-                        animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-                    }
-                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-                    @keyframes fadeInUp {
-                        from { opacity: 0; transform: translateY(10px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                    @keyframes scaleIn {
-                        from { opacity: 0; transform: translateX(-50%) scale(0.95); }
-                        to { opacity: 1; transform: translateX(-50%) scale(1); }
-                    }
-                    .menu-item-hover:hover {
-                        background: rgba(255,255,255,0.05) !important;
-                    }
-                `}</style>
+                <style>{`@keyframes wSpin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
