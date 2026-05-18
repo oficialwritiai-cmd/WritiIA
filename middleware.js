@@ -117,7 +117,7 @@ export async function middleware(req) {
         const trialActive =
             profile.trial_active === true &&
             profile.trial_ends_at &&
-            new Date(profile.trial_ends_at) > new Date();
+            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
 
         // pending = payment in progress, not confirmed yet
         const isPending = profile.plan === 'pending';

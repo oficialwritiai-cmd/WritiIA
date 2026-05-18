@@ -45,7 +45,7 @@ export async function GET() {
         const trialActive =
             profile.trial_active === true &&
             profile.trial_ends_at &&
-            new Date(profile.trial_ends_at) > new Date();
+            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
 
         if (!hasActivePlan && !trialActive) {
             return NextResponse.json({ allowed: false, reason: 'no_plan', plan: profile.plan }, { status: 403 });

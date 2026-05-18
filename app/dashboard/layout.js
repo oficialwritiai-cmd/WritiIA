@@ -381,7 +381,7 @@ export default function DashboardLayout({ children }) {
             profile?.subscription_status === 'trialing';
         const trialActive = profile?.trial_active === true &&
             profile?.trial_ends_at &&
-            new Date(profile.trial_ends_at) > new Date();
+            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
 
         if (!profile || (!hasActivePlan && !trialActive)) {
             // Render children (the expired page) with NO sidebar, NO navigation
