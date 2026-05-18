@@ -16,7 +16,7 @@ import BrainField from '@/app/components/BrainField';
 // Strategy Page v1.17.22 (Refined Planning & Persistence)
 // Simple stepper component
 function Stepper({ current }) {
-    const steps = ['Descubrimiento', 'Banco de Ideas', 'Plan Mensual'];
+    const steps = ['Tu idea', 'Banco de ideas'];
     return (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', marginBottom: '40px' }}>
             {steps.map((label, idx) => {
@@ -91,6 +91,7 @@ export default function EstrategiaPage() {
         types: [],
         platforms: [],
     });
+    const [ideaCount, setIdeaCount] = useState(20);
 
     // Presets State
     const [presets, setPresets] = useState([]);
@@ -959,6 +960,32 @@ export default function EstrategiaPage() {
         }
     };
 
+    const addToCalendar = async () => {
+        const selected = ideas.filter(i => selectedIdeaIds.has(String(i.id)));
+        if (!selected.length) return;
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const today = new Date();
+            const events = selected.map((idea, i) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() + (i * 2) + 1);
+                return {
+                    user_id: user.id,
+                    title: idea.titulo_idea || idea.titulo || 'Idea de contenido',
+                    event_date: d.toISOString().split('T')[0],
+                    status: 'idea', platform: form.platforms[0] || 'Reels',
+                    color: 'purple', type: 'idea',
+                    start_time: '09:00', end_time: '10:00',
+                    notes: idea.descripcion || idea.hook || '',
+                };
+            });
+            const { error } = await supabase.from('calendar_events').insert(events);
+            if (!error) router.push('/dashboard/calendar');
+            else alert('Error: ' + error.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    };
+
     const handleGenerateScriptForIdea = (idea) => {
         // Validate idea has required data
         if (!idea) {
@@ -1032,19 +1059,22 @@ export default function EstrategiaPage() {
     };
 
     const renderDiscovery = () => (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '660px', margin: '0 auto' }}>
             <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
-                <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Target size={32} color="var(--accent)" />
-                    Sesión de Descubrimiento
-                    <span style={{ fontSize: '0.7rem', color: '#FFD700', background: 'rgba(255,215,0,0.1)', padding: '4px 8px', borderRadius: '6px', marginLeft: 'auto' }}>v2.4.1</span>
-                </h1>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '1.1rem' }}>
-                    Diseñaremos tu estrategia basándonos en tus objetivos reales para los próximos 30 días.
-                </p>
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px' }}>
+                        ¿Sobre qué quieres crear este mes?
+                    </h1>
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.88rem', margin: 0 }}>
+                        Cuéntanos tu objetivo o tema del mes
+                    </p>
+                </div>
 
-                {/* Presets Manager Section */}
-                <div style={{ marginBottom: '40px' }}>
+                {/* Cerebro IA badge */}
+
+                {/* Presets Manager Section — hidden */}
+                <div style={{ display: 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                             Tus Preajustes ({presets.length})
@@ -1141,7 +1171,7 @@ export default function EstrategiaPage() {
                         />
                     </div>
 
-                    <div>
+                    <div style={{ display: 'none' }}>
                         <BrainField
                             className="textarea-field"
                             label="¿Tienes algún lanzamiento u oferta próxima?"
@@ -1155,7 +1185,7 @@ export default function EstrategiaPage() {
                         />
                     </div>
 
-                    <div>
+                    <div style={{ display: 'none' }}>
                         <BrainField
                             className="textarea-field"
                             label="¿Cuál es la mayor objeción de tus clientes?"
@@ -1169,8 +1199,21 @@ export default function EstrategiaPage() {
                         />
                     </div>
 
-                    {/* Chips Multiselección */}
+                    {/* Cantidad de ideas */}
                     <div>
+                        <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>¿Cuántas ideas quieres?</label>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {[10, 20, 30].map(n => (
+                                <button key={n} onClick={() => setIdeaCount(n)}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '12px', border: `1px solid ${ideaCount === n ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.1)'}`, background: ideaCount === n ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)', color: ideaCount === n ? '#a78bfa' : 'rgba(255,255,255,0.5)', fontWeight: 800, cursor: 'pointer', fontSize: '1.1rem', transition: 'all 0.15s' }}>
+                                    {n}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Chips Multiselección — hidden */}
+                    <div style={{ display: 'none' }}>
                         <label style={{ display: 'block', marginBottom: '12px', fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>Tipo de contenido a potenciar:</label>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                             {['Ganar seguidores', 'Ventas directas', 'Autoridad', 'Educar', 'Viralidad'].map(opt => (
@@ -1245,10 +1288,9 @@ export default function EstrategiaPage() {
                                 <button
                                     onClick={handleGenerateIdeas}
                                     disabled={loading}
-                                    className="btn-primary"
-                                    style={{ flex: 2, height: '64px', fontSize: '1.1rem', fontWeight: 900 }}
+                                    style={{ flex: 2, height: '56px', fontSize: '1rem', fontWeight: 800, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '14px', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 4px 20px rgba(124,58,237,0.35)' }}
                                 >
-                                    <Sparkles size={20} /> Analizar y generar banco de ideas →
+                                    <Zap size={18} /> Generar ideas →
                                 </button>
                                 <button
                                     onClick={() => setIsNamingModalOpen(true)}
@@ -1387,6 +1429,7 @@ export default function EstrategiaPage() {
         }
 
         return (
+            <>
             <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '60px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
                     <div>
@@ -1607,6 +1650,17 @@ export default function EstrategiaPage() {
                     </div>
                 )}
             </div>
+            {/* Barra fija — ideas seleccionadas */}
+            {selectedIdeaIds.size > 0 && (
+                <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1e1e2a', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '14px', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '16px', zIndex: 2000, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{selectedIdeaIds.size} ideas seleccionadas</span>
+                    <button onClick={addToCalendar}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
+                        <Calendar size={16} /> Añadir al calendario →
+                    </button>
+                </div>
+            )}
+            </>
         );
     };
 
