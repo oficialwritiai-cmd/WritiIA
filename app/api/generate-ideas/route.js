@@ -116,7 +116,14 @@ CLAVE: Usa las FAQs reales y los pilares del Cerebro IA. CERO ideas genéricas. 
         return NextResponse.json({ ideas });
 
     } catch (err) {
-        console.error('[generate-ideas] Error:', err?.message);
-        return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
+        console.error('[generate-ideas] Error completo:', err?.message, err?.stack);
+        const msg = err?.message || 'Error interno del servidor.';
+        // Expose safe error detail for debugging (not stack traces)
+        const safeMsg = msg.includes('credit') || msg.includes('crédito') ? msg :
+                        msg.includes('rate') || msg.includes('limit') ? 'Límite de peticiones alcanzado. Espera 1 minuto.' :
+                        msg.includes('timeout') || msg.includes('Timeout') ? 'La IA tardó demasiado. Reintenta.' :
+                        msg.includes('invalid') || msg.includes('Invalid') ? 'Datos de entrada inválidos.' :
+                        'Error interno del servidor. Reintenta en unos segundos.';
+        return NextResponse.json({ error: safeMsg }, { status: 500 });
     }
 }

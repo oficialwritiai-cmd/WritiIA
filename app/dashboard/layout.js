@@ -79,38 +79,9 @@ export default function DashboardLayout({ children }) {
                 return profileData;
             }
 
-            // ── SECURITY FIX: New OAuth users have no profile row ──────────
-            // If no profile exists, create one with trial so the subscription
-            // gate works correctly. Without this, Google OAuth users bypass payment.
-            if (error?.code === 'PGRST116' || !profileData) {
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                const trialEnds = new Date();
-                trialEnds.setDate(trialEnds.getDate() + 7); // 7-day trial
-
-                const newProfile = {
-                    id: userId,
-                    email: authUser?.email || '',
-                    full_name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || '',
-                    plan: 'trial',
-                    trial_active: true,
-                    trial_ends_at: trialEnds.toISOString(),
-                    credits_balance: 20,
-                };
-
-                const { data: created, error: createErr } = await supabase
-                    .from('users_profiles')
-                    .insert(newProfile)
-                    .select()
-                    .single();
-
-                if (!createErr && created) {
-                    setProfile(created);
-                    return created;
-                }
-                // If insert fails (RLS or duplicate), fetch again
-                const { data: retry } = await supabase.from('users_profiles').select('*').eq('id', userId).single();
-                if (retry) { setProfile(retry); return retry; }
-            }
+            // ── SECURITY: New OAuth user with no profile → no access ──────
+            // Do NOT create trial automatically. Only users you approve get access.
+            // They will be redirected to /dashboard/expired by the subscription gate.
         } catch (err) {
             console.error('FetchProfile catch:', err);
         }
