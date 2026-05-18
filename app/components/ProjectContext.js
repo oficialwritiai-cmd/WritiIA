@@ -18,9 +18,20 @@ export function ProjectProvider({ children }) {
     const [loadingProject, setLoadingProject] = useState(true);
     const supabase = createSupabaseClient();
 
-    // Load all projects on mount
+    // Load projects on mount AND whenever auth state changes (new device / new login)
     useEffect(() => {
         loadProjects();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                loadProjects();
+            }
+            if (event === 'SIGNED_OUT') {
+                setProjects([]);
+                setActiveProjectState(null);
+                setProjectBrain(null);
+            }
+        });
+        return () => subscription.unsubscribe();
     }, []);
 
     const loadProjects = async () => {
