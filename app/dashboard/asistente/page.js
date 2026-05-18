@@ -227,7 +227,7 @@ export default function AsistentePage() {
     const [historyLoaded, setHistoryLoaded] = useState(true);
     const [conversations, setConversations] = useState([]);
     const [currentSessionId, setCurrentSessionId] = useState(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // always closed on mount
     const [editingId, setEditingId] = useState(null);
     const [editingTitle, setEditingTitle] = useState('');
     
@@ -601,28 +601,29 @@ export default function AsistentePage() {
                         position: fixed !important;
                         top: 0 !important;
                         bottom: 0 !important;
-                        left: -282px !important;
+                        left: -300px !important;
                         width: 280px !important;
-                        z-index: 2147483647 !important;
+                        z-index: 9000 !important;
                         background: #111 !important;
                         height: 100vh !important;
                         opacity: 1 !important;
-                        visibility: visible !important;
-                        pointer-events: auto !important;
+                        visibility: hidden !important;
+                        pointer-events: none !important;
                         display: flex !important;
                         flex-direction: column !important;
+                        transition: left 0.3s ease, visibility 0s linear 0.3s !important;
                     }
                     .sidebar.open {
                         left: 0 !important;
-                        box-shadow: 20px 0 50px rgba(0,0,0,0.8) !important;
+                        box-shadow: 8px 0 40px rgba(0,0,0,0.7) !important;
                         visibility: visible !important;
-                        opacity: 1 !important;
+                        pointer-events: auto !important;
+                        transition: left 0.3s ease !important;
                     }
                     .sidebar.closed {
-                        left: -282px !important;
-                        width: 280px !important;
-                        opacity: 1 !important;
-                        visibility: visible !important;
+                        left: -300px !important;
+                        visibility: hidden !important;
+                        pointer-events: none !important;
                     }
                     .chat-container {
                         padding-bottom: 120px !important;
@@ -878,6 +879,12 @@ export default function AsistentePage() {
                     }}>
                         {toast.msg}
                     </div>
+                )}
+
+                {/* Backdrop — cierra sidebar en mobile al tocar fuera */}
+                {isSidebarOpen && isMobile && (
+                    <div onClick={() => setIsSidebarOpen(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 8999, backdropFilter: 'blur(2px)' }} />
                 )}
 
                 {/* Definitive Sidebar Fixed (Mobile) & Desktop Regular */}
