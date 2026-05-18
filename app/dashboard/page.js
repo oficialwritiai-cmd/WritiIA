@@ -755,12 +755,17 @@ export default function DashboardPage() {
     }, [step, generationMode]);
 
     async function handleGenerateSingle() {
-        console.log('[Dashboard] handleGenerateSingle called', { topic, platform, goal, hasBrain, wizardStep });
+        // Fallback: if topic empty (e.g. voice-story state race), use first line of experienciaReal
+        const effectiveTopic = topic?.trim() ||
+            experienciaReal?.split(/[.!?\n]/)[0]?.trim().slice(0, 120) || '';
 
-        if (!topic?.trim()) {
+        if (!effectiveTopic) {
             setError('Por favor, indica sobre qué quieres crear contenido.');
             return;
         }
+        // Sync topic state so the rest of the function uses the right value
+        if (!topic?.trim() && effectiveTopic) setTopic(effectiveTopic);
+        console.log('[Dashboard] handleGenerateSingle called', { topic: effectiveTopic, platform, goal, hasBrain, wizardStep });
 
 
         if (!hasBrain && wizardStep < 2) {
@@ -778,7 +783,7 @@ export default function DashboardPage() {
             const finalQuantity = urlCount ? parseInt(urlCount) : (quantity || 2);
 
             const requestBody = {
-                topic: topic.trim(),
+                topic: effectiveTopic,
                 platform: platform || 'Reels',
                 tone: toneBrand || 'Profesional',
                 goal: goal || 'engagement',
