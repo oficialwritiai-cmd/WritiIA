@@ -104,29 +104,16 @@ export async function middleware(req) {
         // No profile = not a paying user
         if (!profile) return toExpired();
 
+        const isPending = profile.plan === 'pending';
+        if (isPending) return toExpired();
+
         const hasActivePlan =
             profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
-            profile.subscription_status === 'trialing';
+            profile.subscription_status === 'trialing' ||
+            profile.trial_active === true; // trial_active=true = allow, period
 
-        // Robust date parse: handles microseconds and +00 without colon
-        const trialEndRaw = profile.trial_ends_at;
-        let trialEndDate = null;
-        if (trialEndRaw) {
-            const s = String(trialEndRaw).replace(' ', 'T').replace(/\.\d+/, '').replace(/\+00$/, 'Z').replace(/\+00:00$/, 'Z');
-            const d = new Date(s);
-            trialEndDate = isNaN(d.getTime()) ? null : d;
-        }
-        const trialActive =
-            profile.trial_active === true &&
-            trialEndDate !== null &&
-            trialEndDate > new Date();
-
-        // pending = payment in progress, not confirmed yet
-        const isPending = profile.plan === 'pending';
-
-        if (!hasActivePlan && !trialActive) return toExpired();
-        if (isPending) return toExpired();
+        if (!hasActivePlan) return toExpired();
     }
 
     // If there is no user and they're trying to access a protected route
