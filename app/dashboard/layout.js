@@ -304,6 +304,16 @@ export default function DashboardLayout({ children }) {
             .catch(() => { /* network error — don't block user */ });
     }, [pathname]);
 
+    // If user lands on /expired but has valid plan → redirect to home
+    useEffect(() => {
+        if (loading || !profile || pathname !== '/dashboard/expired') return;
+        const hasActivePlan = profile.plan === 'pro' ||
+            profile.subscription_status === 'active' ||
+            profile.subscription_status === 'trialing' ||
+            profile.trial_active === true;
+        if (hasActivePlan) router.replace('/dashboard/home');
+    }, [profile, pathname, loading, router]);
+
     // Secondary client-side check (fallback using React state)
     useEffect(() => {
         if (loading || !pathname || !profile) return;
