@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function middleware(req) {
@@ -87,9 +88,14 @@ export async function middleware(req) {
             return NextResponse.redirect(r);
         };
 
+        // Use SERVICE_ROLE_KEY to bypass RLS — anon key can fail for new OAuth users
         let profile = null;
         try {
-            const { data } = await supabase
+            const adminSupabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            const { data } = await adminSupabase
                 .from('users_profiles')
                 .select('plan, trial_active, trial_ends_at, subscription_status')
                 .eq('id', user.id)
