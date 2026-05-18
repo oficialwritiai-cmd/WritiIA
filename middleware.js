@@ -74,44 +74,50 @@ export async function middleware(req) {
         return NextResponse.redirect(redirectUrl);
     }
 
-    // Check 2: SECURITY — Verify subscription/trial for ALL users including OAuth
-    // This prevents Google OAuth users from bypassing the payment gate
-    if (user && req.nextUrl.pathname.startsWith('/dashboard') &&
+    // Check 2: SECURITY — Block ALL dashboard pages without active plan
+    const protectedPath = user &&
+        req.nextUrl.pathname.startsWith('/dashboard') &&
         req.nextUrl.pathname !== '/dashboard/expired' &&
-        req.nextUrl.pathname !== '/dashboard/settings') {
+        req.nextUrl.pathname !== '/dashboard/settings';
 
+    if (protectedPath) {
+        const toExpired = () => {
+            const r = req.nextUrl.clone();
+            r.pathname = '/dashboard/expired';
+            return NextResponse.redirect(r);
+        };
+
+        let profile = null;
         try {
-            const { data: profile } = await supabase
+            const { data } = await supabase
                 .from('users_profiles')
                 .select('plan, trial_active, trial_ends_at, subscription_status')
                 .eq('id', user.id)
                 .single();
-
-            // NO profile = NO access. Period.
-            if (!profile) {
-                const redirectUrl = req.nextUrl.clone();
-                redirectUrl.pathname = '/dashboard/expired';
-                return NextResponse.redirect(redirectUrl);
-            }
-
-            const hasActivePlan = profile.plan === 'pro' ||
-                profile.subscription_status === 'active' ||
-                profile.subscription_status === 'trialing';
-
-            const trialActive = profile.trial_active &&
-                profile.trial_ends_at &&
-                new Date(profile.trial_ends_at) > new Date();
-
-            const isPending = profile.plan === 'pending';
-
-            if ((!hasActivePlan && !trialActive) || isPending) {
-                const redirectUrl = req.nextUrl.clone();
-                redirectUrl.pathname = '/dashboard/expired';
-                return NextResponse.redirect(redirectUrl);
-            }
-        } catch(e) {
-            // Non-fatal: if DB fails, let layout handle the check
+            profile = data;
+        } catch (_) {
+            // DB error → deny access to be safe
+            return toExpired();
         }
+
+        // No profile = not a paying user
+        if (!profile) return toExpired();
+
+        const hasActivePlan =
+            profile.plan === 'pro' ||
+            profile.subscription_status === 'active' ||
+            profile.subscription_status === 'trialing';
+
+        const trialActive =
+            profile.trial_active === true &&
+            profile.trial_ends_at &&
+            new Date(profile.trial_ends_at) > new Date();
+
+        // pending = payment in progress, not confirmed yet
+        const isPending = profile.plan === 'pending';
+
+        if (!hasActivePlan && !trialActive) return toExpired();
+        if (isPending) return toExpired();
     }
 
     // If there is no user and they're trying to access a protected route
