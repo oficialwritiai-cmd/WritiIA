@@ -116,17 +116,8 @@ export default function DashboardLayout({ children }) {
 
                 setUser(session.user);
 
-                // SECURITY: Wait for profile before showing UI
-                // This prevents OAuth users from seeing the dashboard before subscription check
-                const profileData = await fetchProfile(session.user.id);
-
-                // If no profile exists this user has no subscription — block immediately
-                if (!profileData) {
-                    router.replace('/dashboard/expired');
-                    setLoading(false);
-                    return;
-                }
-
+                // Load profile — show UI regardless, check-plan API handles security
+                fetchProfile(session.user.id);
                 setLoading(false);
             } catch (err) {
                 console.warn('Initial session check timed out or failed:', err.message);
