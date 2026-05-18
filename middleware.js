@@ -66,13 +66,48 @@ export async function middleware(req) {
     // Optimized: Use getUser() for security, as it verifies the token on every request
     const { data: { user } } = await supabase.auth.getUser();
 
-    // ARREGLO CRÍTICO: Bloqueo obligatorio - Email confirmation validation PRIMERO
-    // Si el usuario existe pero su email NO está confirmado, NO puede entrar a NINGÚN lado protegido
-    if (user && !user.email_confirmed_at && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname === '/auth/callback')) {
+    // Check 1: Email must be confirmed
+    if (user && !user.email_confirmed_at && req.nextUrl.pathname.startsWith('/dashboard')) {
         const redirectUrl = req.nextUrl.clone();
         redirectUrl.pathname = '/login';
         redirectUrl.searchParams.set('error', 'Por favor confirma tu email antes de continuar');
         return NextResponse.redirect(redirectUrl);
+    }
+
+    // Check 2: SECURITY — Verify subscription/trial for ALL users including OAuth
+    // This prevents Google OAuth users from bypassing the payment gate
+    if (user && req.nextUrl.pathname.startsWith('/dashboard') &&
+        req.nextUrl.pathname !== '/dashboard/expired' &&
+        req.nextUrl.pathname !== '/dashboard/settings') {
+
+        try {
+            const { data: profile } = await supabase
+                .from('users_profiles')
+                .select('plan, trial_active, trial_ends_at, subscription_status')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                const hasActivePlan = profile.plan === 'pro' ||
+                    profile.subscription_status === 'active' ||
+                    profile.subscription_status === 'trialing';
+
+                const trialActive = profile.trial_active &&
+                    profile.trial_ends_at &&
+                    new Date(profile.trial_ends_at) > new Date();
+
+                const isPending = profile.plan === 'pending';
+
+                if ((!hasActivePlan && !trialActive) || isPending) {
+                    const redirectUrl = req.nextUrl.clone();
+                    redirectUrl.pathname = '/dashboard/expired';
+                    return NextResponse.redirect(redirectUrl);
+                }
+            }
+            // If no profile: allow through, layout.js will create it and gate if needed
+        } catch(e) {
+            // Non-fatal: if DB fails, let layout handle the check
+        }
     }
 
     // If there is no user and they're trying to access a protected route

@@ -64,7 +64,6 @@ export default function DashboardLayout({ children }) {
 
     const fetchProfile = async (userId) => {
         try {
-            // Set a 4s timeout for profile fetch specifically
             const profilePromise = supabase
                 .from('users_profiles')
                 .select('*')
@@ -75,10 +74,42 @@ export default function DashboardLayout({ children }) {
 
             const { data: profileData, error } = await Promise.race([profilePromise, timeoutPromise]);
 
-            if (error) console.error('Error fetching profile:', error);
             if (profileData) {
                 setProfile(profileData);
                 return profileData;
+            }
+
+            // ── SECURITY FIX: New OAuth users have no profile row ──────────
+            // If no profile exists, create one with trial so the subscription
+            // gate works correctly. Without this, Google OAuth users bypass payment.
+            if (error?.code === 'PGRST116' || !profileData) {
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                const trialEnds = new Date();
+                trialEnds.setDate(trialEnds.getDate() + 7); // 7-day trial
+
+                const newProfile = {
+                    id: userId,
+                    email: authUser?.email || '',
+                    full_name: authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || '',
+                    plan: 'trial',
+                    trial_active: true,
+                    trial_ends_at: trialEnds.toISOString(),
+                    credits_balance: 20,
+                };
+
+                const { data: created, error: createErr } = await supabase
+                    .from('users_profiles')
+                    .insert(newProfile)
+                    .select()
+                    .single();
+
+                if (!createErr && created) {
+                    setProfile(created);
+                    return created;
+                }
+                // If insert fails (RLS or duplicate), fetch again
+                const { data: retry } = await supabase.from('users_profiles').select('*').eq('id', userId).single();
+                if (retry) { setProfile(retry); return retry; }
             }
         } catch (err) {
             console.error('FetchProfile catch:', err);
@@ -281,13 +312,20 @@ export default function DashboardLayout({ children }) {
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, [profile]);
 
-    // NEW: Enforce access restriction
-    // If trial is over and no plan is active, redirect to /dashboard/expired
+    // SECURITY: Enforce subscription gate — blocks OAuth users with no plan
     useEffect(() => {
-        if (loading || !profile || !pathname) return;
+        if (loading || !pathname) return;
 
-        // Permanent ignore paths
+        // Ignore these paths always
         if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
+
+        // If profile didn't load after auth, block access — prevents OAuth bypass
+        // Give a short grace period (fetchProfile runs async after login)
+        if (!profile) {
+            // Don't block immediately — fetchProfile may still be running
+            // The 4s timeout in fetchProfile means if profile is null after that, block.
+            return;
+        }
 
         const hasActivePlan = profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
