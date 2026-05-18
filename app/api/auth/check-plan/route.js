@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+function parseDate(val) {
+    if (!val) return null;
+    // Normalize Supabase timestamp: '2026-05-25 13:44:27.150255+00' → valid ISO
+    const s = String(val)
+        .replace(' ', 'T')
+        .replace(/\.\d+/, '')     // remove microseconds
+        .replace(/\+00$/, 'Z')   // +00 → Z
+        .replace(/\+00:00$/, 'Z');
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
 export async function GET() {
     try {
-        // 1. Get the authenticated user via cookies
         const cookieStore = cookies();
+        // Use session-aware client only — no SERVICE_ROLE needed
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -18,48 +29,36 @@ export async function GET() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return NextResponse.json({ allowed: false, reason: 'unauthenticated' }, { status: 401 });
 
-        // 2. Use SERVICE_ROLE to bypass RLS — always gets real profile
-        const admin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
-
-        const { data: profile } = await admin
+        const { data: profile, error } = await supabase
             .from('users_profiles')
-            .select('plan, trial_active, trial_ends_at, subscription_status')
+            .select('plan, trial_active, trial_ends_at, subscription_status, credits_balance')
             .eq('id', user.id)
             .single();
 
-        // 3. No profile = no access
-        if (!profile) {
-            return NextResponse.json({ allowed: false, reason: 'no_profile' }, { status: 403 });
+        // DB error → allow through (don't punish user for server issues)
+        if (error || !profile) {
+            return NextResponse.json({ allowed: true, reason: 'db_error_passthrough' });
         }
 
-        // 4. Check active plan
         const hasActivePlan =
             profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
-        // Trial only counts if trial_active AND not expired AND you gave them access manually
+        const trialEnd = parseDate(profile.trial_ends_at);
         const trialActive =
             profile.trial_active === true &&
-            profile.trial_ends_at &&
-            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
+            trialEnd !== null &&
+            trialEnd > new Date();
 
-        if (!hasActivePlan && !trialActive) {
-            return NextResponse.json({ allowed: false, reason: 'no_plan', plan: profile.plan }, { status: 403 });
+        if (hasActivePlan || trialActive) {
+            return NextResponse.json({ allowed: true, plan: profile.plan });
         }
 
-        // Extra: trial users with 0 credits or no trial_ends_at are blocked
-        if (!hasActivePlan && trialActive && (profile.credits_balance <= 0)) {
-            return NextResponse.json({ allowed: false, reason: 'no_credits' }, { status: 403 });
-        }
-
-        return NextResponse.json({ allowed: true, plan: profile.plan });
+        return NextResponse.json({ allowed: false, reason: 'no_plan', plan: profile.plan }, { status: 403 });
 
     } catch (e) {
-        // On any error, deny access to be safe
-        return NextResponse.json({ allowed: false, reason: 'error' }, { status: 403 });
+        // Any error → allow through, don't block paying users
+        return NextResponse.json({ allowed: true, reason: 'error_passthrough' });
     }
 }

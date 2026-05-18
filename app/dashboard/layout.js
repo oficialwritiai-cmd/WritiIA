@@ -1,7 +1,12 @@
 'use client';
-/**
- * Version: v1.17.6.2 (Omega Asistente Fix)
- */
+
+// Robust Supabase timestamp parser
+function parseSupabaseDate(val) {
+    if (!val) return null;
+    const s = String(val).replace(' ', 'T').replace(/\.\d+/, '').replace(/\+00$/, 'Z').replace(/\+00:00$/, 'Z');
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -226,10 +231,10 @@ export default function DashboardLayout({ children }) {
             let targetDate = null;
 
             if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_ends_at) {
-                targetDate = new Date(String(profile.trial_ends_at).replace(' ', 'T'));
+                targetDate = parseSupabaseDate(profile.trial_ends_at);
             } else if (profile.plan === 'pro') {
                 if (profile.subscription_period_end) {
-                    targetDate = new Date(String(profile.subscription_period_end).replace(' ', 'T'));
+                    targetDate = parseSupabaseDate(profile.subscription_period_end);
                 } else {
                     setDaysRemaining('Activa');
                     setIsExpired(false);
@@ -310,7 +315,7 @@ export default function DashboardLayout({ children }) {
 
         // Calculate trial directly — don't rely on isExpired state which may have wrong date parse
         const trialEndDate = profile.trial_ends_at
-            ? new Date(String(profile.trial_ends_at).replace(' ', 'T'))
+            ? parseSupabaseDate(profile.trial_ends_at)
             : null;
         const isTrialStillActive = profile.trial_active === true &&
             trialEndDate && !isNaN(trialEndDate) && trialEndDate > new Date();
@@ -384,7 +389,7 @@ export default function DashboardLayout({ children }) {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
         const _trialEnd = profile.trial_ends_at
-            ? new Date(String(profile.trial_ends_at).replace(' ', 'T'))
+            ? parseSupabaseDate(profile.trial_ends_at)
             : null;
         const trialActive = profile.trial_active === true &&
             _trialEnd && !isNaN(_trialEnd) && _trialEnd > new Date();
