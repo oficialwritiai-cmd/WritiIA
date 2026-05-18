@@ -29,9 +29,10 @@ export default function ScriptWizardFlow({
     platform, setPlatform,
     quantity, setQuantity,
     experienciaReal, setExperienciaReal,
+    initialPhase = 1,
     onBack, onGenerate,
 }) {
-    const [phase, setPhase]           = useState(1); // 1-3, phase 4 is handled by parent (step=2)
+    const [phase, setPhase] = useState(initialPhase); // respects voice-story jump to phase 3
     const [promptIdx, setPromptIdx]   = useState(0);
     const [tipIdx, setTipIdx]         = useState(0);
     const [dir, setDir]               = useState(1); // slide direction
@@ -188,12 +189,22 @@ export default function ScriptWizardFlow({
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', animation: 'phaseIn 0.3s ease' }}>
                     <div style={{ textAlign: 'center' }}>
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-                            Casi listo
+                            {initialPhase === 3 ? '¡Historia lista! Elige el estilo' : 'Casi listo'}
                         </h2>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                            Solo 3 decisiones rápidas
+                            {initialPhase === 3 ? 'Tu historia ya está incluida — solo elige el gancho y plataforma' : 'Solo 3 decisiones rápidas'}
                         </p>
                     </div>
+
+                    {/* Banner historia incluida (solo desde voz) */}
+                    {initialPhase === 3 && experienciaReal && (
+                        <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 800, flexShrink: 0 }}>✓ Historia grabada</span>
+                            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                "{experienciaReal.slice(0, 120)}{experienciaReal.length > 120 ? '…' : ''}"
+                            </p>
+                        </div>
+                    )}
 
                     {/* Hook type grid */}
                     <div>

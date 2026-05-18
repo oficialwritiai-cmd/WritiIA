@@ -61,6 +61,7 @@ export default function DashboardPage() {
     const [story, setStory] = useState('');
     const [hookType, setHookType] = useState('curiosidad extrema');
     const [showOptional, setShowOptional] = useState(false);
+    const [voiceStoryPhase, setVoiceStoryPhase] = useState(1);
     const [intensity, setIntensity] = useState(3);
     const [videoDuration, setVideoDuration] = useState('60 seg');
     const [singleFrequency, setSingleFrequency] = useState('3 publicaciones por semana');
@@ -572,8 +573,12 @@ export default function DashboardPage() {
                 try { sessionStorage.removeItem('writi_voice_story'); } catch(e) {}
                 setGenerationMode('single');
                 setExperienciaReal(story);
-                setWizardStep(4);
+                // Use first sentence as topic so generation has context
+                const firstSentence = story.split(/[.!?]/)[0]?.trim().slice(0, 120) || story.slice(0, 120);
+                setTopic(firstSentence);
                 setShowOptional(true);
+                setVoiceStoryPhase(3); // jump to phase 3 — user just picks details & generates
+                setWizardStep(4);
             }
         }
 
@@ -2737,7 +2742,8 @@ export default function DashboardPage() {
                             platform={platform} setPlatform={setPlatform}
                             quantity={quantity} setQuantity={setQuantity}
                             experienciaReal={experienciaReal} setExperienciaReal={setExperienciaReal}
-                            onBack={() => setWizardStep(3)}
+                            initialPhase={voiceStoryPhase}
+                            onBack={() => { setVoiceStoryPhase(1); setWizardStep(3); }}
                             onGenerate={handleGenerateSingle}
                         />
                         {/* Hidden original fields kept for compat — DO NOT REMOVE */}

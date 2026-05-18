@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Mic, Square, ChevronLeft, Zap, RefreshCw, Edit3 } from 'lucide-react';
 
 const PROMPTS = [
-    'Una anécdota de un cliente que te sorprendió...',
-    'Un error que cometiste y lo que aprendiste...',
-    'Un resultado que conseguiste recientemente...',
-    'Algo que aprendiste esta semana...',
-    'Un momento en que todo salió mal y lo resolviste...',
+    '"Esta semana un cliente me dijo que..."',
+    '"El error más grande que cometí fue..."',
+    '"Lo que nadie te cuenta sobre..."',
+    '"Antes pensaba X, ahora sé que..."',
+    '"El momento en que todo cambió fue..."',
 ];
 
 const TIPS = [
@@ -195,9 +195,14 @@ export default function VoiceStoryPage() {
                     {/* Continue button */}
                     {displayText && (
                         <button onClick={finishRecording}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '14px', padding: '14px 28px', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 20px rgba(124,58,237,0.35)' }}>
-                            <Zap size={18} /> Terminar y generar guiones
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '14px', padding: '16px 32px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 20px rgba(124,58,237,0.35)', animation: 'micIdle 2s ease-in-out infinite' }}>
+                            <Zap size={20} /> Generar guiones desde mi historia
                         </button>
+                    )}
+                    {isRecording && (
+                        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+                            Habla con naturalidad — no hay respuesta incorrecta
+                        </p>
                     )}
 
                     {/* Rotating tip */}
