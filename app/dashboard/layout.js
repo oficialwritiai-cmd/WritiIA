@@ -301,9 +301,8 @@ export default function DashboardLayout({ children }) {
 
     // Secondary client-side check (fallback using React state)
     useEffect(() => {
-        if (loading || !pathname) return;
+        if (loading || !pathname || !profile) return;
         if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
-        if (!profile) { router.replace('/dashboard/expired'); return; }
 
         const hasActivePlan = profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
@@ -379,19 +378,18 @@ export default function DashboardLayout({ children }) {
         );
     }
 
-    // ── SECURITY WALL: No plan = render ONLY the expired page, nothing else ──
-    if (pathname && pathname !== '/dashboard/settings' && pathname !== '/dashboard/expired') {
-        const hasActivePlan = profile?.plan === 'pro' ||
-            profile?.subscription_status === 'active' ||
-            profile?.subscription_status === 'trialing';
-        const _trialEnd = profile?.trial_ends_at
+    // ── SECURITY WALL: Only block if profile is loaded AND no plan ──
+    if (profile && pathname && pathname !== '/dashboard/settings' && pathname !== '/dashboard/expired') {
+        const hasActivePlan = profile.plan === 'pro' ||
+            profile.subscription_status === 'active' ||
+            profile.subscription_status === 'trialing';
+        const _trialEnd = profile.trial_ends_at
             ? new Date(String(profile.trial_ends_at).replace(' ', 'T'))
             : null;
-        const trialActive = profile?.trial_active === true &&
+        const trialActive = profile.trial_active === true &&
             _trialEnd && !isNaN(_trialEnd) && _trialEnd > new Date();
 
-        if (!profile || (!hasActivePlan && !trialActive)) {
-            // Render children (the expired page) with NO sidebar, NO navigation
+        if (!hasActivePlan && !trialActive) {
             return (
                 <div style={{ minHeight: '100vh', background: '#0c0c0e' }}>
                     {children}
