@@ -374,6 +374,25 @@ export default function DashboardLayout({ children }) {
         );
     }
 
+    // ── SECURITY WALL: No plan = render ONLY the expired page, nothing else ──
+    if (pathname && pathname !== '/dashboard/settings' && pathname !== '/dashboard/expired') {
+        const hasActivePlan = profile?.plan === 'pro' ||
+            profile?.subscription_status === 'active' ||
+            profile?.subscription_status === 'trialing';
+        const trialActive = profile?.trial_active === true &&
+            profile?.trial_ends_at &&
+            new Date(profile.trial_ends_at) > new Date();
+
+        if (!profile || (!hasActivePlan && !trialActive)) {
+            // Render children (the expired page) with NO sidebar, NO navigation
+            return (
+                <div style={{ minHeight: '100vh', background: '#0c0c0e' }}>
+                    {children}
+                </div>
+            );
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Breadcrumb helper
     // ─────────────────────────────────────────────────────────────

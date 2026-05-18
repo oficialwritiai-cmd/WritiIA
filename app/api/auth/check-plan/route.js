@@ -41,6 +41,7 @@ export async function GET() {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
+        // Trial only counts if trial_active AND not expired AND you gave them access manually
         const trialActive =
             profile.trial_active === true &&
             profile.trial_ends_at &&
@@ -48,6 +49,11 @@ export async function GET() {
 
         if (!hasActivePlan && !trialActive) {
             return NextResponse.json({ allowed: false, reason: 'no_plan', plan: profile.plan }, { status: 403 });
+        }
+
+        // Extra: trial users with 0 credits or no trial_ends_at are blocked
+        if (!hasActivePlan && trialActive && (profile.credits_balance <= 0)) {
+            return NextResponse.json({ allowed: false, reason: 'no_credits' }, { status: 403 });
         }
 
         return NextResponse.json({ allowed: true, plan: profile.plan });
