@@ -289,23 +289,27 @@ export default function DashboardLayout({ children }) {
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, [profile]);
 
-    // SECURITY: Enforce subscription gate — blocks OAuth users with no plan
+    // SECURITY: Server-side plan check on EVERY route change — cannot be bypassed
     useEffect(() => {
-        if (loading || !pathname) return;
-
-        // Ignore these paths always
+        if (!pathname) return;
         if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
 
-        // No profile = no access. Redirect to expired/payment page.
-        if (!profile) {
-            router.replace('/dashboard/expired');
-            return;
-        }
+        fetch('/api/auth/check-plan', { cache: 'no-store' })
+            .then(res => {
+                if (!res.ok) router.replace('/dashboard/expired');
+            })
+            .catch(() => router.replace('/dashboard/expired'));
+    }, [pathname]); // Fires on EVERY navigation
+
+    // Secondary client-side check (fallback using React state)
+    useEffect(() => {
+        if (loading || !pathname) return;
+        if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
+        if (!profile) { router.replace('/dashboard/expired'); return; }
 
         const hasActivePlan = profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
-
         const isTrialStillActive = profile.trial_active && !isExpired;
         const isPending = profile.plan === 'pending';
 
