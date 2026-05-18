@@ -432,10 +432,10 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                         {saveStatus === 'idle' && <span>Auto-guardado activo</span>}
                     </div>
 
-                    {/* Word count */}
+                    {/* Word count — hidden on small screens */}
                     {totalWords > 0 && (
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', padding: '3px 9px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            {totalWords} palabras
+                        <span className="sheet-wordcount" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', padding: '3px 9px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            {totalWords} pal.
                         </span>
                     )}
 
@@ -470,8 +470,8 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
             {/* ── Two-column layout ─────────────────────────── */}
             <div style={{ flex: 1, display: 'flex', overflowY: 'hidden', minHeight: 0 }}>
 
-                {/* ── LEFT: Properties sidebar ──────────────── */}
-                <div style={{
+                {/* ── LEFT: Properties sidebar — hidden on mobile ── */}
+                <div className="sheet-sidebar" style={{
                     width: '240px', flexShrink: 0,
                     borderRight: '1px solid rgba(255,255,255,0.05)',
                     background: 'rgba(255,255,255,0.01)',
@@ -521,7 +521,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 </div>
 
                 {/* ── RIGHT: Content ──────────────────────────── */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '48px 56px 80px' }}>
+                <div className="sheet-content" style={{ flex: 1, overflowY: 'auto', padding: '48px 56px 80px' }}>
                     <div style={{ maxWidth: '760px', margin: '0 auto' }}>
 
                         {/* Big Notion-style title */}
@@ -536,7 +536,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                                 color: '#ffffff', fontFamily: "'Inter', sans-serif",
                                 fontSize: '2.6rem', fontWeight: 900, lineHeight: 1.15,
                                 letterSpacing: '-0.04em', resize: 'none', boxSizing: 'border-box',
-                                marginBottom: '40px',
+                                marginBottom: '32px',
                             }}
                         />
 
@@ -632,6 +632,11 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
                 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
                 textarea::placeholder { color: rgba(255,255,255,0.2) !important; }
+                @media (max-width: 640px) {
+                    .sheet-sidebar { display: none !important; }
+                    .sheet-content { padding: 24px 18px 80px !important; }
+                    .sheet-wordcount { display: none !important; }
+                }
             `}</style>
         </div>
     );

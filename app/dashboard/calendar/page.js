@@ -1272,11 +1272,13 @@ function CalendarContent() {
             {/* ── Detail Panel ── */}
             {isPanelOpen && (
                 <aside style={{
-                    position: 'fixed', top: 0, right: 0, bottom: 0, width: 440,
+                    position: 'fixed', top: 0, right: 0, bottom: 0,
+                    width: isMobile ? '100%' : 440,
                     background: '#0f0f13', borderLeft: '1px solid rgba(255,255,255,0.06)',
                     display: 'flex', flexDirection: 'column', zIndex: 100,
                     boxShadow: '-12px 0 40px rgba(0,0,0,0.5)',
                     animation: 'slideInPanel 0.25s cubic-bezier(0.16,1,0.3,1)',
+                    overflowY: 'auto',
                 }}>
                     {/* Panel header */}
                     <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
