@@ -109,10 +109,18 @@ export async function middleware(req) {
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
 
+        // Robust date parse: handles microseconds and +00 without colon
+        const trialEndRaw = profile.trial_ends_at;
+        let trialEndDate = null;
+        if (trialEndRaw) {
+            const s = String(trialEndRaw).replace(' ', 'T').replace(/\.\d+/, '').replace(/\+00$/, 'Z').replace(/\+00:00$/, 'Z');
+            const d = new Date(s);
+            trialEndDate = isNaN(d.getTime()) ? null : d;
+        }
         const trialActive =
             profile.trial_active === true &&
-            profile.trial_ends_at &&
-            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
+            trialEndDate !== null &&
+            trialEndDate > new Date();
 
         // pending = payment in progress, not confirmed yet
         const isPending = profile.plan === 'pending';
