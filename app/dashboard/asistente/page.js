@@ -578,56 +578,38 @@ export default function AsistentePage() {
                 @keyframes spin {
                     to { transform: rotate(360deg); }
                 }
+                /* Sidebar — fixed on ALL screen sizes */
                 .sidebar {
+                    position: fixed;
+                    top: 0;
+                    bottom: 0;
+                    left: -300px;
                     width: 280px;
                     background: #111;
                     border-right: 1px solid rgba(255,255,255,0.08);
-                    height: 100%;
+                    z-index: 9000;
                     display: flex;
                     flex-direction: column;
-                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                    z-index: 100;
                     overflow: hidden;
-                    flex-shrink: 0;
+                    visibility: hidden;
+                    pointer-events: none;
+                    transition: left 0.3s ease, visibility 0s linear 0.3s;
+                }
+                .sidebar.open {
+                    left: 72px;
+                    visibility: visible;
+                    pointer-events: auto;
+                    box-shadow: 8px 0 40px rgba(0,0,0,0.6);
+                    transition: left 0.3s ease;
                 }
                 .sidebar.closed {
-                    width: 0;
-                    border-right: none;
-                    opacity: 0;
+                    left: -300px;
+                    visibility: hidden;
                     pointer-events: none;
                 }
                 @media (max-width: 1024px) {
-                    .sidebar {
-                        position: fixed !important;
-                        top: 0 !important;
-                        bottom: 0 !important;
-                        left: -300px !important;
-                        width: 280px !important;
-                        z-index: 9000 !important;
-                        background: #111 !important;
-                        height: 100vh !important;
-                        opacity: 1 !important;
-                        visibility: hidden !important;
-                        pointer-events: none !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        transition: left 0.3s ease, visibility 0s linear 0.3s !important;
-                    }
-                    .sidebar.open {
-                        left: 0 !important;
-                        box-shadow: 8px 0 40px rgba(0,0,0,0.7) !important;
-                        visibility: visible !important;
-                        pointer-events: auto !important;
-                        transition: left 0.3s ease !important;
-                    }
-                    .sidebar.closed {
-                        left: -300px !important;
-                        visibility: hidden !important;
-                        pointer-events: none !important;
-                    }
-                    .chat-container {
-                        padding-bottom: 120px !important;
-                    }
+                    .sidebar.open { left: 0 !important; }
+                    .chat-container { padding-bottom: 120px !important; }
                 }
                 .sidebar-item {
                     padding: 12px 16px;
@@ -653,17 +635,13 @@ export default function AsistentePage() {
                     position: relative;
                 }
                 .input-container {
-                    position: fixed;
+                    position: absolute;
                     bottom: 0;
-                    left: 280px;
+                    left: 0;
                     right: 0;
                     padding: 24px;
                     background: linear-gradient(to top, #0a0a0a 80%, transparent);
-                    z-index: 2147483640;
-                    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-                .input-container.wide {
-                    left: 0;
+                    z-index: 50;
                 }
                 @media (max-width: 768px) {
                     .input-container {
@@ -677,11 +655,11 @@ export default function AsistentePage() {
                 }
             `}</style>
             
-            <div className="chat-main" style={{ 
-                background: '#050505', 
+            <div className="chat-main" style={{
+                background: '#050505',
                 position: isMobile ? 'relative' : 'fixed',
                 top: isMobile ? 'auto' : '0',
-                left: isMobile ? 'auto' : (isSidebarOpen ? '280px' : '72px'),
+                left: isMobile ? 'auto' : (isSidebarOpen ? '352px' : '72px'),
                 right: isMobile ? 'auto' : 0,
                 bottom: isMobile ? 'auto' : 0,
                 width: isMobile ? '100%' : (isSidebarOpen ? 'calc(100vw - 280px)' : 'calc(100vw - 72px)'),
