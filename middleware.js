@@ -102,8 +102,8 @@ export async function middleware(req) {
                 .single();
             profile = data;
         } catch (_) {
-            // DB error → deny access to be safe
-            return toExpired();
+            // DB error → let through, layout will handle
+            return res;
         }
 
         // No profile = not a paying user

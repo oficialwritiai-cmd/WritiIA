@@ -289,17 +289,24 @@ export default function DashboardLayout({ children }) {
         return () => window.removeEventListener('show-no-credits', handleShowNoCredits);
     }, [profile]);
 
-    // SECURITY: Server-side plan check on EVERY route change — cannot be bypassed
+    // SECURITY: Server-side plan check — only block on explicit no-plan response
     useEffect(() => {
         if (!pathname) return;
         if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
 
         fetch('/api/auth/check-plan', { cache: 'no-store' })
-            .then(res => {
-                if (!res.ok) router.replace('/dashboard/expired');
+            .then(async res => {
+                if (res.status === 403) {
+                    const data = await res.json().catch(() => ({}));
+                    // Only redirect if explicitly no plan — NOT on network/server errors
+                    if (data.reason === 'no_plan' || data.reason === 'no_profile') {
+                        router.replace('/dashboard/expired');
+                    }
+                }
+                // 401, 500, network errors = don't block (benefit of doubt)
             })
-            .catch(() => router.replace('/dashboard/expired'));
-    }, [pathname]); // Fires on EVERY navigation
+            .catch(() => { /* network error — don't block user */ });
+    }, [pathname]);
 
     // Secondary client-side check (fallback using React state)
     useEffect(() => {
