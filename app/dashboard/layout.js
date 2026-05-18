@@ -235,10 +235,10 @@ export default function DashboardLayout({ children }) {
             let targetDate = null;
 
             if ((profile.plan === 'trial' || profile.plan === 'free') && profile.trial_ends_at) {
-                targetDate = new Date(profile.trial_ends_at);
+                targetDate = new Date(String(profile.trial_ends_at).replace(' ', 'T'));
             } else if (profile.plan === 'pro') {
                 if (profile.subscription_period_end) {
-                    targetDate = new Date(profile.subscription_period_end);
+                    targetDate = new Date(String(profile.subscription_period_end).replace(' ', 'T'));
                 } else {
                     setDaysRemaining('Activa');
                     setIsExpired(false);
@@ -310,13 +310,20 @@ export default function DashboardLayout({ children }) {
         const hasActivePlan = profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
             profile.subscription_status === 'trialing';
-        const isTrialStillActive = profile.trial_active && !isExpired;
+
+        // Calculate trial directly — don't rely on isExpired state which may have wrong date parse
+        const trialEndDate = profile.trial_ends_at
+            ? new Date(String(profile.trial_ends_at).replace(' ', 'T'))
+            : null;
+        const isTrialStillActive = profile.trial_active === true &&
+            trialEndDate && !isNaN(trialEndDate) && trialEndDate > new Date();
+
         const isPending = profile.plan === 'pending';
 
         if ((!hasActivePlan && !isTrialStillActive) || isPending) {
             router.replace('/dashboard/expired');
         }
-    }, [profile, isExpired, pathname, loading, router]);
+    }, [profile, pathname, loading, router]);
 
     // v4.6.2: Ensure body scroll is recovered when sidebar closes
     useEffect(() => {
@@ -379,9 +386,11 @@ export default function DashboardLayout({ children }) {
         const hasActivePlan = profile?.plan === 'pro' ||
             profile?.subscription_status === 'active' ||
             profile?.subscription_status === 'trialing';
+        const _trialEnd = profile?.trial_ends_at
+            ? new Date(String(profile.trial_ends_at).replace(' ', 'T'))
+            : null;
         const trialActive = profile?.trial_active === true &&
-            profile?.trial_ends_at &&
-            new Date(String(profile.trial_ends_at).replace(' ', 'T')) > new Date();
+            _trialEnd && !isNaN(_trialEnd) && _trialEnd > new Date();
 
         if (!profile || (!hasActivePlan && !trialActive)) {
             // Render children (the expired page) with NO sidebar, NO navigation
