@@ -88,22 +88,17 @@ export async function middleware(req) {
             return NextResponse.redirect(r);
         };
 
-        // Use SERVICE_ROLE_KEY to bypass RLS — anon key can fail for new OAuth users
+        // Use session-aware client — user can always read their own profile
         let profile = null;
         try {
-            const adminSupabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL,
-                process.env.SUPABASE_SERVICE_ROLE_KEY
-            );
-            const { data } = await adminSupabase
+            const { data } = await supabase
                 .from('users_profiles')
                 .select('plan, trial_active, trial_ends_at, subscription_status')
                 .eq('id', user.id)
                 .single();
             profile = data;
         } catch (_) {
-            // DB error → let through, layout will handle
-            return res;
+            return res; // DB error → let through
         }
 
         // No profile = not a paying user
