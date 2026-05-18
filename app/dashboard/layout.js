@@ -290,11 +290,9 @@ export default function DashboardLayout({ children }) {
         // Ignore these paths always
         if (pathname === '/dashboard/expired' || pathname === '/dashboard/settings') return;
 
-        // If profile didn't load after auth, block access — prevents OAuth bypass
-        // Give a short grace period (fetchProfile runs async after login)
+        // No profile = no access. Redirect to expired/payment page.
         if (!profile) {
-            // Don't block immediately — fetchProfile may still be running
-            // The 4s timeout in fetchProfile means if profile is null after that, block.
+            router.replace('/dashboard/expired');
             return;
         }
 

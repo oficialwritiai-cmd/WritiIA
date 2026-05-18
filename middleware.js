@@ -87,24 +87,28 @@ export async function middleware(req) {
                 .eq('id', user.id)
                 .single();
 
-            if (profile) {
-                const hasActivePlan = profile.plan === 'pro' ||
-                    profile.subscription_status === 'active' ||
-                    profile.subscription_status === 'trialing';
-
-                const trialActive = profile.trial_active &&
-                    profile.trial_ends_at &&
-                    new Date(profile.trial_ends_at) > new Date();
-
-                const isPending = profile.plan === 'pending';
-
-                if ((!hasActivePlan && !trialActive) || isPending) {
-                    const redirectUrl = req.nextUrl.clone();
-                    redirectUrl.pathname = '/dashboard/expired';
-                    return NextResponse.redirect(redirectUrl);
-                }
+            // NO profile = NO access. Period.
+            if (!profile) {
+                const redirectUrl = req.nextUrl.clone();
+                redirectUrl.pathname = '/dashboard/expired';
+                return NextResponse.redirect(redirectUrl);
             }
-            // If no profile: allow through, layout.js will create it and gate if needed
+
+            const hasActivePlan = profile.plan === 'pro' ||
+                profile.subscription_status === 'active' ||
+                profile.subscription_status === 'trialing';
+
+            const trialActive = profile.trial_active &&
+                profile.trial_ends_at &&
+                new Date(profile.trial_ends_at) > new Date();
+
+            const isPending = profile.plan === 'pending';
+
+            if ((!hasActivePlan && !trialActive) || isPending) {
+                const redirectUrl = req.nextUrl.clone();
+                redirectUrl.pathname = '/dashboard/expired';
+                return NextResponse.redirect(redirectUrl);
+            }
         } catch(e) {
             // Non-fatal: if DB fails, let layout handle the check
         }
