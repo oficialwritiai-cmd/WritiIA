@@ -36,6 +36,24 @@ export default function ScriptWizardFlow({
     const [promptIdx, setPromptIdx]   = useState(0);
     const [tipIdx, setTipIdx]         = useState(0);
     const [dir, setDir]               = useState(1); // slide direction
+    const [ideaContext, setIdeaContext] = useState(null);
+
+    // Load idea context from sessionStorage (from calendar "Crear guión" flow)
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('from_idea_context');
+            if (raw) {
+                const ctx = JSON.parse(raw);
+                if (ctx?.from_idea) {
+                    setIdeaContext(ctx);
+                    if (!topic && ctx.idea_title) setTopic(ctx.idea_title);
+                    if (ctx.platform && setPlatform) setPlatform(ctx.platform);
+                    setPhase(3);
+                }
+            }
+        } catch(e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Rotating prompts phase 2
     useEffect(() => {
@@ -97,6 +115,25 @@ export default function ScriptWizardFlow({
                             Habla o escribe — tú decides
                         </p>
                     </div>
+
+                    {/* Banner: creando desde idea del calendario */}
+                    {ideaContext && (
+                        <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '14px', padding: '16px 20px', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                                📝 Creando guión para:
+                            </div>
+                            <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: '0 0 8px', lineHeight: 1.4 }}>
+                                "{ideaContext.idea_title}"
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                {ideaContext.platform && <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '6px' }}>📱 {ideaContext.platform}</span>}
+                            </div>
+                            <button onClick={() => { try { sessionStorage.removeItem('from_idea_context'); } catch(e){} setIdeaContext(null); setPhase(1); }}
+                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>
+                                ✏️ Cambiar idea
+                            </button>
+                        </div>
+                    )}
 
                     {/* Main textarea */}
                     <div style={{ position: 'relative' }}>
@@ -189,15 +226,25 @@ export default function ScriptWizardFlow({
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', animation: 'phaseIn 0.3s ease' }}>
                     <div style={{ textAlign: 'center' }}>
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-                            {initialPhase === 3 ? '¡Historia lista! Elige el estilo' : 'Casi listo'}
+                            {ideaContext ? '¡Idea lista! Elige el estilo' : initialPhase === 3 ? '¡Historia lista! Elige el estilo' : 'Casi listo'}
                         </h2>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                            {initialPhase === 3 ? 'Tu historia ya está incluida — solo elige el gancho y plataforma' : 'Solo 3 decisiones rápidas'}
+                            {ideaContext ? 'Tu idea del calendario ya está incluida — solo elige el estilo' : initialPhase === 3 ? 'Tu historia ya está incluida — solo elige el gancho y plataforma' : 'Solo 3 decisiones rápidas'}
                         </p>
                     </div>
 
+                    {/* Banner: creando desde idea del calendario (fase 3) */}
+                    {ideaContext && (
+                        <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#a78bfa', fontWeight: 800, flexShrink: 0 }}>📝 Desde calendario</span>
+                            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                "{ideaContext.idea_title?.slice(0, 120)}{ideaContext.idea_title?.length > 120 ? '…' : ''}"
+                            </p>
+                        </div>
+                    )}
+
                     {/* Banner historia incluida (solo desde voz) */}
-                    {initialPhase === 3 && experienciaReal && (
+                    {!ideaContext && initialPhase === 3 && experienciaReal && (
                         <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                             <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 800, flexShrink: 0 }}>✓ Historia grabada</span>
                             <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

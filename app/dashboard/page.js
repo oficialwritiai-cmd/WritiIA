@@ -155,6 +155,7 @@ export default function DashboardPage() {
     const [sourceType, setSourceType] = useState(null);
     const [sourceReferenceId, setSourceReferenceId] = useState(null);
     const [scriptFeedback, setScriptFeedback] = useState({}); // { [scriptIdx]: 'like' | 'dislike' }
+    const [savedFromIdea, setSavedFromIdea] = useState(null); // { idea_title, source_idea_id, ... }
     const [activeScriptTab, setActiveScriptTab] = useState(0);
     const [planPhase, setPlanPhase] = useState(1);
     const [planAdvancedOpen, setPlanAdvancedOpen] = useState(false);
@@ -582,6 +583,23 @@ export default function DashboardPage() {
             }
         }
 
+        // From-idea context (from calendar "Crear guión" button)
+        if (params.get('from_idea') === '1') {
+            try {
+                const raw = sessionStorage.getItem('from_idea_context');
+                if (raw) {
+                    const ctx = JSON.parse(raw);
+                    if (ctx?.from_idea && ctx?.idea_title) {
+                        setGenerationMode('single');
+                        setTopic(ctx.idea_title);
+                        if (ctx.platform) setPlatform(ctx.platform);
+                        setVoiceStoryPhase(3);
+                        setWizardStep(4);
+                    }
+                }
+            } catch(e) {}
+        }
+
         if (params.get('mode') === 'single') {
             setGenerationMode('single');
             const topicParam = params.get('topic');
@@ -806,6 +824,22 @@ export default function DashboardPage() {
                 sourceReferenceId: params.get('source_reference_id') || null,
                 projectId: activeProject?.id
             };
+            // Add idea context to improve generation (from calendar flow)
+            try {
+                const raw = sessionStorage.getItem('from_idea_context');
+                if (raw) {
+                    const ideaCtx = JSON.parse(raw);
+                    if (ideaCtx?.from_idea) {
+                        requestBody.ideaContext = {
+                            idea_title: ideaCtx.idea_title,
+                            platform: ideaCtx.platform,
+                            source_idea_id: ideaCtx.source_idea_id,
+                            source_type: ideaCtx.source_type,
+                        };
+                    }
+                }
+            } catch(e) {}
+
             console.log('[Dashboard] Sending request:', requestBody);
 
             const { data: { session } } = await supabase.auth.getSession();
@@ -1550,7 +1584,7 @@ export default function DashboardPage() {
         const fullText = formatFullScript(script);
 
         try {
-            await saveToLibrary({
+            const savedItem = await saveToLibrary({
                 userId: profile.id,
                 type: 'guion',
                 platform: script.platform || platform || 'General',
@@ -1569,8 +1603,28 @@ export default function DashboardPage() {
                 projectId: activeProject?.id
             });
 
+            const savedId = savedItem?.id || null;
 
-            if (!silent) alert('Guardado en biblioteca ✓');
+            // Link script to source idea if from_idea context exists
+            try {
+                const raw = sessionStorage.getItem('from_idea_context');
+                if (raw) {
+                    const ctx = JSON.parse(raw);
+                    if (ctx?.source_idea_id && ctx?.source_type === 'calendar') {
+                        await supabase.from('calendar_events')
+                            .update({ has_script: true, script_id: savedId })
+                            .eq('id', ctx.source_idea_id);
+                    }
+                    if (!silent) setSavedFromIdea(ctx);
+                    sessionStorage.removeItem('from_idea_context');
+                } else if (!silent) {
+                    alert('Guardado en biblioteca ✓');
+                }
+            } catch(e) {
+                if (!silent) alert('Guardado en biblioteca ✓');
+            }
+
+            return savedId;
         } catch (err) {
             console.error('Error saving script:', err);
             if (!silent) throw err;
@@ -4952,6 +5006,33 @@ export default function DashboardPage() {
                     animation: 'fadeInOut 3s forwards'
                 }}>
                     <Sparkles size={16} /> ¡Texto mejorado con éxito!
+                </div>
+            )}
+
+            {/* Modal: guión guardado desde idea del calendario */}
+            {savedFromIdea && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: '#141416', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '20px', padding: '32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>✅</div>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Guión guardado</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '24px', lineHeight: 1.5 }}>
+                            "{savedFromIdea.idea_title?.slice(0, 60)}" está listo en tu biblioteca
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button onClick={() => { setSavedFromIdea(null); router.push('/dashboard/library'); }}
+                                style={{ padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                📚 Ver en Biblioteca
+                            </button>
+                            <button onClick={() => { setSavedFromIdea(null); router.push('/dashboard/calendar'); }}
+                                style={{ padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                📅 Ver en Calendario
+                            </button>
+                            <button onClick={() => { setSavedFromIdea(null); setStep(1); setScripts([]); }}
+                                style={{ padding: '12px', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '12px', color: '#a78bfa', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                Crear otro guión
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

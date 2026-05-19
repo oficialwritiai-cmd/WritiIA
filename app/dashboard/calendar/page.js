@@ -1409,6 +1409,32 @@ function CalendarContent() {
                             />
                         </div>
 
+                        {/* Crear / Ver guión desde idea */}
+                        {selectedEvent && (
+                            selectedEvent.has_script && selectedEvent.script_id ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '9px', padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, color: '#34d399', marginTop: '8px', marginBottom: '12px', cursor: 'pointer' }}
+                                    onClick={() => { setSheetItem({ id: selectedEvent.script_id, titulo: tempTitle }); }}>
+                                    ✓ Guión listo — Ver en editor
+                                </div>
+                            ) : (
+                                <button onClick={() => {
+                                    try {
+                                        sessionStorage.setItem('from_idea_context', JSON.stringify({
+                                            source_idea_id: selectedEvent.id,
+                                            source_type: 'calendar',
+                                            idea_title: tempTitle || selectedEvent.title || '',
+                                            platform: tempPlatform || selectedEvent.platform || 'Reels',
+                                            from_idea: true,
+                                        }));
+                                    } catch(e) {}
+                                    router.push('/dashboard?mode=single&from_idea=1');
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '9px', color: '#a78bfa', padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', width: '100%', justifyContent: 'center', marginTop: '8px', marginBottom: '12px' }}>
+                                    📝 Crear guión para esta idea
+                                </button>
+                            )
+                        )}
+
                         {/* Linked script preview */}
                         {loadingScript ? (
                             <div style={{ padding: 20, textAlign: 'center', color: '#555', fontSize: '0.82rem' }}>
