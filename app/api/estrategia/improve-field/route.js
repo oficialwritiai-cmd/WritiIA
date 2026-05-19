@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
-import { getServerSession, unauthorized } from '@/lib/auth-guard';
+import { unauthorized } from '@/lib/auth-guard';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 
 export const maxDuration = 60; // Allow more time for AI generation
@@ -11,7 +13,13 @@ export async function POST(req) {
         const body = await req.json();
         const { fieldKey, currentText, instruction, brainContext } = body;
 
-        const { user, supabase: sessionSupabase } = await getServerSession(req);
+        const cookieStore = cookies();
+        const sessionSupabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            { cookies: { get: (n) => cookieStore.get(n)?.value } }
+        );
+        const { data: { user } } = await sessionSupabase.auth.getUser();
         if (!user) return unauthorized();
         const verifiedUserId = user.id;
 

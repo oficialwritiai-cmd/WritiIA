@@ -987,24 +987,15 @@ export default function EstrategiaPage() {
     };
 
     const handleGenerateScriptForIdea = (idea) => {
-        // Validate idea has required data
-        if (!idea) {
-            alert('Error: No se pudo obtener la idea. Intenta de nuevo.');
-            return;
-        }
-
+        if (!idea) return;
         const titulo = idea.titulo_idea || idea.titulo || '';
         const desc = idea.descripcion || '';
         const plataforma = idea.plataforma || 'Reels';
         const objetivo = idea.objetivo || 'engagement';
+        if (!titulo) return;
 
-        if (!titulo) {
-            alert('Error: La idea no tiene título válido.');
-            return;
-        }
-
-        // Strategy Page v1.17.22 (Refined Planning & Persistence)
-        console.log('[Estrategia] Generating script for idea:', { titulo, plataforma, objetivo });
+        // Save ideas to sessionStorage before navigating so they can be restored
+        try { sessionStorage.setItem('estrategia_ideas_backup', JSON.stringify(ideas)); } catch(e) {}
 
         const params = new URLSearchParams();
         params.set('mode', 'single');
@@ -1013,7 +1004,6 @@ export default function EstrategiaPage() {
         params.set('platform', encodeURIComponent(plataforma));
         params.set('goal', encodeURIComponent(objetivo));
         params.set('source_type', 'strategy');
-
         router.push(`/dashboard?${params.toString()}`);
     };
 
@@ -1605,19 +1595,7 @@ export default function EstrategiaPage() {
                                     )}
 
                                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleGenerateScriptForIdea(idea); }}
-                                            className="btn-primary"
-                                            style={{
-                                                flex: 2,
-                                                padding: '8px 0',
-                                                fontSize: '0.7rem',
-                                                background: 'linear-gradient(135deg, #B74DFF 0%, #7000FF 100%)',
-                                                borderRadius: '8px'
-                                            }}
-                                        >
-                                            <Sparkles size={11} style={{ marginRight: '4px' }} /> Generar Guion
-                                        </button>
+                                        {/* Botón Generar Guion oculto — evita perder ideas al navegar */}
                                         <button
                                             onClick={async (e) => {
                                                 e.stopPropagation();
