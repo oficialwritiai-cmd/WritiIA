@@ -1600,7 +1600,18 @@ export default function DashboardPage() {
                     copy_post: script.copy_post || { titulo: '', descripcion_larga: '', hashtags: [] }
                 },
                 tags: ['guion', script.platform || platform, script.goal || goal].filter(Boolean),
-                projectId: activeProject?.id
+                projectId: activeProject?.id,
+                // Link to source idea if coming from calendar/strategy
+                ...(() => {
+                    try {
+                        const raw = sessionStorage.getItem('from_idea_context');
+                        if (raw) {
+                            const ctx = JSON.parse(raw);
+                            if (ctx?.source_idea_id) return { source_idea_id: ctx.source_idea_id, source_type: ctx.source_type || 'calendar' };
+                        }
+                    } catch(e) {}
+                    return {};
+                })(),
             });
 
             const savedId = savedItem?.id || null;

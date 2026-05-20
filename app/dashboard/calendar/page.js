@@ -1489,21 +1489,7 @@ function CalendarContent() {
                                     </div>
                                 </div>
                             </div>
-                        ) : selectedEvent && (
-                            <div style={{ padding: 18, background: 'rgba(124,58,237,0.06)', borderRadius: 14, border: '1px solid rgba(124,58,237,0.12)', marginBottom: 12 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#7c3aed', marginBottom: 8 }}>
-                                    <Sparkles size={15} />
-                                    <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Potencia con IA</span>
-                                </div>
-                                <p style={{ fontSize: '0.78rem', color: '#666', marginBottom: 16, lineHeight: 1.5 }}>
-                                    {selectedEvent.has_script ? 'Este contenido ya tiene un guion generado.' : 'Convierte esta idea en un guion estructurado en un clic.'}
-                                </p>
-                                <button onClick={handleCreateScript}
-                                    style={{ width: '100%', background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', border: 'none', borderRadius: 9, height: 40, color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-                                    {selectedEvent.has_script ? 'Ver Guion Completo' : 'Crear Guion con IA'}
-                                </button>
-                            </div>
-                        )}
+                        ) : null}
                     </div>
 
                     {/* Panel footer */}
