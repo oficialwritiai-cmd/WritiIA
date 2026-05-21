@@ -241,14 +241,15 @@ export default function DashboardHomePage() {
 
     const supabase = createSupabaseClient();
     const router   = useRouter();
-    const { refreshProjects, setActiveProject, activeProjectId } = useProject();
+    const { refreshProjects, setActiveProject, activeProject } = useProject();
+    const activeProjectId = activeProject?.id ?? null;
     const searchParams = useSearchParams();
 
     useEffect(() => {
         if (searchParams.get('create') === 'true') setShowModal(true);
     }, [searchParams]);
 
-    useEffect(() => { loadData(); }, []);
+    useEffect(() => { loadData(); }, [activeProjectId]);
 
     async function loadData() {
         setLoading(true);
