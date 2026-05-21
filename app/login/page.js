@@ -154,6 +154,7 @@ export default function LoginPage() {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.error || 'Error al preparar registro');
                     if (data.url) { window.location.href = data.url; return; }
+                    throw new Error('No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
                 }
 
                 const { error: signUpError, data: { user, session } } = await supabase.auth.signUp({
@@ -514,7 +515,8 @@ export default function LoginPage() {
                                 {loading ? 'Procesando…' : mode === 'login' ? 'Entrar al Dashboard' : 'Crear mi cuenta'}
                             </button>
 
-                            {/* Divider */}
+                            {/* Divider + Google — solo en login, no en register */}
+                            {mode === 'login' && <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '4px 0' }}>
                                 <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
                                 <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', fontWeight: 500 }}>o continúa con</span>
@@ -554,6 +556,7 @@ export default function LoginPage() {
                                 </svg>
                                 Continuar con Google
                             </button>
+                            </>}
 
                             {/* Footer link */}
                             <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
