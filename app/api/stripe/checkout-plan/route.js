@@ -1,21 +1,46 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-// Product ID for Writi Plan Pro (monthly subscription)
 const PLAN_PRO_PRODUCT_ID = 'prod_UCYvpgtHDqmkqX';
 
 export async function POST(request) {
     try {
-        const { userId, email } = await request.json();
+        // Autenticar desde cookies de sesión (no depende del cliente)
+        const cookieStore = cookies();
+        const supabaseSession = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            {
+                cookies: {
+                    get(name) { return cookieStore.get(name)?.value; },
+                    set() {},
+                    remove() {},
+                },
+            }
+        );
+        const { data: { user: sessionUser } } = await supabaseSession.auth.getUser();
+
+        // Aceptar userId/email del body como fallback (para compatibilidad)
+        let body = {};
+        try { body = await request.json(); } catch {}
+
+        const userId = sessionUser?.id || body.userId;
+        const email  = sessionUser?.email || body.email;
 
         if (!userId || !email) {
-            return NextResponse.json({ error: 'userId and email are required' }, { status: 400 });
+            return NextResponse.json({ error: 'No autenticado. Inicia sesión de nuevo.' }, { status: 401 });
         }
 
-        // Look up the active price for the Plan Pro product
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+
         const prices = await stripe.prices.list({
             product: PLAN_PRO_PRODUCT_ID,
             active: true,
@@ -23,16 +48,9 @@ export async function POST(request) {
         });
 
         if (!prices.data.length) {
-            console.error('No active price found for product', PLAN_PRO_PRODUCT_ID);
             return NextResponse.json({ error: 'No se encontró el precio del plan' }, { status: 500 });
         }
-
         const priceId = prices.data[0].id;
-
-        // Check if user already has a stripe_customer_id
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         const { data: profile } = await supabase
             .from('users_profiles')
@@ -42,22 +60,15 @@ export async function POST(request) {
 
         let customerId = profile?.stripe_customer_id;
 
-        // If no customer exists, create one in Stripe
         if (!customerId) {
-            const customer = await stripe.customers.create({
-                email: email,
-                metadata: { userId },
-            });
+            const customer = await stripe.customers.create({ email, metadata: { userId } });
             customerId = customer.id;
-
-            // Save stripe_customer_id to profile
             await supabase
                 .from('users_profiles')
                 .update({ stripe_customer_id: customerId })
                 .eq('id', userId);
         }
 
-        // v1.17.8: Robust origin detection for Stripe redirects
         let origin = request.headers.get('origin');
         if (!origin || origin === 'null') {
             const host = request.headers.get('host');
@@ -68,20 +79,12 @@ export async function POST(request) {
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
+            line_items: [{ price: priceId, quantity: 1 }],
             mode: 'subscription',
             success_url: `${origin}/dashboard?plan_activated=true`,
-            cancel_url: `${origin}/dashboard/settings`,
+            cancel_url: `${origin}/dashboard/expired`,
             client_reference_id: userId,
-            metadata: {
-                userId: userId,
-                type: 'plan_pro',
-            },
+            metadata: { userId, type: 'plan_pro' },
         });
 
         return NextResponse.json({ url: session.url });
