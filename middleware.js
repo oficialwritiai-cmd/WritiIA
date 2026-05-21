@@ -88,30 +88,36 @@ export async function middleware(req) {
             return NextResponse.redirect(r);
         };
 
-        // Use session-aware client — user can always read their own profile
         let profile = null;
         try {
             const { data } = await supabase
                 .from('users_profiles')
-                .select('plan, trial_active, trial_ends_at, subscription_status')
+                .select('plan, trial_active, trial_ends_at, subscription_status, access_key_used, stripe_customer_id')
                 .eq('id', user.id)
                 .single();
             profile = data;
         } catch (_) {
-            return toExpired(); // DB error → deny, never let through
+            return toExpired();
         }
 
-        // No profile = not a paying user
         if (!profile) return toExpired();
 
-        const isPending = profile.plan === 'pending';
-        if (isPending) return toExpired();
+        // Trial only valid if user used a real access key (not a DB trigger default)
+        const trialStillValid =
+            profile.trial_active === true &&
+            profile.access_key_used &&
+            profile.trial_ends_at &&
+            new Date(profile.trial_ends_at) > new Date();
+
+        // Stripe only valid if there's a real customer ID
+        const hasStripeSubscription =
+            (profile.subscription_status === 'active' || profile.subscription_status === 'trialing') &&
+            profile.stripe_customer_id;
 
         const hasActivePlan =
-            profile.plan === 'pro' ||
-            profile.subscription_status === 'active' ||
-            profile.subscription_status === 'trialing' ||
-            profile.trial_active === true; // trial_active=true = allow, period
+            (profile.plan === 'pro' && profile.stripe_customer_id)
+            || hasStripeSubscription
+            || trialStillValid;
 
         if (!hasActivePlan) return toExpired();
     }
