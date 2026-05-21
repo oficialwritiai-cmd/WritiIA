@@ -393,7 +393,7 @@ export default function DashboardLayout({ children }) {
         );
     }
 
-    // ── SECURITY WALL: Only block if profile is loaded AND no plan ──
+    // ── SECURITY WALL: bloquea si no hay plan activo ──
     if (profile && pathname && pathname !== '/dashboard/settings' && pathname !== '/dashboard/expired') {
         const hasActivePlan = profile.plan === 'pro' ||
             profile.subscription_status === 'active' ||
@@ -402,13 +402,14 @@ export default function DashboardLayout({ children }) {
             ? parseSupabaseDate(profile.trial_ends_at)
             : null;
         const trialActive = profile.trial_active === true &&
+            profile.access_key_used &&
             _trialEnd && !isNaN(_trialEnd) && _trialEnd > new Date();
 
         if (!hasActivePlan && !trialActive) {
+            // Redirigir a expired — nunca renderizar el contenido protegido
+            router.replace('/dashboard/expired');
             return (
-                <div style={{ minHeight: '100vh', background: '#0c0c0e' }}>
-                    {children}
-                </div>
+                <div style={{ minHeight: '100vh', background: '#0c0c0e' }} />
             );
         }
     }
