@@ -241,8 +241,8 @@ export default function DashboardHomePage() {
 
     const supabase = createSupabaseClient();
     const router   = useRouter();
-    const { refreshProjects, setActiveProject, activeProject } = useProject();
-    const activeProjectId = activeProject?.id ?? null;
+    const { refreshProjects, setActiveProject, activeProject: ctxProject } = useProject();
+    const activeProjectId = ctxProject?.id ?? null;
     const searchParams = useSearchParams();
 
     useEffect(() => {
