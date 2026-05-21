@@ -46,6 +46,10 @@ export default function TrialExpiredPage() {
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '32px', lineHeight: '1.6', fontSize: '1rem' }}>
                     Para usar <strong style={{ color: '#7ECECA' }}>Writi AI</strong> necesitas el Plan Pro. Sin permanencias — cancela cuando quieras.
+                    <br /><br />
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>
+                        Si iniciaste sesión con Google, <strong style={{ color: 'rgba(255,255,255,0.5)' }}>cierra sesión y regístrate con email y contraseña</strong> para poder pagar directamente.
+                    </span>
                 </p>
 
                 {payError && (
