@@ -47,12 +47,6 @@ export const viewport = {
     maximumScale: 1,
 };
 
-// EXTREME CACHE BUSTING FOR VERCEL
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
-export const runtime = 'nodejs';
-
 import SupportWidget from '@/app/components/SupportWidget';
 import { Providers } from '@/app/components/Providers';
 import PostHogProvider from '@/app/components/PostHogProvider';

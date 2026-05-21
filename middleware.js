@@ -98,7 +98,7 @@ export async function middleware(req) {
                 .single();
             profile = data;
         } catch (_) {
-            return res; // DB error → let through
+            return toExpired(); // DB error → deny, never let through
         }
 
         // No profile = not a paying user
