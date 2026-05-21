@@ -92,7 +92,7 @@ export async function middleware(req) {
         try {
             const { data } = await supabase
                 .from('users_profiles')
-                .select('plan, trial_active, trial_ends_at, subscription_status, access_key_used, stripe_customer_id')
+                .select('plan, trial_active, trial_ends_at, subscription_status')
                 .eq('id', user.id)
                 .single();
             profile = data;
@@ -102,22 +102,16 @@ export async function middleware(req) {
 
         if (!profile) return toExpired();
 
-        // Trial only valid if user used a real access key (not a DB trigger default)
         const trialStillValid =
             profile.trial_active === true &&
-            profile.access_key_used &&
             profile.trial_ends_at &&
             new Date(profile.trial_ends_at) > new Date();
 
-        // Stripe only valid if there's a real customer ID
-        const hasStripeSubscription =
-            (profile.subscription_status === 'active' || profile.subscription_status === 'trialing') &&
-            profile.stripe_customer_id;
-
         const hasActivePlan =
-            (profile.plan === 'pro' && profile.stripe_customer_id)
-            || hasStripeSubscription
-            || trialStillValid;
+            profile.plan === 'pro' ||
+            profile.subscription_status === 'active' ||
+            profile.subscription_status === 'trialing' ||
+            trialStillValid;
 
         if (!hasActivePlan) return toExpired();
     }

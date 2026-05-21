@@ -61,23 +61,17 @@ export async function GET(request) {
         return NextResponse.redirect(`${origin}/dashboard/expired`);
     }
 
-    // Profile exists — check access with strict rules:
-    // Trial only counts if the user actually used an access key (not created by a DB trigger)
+    // Profile exists — check if they have an active plan
     const trialStillValid =
         profile.trial_active === true &&
-        profile.access_key_used &&        // must have a real access key
         profile.trial_ends_at &&
         new Date(profile.trial_ends_at) > new Date();
 
-    // Stripe subscription is the only other valid path
-    const hasStripeSubscription =
-        (profile.subscription_status === 'active' || profile.subscription_status === 'trialing') &&
-        profile.stripe_customer_id;       // must have a real Stripe customer
-
     const hasActivePlan =
-        profile.plan === 'pro' && profile.stripe_customer_id  // pro requires Stripe
-        || hasStripeSubscription
-        || trialStillValid;
+        profile.plan === 'pro' ||
+        profile.subscription_status === 'active' ||
+        profile.subscription_status === 'trialing' ||
+        trialStillValid;
 
     if (!hasActivePlan) {
         return NextResponse.redirect(`${origin}/dashboard/expired`);
