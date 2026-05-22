@@ -284,11 +284,11 @@ export default function DashboardHomePage() {
             .eq('user_id', user.id)
             .gte('created_at', monthStart.toISOString());
 
-        // Stats: scripts saved (tabla library, type = 'guion')
-        const { count: scriptCount } = await supabase
-            .from('library').select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('type', 'guion');
+        // Stats: scripts saved — filtrado por proyecto activo
+        let scriptQ = supabase.from('library').select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id).eq('type', 'guion');
+        if (activeId) scriptQ = scriptQ.eq('project_id', activeId);
+        const { count: scriptCount } = await scriptQ;
 
         // Active session
         const { data: activeSessions } = await supabase
