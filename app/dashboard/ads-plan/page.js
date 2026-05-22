@@ -18,7 +18,7 @@ const AD_PLATFORMS = ['Meta Ads (Reels/Stories)', 'YouTube Ads', 'TikTok Ads', '
 
 export default function AdsPlanPage() {
     const supabase = createSupabaseClient();
-    const { activeProject } = useProject();
+    const { activeProject, projectVersion } = useProject();
 
     // Wizard state
     const [wizardStep, setWizardStep] = useState(1);
@@ -59,7 +59,7 @@ export default function AdsPlanPage() {
 
     useEffect(() => {
         loadPresets();
-    }, [activeProject]);
+    }, [projectVersion]);
 
     async function loadPresets() {
         const { data: { user } } = await supabase.auth.getUser();

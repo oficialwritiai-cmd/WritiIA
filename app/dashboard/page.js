@@ -248,7 +248,7 @@ export default function DashboardPage() {
     };
 
 
-    const { activeProject, projectBrain, refreshBrain } = useProject();
+    const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
@@ -385,7 +385,7 @@ export default function DashboardPage() {
         setLibIdeas([]); // Clear library ideas too
         setRecommendedIdeas([]); // Clear recommended ideas
         loadData();
-    }, [activeProject]);
+    }, [projectVersion]);
 
     async function loadData() {
         const { data: { user } } = await supabase.auth.getUser();
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                 fetchProactiveIdeas();
             }
         }
-    }, [generationMode, planWizardStep, activeProject]);
+    }, [generationMode, planWizardStep, projectVersion]);
 
     const fetchProactiveIdeas = async () => {
         if (!profile?.id || !activeProject) return;

@@ -102,7 +102,7 @@ export default function EstrategiaPage() {
 
     const supabase = createSupabaseClient();
 
-    const { activeProject, projectBrain } = useProject();
+    const { activeProject, projectBrain, projectVersion } = useProject();
 
     useEffect(() => {
         if (projectBrain) {
@@ -126,7 +126,7 @@ export default function EstrategiaPage() {
             }
         }
         loadInitialData();
-    }, [activeProject]);
+    }, [projectVersion]);
 
     const fetchPresets = async (userId) => {
         if (!userId) return;

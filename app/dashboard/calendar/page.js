@@ -134,7 +134,7 @@ function CalendarContent() {
         { id: 'gray',   hex: '#6b7280', name: 'Gris' },
     ];
 
-    const { activeProject } = useProject();
+    const { activeProject, projectVersion } = useProject();
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -143,7 +143,7 @@ function CalendarContent() {
         checkMobile();
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
-    }, [currentDate, activeProject]);
+    }, [currentDate, projectVersion]);
 
     useEffect(() => {
         const importId = searchParams.get('import');
