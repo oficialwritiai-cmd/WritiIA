@@ -36,7 +36,9 @@ function SessionContent() {
     }
 
     return (
-        <SessionProvider projectId={projectId}>
+        // key={projectId} fuerza re-mount completo cuando cambia el proyecto
+        // Sin esto React reutiliza el SessionProvider anterior con datos viejos
+        <SessionProvider key={projectId} projectId={projectId}>
             <SessionLayout />
         </SessionProvider>
     );
