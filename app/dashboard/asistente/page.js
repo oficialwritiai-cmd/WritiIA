@@ -279,6 +279,20 @@ export default function AsistentePage() {
         return () => clearInterval(t);
     }, []);
 
+    // Persiste el borrador del input para que no se pierda al navegar
+    useEffect(() => {
+        if (!input) return;
+        try { sessionStorage.setItem('nico_draft_input', input); } catch {}
+    }, [input]);
+
+    // Restaura el borrador al montar
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem('nico_draft_input');
+            if (saved) setInput(saved);
+        } catch {}
+    }, []);
+
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
         check();
@@ -357,6 +371,7 @@ export default function AsistentePage() {
         const userMsg = { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date().toISOString() };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages); setInput(''); setIsTyping(true);
+        try { sessionStorage.removeItem('nico_draft_input'); } catch {}
         if (textareaRef.current) textareaRef.current.style.height = '24px';
 
         try {

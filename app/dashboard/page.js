@@ -250,6 +250,35 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
+    // ── Persistencia de borrador en sessionStorage ──────────────
+    // Guarda el estado del formulario para que no se pierda al navegar
+    useEffect(() => {
+        if (!activeProject?.id) return;
+        const key = `matrix_draft_${activeProject.id}`;
+        try {
+            const draft = { topic, platform, toneBrand, hookType, generationMode, wizardStep };
+            sessionStorage.setItem(key, JSON.stringify(draft));
+        } catch {}
+    }, [topic, platform, toneBrand, hookType, generationMode, wizardStep, activeProject?.id]);
+
+    // Restaura el borrador al montar (solo si hay algo guardado)
+    useEffect(() => {
+        if (!activeProject?.id) return;
+        const key = `matrix_draft_${activeProject.id}`;
+        try {
+            const raw = sessionStorage.getItem(key);
+            if (!raw) return;
+            const draft = JSON.parse(raw);
+            if (draft.topic)          setTopic(draft.topic);
+            if (draft.platform)       setPlatform(draft.platform);
+            if (draft.toneBrand)      setToneBrand(draft.toneBrand);
+            if (draft.hookType)       setHookType(draft.hookType);
+            if (draft.generationMode) setGenerationMode(draft.generationMode);
+        } catch {}
+    // Solo al montar el proyecto activo, no en cada render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeProject?.id]);
+
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
         setIsDragging(true);
