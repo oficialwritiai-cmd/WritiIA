@@ -136,19 +136,41 @@ export async function POST(req) {
             return NextResponse.json({ error: msg }, { status: 429 });
         }
 
-        // Load Cerebro IA
+        // Load Cerebro IA — 3 niveles de fallback
         let brain = null;
         let projectName = null;
         try {
+            // 1. Brain del proyecto activo
             if (projectId) {
-                const { data: brainData } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
-                brain = brainData;
-                const { data: proj } = await supabase.from('projects').select('name').eq('id', projectId).single();
+                const { data: brainData } = await supabase
+                    .from('project_brains').select('*').eq('project_id', projectId).single();
+                brain = brainData || null;
+                const { data: proj } = await supabase
+                    .from('projects').select('name').eq('id', projectId).single();
                 projectName = proj?.name || null;
             }
+
+            // 2. Fallback: brand_brain global del usuario (tabla legacy)
             if (!brain) {
-                const { data } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
-                brain = data;
+                const { data } = await supabase
+                    .from('brand_brain').select('*').eq('user_id', user.id).single();
+                brain = data || null;
+            }
+
+            // 3. Fallback final: cualquier project_brain del usuario
+            if (!brain) {
+                const { data: userProjects } = await supabase
+                    .from('projects').select('id').eq('user_id', user.id)
+                    .or('is_deleted.eq.false,is_deleted.is.null').limit(5);
+                if (userProjects?.length) {
+                    const ids = userProjects.map(p => p.id);
+                    const { data: anyBrain } = await supabase
+                        .from('project_brains').select('*')
+                        .in('project_id', ids)
+                        .not('biography', 'is', null)
+                        .limit(1).single();
+                    brain = anyBrain || null;
+                }
             }
         } catch (dbErr) {
             console.warn('[assistant/chat] DB Warning (Brain):', dbErr.message);
