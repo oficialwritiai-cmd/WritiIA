@@ -1,7 +1,8 @@
 /* app/dashboard/estrategia/page.js */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { RestoreBanner, AutosaveIndicator } from '@/hooks/usePersistedState';
 import { useRouter } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { Plus, Target, Sparkles, Wand2, Calendar, Layout, Trash2, ArrowRight, Save, Wand, PenSquare, Download, Loader2, CheckCircle2, TrendingUp, Brain, Search, Layers, Zap, MessageSquare, ArrowLeft, Rocket, Edit3, X } from 'lucide-react';
@@ -101,8 +102,55 @@ export default function EstrategiaPage() {
     const [savingPreset, setSavingPreset] = useState(false);
 
     const supabase = createSupabaseClient();
-
     const { activeProject, projectBrain, projectVersion } = useProject();
+
+    // Persistencia del formulario y las ideas generadas
+    const EST_KEY = `estrategia_draft_${activeProject?.id || 'global'}`;
+    const [showRestore, setShowRestore] = useState(false);
+    const [autosaving, setAutosaving] = useState(false);
+
+    // Guarda en sessionStorage al cambiar form o ideas
+    useEffect(() => {
+        if (!form.objective && !ideas.length) return;
+        try {
+            sessionStorage.setItem(EST_KEY, JSON.stringify({ form, ideas, step, ts: Date.now() }));
+            setAutosaving(true);
+            const t = setTimeout(() => setAutosaving(false), 1500);
+            return () => clearTimeout(t);
+        } catch {}
+    }, [form, ideas, step]);
+
+    // Restaura al montar
+    useEffect(() => {
+        if (!activeProject?.id) return;
+        try {
+            const raw = sessionStorage.getItem(EST_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (Date.now() - (parsed.ts || 0) > 2 * 3600 * 1000) return;
+            if (parsed.form?.objective || parsed.ideas?.length) {
+                setShowRestore(true);
+            }
+        } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeProject?.id]);
+
+    const restoreDraft = useCallback(() => {
+        try {
+            const raw = sessionStorage.getItem(EST_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed.form)  setForm(parsed.form);
+            if (parsed.ideas?.length) setIdeas(parsed.ideas);
+            if (parsed.step)  setStep(parsed.step);
+        } catch {}
+        setShowRestore(false);
+    }, [EST_KEY]);
+
+    const clearDraftEst = useCallback(() => {
+        try { sessionStorage.removeItem(EST_KEY); } catch {}
+        setShowRestore(false);
+    }, [EST_KEY]);
 
     useEffect(() => {
         if (projectBrain) {
@@ -1737,8 +1785,16 @@ export default function EstrategiaPage() {
 
     return (
         <div style={{ background: '#050505', minHeight: '100vh', padding: '40px 20px' }}>
+            {showRestore && (
+                <RestoreBanner
+                    message={ideas.length ? 'Tienes ideas generadas guardadas' : 'Tienes un formulario guardado'}
+                    onRestore={restoreDraft}
+                    onDiscard={() => { clearDraftEst(); setForm({ objective:'',launch:'',objection:'',story:'',types:[],platforms:[] }); setIdeas([]); setStep(0); }}
+                />
+            )}
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 <Stepper current={step} />
+                {autosaving && <div style={{ textAlign: 'right', marginBottom: '8px' }}><AutosaveIndicator saving={autosaving} /></div>}
 
                 {step === 0 && renderDiscovery()}
                 {step === 1 && renderIdeas()}

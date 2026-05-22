@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { usePersistedState, RestoreBanner, AutosaveIndicator } from '@/hooks/usePersistedState';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
@@ -250,47 +251,55 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
-    // ── Persistencia de borrador en localStorage ──────────────────
-    // localStorage (no sessionStorage) para sobrevivir recargas de pestaña
-    const DRAFT_KEY = `matrix_draft_${activeProject?.id || 'global'}`;
+    // ── Persistencia con hook universal ──────────────────────────
+    const pid = activeProject?.id || 'global';
+    const [savedTopic,   setPersTopic,   clearTopic]   = usePersistedState(`matrix_topic_${pid}`,   '');
+    const [savedScripts, setPersScripts, clearScripts2] = usePersistedState(`matrix_scripts_${pid}`, []);
+    const [savedStep,    setPersStep,    clearStep2]    = usePersistedState(`matrix_step_${pid}`,    1);
+    const [savedPlatform,setPersPlatform,clearPlat2]    = usePersistedState(`matrix_platform_${pid}`,'Reels');
+    const [savedTone,    setPersTone,    clearTone2]    = usePersistedState(`matrix_tone_${pid}`,    'cercano');
+    const [savedHook,    setPersHook,    clearHook2]    = usePersistedState(`matrix_hook_${pid}`,    'curiosidad extrema');
 
-    // Guarda formulario + guiones generados cada vez que cambian
+    const [autosaving, setAutosaving] = useState(false);
+    const [showRestore, setShowRestore] = useState(false);
+
+    // Detecta si hay borrador al montar
     useEffect(() => {
         if (!activeProject?.id) return;
-        try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify({
-                topic, platform, toneBrand, hookType,
-                generationMode, wizardStep,
-                scripts: scripts.slice(0, 10), // máx 10 para no llenar storage
-                step,
-            }));
-        } catch {}
-    }, [topic, platform, toneBrand, hookType, generationMode, wizardStep, scripts, step, activeProject?.id]);
-
-    // Restaura al montar — recupera guiones generados y formulario
-    useEffect(() => {
-        if (!activeProject?.id) return;
-        try {
-            const raw = localStorage.getItem(DRAFT_KEY);
-            if (!raw) return;
-            const draft = JSON.parse(raw);
-            if (draft.topic)          setTopic(draft.topic);
-            if (draft.platform)       setPlatform(draft.platform);
-            if (draft.toneBrand)      setToneBrand(draft.toneBrand);
-            if (draft.hookType)       setHookType(draft.hookType);
-            if (draft.generationMode) setGenerationMode(draft.generationMode);
-            if (draft.scripts?.length) {
-                setScripts(draft.scripts);
-                setStep(draft.step || 3); // ir directo a resultados si hay guiones
-            }
-        } catch {}
+        if (savedTopic || savedScripts.length > 0) setShowRestore(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
-    // Borra el borrador cuando el usuario lo guarda o genera nuevos guiones
-    const clearDraft = () => {
-        try { localStorage.removeItem(DRAFT_KEY); } catch {}
-    };
+    // Sincroniza React state → persisted state y muestra autosave
+    useEffect(() => {
+        setPersTopic(topic);
+        setAutosaving(true);
+        const t = setTimeout(() => setAutosaving(false), 1500);
+        return () => clearTimeout(t);
+    }, [topic]);
+
+    useEffect(() => { setPersPlatform(platform); }, [platform]);
+    useEffect(() => { setPersTone(toneBrand); }, [toneBrand]);
+    useEffect(() => { setPersHook(hookType); }, [hookType]);
+    useEffect(() => { if (scripts.length) setPersScripts(scripts.slice(0, 10)); }, [scripts]);
+    useEffect(() => { setPersStep(step); }, [step]);
+
+    // Restaura al montar cuando el proyecto carga
+    useEffect(() => {
+        if (!activeProject?.id) return;
+        if (savedTopic)          setTopic(savedTopic);
+        if (savedPlatform)       setPlatform(savedPlatform);
+        if (savedTone)           setToneBrand(savedTone);
+        if (savedHook)           setHookType(savedHook);
+        if (savedScripts.length) { setScripts(savedScripts); setStep(savedStep || 3); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeProject?.id]);
+
+    const clearDraft = useCallback(() => {
+        clearTopic(); clearScripts2(); clearStep2();
+        clearPlat2(); clearTone2(); clearHook2();
+        setShowRestore(false);
+    }, [clearTopic, clearScripts2, clearStep2, clearPlat2, clearTone2, clearHook2]);
 
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
@@ -2322,6 +2331,16 @@ export default function DashboardPage() {
 
     return (
         <div className="dashboard-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+            {/* Banner restauración */}
+            {showRestore && (
+                <RestoreBanner
+                    message={savedScripts.length ? 'Tienes guiones generados guardados' : 'Tienes un borrador guardado'}
+                    onRestore={() => setShowRestore(false)}
+                    onDiscard={() => { clearDraft(); setTopic(''); setScripts([]); setStep(1); }}
+                />
+            )}
+
             {/* Header / Stats */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '-20px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>

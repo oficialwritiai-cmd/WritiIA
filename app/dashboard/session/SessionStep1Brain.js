@@ -1,6 +1,7 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from '@/app/components/SessionContext';
+import { RestoreBanner, AutosaveIndicator } from '@/hooks/usePersistedState';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
     Loader2, Sparkles, ChevronRight, ChevronLeft,
@@ -179,15 +180,54 @@ export default function SessionStep1Brain() {
     const [blockIdx, setBlockIdx] = useState(0);
     const currentBlock = BLOCKS[blockIdx];
 
-    /* Fields state — all brain + context */
-    const [fields, setFields] = useState({
-        bio:      brain?.biography     || '',
-        audience: brain?.audience      || '',
+    /* Fields state — persiste en sessionStorage para no perder ediciones */
+    const FIELDS_KEY = `cerebro_fields_${projectId || 'global'}`;
+    const [showRestore, setShowRestore] = useState(false);
+    const [autosaving, setAutosaving]   = useState(false);
+
+    const defaultFields = {
+        bio:      brain?.biography        || '',
+        audience: brain?.audience         || '',
         offer:    brain?.products_services || '',
-        style:    brain?.style_words   || '',
+        style:    brain?.style_words      || '',
         pillars:  contentPillars.join('\n'),
         faqs:     sessionFAQs.join('\n'),
+    };
+
+    const [fields, setFields] = useState(() => {
+        try {
+            const raw = sessionStorage.getItem(FIELDS_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const age = Date.now() - (parsed.ts || 0);
+                if (age < 2 * 3600 * 1000 && parsed.v?.bio !== undefined) return parsed.v;
+            }
+        } catch {}
+        return defaultFields;
     });
+
+    // Detecta si hay borrador guardado distinto del estado inicial
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(FIELDS_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            const hasDraft = parsed.v?.bio && parsed.v.bio !== (brain?.biography || '');
+            if (hasDraft) setShowRestore(true);
+        } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Guarda fields en sessionStorage en cada cambio
+    const setFieldsAndSave = (updater) => {
+        setFields(prev => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            try { sessionStorage.setItem(FIELDS_KEY, JSON.stringify({ v: next, ts: Date.now() })); } catch {}
+            setAutosaving(true);
+            setTimeout(() => setAutosaving(false), 1500);
+            return next;
+        });
+    };
 
     /* Horizon */
     const [horizon, setHorizon] = useState(timeHorizon);
@@ -231,7 +271,7 @@ export default function SessionStep1Brain() {
     }
 
     function updateField(key, val) {
-        setFields(prev => {
+        setFieldsAndSave(prev => {
             const next = { ...prev, [key]: val };
 
             if (key === 'pillars') {
@@ -289,7 +329,7 @@ export default function SessionStep1Brain() {
         }
 
         if (Object.keys(updates).length) {
-            setFields(prev => ({ ...prev, ...updates }));
+            setFieldsAndSave(prev => ({ ...prev, ...updates }));
             // Sync context
             const newPillars = (updates.pillars || fields.pillars).split('\n').map(s=>s.trim()).filter(Boolean);
             const newFaqs    = (updates.faqs || fields.faqs).split('\n').map(s=>s.trim()).filter(Boolean);
@@ -336,7 +376,7 @@ export default function SessionStep1Brain() {
             const { brain: nb } = await res.json();
             await supabase.from('project_brains').upsert({ ...nb, project_id: projectId });
             dispatch({ type: 'SET_BRAIN', payload: nb });
-            setFields(prev => ({ ...prev, bio: nb.biography||'', audience: nb.audience||'', style: nb.style_words||'' }));
+            setFieldsAndSave(prev => ({ ...prev, bio: nb.biography||'', audience: nb.audience||'', style: nb.style_words||'' }));
         } catch (e) { setGenError(e.message); }
         finally { setGenerating(false); }
     }
@@ -589,6 +629,18 @@ export default function SessionStep1Brain() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Banner restauración */}
+            {showRestore && (
+                <RestoreBanner
+                    message="Tienes cambios sin guardar en el Cerebro IA"
+                    onRestore={() => setShowRestore(false)}
+                    onDiscard={() => {
+                        try { sessionStorage.removeItem(FIELDS_KEY); } catch {}
+                        setFields(defaultFields);
+                        setShowRestore(false);
+                    }}
+                />
+            )}
             <div>
                 <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: '6px' }}>
                     🧠 Activa tu Cerebro IA
@@ -596,6 +648,7 @@ export default function SessionStep1Brain() {
                 <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 }}>
                     5 preguntas rápidas para que WRITI genere contenido en tu voz, no en la de una IA genérica.
                 </p>
+                <AutosaveIndicator saving={autosaving} />
             </div>
 
             {/* Voice option */}
