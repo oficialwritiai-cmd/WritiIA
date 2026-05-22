@@ -9,11 +9,11 @@ export default function StatsPage() {
     const [stats, setStats] = useState({ guiones: 0, ideas: 0, calendarEvents: 0, totalItems: 0 });
     const [loading, setLoading] = useState(true);
     const supabase = createSupabaseClient();
-    const { activeProject } = useProject();
+    const { activeProject, projectVersion } = useProject();
 
     useEffect(() => {
         fetchStats();
-    }, [activeProject?.id]);
+    }, [projectVersion]);
 
     async function fetchStats() {
         setLoading(true);

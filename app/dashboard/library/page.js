@@ -82,12 +82,12 @@ export default function LibraryPage() {
 
     const supabase = createSupabaseClient();
     const router   = useRouter();
-    const { activeProject } = useProject();
+    const { activeProject, projectVersion } = useProject();
 
     // ── Load on mount + visibility change ─────────────────────────────────────
     useEffect(() => {
         loadScripts();
-    }, []);
+    }, [projectVersion]);
 
     useEffect(() => {
         const onVisible = () => { if (document.visibilityState === 'visible') loadScripts(); };
@@ -105,12 +105,17 @@ export default function LibraryPage() {
             if (!user) { router.push('/login'); return; }
             setCurrentUserId(user.id);
 
-            // FIX: Query ALL library items for the user — no project_id filter
-            const { data, error: fetchError } = await supabase
+            // Filtrar por proyecto activo si hay uno seleccionado
+            let query = supabase
                 .from('library')
                 .select('*')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
+
+            const pid = activeProject?.id;
+            if (pid) query = query.eq('project_id', pid);
+
+            const { data, error: fetchError } = await query;
 
             if (fetchError) throw fetchError;
             setScripts(data || []);
