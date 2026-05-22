@@ -40,12 +40,14 @@ export async function POST(request) {
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         const endOfMonthStr = endOfMonth.toISOString().split('T')[0];
 
-        const { data: existingEvents } = await supabase
+        let eventsQuery = supabase
             .from('calendar_events')
             .select('event_date, type, platform')
             .eq('user_id', verifiedUserId)
             .gte('event_date', todayStr)
             .lte('event_date', endOfMonthStr);
+        if (projectId) eventsQuery = eventsQuery.eq('project_id', projectId);
+        const { data: existingEvents } = await eventsQuery;
 
         const eventsByDate = {};
         if (existingEvents) {

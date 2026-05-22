@@ -1834,7 +1834,9 @@ export default function DashboardPage() {
             setIsSuccessModalOpen(true);
             
             // Refresh events
-            const { data: refreshedEvents } = await supabase.from('calendar_events').select('*').eq('user_id', user.id);
+            let refreshQ = supabase.from('calendar_events').select('*').eq('user_id', user.id);
+            if (activeProject?.id) refreshQ = refreshQ.eq('project_id', activeProject.id);
+            const { data: refreshedEvents } = await refreshQ;
             setEvents(refreshedEvents || []);
         } catch (err) {
             console.error('Error in planning:', err);

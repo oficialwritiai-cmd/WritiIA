@@ -32,12 +32,14 @@ export async function POST(request) {
             brandBrain = data;
         }
 
-        const { data: existingEvents } = await supabase
+        let eventsQ = supabase
             .from('calendar_events')
             .select('event_date, type, platform')
             .eq('user_id', userId)
             .gte('event_date', todayStr)
             .lte('event_date', endOfWindowStr);
+        if (projectId) eventsQ = eventsQ.eq('project_id', projectId);
+        const { data: existingEvents } = await eventsQ;
 
         const eventsByDate = {};
         if (existingEvents) {

@@ -292,14 +292,19 @@ function CalendarContent() {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString().split('T')[0];
             const lastDay  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0).toISOString().split('T')[0];
 
-            // Solo calendar_events — los slots del Matrix siempre tienen un calendar_event asociado
-            const { data: eventData } = await supabase
+            // Filtrar SIEMPRE por project_id — cada proyecto tiene su propio calendario
+            let calQuery = supabase
                 .from('calendar_events')
                 .select('*')
                 .eq('user_id', user.id)
                 .gte('event_date', firstDay)
                 .lte('event_date', lastDay)
                 .order('event_date', { ascending: true });
+
+            if (activeProject?.id) {
+                calQuery = calQuery.eq('project_id', activeProject.id);
+            }
+            const { data: eventData } = await calQuery;
 
             setEvents(eventData || []);
             setSelectedEvents(new Set());
@@ -364,7 +369,9 @@ function CalendarContent() {
             } else {
                 if (!selectedDate) throw new Error('Selecciona una fecha primero');
                 const { error } = await supabase.from('calendar_events').insert({
-                    user_id: user.id, title: tempTitle || 'Sin título',
+                    user_id: user.id,
+                    project_id: activeProject?.id || null,
+                    title: tempTitle || 'Sin título',
                     status: tempStatus, platform: tempPlatform, notes: tempNotes,
                     event_date: selectedDate, type: 'idea', color: colorValue,
                     start_time: tempStartTime, end_time: tempEndTime,
