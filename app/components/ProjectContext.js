@@ -61,7 +61,7 @@ export function ProjectProvider({ children }) {
 
     const selectProject = async (project, userId) => {
         if (!project) return;
-        setActiveProjectState(project);
+        setActiveProjectState({ ...project }); // nueva referencia siempre → fuerza re-render
         if (typeof window !== 'undefined') {
             localStorage.setItem('writi_active_project', project.id);
         }
