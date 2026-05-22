@@ -1,28 +1,26 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
+const TTL_MS = 4 * 60 * 60 * 1000; // 4 horas
 
-/**
- * useState con persistencia en sessionStorage.
- * Sobrevive: cambio de pestaña, minimizar, bloqueo de pantalla, navegación entre rutas.
- * Se borra: cuando el usuario cierra el tab (sessionStorage) o llama a clearState().
- *
- * @param {string} key   - Clave única (ej: 'matrix_topic_f16c333c')
- * @param {*} defaultValue
- * @returns [state, setState, clearState, hasRestored]
- */
+// localStorage — sobrevive descarte de pestaña, bloqueo de pantalla, bajo rendimiento
+const store = {
+    get: (key) => { try { return localStorage.getItem(key); } catch { return null; } },
+    set: (key, val) => { try { localStorage.setItem(key, val); } catch {} },
+    del: (key) => { try { localStorage.removeItem(key); } catch {} },
+};
+
 export function usePersistedState(key, defaultValue) {
     const [hasRestored, setHasRestored] = useState(false);
 
     const [state, setState] = useState(() => {
         if (typeof window === 'undefined') return defaultValue;
         try {
-            const raw = sessionStorage.getItem(key);
+            const raw = store.get(key);
             if (!raw) return defaultValue;
             const parsed = JSON.parse(raw);
             if (Date.now() - (parsed.ts || 0) > TTL_MS) {
-                sessionStorage.removeItem(key);
+                store.del(key);
                 return defaultValue;
             }
             return parsed.v;
@@ -31,27 +29,25 @@ export function usePersistedState(key, defaultValue) {
         }
     });
 
-    // Guarda en sessionStorage en cada cambio
     const isFirst = useRef(true);
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        try {
-            sessionStorage.setItem(key, JSON.stringify({ v: state, ts: Date.now() }));
-            if (isFirst.current) {
-                isFirst.current = false;
-                // Detecta si hay valor guardado distinto del default
-                const raw = sessionStorage.getItem(key);
-                if (raw) {
+        store.set(key, JSON.stringify({ v: state, ts: Date.now() }));
+        if (isFirst.current) {
+            isFirst.current = false;
+            const raw = store.get(key);
+            if (raw) {
+                try {
                     const parsed = JSON.parse(raw);
                     const hasData = JSON.stringify(parsed.v) !== JSON.stringify(defaultValue);
                     if (hasData) setHasRestored(true);
-                }
+                } catch {}
             }
-        } catch {}
+        }
     }, [key, state]);
 
     const clearState = useCallback(() => {
-        try { sessionStorage.removeItem(key); } catch {}
+        store.del(key);
         setState(defaultValue);
         setHasRestored(false);
     }, [key, defaultValue]);
@@ -59,27 +55,16 @@ export function usePersistedState(key, defaultValue) {
     return [state, setState, clearState, hasRestored];
 }
 
-/**
- * Comprueba si hay estado guardado para una clave (sin restaurarlo).
- * Útil para mostrar el banner de restauración.
- */
 export function hasSavedState(key) {
     if (typeof window === 'undefined') return false;
     try {
-        const raw = sessionStorage.getItem(key);
+        const raw = store.get(key);
         if (!raw) return false;
         const parsed = JSON.parse(raw);
         return Date.now() - (parsed.ts || 0) < TTL_MS;
-    } catch {
-        return false;
-    }
+    } catch { return false; }
 }
 
-/**
- * Banner de restauración.
- * Muestra slide-down cuando hay estado guardado.
- * El usuario elige restaurar o empezar de nuevo.
- */
 export function RestoreBanner({ onRestore, onDiscard, message = 'Tienes trabajo guardado' }) {
     const [visible, setVisible] = useState(true);
     if (!visible) return null;
@@ -113,9 +98,6 @@ export function RestoreBanner({ onRestore, onDiscard, message = 'Tienes trabajo 
     );
 }
 
-/**
- * Indicador de autoguardado — aparece brevemente al guardar.
- */
 export function AutosaveIndicator({ saving }) {
     if (!saving) return null;
     return (

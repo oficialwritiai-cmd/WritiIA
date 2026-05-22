@@ -282,12 +282,12 @@ export default function AsistentePage() {
     // sessionStorage con TTL 2h para el borrador de input
     useEffect(() => {
         if (!input) return;
-        try { sessionStorage.setItem('nico_draft_input', JSON.stringify({ v: input, ts: Date.now() })); } catch {}
+        try { localStorage.setItem('nico_draft_input', JSON.stringify({ v: input, ts: Date.now() })); } catch {}
     }, [input]);
 
     useEffect(() => {
         try {
-            const raw = sessionStorage.getItem('nico_draft_input');
+            const raw = localStorage.getItem('nico_draft_input');
             if (!raw) return;
             const parsed = JSON.parse(raw);
             if (Date.now() - (parsed.ts || 0) < 2 * 3600 * 1000 && parsed.v) setInput(parsed.v);
@@ -372,7 +372,7 @@ export default function AsistentePage() {
         const userMsg = { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date().toISOString() };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages); setInput(''); setIsTyping(true);
-        try { sessionStorage.removeItem('nico_draft_input'); } catch {}
+        try { localStorage.removeItem('nico_draft_input'); } catch {}
         if (textareaRef.current) textareaRef.current.style.height = '24px';
 
         try {

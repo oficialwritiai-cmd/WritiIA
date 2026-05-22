@@ -1043,7 +1043,7 @@ export default function EstrategiaPage() {
         if (!titulo) return;
 
         // Save ideas to sessionStorage before navigating so they can be restored
-        try { sessionStorage.setItem('estrategia_ideas_backup', JSON.stringify(ideas)); } catch(e) {}
+        try { localStorage.setItem('estrategia_ideas_backup', JSON.stringify(ideas)); } catch(e) {}
 
         const params = new URLSearchParams();
         params.set('mode', 'single');

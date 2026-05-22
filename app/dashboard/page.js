@@ -621,13 +621,13 @@ export default function DashboardPage() {
     // Restaurar si hubo generación interrumpida (cambio de pestaña durante carga)
     useEffect(() => {
         try {
-            const wasGenerating = sessionStorage.getItem('guion_generando');
-            const backup = sessionStorage.getItem('guion_backup');
+            const wasGenerating = localStorage.getItem('guion_generando');
+            const backup = localStorage.getItem('guion_backup');
             if (wasGenerating === 'true' && backup) {
                 const bd = JSON.parse(backup);
                 const age = Date.now() - (bd.ts || 0);
                 if (age < 5 * 60 * 1000) { // menos de 5 min
-                    sessionStorage.removeItem('guion_generando');
+                    localStorage.removeItem('guion_generando');
                     if (bd.topic) setTopic(bd.topic);
                     if (bd.platform) setPlatform(bd.platform);
                     if (bd.toneBrand) setToneBrand(bd.toneBrand);
@@ -872,13 +872,13 @@ export default function DashboardPage() {
 
         // BACKUP: guardar formulario ANTES de la llamada — restaurar si falla/interrumpe
         try {
-            sessionStorage.setItem('guion_backup', JSON.stringify({
+            localStorage.setItem('guion_backup', JSON.stringify({
                 topic: effectiveTopic, platform, toneBrand, hookType,
                 goal, awareness, victory, opinion, story, specificDetails,
                 ctaIdea, experienciaReal, opinionPersonal,
                 ts: Date.now()
             }));
-            sessionStorage.setItem('guion_generando', 'true');
+            localStorage.setItem('guion_generando', 'true');
         } catch {}
 
         try {
@@ -978,15 +978,15 @@ export default function DashboardPage() {
             setScripts(finalScripts);
             setStep(3);
             // Limpiar flags de generación — éxito
-            try { sessionStorage.removeItem('guion_generando'); } catch {}
+            try { localStorage.removeItem('guion_generando'); } catch {}
             // Refresh credits balance in header
             window.dispatchEvent(new CustomEvent('refresh-profile'));
             fetchCredits(profile.id);
         } catch (err) {
             // RESTAURAR formulario si falló — topic y form siguen visibles
             try {
-                sessionStorage.removeItem('guion_generando');
-                const backup = sessionStorage.getItem('guion_backup');
+                localStorage.removeItem('guion_generando');
+                const backup = localStorage.getItem('guion_backup');
                 if (backup) {
                     const bd = JSON.parse(backup);
                     if (bd.topic && !topic)    setTopic(bd.topic);
