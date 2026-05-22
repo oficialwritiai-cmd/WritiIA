@@ -8,10 +8,10 @@ import { Loader2 } from 'lucide-react';
 
 function SessionContent() {
     const params    = useSearchParams();
-    const { activeProjectId } = useProject();
+    const { activeProject } = useProject(); // activeProjectId no existe — usar activeProject.id
 
     // Priority: ?project= query param → ProjectContext active project
-    const projectId = params.get('project') || activeProjectId;
+    const projectId = params.get('project') || activeProject?.id;
 
     if (!projectId) {
         return (

@@ -100,7 +100,7 @@ function ScriptsStatCard({ value, router }) {
                         Aun sin guiones
                     </p>
                     <button
-                        onClick={() => router.push('/dashboard/session')}
+                        onClick={() => router.push(activeProject ? `/dashboard/session?project=${activeProject.id}` : '/dashboard/session')}
                         onMouseEnter={e => { e.currentTarget.style.background = color; e.currentTarget.style.color = '#000'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = color; }}
                         style={{
@@ -543,7 +543,7 @@ export default function DashboardHomePage() {
             {/* ── ACTIVE SESSION BANNER ────────────────────────── */}
             {stats.activeSession && (
                 <div
-                    onClick={() => router.push(`/dashboard/session${activeProject ? `?project=${activeProject.id}` : ''}`)}
+                    onClick={() => activeProject ? router.push(`/dashboard/session?project=${activeProject.id}`) : router.push('/dashboard/session')}
                     style={{
                         background: 'rgba(124,58,237,0.08)',
                         border: '1px solid rgba(124,58,237,0.25)',
