@@ -251,58 +251,57 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
-    // ── Persistencia con hook universal ──────────────────────────
-    const pid = activeProject?.id || 'global';
-    const [savedTopic,   setPersTopic,   clearTopic]   = usePersistedState(`matrix_topic_${pid}`,   '');
-    const [savedScripts, setPersScripts, clearScripts2] = usePersistedState(`matrix_scripts_${pid}`, []);
-    const [savedStep,    setPersStep,    clearStep2]    = usePersistedState(`matrix_step_${pid}`,    1);
-    const [savedPlatform,setPersPlatform,clearPlat2]    = usePersistedState(`matrix_platform_${pid}`,'Reels');
-    const [savedTone,    setPersTone,    clearTone2]    = usePersistedState(`matrix_tone_${pid}`,    'cercano');
-    const [savedHook,    setPersHook,    clearHook2]    = usePersistedState(`matrix_hook_${pid}`,    'curiosidad extrema');
-
-    const [autosaving, setAutosaving] = useState(false);
+    // ── Persistencia directa — clave fija por proyecto ───────────
+    // NOTA: NO usar el hook con pid dinámico — en primer render pid='global'
+    // y se pierde la clave real. Persistencia directa con clave calculada on-demand.
+    const [autosaving, setAutosaving]   = useState(false);
     const [showRestore, setShowRestore] = useState(false);
 
-    // Detecta si hay borrador al montar
+    const getDraftKey  = () => `matrix_draft_v3_${activeProject?.id || 'global'}`;
+
+    // Guarda todo en localStorage cuando cambia topic, scripts o step
     useEffect(() => {
-        if (!activeProject?.id) return;
-        if (savedTopic || savedScripts.length > 0) setShowRestore(true);
+        if (!activeProject?.id && !topic && !scripts.length) return;
+        try {
+            localStorage.setItem(getDraftKey(), JSON.stringify({
+                topic, platform: platform || 'Reels',
+                toneBrand: toneBrand || 'cercano',
+                hookType: hookType || 'curiosidad extrema',
+                scripts: scripts.slice(0, 10),
+                step, ts: Date.now(),
+            }));
+            if (topic || scripts.length) { setAutosaving(true); setTimeout(() => setAutosaving(false), 1200); }
+        } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeProject?.id]);
+    }, [topic, scripts, step, platform, toneBrand, hookType, activeProject?.id]);
 
-    // Sincroniza React state → persisted state y muestra autosave
-    useEffect(() => {
-        setPersTopic(topic);
-        setAutosaving(true);
-        const t = setTimeout(() => setAutosaving(false), 1500);
-        return () => clearTimeout(t);
-    }, [topic]);
-
-    useEffect(() => { setPersPlatform(platform); }, [platform]);
-    useEffect(() => { setPersTone(toneBrand); }, [toneBrand]);
-    useEffect(() => { setPersHook(hookType); }, [hookType]);
-    useEffect(() => { if (scripts.length) setPersScripts(scripts.slice(0, 10)); }, [scripts]);
-    useEffect(() => { setPersStep(step); }, [step]);
-
-    // Restaura al montar cuando el proyecto carga
-    // EXCEPCIÓN: si hay URL params con topic (flujo Ideas Virales), no sobreescribir
+    // Restaura cuando el proyecto carga — PRIORIDAD sobre todo excepto URL params
     useEffect(() => {
         if (!activeProject?.id) return;
-        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const hasUrlTopic = urlParams?.get('topic') || urlParams?.get('from_idea');
-        if (!hasUrlTopic && savedTopic) setTopic(savedTopic);
-        if (savedPlatform && !hasUrlTopic) setPlatform(savedPlatform);
-        if (savedTone)           setToneBrand(savedTone);
-        if (savedHook)           setHookType(savedHook);
-        if (savedScripts.length && !hasUrlTopic) { setScripts(savedScripts); setStep(savedStep || 3); }
+        try {
+            const raw = localStorage.getItem(getDraftKey());
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (Date.now() - (d.ts || 0) > 4 * 3600 * 1000) return; // expirado
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasUrlTopic = urlParams.get('topic') || urlParams.get('from_idea');
+            if (!hasUrlTopic) {
+                if (d.topic)            setTopic(d.topic);
+                if (d.platform)         setPlatform(d.platform);
+                if (d.toneBrand)        setToneBrand(d.toneBrand);
+                if (d.hookType)         setHookType(d.hookType);
+                if (d.scripts?.length)  { setScripts(d.scripts); setStep(d.step >= 3 ? 3 : 1); }
+                if (d.scripts?.length)  setShowRestore(true);
+            }
+        } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
     const clearDraft = useCallback(() => {
-        clearTopic(); clearScripts2(); clearStep2();
-        clearPlat2(); clearTone2(); clearHook2();
+        try { localStorage.removeItem(getDraftKey()); } catch {}
         setShowRestore(false);
-    }, [clearTopic, clearScripts2, clearStep2, clearPlat2, clearTone2, clearHook2]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeProject?.id]);
 
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
@@ -431,11 +430,10 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Limpiar resultados al cambiar de proyecto — NO el topic/formulario
-        // El topic lo maneja el localStorage per-proyecto en el efecto de [activeProject?.id]
-        setScripts([]);
+        // Al cambiar de proyecto: limpiar resultados generados
+        // Los scripts se restaurarán desde localStorage en el efecto [activeProject?.id]
+        // NO limpiar topic ni scripts aquí — el restore los pondrá correctos
         setStep(1);
-        // setTopic('') ← NO limpiar: borra ideas venidas de URL params (Ideas Virales bug)
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
