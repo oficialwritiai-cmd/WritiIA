@@ -285,13 +285,16 @@ export default function DashboardPage() {
     useEffect(() => { setPersStep(step); }, [step]);
 
     // Restaura al montar cuando el proyecto carga
+    // EXCEPCIÓN: si hay URL params con topic (flujo Ideas Virales), no sobreescribir
     useEffect(() => {
         if (!activeProject?.id) return;
-        if (savedTopic)          setTopic(savedTopic);
-        if (savedPlatform)       setPlatform(savedPlatform);
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const hasUrlTopic = urlParams?.get('topic') || urlParams?.get('from_idea');
+        if (!hasUrlTopic && savedTopic) setTopic(savedTopic);
+        if (savedPlatform && !hasUrlTopic) setPlatform(savedPlatform);
         if (savedTone)           setToneBrand(savedTone);
         if (savedHook)           setHookType(savedHook);
-        if (savedScripts.length) { setScripts(savedScripts); setStep(savedStep || 3); }
+        if (savedScripts.length && !hasUrlTopic) { setScripts(savedScripts); setStep(savedStep || 3); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
@@ -428,18 +431,17 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Limpiar datos del proyecto anterior al cambiar
+        // Limpiar resultados al cambiar de proyecto — NO el topic/formulario
+        // El topic lo maneja el localStorage per-proyecto en el efecto de [activeProject?.id]
         setScripts([]);
         setStep(1);
-        setTopic('');
+        // setTopic('') ← NO limpiar: borra ideas venidas de URL params (Ideas Virales bug)
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
         setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
-        // NO limpiar el draft de localStorage aquí — lo restaurará
-        // el useEffect de [activeProject?.id] con los datos correctos
     }, [projectVersion]);
 
     async function loadData() {
@@ -615,6 +617,25 @@ export default function DashboardPage() {
         setAiCredits(creditsObj);
         return creditsObj; // Return so callers can use fresh data immediately
     }
+
+    // Restaurar si hubo generación interrumpida (cambio de pestaña durante carga)
+    useEffect(() => {
+        try {
+            const wasGenerating = sessionStorage.getItem('guion_generando');
+            const backup = sessionStorage.getItem('guion_backup');
+            if (wasGenerating === 'true' && backup) {
+                const bd = JSON.parse(backup);
+                const age = Date.now() - (bd.ts || 0);
+                if (age < 5 * 60 * 1000) { // menos de 5 min
+                    sessionStorage.removeItem('guion_generando');
+                    if (bd.topic) setTopic(bd.topic);
+                    if (bd.platform) setPlatform(bd.platform);
+                    if (bd.toneBrand) setToneBrand(bd.toneBrand);
+                    setStep(1); // volver al form con datos restaurados
+                }
+            }
+        } catch {}
+    }, []); // Solo al montar
 
     useEffect(() => {
         // Load params from URL on initial load or navigation
@@ -849,6 +870,17 @@ export default function DashboardPage() {
         setStep(2);
         setError('');
 
+        // BACKUP: guardar formulario ANTES de la llamada — restaurar si falla/interrumpe
+        try {
+            sessionStorage.setItem('guion_backup', JSON.stringify({
+                topic: effectiveTopic, platform, toneBrand, hookType,
+                goal, awareness, victory, opinion, story, specificDetails,
+                ctaIdea, experienciaReal, opinionPersonal,
+                ts: Date.now()
+            }));
+            sessionStorage.setItem('guion_generando', 'true');
+        } catch {}
+
         try {
             // Priority check for count to avoid state race conditions from strategy
             const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -945,10 +977,22 @@ export default function DashboardPage() {
 
             setScripts(finalScripts);
             setStep(3);
+            // Limpiar flags de generación — éxito
+            try { sessionStorage.removeItem('guion_generando'); } catch {}
             // Refresh credits balance in header
             window.dispatchEvent(new CustomEvent('refresh-profile'));
             fetchCredits(profile.id);
         } catch (err) {
+            // RESTAURAR formulario si falló — topic y form siguen visibles
+            try {
+                sessionStorage.removeItem('guion_generando');
+                const backup = sessionStorage.getItem('guion_backup');
+                if (backup) {
+                    const bd = JSON.parse(backup);
+                    if (bd.topic && !topic)    setTopic(bd.topic);
+                    if (bd.platform)           setPlatform(bd.platform);
+                }
+            } catch {}
             setError(err.message || 'No se pudo generar los guiones. Inténtalo de nuevo en unos minutos.');
             setStep(1);
         }
