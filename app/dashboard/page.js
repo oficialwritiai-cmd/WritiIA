@@ -1800,28 +1800,42 @@ export default function DashboardPage() {
     };
 
     const handleAISuggestion = async () => {
-        if (!planningScript || !brainProfile) return;
+        if (!planningScript) return;
+        // brainProfile puede ser null — la IA igual puede sugerir fecha con topic+platform
         setIsSuggestingAI(true);
+        setSuggestedReasoning('');
         try {
             const res = await fetch('/api/suggest-planning', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    topic: planningScript.titulo_guion || planningScript.titulo_angulo || topic,
-                    platform: planningScript.platform || platform || 'General',
-                    brainProfile,
+                    topic: planningScript.titulo_guion || planningScript.titulo_angulo || topic || 'Contenido',
+                    platform: planningScript.platform || platform || 'Reels',
+                    brainProfile: brainProfile || null,
                     existingEvents: events.map(e => e.event_date),
                     projectId: activeProject?.id
                 })
             });
+
+            if (res.status === 402) {
+                alert('Créditos insuficientes para usar esta función.');
+                return;
+            }
+
             const data = await res.json();
+
+            if (data.error) throw new Error(data.error);
+
             if (data.suggestedDate) {
                 setPlannedDate(data.suggestedDate);
-                setPlannedTime(data.suggestedTime);
-                setSuggestedReasoning(data.reasoning);
+                if (data.suggestedTime) setPlannedTime(data.suggestedTime);
+                setSuggestedReasoning(data.reasoning || '');
+            } else {
+                throw new Error('La IA no devolvió una fecha válida. Inténtalo de nuevo.');
             }
         } catch (err) {
             console.error('Error in handleAISuggestion:', err);
+            alert('No se pudo sugerir la fecha: ' + (err.message || 'Error desconocido'));
         } finally {
             setIsSuggestingAI(false);
         }
