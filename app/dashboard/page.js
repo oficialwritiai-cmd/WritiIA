@@ -251,56 +251,79 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
-    // ── Persistencia directa — clave fija por proyecto ───────────
-    // NOTA: NO usar el hook con pid dinámico — en primer render pid='global'
-    // y se pierde la clave real. Persistencia directa con clave calculada on-demand.
+    // ── Persistencia — refs para capturar valores actuales ────────
     const [autosaving, setAutosaving]   = useState(false);
     const [showRestore, setShowRestore] = useState(false);
 
-    const getDraftKey  = () => `matrix_draft_v3_${activeProject?.id || 'global'}`;
-
-    // Guarda todo en localStorage cuando cambia topic, scripts o step
+    // Refs para que visibilitychange siempre vea los valores más recientes
+    const draftRef = useRef({});
     useEffect(() => {
-        if (!activeProject?.id && !topic && !scripts.length) return;
+        draftRef.current = { topic, platform, toneBrand, hookType, scripts, step, pid: activeProject?.id };
+    });
+
+    const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
+
+    // Guarda síncronamente cuando el usuario cambia de pestaña (visibilitychange)
+    // Es el único momento garantizado antes del descarte del navegador
+    useEffect(() => {
+        const handleHide = () => {
+            const { topic: t, platform: pl, toneBrand: tb, hookType: hk,
+                    scripts: sc, step: st, pid } = draftRef.current;
+            if (!pid || (!t && !sc?.length)) return;
+            try {
+                localStorage.setItem(getDraftKey(pid), JSON.stringify({
+                    topic: t, platform: pl || 'Reels', toneBrand: tb || 'cercano',
+                    hookType: hk || 'curiosidad extrema',
+                    scripts: (sc || []).slice(0, 10), step: st, ts: Date.now(),
+                }));
+            } catch {}
+        };
+        document.addEventListener('visibilitychange', handleHide);
+        window.addEventListener('beforeunload', handleHide);
+        return () => {
+            document.removeEventListener('visibilitychange', handleHide);
+            window.removeEventListener('beforeunload', handleHide);
+        };
+    }, []); // solo montar/desmontar — usa ref para valores actuales
+
+    // También guarda cuando cambian topic o scripts (por si acaso)
+    useEffect(() => {
+        if (!activeProject?.id || (!topic && !scripts.length)) return;
         try {
-            localStorage.setItem(getDraftKey(), JSON.stringify({
-                topic, platform: platform || 'Reels',
-                toneBrand: toneBrand || 'cercano',
+            localStorage.setItem(getDraftKey(activeProject.id), JSON.stringify({
+                topic, platform: platform || 'Reels', toneBrand: toneBrand || 'cercano',
                 hookType: hookType || 'curiosidad extrema',
-                scripts: scripts.slice(0, 10),
-                step, ts: Date.now(),
+                scripts: scripts.slice(0, 10), step, ts: Date.now(),
             }));
-            if (topic || scripts.length) { setAutosaving(true); setTimeout(() => setAutosaving(false), 1200); }
+            setAutosaving(true);
+            setTimeout(() => setAutosaving(false), 1200);
         } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [topic, scripts, step, platform, toneBrand, hookType, activeProject?.id]);
+    }, [topic, scripts, step, activeProject?.id]);
 
-    // Restaura cuando el proyecto carga — PRIORIDAD sobre todo excepto URL params
+    // Restaura cuando el proyecto carga — URL params tienen prioridad
     useEffect(() => {
         if (!activeProject?.id) return;
         try {
-            const raw = localStorage.getItem(getDraftKey());
+            const raw = localStorage.getItem(getDraftKey(activeProject.id));
             if (!raw) return;
             const d = JSON.parse(raw);
-            if (Date.now() - (d.ts || 0) > 4 * 3600 * 1000) return; // expirado
+            if (Date.now() - (d.ts || 0) > 4 * 3600 * 1000) return;
             const urlParams = new URLSearchParams(window.location.search);
             const hasUrlTopic = urlParams.get('topic') || urlParams.get('from_idea');
-            if (!hasUrlTopic) {
-                if (d.topic)            setTopic(d.topic);
-                if (d.platform)         setPlatform(d.platform);
-                if (d.toneBrand)        setToneBrand(d.toneBrand);
-                if (d.hookType)         setHookType(d.hookType);
-                if (d.scripts?.length)  { setScripts(d.scripts); setStep(d.step >= 3 ? 3 : 1); }
-                if (d.scripts?.length)  setShowRestore(true);
-            }
+            if (hasUrlTopic) return; // URL params ganan
+            if (d.topic)           setTopic(d.topic);
+            if (d.platform)        setPlatform(d.platform);
+            if (d.toneBrand)       setToneBrand(d.toneBrand);
+            if (d.hookType)        setHookType(d.hookType);
+            if (d.scripts?.length) { setScripts(d.scripts); setStep(d.step >= 3 ? 3 : 1); setShowRestore(true); }
         } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
     const clearDraft = useCallback(() => {
-        try { localStorage.removeItem(getDraftKey()); } catch {}
+        if (activeProject?.id) try { localStorage.removeItem(getDraftKey(activeProject.id)); } catch {}
         setShowRestore(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
     // -- Drag Selection Logic --
