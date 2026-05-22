@@ -138,13 +138,28 @@ function TypingIndicator() {
     );
 }
 
+// ── Extrae ideas con 💡 del texto de respuesta ────────────────
+function extractIdeas(content) {
+    const lines = content.split('\n');
+    const ideas = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('💡')) {
+            const title = line.replace(/^💡\s*/, '').replace(/\*\*/g, '').trim();
+            if (title.length > 3) ideas.push(title);
+        }
+    }
+    return ideas;
+}
+
 // ── Message Bubble ─────────────────────────────────────────────
-function MessageBubble({ msg, onSaveIdea, onSaveScript }) {
+function MessageBubble({ msg, onSaveIdea, onSaveScript, onGenerateScript }) {
     const isUser = msg.role === 'user';
     const [saved, setSaved] = useState({});
     const [copied, setCopied] = useState(false);
 
-    const isScript = /gancho|desarrollo|cta|guion|hook/i.test(msg.content);
+    const isScript = /## GANCHO|## DESARROLLO|## CTA/i.test(msg.content);
+    const ideas = !isUser ? extractIdeas(msg.content) : [];
 
     const handleCopy = () => {
         navigator.clipboard.writeText(msg.content);
@@ -160,8 +175,7 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript }) {
                     borderRadius: '18px 18px 4px 18px',
                     background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(109,40,217,0.15))',
                     border: '1px solid rgba(124,58,237,0.25)',
-                    color: '#f1f1f3', fontSize: '0.93rem', lineHeight: 1.65,
-                    wordBreak: 'break-word',
+                    color: '#f1f1f3', fontSize: '0.93rem', lineHeight: 1.65, wordBreak: 'break-word',
                 }}>
                     {msg.content}
                 </div>
@@ -169,30 +183,34 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript }) {
         );
     }
 
-    // AI message — full width card style
     return (
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', animation: 'msgFadeIn 0.35s ease-out', width: '100%' }}>
-            {/* Avatar */}
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #0ea5e9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
                 <span style={{ color: '#fff', fontSize: '13px', fontWeight: 800 }}>N</span>
             </div>
-
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a78bfa', marginBottom: '8px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Nico</div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', marginBottom: '8px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Nico</div>
 
-                {/* Bubble */}
-                <div style={{
-                    padding: '18px 22px',
-                    background: '#111118',
-                    border: '1px solid rgba(124,58,237,0.15)',
-                    borderRadius: '4px 16px 16px 16px',
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-                    wordBreak: 'break-word',
-                }}>
+                <div style={{ padding: '18px 22px', background: '#111118', border: '1px solid rgba(124,58,237,0.15)', borderRadius: '4px 16px 16px 16px', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', wordBreak: 'break-word' }}>
                     <MarkdownRenderer content={msg.content} />
                 </div>
 
-                {/* Actions */}
+                {/* Botón "Generar guión" por cada idea detectada */}
+                {ideas.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                        {ideas.map((idea, i) => (
+                            <button key={i} onClick={() => onGenerateScript(idea)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '10px', color: '#a78bfa', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', transition: '0.2s', textAlign: 'left' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.2)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.4)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.12)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.25)'; }}>
+                                <span>⚡</span>
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Generar guión: {idea.length > 50 ? idea.slice(0, 50) + '...' : idea}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Acciones globales */}
                 <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                     <button onClick={handleCopy}
                         style={{ fontSize: '0.72rem', padding: '4px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: copied ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.03)', color: copied ? '#34d399' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: '0.2s' }}>
@@ -205,11 +223,11 @@ function MessageBubble({ msg, onSaveIdea, onSaveScript }) {
                             <PenLine size={10} /> {saved.script ? 'Guion guardado' : 'Guardar guion'}
                         </button>
                     )}
-                    {!isScript && (
+                    {!isScript && ideas.length === 0 && (
                         <button onClick={() => { if (!saved.idea) { onSaveIdea(); setSaved(p => ({ ...p, idea: true })); } }}
                             disabled={!!saved.idea}
                             style={{ fontSize: '0.72rem', padding: '4px 12px', borderRadius: '20px', border: `1px solid ${saved.idea ? 'rgba(126,206,202,0.3)' : 'rgba(255,255,255,0.08)'}`, background: saved.idea ? 'rgba(126,206,202,0.08)' : 'rgba(255,255,255,0.03)', color: saved.idea ? '#7ECECA' : 'rgba(255,255,255,0.4)', cursor: saved.idea ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: '0.2s' }}>
-                            <Save size={10} /> {saved.idea ? 'Idea guardada' : 'Guardar idea'}
+                            <Save size={10} /> {saved.idea ? 'Guardado' : 'Guardar'}
                         </button>
                     )}
                 </div>
@@ -365,6 +383,18 @@ export default function AsistentePage() {
         } finally {
             setIsTyping(false);
         }
+    };
+
+    const handleGenerateScript = (ideaTitle) => {
+        try {
+            sessionStorage.setItem('from_idea_context', JSON.stringify({
+                from_idea: true,
+                from_nico: true,
+                idea_title: ideaTitle,
+                platform: activeProject?.platform || 'Reels',
+            }));
+        } catch {}
+        router.push('/dashboard?from_idea=1');
     };
 
     const handleSaveToLibrary = async (content, type = 'idea') => {
@@ -540,7 +570,8 @@ export default function AsistentePage() {
                         {messages.map((msg, idx) => (
                             <MessageBubble key={msg.id || idx} msg={msg}
                                 onSaveIdea={() => handleSaveToLibrary(msg.content, 'idea')}
-                                onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')} />
+                                onSaveScript={() => handleSaveToLibrary(msg.content, 'guion')}
+                                onGenerateScript={handleGenerateScript} />
                         ))}
                         {isTyping && <TypingIndicator />}
                         <div ref={messagesEndRef} />
