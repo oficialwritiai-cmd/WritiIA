@@ -250,23 +250,28 @@ export default function DashboardPage() {
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
 
-    // ── Persistencia de borrador en sessionStorage ──────────────
-    // Guarda el estado del formulario para que no se pierda al navegar
-    useEffect(() => {
-        if (!activeProject?.id) return;
-        const key = `matrix_draft_${activeProject.id}`;
-        try {
-            const draft = { topic, platform, toneBrand, hookType, generationMode, wizardStep };
-            sessionStorage.setItem(key, JSON.stringify(draft));
-        } catch {}
-    }, [topic, platform, toneBrand, hookType, generationMode, wizardStep, activeProject?.id]);
+    // ── Persistencia de borrador en localStorage ──────────────────
+    // localStorage (no sessionStorage) para sobrevivir recargas de pestaña
+    const DRAFT_KEY = `matrix_draft_${activeProject?.id || 'global'}`;
 
-    // Restaura el borrador al montar (solo si hay algo guardado)
+    // Guarda formulario + guiones generados cada vez que cambian
     useEffect(() => {
         if (!activeProject?.id) return;
-        const key = `matrix_draft_${activeProject.id}`;
         try {
-            const raw = sessionStorage.getItem(key);
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                topic, platform, toneBrand, hookType,
+                generationMode, wizardStep,
+                scripts: scripts.slice(0, 10), // máx 10 para no llenar storage
+                step,
+            }));
+        } catch {}
+    }, [topic, platform, toneBrand, hookType, generationMode, wizardStep, scripts, step, activeProject?.id]);
+
+    // Restaura al montar — recupera guiones generados y formulario
+    useEffect(() => {
+        if (!activeProject?.id) return;
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
             if (!raw) return;
             const draft = JSON.parse(raw);
             if (draft.topic)          setTopic(draft.topic);
@@ -274,10 +279,18 @@ export default function DashboardPage() {
             if (draft.toneBrand)      setToneBrand(draft.toneBrand);
             if (draft.hookType)       setHookType(draft.hookType);
             if (draft.generationMode) setGenerationMode(draft.generationMode);
+            if (draft.scripts?.length) {
+                setScripts(draft.scripts);
+                setStep(draft.step || 3); // ir directo a resultados si hay guiones
+            }
         } catch {}
-    // Solo al montar el proyecto activo, no en cada render
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
+
+    // Borra el borrador cuando el usuario lo guarda o genera nuevos guiones
+    const clearDraft = () => {
+        try { localStorage.removeItem(DRAFT_KEY); } catch {}
+    };
 
     // -- Drag Selection Logic --
     const handleSlotMouseDown = (id) => {
@@ -406,16 +419,18 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Clear ALL project-specific data when switching project
+        // Limpiar datos del proyecto anterior al cambiar
         setScripts([]);
         setStep(1);
         setTopic('');
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
-        setPlanSlots([]);      // ← faltaba: slots del plan del proyecto anterior
+        setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
+        // NO limpiar el draft de localStorage aquí — lo restaurará
+        // el useEffect de [activeProject?.id] con los datos correctos
     }, [projectVersion]);
 
     async function loadData() {
