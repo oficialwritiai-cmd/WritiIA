@@ -68,6 +68,24 @@ ${brainContext}
 ${learningBlock}
 ${modeGuide[mode] || ''}
 
+FORMATO DE RESPUESTA — OBLIGATORIO:
+- Usa markdown siempre: **negrita**, ## títulos, listas con ·
+- Nunca uses *** triple asterisco ni _subrayado_
+- Separa secciones con ---
+- Cuando generes un guión usa EXACTAMENTE:
+  ## GANCHO
+  [texto del gancho]
+  ## DESARROLLO
+  · 01 · [primer punto]
+  · 02 · [segundo punto]
+  · 03 · [tercer punto]
+  ## CTA
+  [llamada a la acción]
+- Nunca empieces con "Claro", "Por supuesto", "¡Perfecto!", "Entendido"
+- Respuestas directas, sin relleno introductorio
+- Máximo 2 preguntas de seguimiento, nunca al principio
+- Listas siempre con · no con -
+
 IDIOMA: Responde siempre en el idioma del usuario.`;
 }
 
