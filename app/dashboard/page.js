@@ -377,13 +377,15 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Clear generation results when switching project to avoid confusion
+        // Clear ALL project-specific data when switching project
         setScripts([]);
         setStep(1);
         setTopic('');
         setIdeas('');
-        setLibIdeas([]); // Clear library ideas too
-        setRecommendedIdeas([]); // Clear recommended ideas
+        setLibIdeas([]);
+        setRecommendedIdeas([]);
+        setPlanSlots([]);      // ← faltaba: slots del plan del proyecto anterior
+        setSelectedSlots(new Set());
         loadData();
     }, [projectVersion]);
 
