@@ -415,38 +415,27 @@ export default function AsistentePage() {
             @keyframes typingBounce { 0%,100% { transform:translateY(0); opacity:0.4; } 50% { transform:translateY(-5px); opacity:1; } }
             @keyframes nicoGlow { 0%,100% { box-shadow:0 0 10px rgba(124,58,237,0.4); } 50% { box-shadow:0 0 22px rgba(14,165,233,0.5); } }
             @keyframes nicoPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.8); } }
-            .chat-sidebar {
-                position: fixed; top: 0; bottom: 0; z-index: 900;
-                width: 280px; background: #111118;
-                border-right: 1px solid rgba(255,255,255,0.06);
-                display: flex; flex-direction: column;
-                transition: transform 0.3s ease;
-                transform: translateX(-100%);
-            }
-            .chat-sidebar.open { transform: translateX(72px); box-shadow: 8px 0 40px rgba(0,0,0,0.5); }
-            @media (max-width: 768px) {
-                .chat-sidebar.open { transform: translateX(0) !important; }
-            }
             .sidebar-item { padding:10px 14px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:10px; color:#666; font-size:0.87rem; transition:0.15s; margin:2px 10px; }
             .sidebar-item:hover { background:rgba(255,255,255,0.05); color:#fff; }
             .sidebar-item.active { background:rgba(124,58,237,0.12); color:#a78bfa; border:1px solid rgba(124,58,237,0.2); }
-            .action-pill:hover { border-color:rgba(167,139,250,0.4) !important; color:rgba(255,255,255,0.8) !important; }
             .send-btn:hover { background:#fff !important; color:#000 !important; }
             .welcome-card:hover { background:rgba(124,58,237,0.08) !important; border-color:rgba(124,58,237,0.25) !important; transform:translateY(-2px); }
         `}</style>
 
-        {/* Wrapper — renders WITHIN dashboard content area, no fixed positioning */}
-        <div style={{ position: 'relative', height: 'calc(100vh - 72px)', display: 'flex', overflow: 'hidden', background: '#070709' }}>
+        {/* Wrapper: height:100% fills whatever the dashboard gives, flex row */}
+        <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden', background: '#070709', position: 'relative' }}>
 
-            {/* Sidebar overlay (mobile) */}
-            {isSidebarOpen && (
-                <div onClick={() => setIsSidebarOpen(false)}
-                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 899, backdropFilter: 'blur(3px)' }} />
-            )}
-
-            {/* Chat History Sidebar */}
-            <div className={`chat-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <div style={{ padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'hidden' }}>
+            {/* Chat History Sidebar — inline flex column, width transitions, NO position:fixed */}
+            <div style={{
+                width: isSidebarOpen ? '260px' : '0px',
+                minWidth: isSidebarOpen ? '260px' : '0px',
+                overflow: 'hidden',
+                transition: 'width 0.28s ease, min-width 0.28s ease',
+                background: '#0e0e16',
+                borderRight: isSidebarOpen ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                display: 'flex', flexDirection: 'column', flexShrink: 0,
+            }}>
+                <div style={{ padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'hidden', width: '260px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>Historial</span>
                         <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}><X size={16} /></button>
