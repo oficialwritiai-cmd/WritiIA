@@ -6,14 +6,14 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const isDev = process.env.NODE_ENV === 'development';
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://player.vimeo.com;
+    script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://player.vimeo.com https://www.youtube.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' data: https://fonts.gstatic.com;
     img-src 'self' blob: data: https:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    frame-src https://player.vimeo.com https://vimeo.com;
+    frame-src https://player.vimeo.com https://vimeo.com https://www.youtube.com https://youtube.com;
     frame-ancestors 'none';
     connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.stripe.com https://*.sentry.io https://app.posthog.com https://eu.posthog.com https://fresnel.vimeocdn.com https://*.vimeocdn.com https://vimeo.com;
     media-src 'self' https://d8j0ntlcm91z4.cloudfront.net https://*.vimeocdn.com https://fresnel.vimeocdn.com;

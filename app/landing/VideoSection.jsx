@@ -1,8 +1,7 @@
 'use client';
 import Reveal from "./Reveal";
 
-const VIMEO_URL =
-    'https://player.vimeo.com/video/1195009713?badge=0&autopause=0&player_id=0&app_id=58479&title=0&byline=0&portrait=0';
+const VIDEO_URL = 'https://www.youtube.com/embed/C6MJRgDxbIY?rel=0&modestbranding=1';
 
 const VideoSection = () => {
     return (
@@ -37,7 +36,7 @@ const VideoSection = () => {
                         }}
                     >
                         <iframe
-                            src={VIMEO_URL}
+                            src={VIDEO_URL}
                             frameBorder="0"
                             allow="autoplay; fullscreen; picture-in-picture"
                             allowFullScreen
