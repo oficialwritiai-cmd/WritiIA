@@ -34,8 +34,13 @@ const Footer = () => {
           ))}
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-5 lg:px-8 mt-10 pt-6 border-t border-white/[0.05] flex items-center justify-between text-xs text-white/35">
+      <div className="mx-auto max-w-7xl px-5 lg:px-8 mt-10 pt-6 border-t border-white/[0.05] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/35">
         <span>© {new Date().getFullYear()} WRITI.AI</span>
+        <div className="flex items-center gap-5">
+          <a href="/privacidad" className="hover:text-white/70 transition-colors">Privacidad</a>
+          <a href="/terminos" className="hover:text-white/70 transition-colors">Términos</a>
+          <a href="/cookies" className="hover:text-white/70 transition-colors">Cookies</a>
+        </div>
         <span>{t("footer.rights")}</span>
       </div>
     </footer>
