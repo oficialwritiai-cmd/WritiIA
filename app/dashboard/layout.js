@@ -17,6 +17,7 @@ import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import SuccessModal from '@/app/components/SuccessModal';
 import OnboardingVideoModal from '@/app/components/OnboardingVideoModal';
+import WelcomeCinematic from '@/app/components/WelcomeCinematic';
 import { useProject } from '@/app/components/ProjectContext';
 import ProjectSelector from '@/app/components/ProjectSelector';
 import { Bell, Search, LogOut as LogOutIcon, User, Settings as SettingsIcon, X as CloseIcon } from 'lucide-react';
@@ -65,6 +66,7 @@ export default function DashboardLayout({ children }) {
     const [purchasedCredits, setPurchasedCredits] = useState(0);
     const [sidebarHovered, setSidebarHovered] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showCinematic, setShowCinematic] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -400,6 +402,8 @@ export default function DashboardLayout({ children }) {
                 .eq('id', user.id);
             setProfile(prev => prev ? { ...prev, has_seen_onboarding: true } : prev);
         }
+        // Launch cinematic welcome sequence (first login only)
+        setShowCinematic(true);
     }
 
     async function handleLogout() {
@@ -1325,6 +1329,13 @@ export default function DashboardLayout({ children }) {
                 <OnboardingVideoModal
                     onClose={() => setShowOnboarding(false)}
                     onConfirm={handleOnboardingConfirm}
+                />
+            )}
+
+            {showCinematic && (
+                <WelcomeCinematic
+                    onComplete={() => setShowCinematic(false)}
+                    userName={profile?.name || ''}
                 />
             )}
 
