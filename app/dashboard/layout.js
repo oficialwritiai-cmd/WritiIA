@@ -207,6 +207,9 @@ export default function DashboardLayout({ children }) {
             } else if (urlParams.get('open_credits')) {
                 setIsCreditsModalOpen(true);
                 router.replace('/dashboard/home');
+            } else if (urlParams.get('tutorial')) {
+                setShowOnboarding(true);
+                router.replace('/dashboard/home');
             }
         }
 
