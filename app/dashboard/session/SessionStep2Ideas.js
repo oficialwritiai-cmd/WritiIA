@@ -229,7 +229,11 @@ export default function SessionStep2Ideas() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', gap: '16px', flexWrap: 'wrap' }}>
                 <div>
                     <h2 style={{ fontSize: '1.65rem', fontWeight: 900, marginBottom: '6px' }}>💡 Elige tus ideas</h2>
-                    <p style={{ color: '#888' }}>Selecciona entre 2 y 8 ideas para guionizar.</p>
+                    <p style={{ color: '#888' }}>
+                        {timeHorizon === '2weeks'
+                            ? 'Selecciona entre 6 y 8 ideas para guionizar (2 semanas de contenido).'
+                            : 'Selecciona entre 12 y 16 ideas para guionizar (1 mes de contenido).'}
+                    </p>
                 </div>
                 <button onClick={handleGenerateMore} disabled={extraCount >= 2 || loading} style={{
                     display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -259,7 +263,7 @@ export default function SessionStep2Ideas() {
                     ? 'Haz clic en las ideas que quieras grabar — mínimo 2.'
                     : selected === 1
                         ? '1 seleccionada — necesitas al menos 2 para continuar.'
-                        : `${selected} seleccionadas ${selected > 8 ? '(máximo 8 recomendado)' : '— ¡listas para guionizar!'}`
+                        : `${selected} seleccionadas ${selected > (timeHorizon === '2weeks' ? 8 : 16) ? '(más del recomendado)' : '— ¡listas para guionizar!'}`
                 }
             </div>
 

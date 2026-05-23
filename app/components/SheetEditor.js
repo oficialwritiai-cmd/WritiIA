@@ -20,14 +20,14 @@ function Block({ icon, label, color, accent, children, collapsible = false, defa
             border: `1px solid ${accent}22`,
             background: `linear-gradient(135deg, ${accent}08 0%, transparent 100%)`,
             overflow: 'hidden',
-            marginBottom: '20px',
+            marginBottom: '28px',
             transition: 'border-color 0.2s',
         }}>
             <div
                 onClick={collapsible ? () => setOpen(o => !o) : undefined}
                 style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '14px 20px 12px',
+                    padding: '16px 24px 14px',
                     borderBottom: open ? `1px solid ${accent}18` : 'none',
                     cursor: collapsible ? 'pointer' : 'default',
                     userSelect: 'none',
@@ -53,7 +53,7 @@ function Block({ icon, label, color, accent, children, collapsible = false, defa
                 )}
             </div>
             {open && (
-                <div style={{ padding: '16px 20px 20px' }}>
+                <div style={{ padding: '24px 28px 28px' }}>
                     {children}
                 </div>
             )}
@@ -79,10 +79,10 @@ function InlineArea({ value, onChange, placeholder, rows = 4, mono = false, larg
             rows={rows}
             style={{
                 width: '100%', background: 'transparent', border: 'none',
-                color: large ? '#ffffff' : 'rgba(255,255,255,0.85)',
+                color: large ? '#ffffff' : 'rgba(255,255,255,0.88)',
                 outline: 'none', fontFamily: mono ? "'JetBrains Mono', 'Fira Code', monospace" : "'Inter', sans-serif",
-                fontSize: large ? '1rem' : '0.92rem',
-                lineHeight: large ? 1.7 : 1.75,
+                fontSize: large ? '1.08rem' : '0.97rem',
+                lineHeight: large ? 2.0 : 2.0,
                 resize: 'none', boxSizing: 'border-box',
                 fontWeight: large ? 500 : 400,
                 letterSpacing: large ? '-0.01em' : 'normal',
@@ -536,7 +536,7 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                                 color: '#ffffff', fontFamily: "'Inter', sans-serif",
                                 fontSize: '2.6rem', fontWeight: 900, lineHeight: 1.15,
                                 letterSpacing: '-0.04em', resize: 'none', boxSizing: 'border-box',
-                                marginBottom: '32px',
+                                marginBottom: '44px',
                             }}
                         />
 

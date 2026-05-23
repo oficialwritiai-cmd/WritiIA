@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
-import { sendPlanActivationEmail, sendCreditsEmail } from '@/lib/email';
+import { sendPlanActivationEmail, sendCreditsEmail, sendRenewalEmail, sendCancellationEmail } from '@/lib/email';
 import { PRO_MONTHLY_CREDITS, TRIAL_INITIAL_CREDITS } from '@/lib/credits';
 
 export const dynamic = 'force-dynamic';
@@ -13,43 +13,7 @@ function getSupabase() {
     );
 }
 
-// Adding GET for easy testing/confirmation that route is live
-export async function GET(req) {
-    const supabase = getSupabase();
-    const url = req.url;
-    const userAgent = req.headers.get('user-agent');
-    
-    let logResult = 'NOT_ATTEMPTED';
-    let logError = null;
-
-    try {
-        const { error } = await supabase.from('webhook_logs').insert({
-            event_type: 'GET_DIAGNOSTIC',
-            payload: { url, userAgent, note: 'Testing DB connectivity from Vercel' }
-        });
-        if (error) {
-            logResult = 'ERROR';
-            logError = error.message;
-        } else {
-            logResult = 'SUCCESS';
-        }
-    } catch (e) {
-        logResult = 'EXCEPTION';
-        logError = e.message;
-    }
-
-    return NextResponse.json({ 
-        status: 'Online', 
-        service: 'Stripe Webhook',
-        db_log: logResult,
-        db_error: logError,
-        env_check: {
-            url_present: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-            key_present: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            webhook_secret_present: !!process.env.STRIPE_WEBHOOK_SECRET,
-        }
-    });
-}
+// GET removed — diagnostic endpoint exposed env var status publicly
 
 export async function POST(req) {
     const payload = await req.text();
@@ -401,6 +365,20 @@ async function handleSubscriptionDeleted(subscription, supabase) {
     }
 
     console.log(`[Webhook] ✅ Plan deactivated for user ${profile.id}`);
+
+    // Send cancellation email
+    const { data: userProfile } = await supabase
+        .from('users_profiles')
+        .select('email, name, subscription_period_end')
+        .eq('id', profile.id)
+        .single();
+    if (userProfile?.email) {
+        await sendCancellationEmail(
+            userProfile.email,
+            userProfile.name,
+            userProfile.subscription_period_end
+        ).catch(e => console.error('[Webhook] cancel email error:', e.message));
+    }
 }
 
 // ─────────────────────────────────────────────
@@ -499,6 +477,18 @@ async function handleInvoicePaid(invoice, supabase) {
     });
 
     console.log(`[Webhook] ✅ Monthly credits reset to ${PRO_MONTHLY_CREDITS} for user ${profile.id}`);
+
+    // Send renewal confirmation email
+    const { data: userProfile } = await supabase
+        .from('users_profiles')
+        .select('email, name')
+        .eq('id', profile.id)
+        .single();
+    if (userProfile?.email) {
+        await sendRenewalEmail(userProfile.email, userProfile.name, periodEnd).catch(e =>
+            console.error('[Webhook] invoice.paid: renewal email error:', e.message)
+        );
+    }
 }
 
 // ─────────────────────────────────────────────

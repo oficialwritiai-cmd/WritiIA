@@ -1,26 +1,29 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { generateIdeasWithHaiku } from '@/lib/anthropic'; // We can use this or create a generic one. improveBlockWithHaiku also works but generateIdeasWithHaiku gives more token output room.
-import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
+import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { chargeCredits } from '@/lib/credits';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 export const maxDuration = 60;
 
 export async function POST(req) {
     try {
-        const body = await req.json();
-        const { answers, userId, projectId } = body;
+        // SECURITY: Verify JWT session — never trust userId from body
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
 
-        if (!answers || !userId || !projectId) {
-            return NextResponse.json({ error: 'Faltan datos requeridos (answers, userId, projectId).' }, { status: 400 });
+        const body = await req.json();
+        const { answers, projectId } = body;
+
+        if (!answers || !projectId) {
+            return NextResponse.json({ error: 'Faltan datos requeridos (answers, projectId).' }, { status: 400 });
         }
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        // SECURITY: Verify the user owns this project
+        const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+        if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
 
-        // Charge 2 credits for a full brain generation
-        const creditResult = await chargeCredits(supabase, userId, 2, 'generate_brain', projectId);
+        // Charge 2 credits — use verified user.id, not body
+        const creditResult = await chargeCredits(supabase, user.id, 2, 'generate_brain', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
