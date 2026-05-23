@@ -540,6 +540,48 @@ export default function DashboardHomePage() {
                 </div>
             </div>
 
+            {/* ── TUTORIAL CARD (permanente) ───────────────────── */}
+            <div
+                onClick={() => window.dispatchEvent(new CustomEvent('open-tutorial'))}
+                style={{
+                    background: 'rgba(124,58,237,0.07)',
+                    border: '1px solid rgba(124,58,237,0.2)',
+                    borderRadius: '16px', padding: '18px 24px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '16px', flexWrap: 'wrap', marginBottom: '24px',
+                    cursor: 'pointer', transition: 'background 0.2s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(124,58,237,0.07)'}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{
+                        width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+                        background: 'rgba(124,58,237,0.18)', border: '1px solid rgba(124,58,237,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <PlayCircle size={22} color="#a78bfa" strokeWidth={1.8} />
+                    </div>
+                    <div>
+                        <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>
+                            Tutorial de inicio
+                        </p>
+                        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.42)' }}>
+                            Aprende a usar Writi en 2 minutos
+                        </p>
+                    </div>
+                </div>
+                <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '7px',
+                    background: 'rgba(124,58,237,0.25)', color: '#c4b5fd',
+                    border: '1px solid rgba(124,58,237,0.3)', borderRadius: '8px',
+                    padding: '8px 16px', fontSize: '0.8rem', fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                }}>
+                    <PlayCircle size={14} strokeWidth={2} /> Ver tutorial
+                </div>
+            </div>
+
             {/* ── ACTIVE SESSION BANNER ────────────────────────── */}
             {stats.activeSession && (
                 <div

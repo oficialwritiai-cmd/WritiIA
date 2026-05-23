@@ -83,8 +83,9 @@ export default function DashboardLayout({ children }) {
 
             if (profileData) {
                 setProfile(profileData);
-                // Show onboarding video on first login
-                if (profileData.has_seen_onboarding === false) {
+                // Show onboarding video if user hasn't confirmed it yet
+                // Uses falsy check (not strict ===false) to handle null/undefined for existing users
+                if (!profileData.has_seen_onboarding) {
                     setShowOnboarding(true);
                 }
                 return profileData;
@@ -175,6 +176,11 @@ export default function DashboardLayout({ children }) {
         };
         window.addEventListener('open-credits', handleOpenCredits);
 
+        const handleOpenTutorial = () => {
+            if (isMounted) setShowOnboarding(true);
+        };
+        window.addEventListener('open-tutorial', handleOpenTutorial);
+
         // Handle URL params for credits and plans
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
@@ -210,6 +216,7 @@ export default function DashboardLayout({ children }) {
             subscription.unsubscribe();
             window.removeEventListener('refresh-profile', handleRefreshProfile);
             window.removeEventListener('open-credits', handleOpenCredits);
+            window.removeEventListener('open-tutorial', handleOpenTutorial);
         };
     }, []);
 
