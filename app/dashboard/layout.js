@@ -12,10 +12,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare, Megaphone } from 'lucide-react';
+import { PenLine, BookOpen, Brain, CalendarDays, BarChart2, Settings, LogOut, Menu, Sparkles, Target, Coins, Home, ChevronDown, FolderOpen, Type, MessageSquare, Megaphone, PlayCircle } from 'lucide-react';
 import Logo from '@/app/components/Logo';
 import CreditsModal from '@/app/components/CreditsModal';
 import SuccessModal from '@/app/components/SuccessModal';
+import OnboardingVideoModal from '@/app/components/OnboardingVideoModal';
 import { useProject } from '@/app/components/ProjectContext';
 import ProjectSelector from '@/app/components/ProjectSelector';
 import { Bell, Search, LogOut as LogOutIcon, User, Settings as SettingsIcon, X as CloseIcon } from 'lucide-react';
@@ -63,6 +64,7 @@ export default function DashboardLayout({ children }) {
     const [isPaymentSuccessModalOpen, setIsPaymentSuccessModalOpen] = useState(false);
     const [purchasedCredits, setPurchasedCredits] = useState(0);
     const [sidebarHovered, setSidebarHovered] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const supabase = createSupabaseClient();
@@ -81,6 +83,10 @@ export default function DashboardLayout({ children }) {
 
             if (profileData) {
                 setProfile(profileData);
+                // Show onboarding video on first login
+                if (profileData.has_seen_onboarding === false) {
+                    setShowOnboarding(true);
+                }
                 return profileData;
             }
 
@@ -375,6 +381,17 @@ export default function DashboardLayout({ children }) {
         }
     }
 
+    async function handleOnboardingConfirm() {
+        setShowOnboarding(false);
+        if (user?.id) {
+            await supabase
+                .from('users_profiles')
+                .update({ has_seen_onboarding: true })
+                .eq('id', user.id);
+            setProfile(prev => prev ? { ...prev, has_seen_onboarding: true } : prev);
+        }
+    }
+
     async function handleLogout() {
         await supabase.auth.signOut();
         router.replace('/login');
@@ -616,6 +633,49 @@ export default function DashboardLayout({ children }) {
                 {/* Bottom actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', paddingBottom: '12px', width: '100%', padding: '0 8px 12px' }}>
                     <div style={{ width: '32px', height: '1px', background: 'rgba(255,255,255,0.06)', marginBottom: '8px' }} />
+
+                    {/* Tutorial button */}
+                    <button
+                        onClick={() => setShowOnboarding(true)}
+                        onMouseEnter={() => setHoveredItem('__tutorial__')}
+                        onMouseLeave={() => setHoveredItem(null)}
+                        style={{
+                            position: 'relative',
+                            background: 'transparent',
+                            border: '1px solid transparent',
+                            color: 'rgba(255,255,255,0.3)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: sidebarHovered ? 'flex-start' : 'center',
+                            paddingLeft: sidebarHovered ? '14px' : 0,
+                            gap: '10px',
+                            width: '100%',
+                            height: '44px',
+                            borderRadius: '10px',
+                            transition: 'background 0.15s ease, color 0.15s ease',
+                            boxSizing: 'border-box',
+                        }}
+                        className="sidebar-tutorial-btn"
+                    >
+                        <PlayCircle size={18} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                        {sidebarHovered && (
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'inherit', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                                Tutorial de inicio
+                            </span>
+                        )}
+                        {!sidebarHovered && hoveredItem === '__tutorial__' && (
+                            <div style={{
+                                position: 'absolute', left: '56px', top: '50%', transform: 'translateY(-50%)',
+                                background: '#1e1e26', color: 'white', padding: '6px 10px',
+                                borderRadius: '7px', fontSize: '0.72rem', fontWeight: 600,
+                                whiteSpace: 'nowrap', zIndex: 200, pointerEvents: 'none',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.08)',
+                            }}>
+                                Tutorial de inicio
+                            </div>
+                        )}
+                    </button>
 
                     {/* Logout button */}
                     <button
@@ -1134,6 +1194,21 @@ export default function DashboardLayout({ children }) {
                             })}
                         </nav>
 
+                        {/* Mobile tutorial */}
+                        <button
+                            onClick={() => { setSidebarOpen(false); setShowOnboarding(true); }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '12px',
+                                padding: '11px 14px', background: 'none', border: 'none',
+                                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                                fontSize: '0.9rem', fontWeight: 500, borderRadius: '10px',
+                                width: '100%', textAlign: 'left',
+                            }}
+                        >
+                            <PlayCircle size={18} strokeWidth={1.8} />
+                            Tutorial de inicio
+                        </button>
+
                         {/* Mobile logout */}
                         <button
                             onClick={() => { setSidebarOpen(false); handleLogout(); }}
@@ -1234,6 +1309,13 @@ export default function DashboardLayout({ children }) {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {showOnboarding && (
+                <OnboardingVideoModal
+                    onClose={() => setShowOnboarding(false)}
+                    onConfirm={handleOnboardingConfirm}
+                />
             )}
 
             {isPaymentSuccessModalOpen && (

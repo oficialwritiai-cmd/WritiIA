@@ -12,6 +12,7 @@ import ValueStack from "./ValueStack";
 import Testimonials from "./Testimonials";
 import FinalCTA from "./FinalCTA";
 import Footer from "./Footer";
+import VideoSection from "./VideoSection";
 
 const Landing = () => {
   return (
@@ -34,6 +35,7 @@ const Landing = () => {
         <Navbar />
         <main>
           <Hero />
+          <VideoSection />
           <Problem />
           <SystemSteps />
           <NotChatGPT />
