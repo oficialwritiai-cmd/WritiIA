@@ -3,10 +3,23 @@
 import { useState } from 'react';
 import { useProject } from '@/app/components/ProjectContext';
 import { FolderOpen, ChevronDown } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function ProjectSelector({ mobile = false }) {
     const { projects, activeProject, setActiveProject } = useProject();
     const [selectorOpen, setSelectorOpen] = useState(false);
+    const router   = useRouter();
+    const pathname = usePathname();
+
+    const handleSelectProject = (projectId) => {
+        setSelectorOpen(false);
+        if (pathname?.startsWith('/dashboard/session')) {
+            // Hard reload — bypasses React/router entirely, guaranteed clean state
+            window.location.href = `/dashboard/session?project=${projectId}`;
+            return;
+        }
+        setActiveProject(projectId);
+    };
 
     // If projects are loading or empty, we still want to show something on mobile
     const hasProjects = Array.isArray(projects) && projects.length > 0;
@@ -66,7 +79,7 @@ export default function ProjectSelector({ mobile = false }) {
                                 {projects.map(p => (
                                     <button
                                         key={p.id}
-                                        onClick={() => { setActiveProject(p.id); setSelectorOpen(false); }}
+                                        onClick={() => handleSelectProject(p.id)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: '10px',
                                             width: '100%', padding: '12px',
@@ -158,7 +171,7 @@ export default function ProjectSelector({ mobile = false }) {
                     {projects.map(p => (
                         <button
                             key={p.id}
-                            onClick={() => { setActiveProject(p.id); setSelectorOpen(false); }}
+                            onClick={() => handleSelectProject(p.id)}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
                                 width: '100%', padding: '10px 12px',

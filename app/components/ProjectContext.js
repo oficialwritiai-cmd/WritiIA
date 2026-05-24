@@ -72,10 +72,7 @@ export function ProjectProvider({ children }) {
 
     const setActiveProject = useCallback(async (projectId) => {
         const project = projects.find(p => p.id === projectId);
-        if (project) {
-            const { data: { user } } = await supabase.auth.getUser();
-            await selectProject(project, user?.id);
-        }
+        if (project) await selectProject(project);
     }, [projects]);
 
     const refreshProjects = useCallback(async () => { await loadProjects(); }, []);

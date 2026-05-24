@@ -1,6 +1,6 @@
 'use client';
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { SessionProvider } from '@/app/components/SessionContext';
 import SessionLayout from './SessionLayout';
 import { useProject } from '@/app/components/ProjectContext';
@@ -8,10 +8,19 @@ import { Loader2 } from 'lucide-react';
 
 function SessionContent() {
     const params    = useSearchParams();
-    const { activeProject } = useProject(); // activeProjectId no existe — usar activeProject.id
+    const router    = useRouter();
+    const { activeProject } = useProject();
 
-    // Priority: ?project= query param → ProjectContext active project
-    const projectId = params.get('project') || activeProject?.id;
+    const urlProjectId = params.get('project');
+    // Context takes priority — selectProject() updates state synchronously now
+    const projectId    = activeProject?.id || urlProjectId;
+
+    // Keep URL in sync with active project
+    useEffect(() => {
+        if (activeProject?.id && activeProject.id !== urlProjectId) {
+            router.replace(`/dashboard/session?project=${activeProject.id}`);
+        }
+    }, [activeProject?.id]);
 
     if (!projectId) {
         return (
@@ -36,11 +45,24 @@ function SessionContent() {
     }
 
     return (
-        // key={projectId} fuerza re-mount completo cuando cambia el proyecto
-        // Sin esto React reutiliza el SessionProvider anterior con datos viejos
-        <SessionProvider key={projectId} projectId={projectId}>
-            <SessionLayout />
-        </SessionProvider>
+        <>
+            {/* DEBUG — borrar después de confirmar el fix */}
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+                background: '#1a0a2e', borderBottom: '2px solid #9D00FF',
+                padding: '4px 12px', fontSize: '11px', color: '#c084fc',
+                fontFamily: 'monospace', display: 'flex', gap: '16px',
+            }}>
+                <span>URL: <b>{urlProjectId || 'null'}</b></span>
+                <span>CTX: <b>{activeProject?.id || 'null'}</b></span>
+                <span>KEY: <b>{projectId}</b></span>
+            </div>
+            <div style={{ paddingTop: '24px' }}>
+                <SessionProvider key={projectId} projectId={projectId}>
+                    <SessionLayout />
+                </SessionProvider>
+            </div>
+        </>
     );
 }
 
