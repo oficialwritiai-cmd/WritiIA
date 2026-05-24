@@ -13,10 +13,14 @@ import Testimonials from "./Testimonials";
 import FinalCTA from "./FinalCTA";
 import Footer from "./Footer";
 import VideoSection from "./VideoSection";
+import LandingIntro from "./LandingIntro";
 
 const Landing = () => {
   return (
     <LanguageLandingProvider>
+      {/* Intro cinematográfica — una vez por sesión */}
+      <LandingIntro />
+
       {/* Fondo galáctico — z-index 0, fijo en viewport */}
       <GalaxyBackground />
 
