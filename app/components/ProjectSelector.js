@@ -14,7 +14,8 @@ export default function ProjectSelector({ mobile = false }) {
     const handleSelectProject = (projectId) => {
         setSelectorOpen(false);
         if (pathname?.startsWith('/dashboard/session')) {
-            // Hard reload — bypasses React/router entirely, guaranteed clean state
+            // Update localStorage BEFORE reload so ProjectContext picks up the new project
+            localStorage.setItem('writi_active_project', projectId);
             window.location.href = `/dashboard/session?project=${projectId}`;
             return;
         }

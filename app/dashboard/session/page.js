@@ -1,26 +1,20 @@
 'use client';
-import { Suspense, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SessionProvider } from '@/app/components/SessionContext';
 import SessionLayout from './SessionLayout';
 import { useProject } from '@/app/components/ProjectContext';
 import { Loader2 } from 'lucide-react';
 
 function SessionContent() {
-    const params    = useSearchParams();
-    const router    = useRouter();
+    const params           = useSearchParams();
     const { activeProject } = useProject();
 
     const urlProjectId = params.get('project');
-    // Context takes priority — selectProject() updates state synchronously now
-    const projectId    = activeProject?.id || urlProjectId;
+    // URL takes priority — set by window.location.href redirect in ProjectSelector
+    const projectId    = urlProjectId || activeProject?.id;
 
-    // Keep URL in sync with active project
-    useEffect(() => {
-        if (activeProject?.id && activeProject.id !== urlProjectId) {
-            router.replace(`/dashboard/session?project=${activeProject.id}`);
-        }
-    }, [activeProject?.id]);
+    // No useEffect needed — ProjectSelector handles navigation directly
 
     if (!projectId) {
         return (
@@ -45,24 +39,9 @@ function SessionContent() {
     }
 
     return (
-        <>
-            {/* DEBUG — borrar después de confirmar el fix */}
-            <div style={{
-                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-                background: '#1a0a2e', borderBottom: '2px solid #9D00FF',
-                padding: '4px 12px', fontSize: '11px', color: '#c084fc',
-                fontFamily: 'monospace', display: 'flex', gap: '16px',
-            }}>
-                <span>URL: <b>{urlProjectId || 'null'}</b></span>
-                <span>CTX: <b>{activeProject?.id || 'null'}</b></span>
-                <span>KEY: <b>{projectId}</b></span>
-            </div>
-            <div style={{ paddingTop: '24px' }}>
-                <SessionProvider key={projectId} projectId={projectId}>
-                    <SessionLayout />
-                </SessionProvider>
-            </div>
-        </>
+        <SessionProvider key={projectId} projectId={projectId}>
+            <SessionLayout />
+        </SessionProvider>
     );
 }
 
