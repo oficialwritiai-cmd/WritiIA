@@ -375,37 +375,57 @@ export default function SessionStep3Scripts() {
 
     useEffect(() => { if (selectedSlotIds.length) { loadSlots(); } }, []);
 
-    async function loadSlots() {
-        const [{ data: slotData }, { data: savedScripts }] = await Promise.all([
-            supabase.from('content_slots').select('*').in('id', selectedSlotIds),
-            supabase.from('scripts').select('*').in('slot_id', selectedSlotIds),
-        ]);
-        setSlots(slotData || []);
+    // ── sessionStorage helpers ──────────────────────────────────────────────
+    function cacheKey(slotId) { return `writi_s3_${projectId}_${slotId}`; }
+    function writeCache(slotId, obj) {
+        try { sessionStorage.setItem(cacheKey(slotId), JSON.stringify(obj)); } catch(e) {}
+    }
+    function readCache(slotId) {
+        try { const r = sessionStorage.getItem(cacheKey(slotId)); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+    }
 
-        // Primary: restore from `scripts` table (slot_id is always saved there)
-        if (savedScripts?.length) {
-            const restoredScripts = {};
-            const restoredSaved = {};
-            for (const s of savedScripts) {
-                if (!s.slot_id) continue;
-                const raw = {
-                    title:     s.title     || '',
-                    hook:      s.hook      || '',
-                    structure: Array.isArray(s.structure) ? s.structure : [],
-                    cta:       s.cta       || '',
-                    post_copy: s.post_copy || {},
-                };
-                restoredScripts[s.slot_id] = { id: s.id, text: formatScript(raw), raw };
-                restoredSaved[s.slot_id]   = true;
-            }
-            setScripts(p => ({ ...p, ...restoredScripts }));
-            setSaved(p => ({ ...p, ...restoredSaved }));
-            return;
+    async function loadSlots() {
+        // ── Layer 1: sessionStorage (instant, zero DB calls) ───────────────
+        const fromCache = {};
+        for (const id of selectedSlotIds) {
+            const cached = readCache(id);
+            if (cached) fromCache[id] = cached;
+        }
+        if (Object.keys(fromCache).length) {
+            setScripts(p => ({ ...p, ...fromCache }));
+            setSaved(p => {
+                const s = { ...p };
+                Object.keys(fromCache).forEach(id => { s[id] = true; });
+                return s;
+            });
         }
 
-        // Fallback: restore from content_slots.script_data (legacy path)
-        const savedSlots = (slotData || []).filter(s => s.has_script && s.script_data);
-        for (const slot of savedSlots) {
+        // ── Layer 2: DB via proper FK join (content_slots.script_id → scripts) ─
+        const { data: slotData } = await supabase
+            .from('content_slots')
+            .select('*, scripts(*)')
+            .in('id', selectedSlotIds);
+        setSlots(slotData || []);
+
+        for (const slot of (slotData || [])) {
+            if (!slot.scripts || fromCache[slot.id]) continue;
+            const s = slot.scripts;
+            const raw = {
+                title:     s.title     || '',
+                hook:      s.hook      || s.gancho || '',
+                structure: Array.isArray(s.structure) ? s.structure : [],
+                cta:       s.cta       || '',
+                post_copy: s.post_copy || {},
+            };
+            const obj = { id: s.id, text: formatScript(raw), raw };
+            setScripts(p => ({ ...p, [slot.id]: obj }));
+            setSaved(p => ({ ...p, [slot.id]: true }));
+            writeCache(slot.id, obj);
+        }
+
+        // ── Layer 3: legacy content_slots.script_data fallback ─────────────
+        for (const slot of (slotData || [])) {
+            if (slot.scripts || fromCache[slot.id] || !slot.has_script || !slot.script_data) continue;
             const sd = slot.script_data;
             const raw = {
                 hook:      sd.hook || '',
@@ -416,8 +436,10 @@ export default function SessionStep3Scripts() {
                 cta:       sd.cta       || '',
                 post_copy: sd.copy_post || {},
             };
-            setScripts(p => ({ ...p, [slot.id]: { id: slot.script_id || null, text: formatScript(raw), raw } }));
+            const obj = { id: slot.script_id || null, text: formatScript(raw), raw };
+            setScripts(p => ({ ...p, [slot.id]: obj }));
             setSaved(p => ({ ...p, [slot.id]: true }));
+            writeCache(slot.id, obj);
         }
     }
 
@@ -435,9 +457,10 @@ export default function SessionStep3Scripts() {
             const data = await res.json();
             const raw  = data.script || data;
             const text = formatScript(raw);
-            setScripts(p => ({ ...p, [slotId]: { id: raw.id || null, text, raw } }));
-            // API already saved to library — mark as saved
+            const obj  = { id: raw.id || null, text, raw };
+            setScripts(p => ({ ...p, [slotId]: obj }));
             setSaved(p => ({ ...p, [slotId]: true }));
+            writeCache(slotId, obj); // persist for tab navigation
         } catch (e) {
             setErrors(p => ({ ...p, [slotId]: e.message }));
         } finally {
