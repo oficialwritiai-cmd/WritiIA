@@ -257,6 +257,7 @@ export default function DashboardPage() {
 
     // Refs para que visibilitychange siempre vea los valores más recientes
     const draftRef = useRef({});
+    const restoredRef = useRef(false); // true cuando restore carga scripts, evita que projectVersion resetee step
     useEffect(() => {
         draftRef.current = { topic, platform, toneBrand, hookType, scripts, step, pid: activeProject?.id };
     });
@@ -316,7 +317,7 @@ export default function DashboardPage() {
             if (d.platform)        setPlatform(d.platform);
             if (d.toneBrand)       setToneBrand(d.toneBrand);
             if (d.hookType)        setHookType(d.hookType);
-            if (d.scripts?.length) { setScripts(d.scripts); setStep(d.step >= 3 ? 3 : 1); setShowRestore(true); }
+            if (d.scripts?.length) { setScripts(d.scripts); setStep(3); setShowRestore(true); restoredRef.current = true; }
         } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
@@ -454,9 +455,9 @@ export default function DashboardPage() {
 
     useEffect(() => {
         // Al cambiar de proyecto: limpiar resultados generados
-        // Los scripts se restaurarán desde localStorage en el efecto [activeProject?.id]
-        // NO limpiar topic ni scripts aquí — el restore los pondrá correctos
-        setStep(1);
+        // Si el restore acaba de cargar scripts, NO resetear step — el usuario debe ver sus resultados
+        if (!restoredRef.current) setStep(1);
+        restoredRef.current = false; // limpiar para la próxima vez
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
@@ -2416,7 +2417,7 @@ export default function DashboardPage() {
             {/* Banner restauración */}
             {showRestore && (
                 <RestoreBanner
-                    message={savedScripts.length ? 'Tienes guiones generados guardados' : 'Tienes un borrador guardado'}
+                    message={scripts.length ? 'Tienes guiones generados guardados' : 'Tienes un borrador guardado'}
                     onRestore={() => setShowRestore(false)}
                     onDiscard={() => { clearDraft(); setTopic(''); setScripts([]); setStep(1); }}
                 />
