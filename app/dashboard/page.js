@@ -39,22 +39,26 @@ const ESTILOS_PLAN = ['Historias reales', 'Opiniones impopulares', 'Tutoriales /
 // 20) v4.9.8 - Authorization JWT Fix
 export const VERSION = 'v1.17.55'; // UI Duplicate Fix (Step 3) + Schema Fix (color & Datos inválidos)
 
-
+// Variables de módulo — persisten mientras el tab esté abierto, sobreviven navegación SPA
+let _cachedScripts = [];
+let _cachedStep    = 1;
+let _cachedTopic   = '';
+let _cachedPlatform = 'Reels';
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState('single');
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
     const [wizardStep, setWizardStep] = useState(1);
-    const [step, setStep] = useState(1); // 1: Form, 2: Loading, 3: Results
-    const [topic, setTopic] = useState('');
-    const [platform, setPlatform] = useState('Reels');
+    const [step, setStep]     = useState(_cachedStep >= 3 ? 3 : 1);
+    const [topic, setTopic]   = useState(_cachedTopic);
+    const [platform, setPlatform] = useState(_cachedPlatform || 'Reels');
     const [toneBrand, setToneBrand] = useState('cercano');
     const [goal, setGoal] = useState('engagement');
     const [awareness, setAwareness] = useState('tibia');
     const [quantity, setQuantity] = useState(2);
     const [ideas, setIdeas] = useState('');
-    const [scripts, setScripts] = useState([]);
+    const [scripts, setScripts] = useState(_cachedScripts);
 
     // Wizard step 3 fields
     const [victory, setVictory] = useState('');
@@ -257,9 +261,14 @@ export default function DashboardPage() {
 
     // Refs para que visibilitychange siempre vea los valores más recientes
     const draftRef = useRef({});
-    const restoredRef = useRef(false); // true cuando restore carga scripts, evita que projectVersion resetee step
+    const restoredRef = useRef(false);
     useEffect(() => {
         draftRef.current = { topic, platform, toneBrand, hookType, scripts, step, pid: activeProject?.id };
+        // Sincronizar variables de módulo — persisten en navegación SPA
+        _cachedScripts  = scripts;
+        _cachedStep     = step;
+        _cachedTopic    = topic;
+        _cachedPlatform = platform;
     });
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
@@ -346,6 +355,7 @@ export default function DashboardPage() {
     const clearDraft = useCallback(() => {
         try { localStorage.removeItem(getDraftKey(activeProject?.id || 'global')); } catch {}
         try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+        _cachedScripts = []; _cachedStep = 1; _cachedTopic = ''; _cachedPlatform = 'Reels';
         setShowRestore(false);
     }, [activeProject?.id]);
 
@@ -2522,6 +2532,7 @@ export default function DashboardPage() {
                             setWizardStep(1);
                             setStep(1);
                             setScripts([]);
+                            _cachedScripts = []; _cachedStep = 1; _cachedTopic = '';
                         }}
                         style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7c3aed' : 'rgba(255,255,255,0.04)', color: generationMode === 'single' ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }}
                     >
