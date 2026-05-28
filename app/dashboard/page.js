@@ -263,6 +263,25 @@ export default function DashboardPage() {
     });
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
+    const SESSION_KEY = 'writi_scripts_session';
+
+    // Restaura guiones al montar — sessionStorage persiste en la misma pestaña
+    // y entre navegaciones SPA sin depender de project ID ni context timing
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(SESSION_KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (!d.scripts?.length) return;
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('topic') || urlParams.get('from_idea') || urlParams.get('mode')) return;
+            setScripts(d.scripts);
+            setStep(3);
+            if (d.topic) setTopic(d.topic);
+            if (d.platform) setPlatform(d.platform);
+            restoredRef.current = true;
+        } catch {}
+    }, []); // [] = exactamente una vez al montar, siempre
 
     // Guarda síncronamente cuando el usuario cambia de pestaña (visibilitychange)
     // Es el único momento garantizado antes del descarte del navegador
@@ -326,6 +345,7 @@ export default function DashboardPage() {
 
     const clearDraft = useCallback(() => {
         try { localStorage.removeItem(getDraftKey(activeProject?.id || 'global')); } catch {}
+        try { sessionStorage.removeItem(SESSION_KEY); } catch {}
         setShowRestore(false);
     }, [activeProject?.id]);
 
@@ -1001,7 +1021,16 @@ export default function DashboardPage() {
 
             setScripts(finalScripts);
             setStep(3);
-            // Guardar draft inmediatamente — garantiza restauración al volver
+            // Guardar en sessionStorage — restauración garantizada al volver a esta página
+            try {
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+                    scripts: finalScripts.slice(0, 10),
+                    topic: effectiveTopic,
+                    platform: platform || 'Reels',
+                    ts: Date.now(),
+                }));
+            } catch {}
+            // Guardar en localStorage también (respaldo cross-session)
             try {
                 const pid = activeProject?.id || 'global';
                 localStorage.setItem(getDraftKey(pid), JSON.stringify({
