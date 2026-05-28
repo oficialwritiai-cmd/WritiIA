@@ -274,9 +274,14 @@ export default function DashboardPage() {
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
     const SESSION_KEY = 'writi_scripts_session';
 
-    // Restaura guiones al montar — sessionStorage persiste en la misma pestaña
-    // y entre navegaciones SPA sin depender de project ID ni context timing
+    // Restaura guiones al montar
     useEffect(() => {
+        // Caso 1: navegación SPA — módulo ya tiene los scripts en memoria
+        if (_cachedScripts.length > 0 && _cachedStep >= 3) {
+            restoredRef.current = true; // evita que projectVersion resetee step
+            return;
+        }
+        // Caso 2: recarga de página — leer sessionStorage
         try {
             const raw = sessionStorage.getItem(SESSION_KEY);
             if (!raw) return;
@@ -290,7 +295,7 @@ export default function DashboardPage() {
             if (d.platform) setPlatform(d.platform);
             restoredRef.current = true;
         } catch {}
-    }, []); // [] = exactamente una vez al montar, siempre
+    }, []);
 
     // Guarda síncronamente cuando el usuario cambia de pestaña (visibilitychange)
     // Es el único momento garantizado antes del descarte del navegador
