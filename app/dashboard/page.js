@@ -783,16 +783,18 @@ export default function DashboardPage() {
             setPlanSlots([]); // v1.17.45: Clear previous slots to avoid skipping
             setTopic('');
         } else if (!params.get('mode')) {
-            // v1.17.43: Reset to initial state when navigating to root /dashboard without params
-            // This ensures sidebar "Nuevo Guion" always starts a fresh session
-            setGenerationMode('single');
-            setStep(1);
-            setWizardStep(1);
-            setPlanWizardStep(1);
-            setScripts([]);
-            setPlanSlots([]);
-            setTopic('');
-            setIdeas('');
+            // Solo resetear si no hay guiones cargados — si los hay, el usuario
+            // viene de navegar a otra sección y debe ver su trabajo
+            if (_cachedScripts.length === 0) {
+                setGenerationMode('single');
+                setStep(1);
+                setWizardStep(1);
+                setPlanWizardStep(1);
+                setScripts([]);
+                setPlanSlots([]);
+                setTopic('');
+                setIdeas('');
+            }
         }
     }, [supabase, searchParams]);
 
