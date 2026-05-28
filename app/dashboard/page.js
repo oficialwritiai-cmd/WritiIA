@@ -492,9 +492,9 @@ export default function DashboardPage() {
 
     useEffect(() => {
         // Al cambiar de proyecto: limpiar resultados generados
-        // Si el restore acaba de cargar scripts, NO resetear step — el usuario debe ver sus resultados
-        if (!restoredRef.current) setStep(1);
-        restoredRef.current = false; // limpiar para la próxima vez
+        // No resetear step si hay scripts cargados (evita que TOKEN_REFRESHED borre el trabajo)
+        if (_cachedScripts.length === 0 && !restoredRef.current) setStep(1);
+        restoredRef.current = false;
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
