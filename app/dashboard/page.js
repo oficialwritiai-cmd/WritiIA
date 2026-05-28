@@ -270,9 +270,10 @@ export default function DashboardPage() {
         const handleHide = () => {
             const { topic: t, platform: pl, toneBrand: tb, hookType: hk,
                     scripts: sc, step: st, pid } = draftRef.current;
-            if (!pid || (!t && !sc?.length)) return;
+            if (!t && !sc?.length) return;
+            const key = getDraftKey(pid || 'global');
             try {
-                localStorage.setItem(getDraftKey(pid), JSON.stringify({
+                localStorage.setItem(key, JSON.stringify({
                     topic: t, platform: pl || 'Reels', toneBrand: tb || 'cercano',
                     hookType: hk || 'curiosidad extrema',
                     scripts: (sc || []).slice(0, 10), step: st, ts: Date.now(),
@@ -287,11 +288,12 @@ export default function DashboardPage() {
         };
     }, []); // solo montar/desmontar — usa ref para valores actuales
 
-    // También guarda cuando cambian topic o scripts (por si acaso)
+    // Guarda draft cuando cambian scripts o step — usa pid 'global' si no hay proyecto
     useEffect(() => {
-        if (!activeProject?.id || (!topic && !scripts.length)) return;
+        if (!topic && !scripts.length) return;
+        const pid = activeProject?.id || 'global';
         try {
-            localStorage.setItem(getDraftKey(activeProject.id), JSON.stringify({
+            localStorage.setItem(getDraftKey(pid), JSON.stringify({
                 topic, platform: platform || 'Reels', toneBrand: toneBrand || 'cercano',
                 hookType: hookType || 'curiosidad extrema',
                 scripts: scripts.slice(0, 10), step, ts: Date.now(),
@@ -302,17 +304,17 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [topic, scripts, step, activeProject?.id]);
 
-    // Restaura cuando el proyecto carga — URL params tienen prioridad
+    // Restaura draft al montar — URL params tienen prioridad
     useEffect(() => {
-        if (!activeProject?.id) return;
+        const pid = activeProject?.id || 'global';
         try {
-            const raw = localStorage.getItem(getDraftKey(activeProject.id));
+            const raw = localStorage.getItem(getDraftKey(pid));
             if (!raw) return;
             const d = JSON.parse(raw);
             if (Date.now() - (d.ts || 0) > 4 * 3600 * 1000) return;
             const urlParams = new URLSearchParams(window.location.search);
             const hasUrlTopic = urlParams.get('topic') || urlParams.get('from_idea');
-            if (hasUrlTopic) return; // URL params ganan
+            if (hasUrlTopic) return;
             if (d.topic)           setTopic(d.topic);
             if (d.platform)        setPlatform(d.platform);
             if (d.toneBrand)       setToneBrand(d.toneBrand);
@@ -323,7 +325,7 @@ export default function DashboardPage() {
     }, [activeProject?.id]);
 
     const clearDraft = useCallback(() => {
-        if (activeProject?.id) try { localStorage.removeItem(getDraftKey(activeProject.id)); } catch {}
+        try { localStorage.removeItem(getDraftKey(activeProject?.id || 'global')); } catch {}
         setShowRestore(false);
     }, [activeProject?.id]);
 
@@ -999,6 +1001,15 @@ export default function DashboardPage() {
 
             setScripts(finalScripts);
             setStep(3);
+            // Guardar draft inmediatamente — garantiza restauración al volver
+            try {
+                const pid = activeProject?.id || 'global';
+                localStorage.setItem(getDraftKey(pid), JSON.stringify({
+                    topic: effectiveTopic, platform: platform || 'Reels',
+                    toneBrand: toneBrand || 'cercano', hookType: hookType || 'curiosidad extrema',
+                    scripts: finalScripts.slice(0, 10), step: 3, ts: Date.now(),
+                }));
+            } catch {}
             // Limpiar flags de generación — éxito
             try { localStorage.removeItem('guion_generando'); } catch {}
             // Refresh credits balance in header
