@@ -376,27 +376,48 @@ export default function SessionStep3Scripts() {
     useEffect(() => { if (selectedSlotIds.length) { loadSlots(); } }, []);
 
     async function loadSlots() {
-        const { data: slotData } = await supabase.from('content_slots').select('*').in('id', selectedSlotIds);
+        const [{ data: slotData }, { data: savedScripts }] = await Promise.all([
+            supabase.from('content_slots').select('*').in('id', selectedSlotIds),
+            supabase.from('scripts').select('*').in('slot_id', selectedSlotIds),
+        ]);
         setSlots(slotData || []);
-        // Load previously saved scripts from DB
-        const savedSlots = (slotData || []).filter(s => s.has_script && s.script_data);
-        if (savedSlots.length) {
-            for (const slot of savedSlots) {
-                const slotId = slot.id;
-                const sd = slot.script_data;
+
+        // Primary: restore from `scripts` table (slot_id is always saved there)
+        if (savedScripts?.length) {
+            const restoredScripts = {};
+            const restoredSaved = {};
+            for (const s of savedScripts) {
+                if (!s.slot_id) continue;
                 const raw = {
-                    hook: sd.hook || '',
-                    structure: Array.isArray(sd.desarrollo) ? sd.desarrollo.map(d => {
-                        const parts = d.split(': ');
-                        return { point: parts[0] || d, detail: parts.slice(1).join(': ') || d };
-                    }) : (Array.isArray(sd.puntos) ? sd.puntos : []),
-                    cta: sd.cta || '',
-                    post_copy: sd.copy_post || {},
+                    title:     s.title     || '',
+                    hook:      s.hook      || '',
+                    structure: Array.isArray(s.structure) ? s.structure : [],
+                    cta:       s.cta       || '',
+                    post_copy: s.post_copy || {},
                 };
-                const text = formatScript(raw);
-                setScripts(p => ({ ...p, [slotId]: { id: slot.script_id || null, text, raw } }));
-                setSaved(p => ({ ...p, [slotId]: true }));
+                restoredScripts[s.slot_id] = { id: s.id, text: formatScript(raw), raw };
+                restoredSaved[s.slot_id]   = true;
             }
+            setScripts(p => ({ ...p, ...restoredScripts }));
+            setSaved(p => ({ ...p, ...restoredSaved }));
+            return;
+        }
+
+        // Fallback: restore from content_slots.script_data (legacy path)
+        const savedSlots = (slotData || []).filter(s => s.has_script && s.script_data);
+        for (const slot of savedSlots) {
+            const sd = slot.script_data;
+            const raw = {
+                hook:      sd.hook || '',
+                structure: Array.isArray(sd.desarrollo) ? sd.desarrollo.map(d => {
+                    const parts = d.split(': ');
+                    return { point: parts[0] || d, detail: parts.slice(1).join(': ') || d };
+                }) : (Array.isArray(sd.puntos) ? sd.puntos : []),
+                cta:       sd.cta       || '',
+                post_copy: sd.copy_post || {},
+            };
+            setScripts(p => ({ ...p, [slot.id]: { id: slot.script_id || null, text: formatScript(raw), raw } }));
+            setSaved(p => ({ ...p, [slot.id]: true }));
         }
     }
 
