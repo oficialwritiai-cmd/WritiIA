@@ -15,6 +15,7 @@ export default function sitemap() {
         { url: `${baseUrl}/generador-guiones-ia`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
         { url: `${baseUrl}/privacidad`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
         { url: `${baseUrl}/terminos`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+        { url: `${baseUrl}/cookies`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
         { url: `${baseUrl}/login`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
         ...blogSlugs.map(slug => ({
             url: `${baseUrl}/blog/${slug}`,

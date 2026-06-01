@@ -49,3 +49,4 @@ node_path.txt
 /temp-home-code.txt.txt
 /fondo.png
 /.superpowers/
+.env.local

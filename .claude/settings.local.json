@@ -5,7 +5,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(vercel:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(npx next *)",
+      "Bash(git -C \"c:/Users/stive/WRITIAI\" add app/dashboard/stats/page.js app/dashboard/library/page.js)",
+      "Bash(git -C c:/Users/stive/WRITIAI commit -m 'fix\\(proyectos\\): stats y library usan projectVersion + library filtra por proyecto activo *)",
+      "Bash(git -C \"c:/Users/stive/WRITIAI\" push origin main)"
     ]
   }
 }

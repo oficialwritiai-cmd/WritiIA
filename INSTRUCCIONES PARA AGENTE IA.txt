@@ -1,0 +1,201 @@
+# 🤖 INSTRUCCIONES PARA AGENTE IA — WRITI.AI
+## Documento de mejora progresiva sin romper el sistema actual
+
+---
+
+## CONTEXTO DEL PRODUCTO
+
+Writi.AI es una SaaS de planificación de contenido para coaches y consultores.
+Su flujo principal es una sesión guiada llamada **Matrix** con 4 pasos:
+`Cerebro IA → Ideas → Guiones → Calendario`
+
+El producto ya está en producción. Tu misión es **mejorar y optimizar, nunca reescribir ni romper** lo que ya funciona.
+
+---
+
+## REGLAS ABSOLUTAS DEL AGENTE
+
+```
+1. NUNCA elimines funcionalidad existente sin confirmación explícita del usuario
+2. NUNCA refactorices componentes completos — trabaja por bloques pequeños
+3. NUNCA cambies la estructura de base de datos sin confirmación
+4. SIEMPRE pregunta antes de tocar: flujo Matrix, Cerebro IA, sistema de créditos
+5. SIEMPRE que hagas un cambio, describe qué tocaste y qué NO tocaste
+6. Si tienes dudas entre dos enfoques, presenta opciones y espera confirmación
+```
+
+---
+
+## PROBLEMAS CRÍTICOS — PRIORIDAD MÁXIMA
+
+### 🔴 BUG #1 — Guiones no aparecen en Biblioteca
+**Síntoma:** El usuario tiene 6 sesiones completadas pero 0 guiones guardados en Biblioteca.
+**Lo que debe pasar:** Cada guión generado en la sesión Matrix debe guardarse automáticamente en Biblioteca al generarse, sin que el usuario haga nada.
+**Acción:** Revisar el flujo de guardado post-generación en Matrix → Guiones. Verificar que el ID de usuario y proyecto se pasan correctamente al guardar. No tocar la UI, solo el guardado.
+
+### 🔴 BUG #2 — Contador "Guiones guardados" en dashboard siempre en 0
+**Síntoma:** El widget del dashboard muestra 0 guiones aunque existan guiones generados.
+**Acción:** Revisar la query que alimenta ese contador. Debe consultar la misma tabla donde Matrix guarda los guiones.
+
+---
+
+## MEJORAS DE UX — PRIORIDAD ALTA
+
+### 🟠 MEJORA #1 — Dashboard: CTA dinámico según estado del usuario
+El dashboard actualmente muestra las mismas 3 cards siempre.
+Implementar lógica condicional:
+
+```
+SI Cerebro IA no configurado:
+  → Mostrar banner principal: "Configura tu Cerebro IA — 8 min y tu contenido será tuyo"
+  → Ocultar card "Nueva sesión Matrix"
+
+SI Cerebro IA configurado + 0 guiones:
+  → CTA principal: "Genera tu primer guión →"
+  → Mostrar card Matrix como principal
+
+SI tiene guiones generados:
+  → CTA principal: "Ver tu calendario →"
+  → Mostrar resumen de guiones pendientes de grabar
+```
+
+No eliminar las 3 cards actuales. Solo cambiar cuál se muestra en primer lugar según el estado.
+
+### 🟠 MEJORA #2 — Widget "Guiones guardados" en dashboard
+Cambiar comportamiento cuando el valor es 0:
+- Texto actual: "0 — listos para grabar"
+- Texto nuevo cuando es 0: "Aún sin guiones — [Crear mi primero →]"
+- Convertir el widget en clickable que lleva a Nuevo Guion
+
+### 🟠 MEJORA #3 — Barra de progreso del Cerebro IA
+Añadir indicador visual de completitud del Cerebro IA en:
+- El dashboard (sección "Tu marca y Cerebro IA")
+- La pantalla de Matrix paso 1
+
+Formato: barra de progreso + porcentaje
+```
+Ejemplo: "Tu Cerebro IA está al 67% — complétalo para guiones más precisos"
+6 bloques en total → cada bloque completado = ~17%
+```
+No modificar el formulario del Cerebro, solo leer cuántos bloques tienen contenido.
+
+### 🟠 MEJORA #4 — Variantes de guión
+En la pantalla de guión generado, añadir botón: **"Generar variante"**
+Al pulsarlo, regenera el mismo guión con enfoque distinto:
+- Variante A: Storytelling personal
+- Variante B: Educativo directo
+- Variante C: Provocador / gancho fuerte
+
+Cada variante consume 1 crédito IA.
+No modificar el guión original, mostrar la variante en una pestaña nueva al lado.
+
+---
+
+## MEJORAS DE NAVEGACIÓN — PRIORIDAD MEDIA
+
+### 🟡 MEJORA #5 — Simplificar sidebar
+El sidebar actual tiene 11 ítems. Reorganizar en dos niveles:
+
+**Nivel principal (siempre visible):**
+- Inicio
+- Matrix *(sesión mensual)*
+- Biblioteca
+- Calendario
+- Configuración
+
+**Nivel secundario (dentro de secciones o colapsable):**
+- Asistente IA → mover dentro de Inicio o flotante
+- Copys IA → renombrar a "Textos rápidos", mover dentro de Biblioteca
+- Ideas virales → mover dentro de Matrix como opción extra
+- Estrategia → evaluar si tiene suficiente uso para mantenerse; si no, mover dentro de Matrix
+
+**IMPORTANTE:** No eliminar ninguna sección. Solo reorganizar visualmente. Las rutas y funciones deben seguir funcionando igual.
+
+### 🟡 MEJORA #6 — Renombrar "Matrix" en la navegación
+El nombre Matrix funciona como nombre de marca interno pero confunde a usuarios nuevos.
+Propuesta: mantener "Matrix" como nombre pero añadir subtítulo descriptivo:
+
+```
+Matrix
+"Tu sesión mensual de contenido"
+```
+
+No cambiar el nombre de la ruta ni del componente en código.
+
+---
+
+## MEJORAS DE RETENCIÓN — PRIORIDAD MEDIA
+
+### 🟡 MEJORA #7 — Compartir guión generado
+En cada guión de la Biblioteca, añadir botón: **"Compartir como template"**
+Al pulsarlo, genera una URL pública con el guión anonimizado (sin datos de marca del usuario).
+Esa URL lleva a una landing simple con:
+- El guión visible
+- CTA: "Crea guiones así con Writi →"
+
+Esto activa el loop viral orgánico sin ads.
+
+### 🟡 MEJORA #8 — Estadística de horas ahorradas
+En el dashboard, añadir debajo de "Sesiones este mes":
+```
+"~X horas ahorradas"
+Cálculo: número de guiones × 45 minutos (tiempo medio estimado manual)
+```
+Este número es el que los usuarios comparten en redes. Es el "Spotify Wrapped" de Writi.
+
+---
+
+## FUNCIONES A NO TOCAR SALVO BUG CRÍTICO
+
+```
+✅ Flujo completo de sesión Matrix (4 pasos)
+✅ Sistema de grabación de voz y transcripción
+✅ Botón "Mejorar" en Cerebro IA
+✅ Sistema de créditos IA
+✅ Calendario (funciona bien, no intervenir)
+✅ Multi-proyecto (selector "Stiven IA")
+✅ Sistema de login y autenticación
+✅ Integración con Stripe
+```
+
+---
+
+## ORDEN DE EJECUCIÓN RECOMENDADO
+
+```
+SEMANA 1:
+  → Bug #1: Guiones no se guardan en Biblioteca
+  → Bug #2: Contador dashboard siempre en 0
+  → Mejora #2: Widget guiones en 0 con CTA
+
+SEMANA 2:
+  → Mejora #1: CTA dinámico según estado usuario
+  → Mejora #3: Barra progreso Cerebro IA
+
+SEMANA 3:
+  → Mejora #5: Reorganizar sidebar
+  → Mejora #6: Subtítulo en Matrix
+
+SEMANA 4:
+  → Mejora #4: Variantes de guión
+  → Mejora #7: Compartir guión (loop viral)
+  → Mejora #8: Horas ahorradas
+```
+
+---
+
+## FORMATO DE RESPUESTA DEL AGENTE
+
+Cada vez que el agente complete una tarea debe responder con:
+
+```
+✅ QUÉ HICE: [descripción breve]
+🔒 QUÉ NO TOQUÉ: [lista de lo que quedó intacto]
+⚠️ REVISAR: [si hay algo que el usuario debe verificar manualmente]
+🔜 SIGUIENTE PASO SUGERIDO: [próxima mejora recomendada]
+```
+
+---
+
+*Documento generado para Writi.AI — Mayo 2026*
+*Versión 1.0 — Para uso con agente de desarrollo IA*

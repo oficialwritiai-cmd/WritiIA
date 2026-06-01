@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Reveal from "./Reveal";
 
-const VIDEO_ID = 'UcaCvukwpW8';
+const VIDEO_ID = 'cgv6i7IALWw';
 const THUMBNAIL = `https://img.youtube.com/vi/${VIDEO_ID}/maxresdefault.jpg`;
 const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1&autoplay=1`;
 
@@ -18,14 +18,14 @@ const VideoSection = () => {
                             className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white mb-4"
                             style={{ fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.03em' }}
                         >
-                            Ve{' '}
+                            Cómo{' '}
                             <span className="text-transparent bg-clip-text"
                                 style={{ backgroundImage: 'linear-gradient(135deg, #a78bfa, #7c3aed)' }}>
-                                Writi IA en acción
+                                7 posts salen solos
                             </span>
                         </h2>
                         <p className="text-white/50 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-                            Sin complicaciones. Sin curva de aprendizaje. Tú solo grabas y publicas.
+                            De tu idea manuscrita a publicado, automático. En menos de 1 hora, sin diseño, sin esperas, sin estrés.
                         </p>
                     </div>
 

@@ -2,15 +2,23 @@ import Link from 'next/link';
 import Logo from '@/app/components/Logo';
 
 export const metadata = {
-    title: 'Sobre WRITI.AI – El planificador de contenido con IA para creadores',
-    description: 'WRITI.AI es el sistema todo-en-uno que genera ideas virales, escribe guiones completos para Reels y Shorts, y organiza tu mes de contenido en un calendario con IA. Diseñado para creadores en español.',
+    title: 'Sobre WRITI.AI – Generador de Guiones con IA para Coaches e Infoproductores',
+    description: 'WRITI.AI es el sistema todo-en-uno con IA para coaches, consultores, infoproductores y creadores de contenido en español. Genera ideas virales, escribe guiones completos para Reels y TikTok, y organiza tu mes en un calendario automático.',
+    keywords: 'qué es WRITI.AI, herramienta contenido IA coaches, generador guiones infoproductores, planificador contenido consultores, WRITI vs ChatGPT contenido',
     alternates: { canonical: 'https://www.writi-ai.com/sobre-writi' },
     openGraph: {
-        title: 'Sobre WRITI.AI – El planificador de contenido con IA para creadores',
-        description: 'Qué es WRITI.AI, para quién es, qué problema resuelve y cómo funciona.',
+        title: 'Sobre WRITI.AI – Generador de Guiones con IA para Coaches e Infoproductores',
+        description: 'WRITI.AI: qué es, para quién es (coaches, consultores, creadores), qué problema resuelve y cómo se compara con herramientas generalistas como ChatGPT.',
         url: 'https://www.writi-ai.com/sobre-writi',
         type: 'website',
         siteName: 'WRITI.AI',
+        images: [{ url: 'https://www.writi-ai.com/og-image.jpg', width: 1200, height: 630 }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Sobre WRITI.AI – Generador de Guiones con IA para Coaches e Infoproductores',
+        description: 'WRITI.AI genera ideas, guiones y calendario mensual con IA. Para coaches, consultores e infoproductores en español.',
+        images: ['https://www.writi-ai.com/og-image.jpg'],
     },
 };
 
@@ -118,6 +126,18 @@ export default function SobreWRITI() {
                         <li>Exportación de guiones en 1 clic</li>
                     </ul>
                     <p>Cancelas cuando quieras. Pago seguro vía Stripe. Sin permanencias.</p>
+                </Section>
+
+                {/* SECTION: Comparativa con alternativas */}
+                <Section title="¿Cómo se compara WRITI.AI con ChatGPT, Notion o herramientas generalistas?">
+                    <p>WRITI.AI no compite con herramientas de propósito general como ChatGPT, Claude o Notion AI. Las complementa y las supera en un caso de uso muy específico: la producción de contenido para redes sociales en español de forma consistente.</p>
+                    <p>Las herramientas generalistas son potentes pero no tienen memoria de marca, no tienen calendario integrado, y requieren saber construir prompts avanzados para obtener resultados útiles. Cada sesión empieza desde cero. WRITI soluciona exactamente esos tres problemas:</p>
+                    <ul>
+                        <li><strong>Memoria de marca persistente ("Cerebro IA"):</strong> configuras tu nicho, tono y audiencia una sola vez. El sistema lo recuerda siempre.</li>
+                        <li><strong>Flujo completo en un solo sitio:</strong> idea → guion → calendario, sin copiar y pegar entre herramientas.</li>
+                        <li><strong>Diseñado para el mercado hispanohablante:</strong> no es una traducción del inglés. Los prompts internos, las estructuras de gancho y el vocabulario están optimizados para el español de España y Latinoamérica.</li>
+                    </ul>
+                    <p>Si buscas la herramienta de contenido con IA más completa para coaches, consultores e infoproductores en español, WRITI.AI es la opción más especializada del mercado hispanohablante en 2026.</p>
                 </Section>
 
                 {/* CTA */}

@@ -1,0 +1,4 @@
+- [WRITI.AI Dashboard Layout](project_writiai_layout.md) — Design tokens, JSX structure, safe editing zones for app/dashboard/layout.js
+- [WRITI.AI Supabase Schema](project_writiai_schema.md) — Tablas correctas: library (guiones), project_brains (cerebro), NO content_slots
+- [WRITI.AI Observability Stack](project_observability.md) — Sentry + PostHog + admin logs: file locations, env vars, CSP rules, Supabase SQL
+- [WRITI.AI Dashboard page.js patterns](project_dashboard_patterns.md) — Estados UX, bloque step===3, plan slots grid, inline styles conventions
