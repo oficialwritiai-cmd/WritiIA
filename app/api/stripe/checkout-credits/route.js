@@ -4,12 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-// Product IDs for credit packs
-const CREDIT_PRODUCTS = {
-    '100': 'prod_U5X3aTmOroVFwW',
-    '250': 'prod_U8q9D9e8M4lusU',
-    '500': 'prod_U5X53LOdSC6k9B',
-};
+// Price IDs desde env vars (más fiable que buscar por producto)
+function getPriceId(packStr) {
+    if (packStr === '100') return process.env.STRIPE_PRICE_CREDITS_100 || 'prod_U5X3aTmOroVFwW';
+    if (packStr === '250') return process.env.STRIPE_PRICE_CREDITS_250;
+    if (packStr === '500') return process.env.STRIPE_PRICE_CREDITS_500 || 'prod_U5X53LOdSC6k9B';
+    return null;
+}
 
 export async function POST(request) {
     try {
@@ -25,21 +26,12 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Pack de créditos inválido. Usa: 100, 250 o 500' }, { status: 400 });
         }
 
-        const productId = CREDIT_PRODUCTS[packStr];
+        const priceId = getPriceId(packStr);
 
-        // Look up the active price for this product
-        const prices = await stripe.prices.list({
-            product: productId,
-            active: true,
-            limit: 1,
-        });
-
-        if (!prices.data.length) {
-            console.error(`No active price found for product ${productId} (pack ${packStr})`);
-            return NextResponse.json({ error: `No se encontró el precio para el pack de ${packStr} créditos` }, { status: 500 });
+        if (!priceId) {
+            console.error(`STRIPE_PRICE_CREDITS_${packStr} no configurado en env vars`);
+            return NextResponse.json({ error: `Precio no configurado para pack de ${packStr} créditos` }, { status: 500 });
         }
-
-        const priceId = prices.data[0].id;
 
         // Check if user already has a stripe_customer_id
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
