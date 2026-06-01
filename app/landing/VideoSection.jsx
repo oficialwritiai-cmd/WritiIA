@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Reveal from "./Reveal";
 
-const VIDEO_ID = 'C6MJRgDxbIY';
+const VIDEO_ID = 'UcaCvukwpW8';
 const THUMBNAIL = `https://img.youtube.com/vi/${VIDEO_ID}/maxresdefault.jpg`;
 const EMBED_URL = `https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1&autoplay=1`;
 

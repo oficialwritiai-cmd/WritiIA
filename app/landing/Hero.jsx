@@ -1,7 +1,11 @@
 'use client';
 import { useLang } from "./LanguageLanding";
 import Reveal from "./Reveal";
-import { ArrowUpRight, Sparkles, Brain, Calendar, FileText, Play, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, Sparkles, Brain, Calendar, FileText, CheckCircle2 } from "lucide-react";
+
+function track(event) {
+  if (typeof window !== 'undefined' && window.gtag) window.gtag('event', event);
+}
 
 const Hero = () => {
   const { t } = useLang();
@@ -9,7 +13,16 @@ const Hero = () => {
   const dash = t("hero.dash");
 
   return (
-    <section id="top" className="relative min-h-screen w-full pt-24 sm:pt-28 lg:pt-32 pb-16 sm:pb-24 overflow-hidden">
+    <section
+      id="top"
+      className="relative min-h-screen w-full pt-40 sm:pt-44 lg:pt-48 pb-16 sm:pb-24 overflow-hidden"
+      onMouseEnter={() => {
+        if (typeof window !== 'undefined' && !window._heroSeen) {
+          window._heroSeen = true;
+          track('hero_view');
+        }
+      }}
+    >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 items-stretch">
           {/* LEFT */}
@@ -22,31 +35,56 @@ const Hero = () => {
                 </span>
               </div>
 
+              {/* Headline */}
               <h1
-                className="text-[36px] sm:text-5xl md:text-[56px] lg:text-[64px] xl:text-[72px] leading-[1.05] tracking-[-0.035em] text-white font-medium"
+                className="text-[34px] sm:text-5xl md:text-[52px] lg:text-[58px] xl:text-[64px] leading-[1.08] tracking-[-0.035em] text-white font-medium"
                 style={{ fontFamily: "'Outfit', sans-serif" }}
                 data-testid="hero-h1"
               >
                 {t("hero.h1Pre")}{" "}
-                <span className="font-serif-accent text-white/80">{t("hero.h1Italic")}</span>{" "}
-                {t("hero.h1Post")}
+                <span className="font-serif-accent text-white/85">{t("hero.h1Italic")}</span>
+                {t("hero.h1Post") ? ` ${t("hero.h1Post")}` : ""}
               </h1>
 
-              <p className="mt-6 text-base sm:text-lg text-white/65 max-w-xl leading-relaxed">
+              {/* Subtitle */}
+              <p className="mt-6 text-base sm:text-lg text-white/70 max-w-xl leading-relaxed">
                 {t("hero.sub")}
               </p>
+              <p className="mt-2 text-sm text-white/40 max-w-xl leading-relaxed">
+                {t("hero.subSmall")}
+              </p>
 
-              <div className="mt-9 flex flex-col sm:flex-row gap-3">
-                <a href="/login" className="btn-primary group" data-testid="hero-cta-primary">
+              {/* CTA */}
+              <div className="mt-9 flex flex-col gap-3">
+                <a
+                  href="/login"
+                  className="btn-primary group w-full sm:w-auto justify-center"
+                  data-testid="hero-cta-primary"
+                  onClick={() => track('hero_cta_click')}
+                  style={{
+                    background: '#7C3AED',
+                    boxShadow: '0 0 24px rgba(124,58,237,0.5)',
+                    padding: '16px 28px',
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                  }}
+                >
                   {t("hero.ctaPrimary")}
                   <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
-                <a href="#system" className="btn-secondary group" data-testid="hero-cta-secondary">
-                  <Play className="h-3.5 w-3.5" />
+                <p className="text-center text-xs text-white/35 leading-relaxed">
+                  {t("hero.ctaTrust")}
+                </p>
+                <a
+                  href="#video"
+                  className="text-center text-sm text-white/50 hover:text-white/80 transition-colors"
+                  style={{ textDecoration: 'none' }}
+                >
                   {t("hero.ctaSecondary")}
                 </a>
               </div>
 
+              {/* Pills */}
               <div className="mt-10 flex flex-wrap gap-2.5">
                 {pills.map((p, i) => (
                   <span key={i} className="pill" data-testid={`hero-feature-pill-${i}`}>
@@ -139,7 +177,7 @@ const Hero = () => {
               </div>
 
               <div className="absolute -left-3 -top-3 hidden lg:flex liquid-glass px-3 py-2 items-center gap-2 text-[11px] text-white/70 float-slow" style={{ animationDelay: "1.2s" }}>
-                <Sparkles className="h-3 w-3 text-white" /> 60 min · 1 sesión
+                <Sparkles className="h-3 w-3 text-white" /> 20 min · 1 sesión
               </div>
             </div>
           </Reveal>

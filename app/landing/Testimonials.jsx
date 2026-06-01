@@ -1,61 +1,77 @@
 'use client';
 import { useLang } from "./LanguageLanding";
 import Reveal from "./Reveal";
-import { Star } from "lucide-react";
+import { ArrowUpRight, Users } from "lucide-react";
 
-const avatars = [
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256&h=256",
-  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256&h=256",
-  "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=256&h=256",
-];
+// Actualiza este número manualmente cuando cambien las plazas
+const PLAZAS_DISPONIBLES = 13;
+
+function track(event) {
+  if (typeof window !== 'undefined' && window.gtag) window.gtag('event', event);
+}
 
 const Testimonials = () => {
   const { t } = useLang();
-  const items = t("testimonials.items");
+  const d = t("launch");
 
   return (
-    <section id="testimonials" className="relative py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+    <section id="launch" className="relative py-24 lg:py-32">
+      <div className="mx-auto max-w-3xl px-5 lg:px-8">
         <Reveal>
-          <p className="micro-label" data-testid="test-eyebrow">{t("testimonials.eyebrow")}</p>
-          <h2
-            className="mt-4 text-3xl sm:text-4xl lg:text-5xl tracking-tight text-white font-medium max-w-3xl"
-            style={{ fontFamily: "'Outfit', sans-serif" }}
-            data-testid="test-title"
+          <p className="micro-label text-center mb-6">{d.eyebrow}</p>
+          <div
+            className="liquid-glass-strong p-8 sm:p-12 text-center"
+            style={{ border: '1px solid rgba(124,58,237,0.35)' }}
           >
-            {t("testimonials.title")}
-          </h2>
-        </Reveal>
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 border border-violet-400/20 mb-6">
+              <Users className="h-6 w-6 text-violet-300" />
+            </div>
 
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-          {items.map((it, i) => (
-            <Reveal key={i} delay={i * 110}>
-              <div
-                className="liquid-glass p-7 h-full flex flex-col transition-all duration-500 hover:bg-white/[0.05] hover:-translate-y-1"
-                data-testid={`testimonial-${i}`}
+            <h2
+              className="text-3xl sm:text-4xl font-medium text-white tracking-tight mb-4"
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              {d.title}
+            </h2>
+
+            <p className="text-white/65 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-8">
+              {d.body}
+            </p>
+
+            {/* Plazas counter */}
+            <div
+              className="inline-flex items-center gap-3 px-5 py-3 rounded-xl mb-8"
+              style={{
+                background: 'rgba(124,58,237,0.12)',
+                border: '1px solid rgba(124,58,237,0.3)',
+              }}
+            >
+              <span className="h-2 w-2 rounded-full bg-violet-400" style={{ animation: 'pulse 1.5s infinite' }} />
+              <span className="text-sm font-semibold text-white/80">
+                Quedan: <span className="text-violet-300 text-base font-bold">{PLAZAS_DISPONIBLES}</span> plazas
+              </span>
+            </div>
+
+            <div>
+              <a
+                href="/login"
+                onClick={() => track('launch_cta_click')}
+                className="btn-primary justify-center"
+                style={{
+                  background: '#7C3AED',
+                  boxShadow: '0 0 20px rgba(124,58,237,0.4)',
+                  padding: '14px 32px',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                }}
               >
-                <div className="flex items-center gap-1 mb-5">
-                  {Array.from({ length: 5 }).map((_, k) => (
-                    <Star key={k} className="h-3.5 w-3.5 fill-white text-white" />
-                  ))}
-                </div>
-                <p className="text-[15px] text-white/80 leading-relaxed flex-1">"{it.text}"</p>
-                <div className="mt-7 flex items-center gap-3 pt-5 border-t border-white/[0.06]">
-                  <img
-                    src={avatars[i]}
-                    alt={it.name}
-                    loading="lazy"
-                    className="h-10 w-10 rounded-full object-cover ring-1 ring-white/15"
-                  />
-                  <div>
-                    <p className="text-sm text-white">{it.name}</p>
-                    <p className="text-[11px] text-white/45">{it.role}</p>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+                {d.cta}
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

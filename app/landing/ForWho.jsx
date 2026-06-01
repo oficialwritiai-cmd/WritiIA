@@ -38,7 +38,15 @@ const ForWho = () => {
                   <h3 className="text-xl text-white font-medium tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
                     {c.k}
                   </h3>
-                  <p className="mt-3 text-sm text-white/55 leading-relaxed">{c.v}</p>
+                  <p className="mt-3 text-sm text-white/55 leading-relaxed flex-1">{c.v}</p>
+                  <a
+                    href="#pricing"
+                    onClick={e => { e.preventDefault(); document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' }); }}
+                    className="mt-5 text-sm text-violet-300/70 hover:text-violet-300 transition-colors"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    Soy {c.k.split(' ')[0].toLowerCase()} →
+                  </a>
                 </div>
               </Reveal>
             );
