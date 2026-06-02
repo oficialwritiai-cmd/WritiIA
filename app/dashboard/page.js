@@ -550,10 +550,8 @@ export default function DashboardPage() {
         setLibIdeas([]);
         setRecommendedIdeas([]);
         setIdeasFetchError('');
-        // Clear cached ideas for the current project so stale data doesn't show after project switch
-        try {
-            if (activeProject?.id) sessionStorage.removeItem(`writi_rec_ideas_${activeProject.id}`);
-        } catch {}
+        setPlanWizardStep(1);
+        // Note: sessionStorage cache is preserved on project switch — restore effect will load it for new project
         setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
@@ -867,43 +865,66 @@ export default function DashboardPage() {
         }
     }, [supabase, searchParams]);
 
+    // ── Plan wizard sessionStorage helpers ───────────────────────────
+    const PLAN_STATE_KEY = (pid) => `writi_plan_state_v2_${pid}`;
+
+    // Restore planWizardStep + recommendedIdeas when activeProject becomes available
     useEffect(() => {
-        if (generationMode === 'plan' && planWizardStep === 1) {
-            fetchLibraryIdeas();
-            if (activeProject && recommendedIdeas.length === 0) {
-                // Restore from sessionStorage first to avoid paying credits on every nav
-                try {
-                    const cached = sessionStorage.getItem(`writi_rec_ideas_${activeProject.id}`);
-                    if (cached) {
-                        const parsed = JSON.parse(cached);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            setRecommendedIdeas(parsed);
-                            return;
-                        }
-                    }
-                } catch {}
-                // Only fetch from API if no cache exists
-                fetchProactiveIdeas();
+        if (!activeProject?.id) return;
+        try {
+            const saved = sessionStorage.getItem(PLAN_STATE_KEY(activeProject.id));
+            if (saved) {
+                const state = JSON.parse(saved);
+                // Only restore step 2 or 3 — step 1 is the entry, step 4 needs fresh analysis
+                if (state.step >= 2 && state.step <= 3) setPlanWizardStep(state.step);
+                if (Array.isArray(state.ideas) && state.ideas.length > 0) setRecommendedIdeas(state.ideas);
             }
+        } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeProject?.id]);
+
+    // Persist plan state — only when there's actual content to avoid wiping cache on remount
+    useEffect(() => {
+        if (!activeProject?.id || generationMode !== 'plan') return;
+        if (planWizardStep === 1 && recommendedIdeas.length === 0) return; // don't overwrite with empty state
+        try {
+            sessionStorage.setItem(PLAN_STATE_KEY(activeProject.id), JSON.stringify({
+                step: planWizardStep,
+                ideas: recommendedIdeas,
+            }));
+        } catch {}
+    }, [planWizardStep, recommendedIdeas, activeProject?.id, generationMode]);
+
+    // Fetch library + AI ideas when entering plan mode at step 1
+    useEffect(() => {
+        if (generationMode !== 'plan' || planWizardStep !== 1 || !activeProject) return;
+        fetchLibraryIdeas();
+        if (recommendedIdeas.length === 0) {
+            // Skip API fetch if sessionStorage already has cached ideas (restore effect will handle it)
+            const hasCached = (() => {
+                try {
+                    const s = sessionStorage.getItem(`writi_plan_state_v2_${activeProject.id}`);
+                    if (!s) return false;
+                    const parsed = JSON.parse(s);
+                    return Array.isArray(parsed.ideas) && parsed.ideas.length > 0;
+                } catch { return false; }
+            })();
+            if (!hasCached) fetchProactiveIdeas();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [generationMode, planWizardStep, projectVersion, profile?.id]);
-
-    const RECOMMENDED_CACHE_KEY = (pid) => `writi_rec_ideas_${pid}`;
+    }, [generationMode, planWizardStep, projectVersion, activeProject?.id]);
 
     const fetchProactiveIdeas = async () => {
         if (!activeProject) return;
-        if (!profile?.id) {
-            setIdeasFetchError('Cargando perfil, intenta en un momento...');
-            return;
-        }
         setIdeasFetchError('');
         setLoadingRecommended(true);
-        // Don't clear existing ideas until new ones arrive (avoids empty flash on failure)
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-
+            if (!token) {
+                setIdeasFetchError('Sesión no disponible. Recarga la página.');
+                return;
+            }
             const res = await fetch('/api/ideas-extra', {
                 method: 'POST',
                 headers: {
@@ -911,13 +932,11 @@ export default function DashboardPage() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    userId: profile.id,
                     projectId: activeProject.id,
                     proactive: true,
-                    context: 'Generación proactiva basada en cerebro',
-                    businessOffer: businessOffer,
-                    targetAudience: targetAudience,
-                    mainPainPoint: mainPainPoint
+                    businessOffer,
+                    targetAudience,
+                    mainPainPoint
                 })
             });
             const data = await res.json();
@@ -927,17 +946,15 @@ export default function DashboardPage() {
                     id: `ai-idea-${idx}-${Date.now()}`
                 }));
                 setRecommendedIdeas(stableIdeas);
-                // Persist so ideas survive tab navigation without re-charging credits
-                try { sessionStorage.setItem(RECOMMENDED_CACHE_KEY(activeProject.id), JSON.stringify(stableIdeas)); } catch {}
             } else if (data.code === 'NO_CREDITS') {
-                setIdeasFetchError('Sin créditos suficientes para generar ideas IA.');
+                setIdeasFetchError('Sin créditos suficientes para ideas IA.');
             } else {
                 setIdeasFetchError('Error al generar ideas. Intenta de nuevo.');
-                console.error('Error fetching proactive ideas:', data.error);
+                console.error('[ideas-proactive]', data.error);
             }
         } catch (err) {
             setIdeasFetchError('Error de red. Intenta de nuevo.');
-            console.error('Error fetching proactive ideas:', err);
+            console.error('[ideas-proactive]', err);
         } finally {
             setLoadingRecommended(false);
         }
