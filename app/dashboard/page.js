@@ -57,7 +57,9 @@ let _cachedPlanFrequency = '3 publicaciones por semana';
 let _cachedPlanOffer     = '';
 let _cachedPlanAudience  = 'Emprendedores';
 let _cachedPlanPain      = '';
-let _cachedPlanProjectId = null; // para detectar cambio de proyecto y limpiar
+let _cachedPlanProjectId = null;
+let _cachedPlanSlots     = []; // plan slots con guiones generados
+let _cachedSelectedSlots = []; // IDs de slots seleccionados
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState(_cachedPlanMode);
@@ -108,8 +110,8 @@ export default function DashboardPage() {
     const [planContentTypes, setPlanContentTypes] = useState({ autoridad: 30, 'historia personal': 25, venta: 25, comunidad: 20 });
     const [planExcludeTopics, setPlanExcludeTopics] = useState('');
     const [planCampaigns, setPlanCampaigns] = useState('');
-    const [planSlots, setPlanSlots] = useState([]);
-    const [selectedSlots, setSelectedSlots] = useState(new Set());
+    const [planSlots, setPlanSlots] = useState(_cachedPlanSlots);
+    const [selectedSlots, setSelectedSlots] = useState(new Set(_cachedSelectedSlots));
     const [isDragging, setIsDragging] = useState(false);
     const [dragMode, setDragMode] = useState(null); // 'select' or 'deselect'
     const [contextMenu, setContextMenu] = useState(null); // { x, y }
@@ -295,6 +297,8 @@ export default function DashboardPage() {
         _cachedPlanAudience  = targetAudienceType;
         _cachedPlanPain      = mainPainPoint;
         _cachedPlanProjectId = activeProject?.id || null;
+        _cachedPlanSlots     = planSlots;
+        _cachedSelectedSlots = [...selectedSlots];
     });
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
@@ -573,8 +577,6 @@ export default function DashboardPage() {
         setLibIdeas([]);
         // NO tocar plan wizard state aquí — este effect corre en cada mount y destruiría el caché
         setIdeasFetchError('');
-        setPlanSlots([]);
-        setSelectedSlots(new Set());
         loadData();
     }, [projectVersion]);
 
@@ -598,7 +600,7 @@ export default function DashboardPage() {
             _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
             _cachedPlanFrequency = '3 publicaciones por semana';
             _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
-            _cachedPlanProjectId = null;
+            _cachedPlanProjectId = null; _cachedPlanSlots = []; _cachedSelectedSlots = [];
         }
     }, [activeProject?.id]);
 
@@ -4977,10 +4979,14 @@ export default function DashboardPage() {
                                                 <Trash2 size={16} />
                                             </button>
                                             
-                                            {!slot.has_script ? (
+                                            {slot.slot_status === 'script_generating' ? (
+                                                <button disabled className="btn-secondary" style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.7 }}>
+                                                    <Loader className="animate-spin" size={14} /> Generando...
+                                                </button>
+                                            ) : !slot.has_script ? (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleGenerateSlotScript(slot); }}
-                                                    disabled={generatingSlotId === slot.id}
+                                                    disabled={generatingSlotId === slot.id || isGeneratingMassive}
                                                     className="btn-primary"
                                                     style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(126, 206, 202, 0.2)' }}
                                                 >
