@@ -367,20 +367,22 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
         setAutoRunning(true);
         setGlobalError('');
 
-        // Get token ONCE upfront — avoid stale closure issues
         const tok = await getToken();
         if (!tok) {
-            setGlobalError('No se pudo obtener sesión. Recarga la página e intenta de nuevo.');
+            setGlobalError('Sesión no disponible. Recarga la página e intenta de nuevo.');
             setAutoRunning(false);
             return;
         }
 
-        for (const slot of (slots || [])) {
-            // Use scriptsRef (always current) instead of stale closure
-            if (!scriptsRef.current[slot.id]) {
-                await generateOne(slot.id, tok);
-            }
+        // Generar en paralelo con concurrencia máx 3 — rápido y sin sobrecargar la API
+        const pending = (slots || []).filter(s => !scriptsRef.current[s.id]);
+        const CONCURRENCY = 3;
+
+        for (let i = 0; i < pending.length; i += CONCURRENCY) {
+            const batch = pending.slice(i, i + CONCURRENCY);
+            await Promise.all(batch.map(slot => generateOne(slot.id, tok)));
         }
+
         setAutoRunning(false);
     }
 
