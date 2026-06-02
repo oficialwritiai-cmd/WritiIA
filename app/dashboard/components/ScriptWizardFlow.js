@@ -405,25 +405,27 @@ export default function ScriptWizardFlow({
                         </div>
                     </div>
 
-                    {/* Platform */}
-                    <div>
-                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-                            Plataforma
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {PLATFORMS.map(p => (
-                                <button key={p} onClick={() => setPlatform(p)} style={{
-                                    padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
-                                    border: `1px solid ${platform === p ? PLAT_COLORS[p] : 'rgba(255,255,255,0.08)'}`,
-                                    background: platform === p ? `${PLAT_COLORS[p]}18` : 'rgba(255,255,255,0.03)',
-                                    color: platform === p ? PLAT_COLORS[p] : 'rgba(255,255,255,0.5)',
-                                    cursor: 'pointer', transition: 'all 0.15s',
-                                }}>
-                                    {p}
-                                </button>
-                            ))}
+                    {/* Platform — solo si NO viene del calendario */}
+                    {!ideaContext && (
+                        <div>
+                            <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                                Plataforma
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {PLATFORMS.map(p => (
+                                    <button key={p} onClick={() => setPlatform(p)} style={{
+                                        padding: '8px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
+                                        border: `1px solid ${platform === p ? PLAT_COLORS[p] : 'rgba(255,255,255,0.08)'}`,
+                                        background: platform === p ? `${PLAT_COLORS[p]}18` : 'rgba(255,255,255,0.03)',
+                                        color: platform === p ? PLAT_COLORS[p] : 'rgba(255,255,255,0.5)',
+                                        cursor: 'pointer', transition: 'all 0.15s',
+                                    }}>
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Quantity */}
                     <div>
