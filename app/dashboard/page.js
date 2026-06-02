@@ -765,7 +765,10 @@ export default function DashboardPage() {
                 ? sessionStorage.getItem('writi_voice_story') || ''
                 : '';
             if (story) {
-                try { sessionStorage.removeItem('writi_voice_story'); } catch(e) {}
+                try {
+                    sessionStorage.removeItem('writi_voice_story');
+                    sessionStorage.removeItem('writi_scripts_session'); // CRITICAL: Clear old scripts cache
+                } catch(e) {}
                 setGenerationMode('single');
                 setExperienciaReal(story);
                 // Use first sentence as topic so generation has context
