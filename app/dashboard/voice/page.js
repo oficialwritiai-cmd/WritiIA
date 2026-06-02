@@ -32,8 +32,11 @@ export default function VoiceStoryPage() {
     const [error, setError]             = useState('');
     const [isSupported, setIsSupported] = useState(true);
 
-    const recognitionRef = useRef(null);
-    const accRef         = useRef('');
+    const recognitionRef  = useRef(null);
+    const accRef          = useRef('');
+    const isRecordingRef  = useRef(false);
+    const streamRef       = useRef(null);   // mantener stream vivo en iOS
+    const restartTimerRef = useRef(null);
 
     // Rotate prompts
     useEffect(() => {
@@ -47,8 +50,6 @@ export default function VoiceStoryPage() {
         return () => clearInterval(t);
     }, []);
 
-    const isRecordingRef = useRef(false); // ref para onend/onerror (evita stale closure)
-
     // Init SpeechRecognition
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -57,7 +58,7 @@ export default function VoiceStoryPage() {
 
         const r = new SR();
         r.lang = 'es-ES';
-        r.continuous = true;   // desktop; iOS lo ignora y aborta — onend lo reinicia
+        r.continuous = true;
         r.interimResults = true;
 
         r.onresult = (e) => {
@@ -72,7 +73,6 @@ export default function VoiceStoryPage() {
         };
 
         r.onerror = (e) => {
-            // 'aborted' y 'no-speech' son normales en iOS — no mostrar error
             if (e.error === 'no-speech' || e.error === 'aborted') return;
             setError('Micrófono no disponible: ' + e.error);
             isRecordingRef.current = false;
@@ -81,40 +81,57 @@ export default function VoiceStoryPage() {
 
         r.onend = () => {
             setInterim('');
-            // iOS Safari no soporta continuous=true: aborta y dispara onend.
-            // Si el usuario todavía está grabando, reiniciar automáticamente.
-            if (isRecordingRef.current) {
+            if (!isRecordingRef.current) { setIsRecording(false); return; }
+            // iOS no soporta continuous: reiniciar con delay para que procese el audio
+            clearTimeout(restartTimerRef.current);
+            restartTimerRef.current = setTimeout(() => {
+                if (!isRecordingRef.current) return;
                 try { r.start(); } catch (_) {}
-            } else {
-                setIsRecording(false);
-            }
+            }, 300);
         };
 
         recognitionRef.current = r;
-        return () => { isRecordingRef.current = false; try { r.abort(); } catch(_) {} };
+        return () => {
+            clearTimeout(restartTimerRef.current);
+            isRecordingRef.current = false;
+            try { r.abort(); } catch(_) {}
+            try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch(_) {}
+        };
     }, []);
 
     async function startRecording() {
         setError('');
-        // No llamar getUserMedia antes — en iOS compite con SpeechRecognition por el mic
-        // SpeechRecognition gestiona el permiso de micrófono internamente
         try {
+            // Pedir permiso del micrófono primero y mantener el stream vivo.
+            // Esto es necesario en iOS Safari: la recognition no captura audio
+            // si el stream no fue abierto desde un gesto del usuario en el mismo tick.
+            if (!streamRef.current || streamRef.current.active === false) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamRef.current = stream;
+            }
             accRef.current = transcript;
             isRecordingRef.current = true;
             setIsRecording(true);
-            recognitionRef.current?.start();
+            try { recognitionRef.current?.start(); } catch(_) {}
         } catch(e) {
             isRecordingRef.current = false;
             setIsRecording(false);
-            setError('No se pudo iniciar el micrófono. Permite el acceso en el navegador.');
+            if (e?.name === 'NotAllowedError') {
+                setError('Permiso denegado. Toca el candado en la barra y activa el micrófono.');
+            } else {
+                setError('No se pudo iniciar. Usa Safari en iPhone o Chrome en Android.');
+            }
         }
     }
 
     function stopRecording() {
+        clearTimeout(restartTimerRef.current);
         isRecordingRef.current = false;
         setIsRecording(false);
         setInterim('');
         try { recognitionRef.current?.stop(); } catch(_) {}
+        // Liberar stream al parar
+        try { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; } catch(_) {}
     }
 
     function finishRecording() {
@@ -245,9 +262,30 @@ export default function VoiceStoryPage() {
                     </p>
 
                     {!isSupported && (
-                        <p style={{ color: '#f87171', fontSize: '0.85rem', textAlign: 'center' }}>
-                            Tu navegador no soporta grabación de voz. Usa Chrome o Edge.
+                        <p style={{ color: '#f87171', fontSize: '0.85rem', textAlign: 'center', maxWidth: 360 }}>
+                            ⚠ Tu navegador no soporta grabación de voz.<br/>
+                            En iPhone usa <strong>Safari</strong>. En Android usa <strong>Chrome</strong>.
                         </p>
+                    )}
+
+                    {/* Fallback de texto — siempre disponible */}
+                    {!isRecording && !displayText && (
+                        <div style={{ width: '100%', maxWidth: '620px', marginTop: 8 }}>
+                            <p style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.4)', textAlign: 'center', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                — o escribe tu historia —
+                            </p>
+                            <textarea
+                                placeholder="Si la voz no funciona, escribe aquí tu historia..."
+                                onChange={e => { accRef.current = e.target.value; setTranscript(e.target.value); }}
+                                rows={4}
+                                style={{
+                                    width: '100%', background: 'rgba(0,20,10,0.6)', border: '1px solid rgba(52,211,153,0.25)',
+                                    borderRadius: 6, color: '#34d399', padding: '12px 16px', fontSize: '0.9rem',
+                                    fontFamily: "'Courier New', monospace", resize: 'vertical', outline: 'none',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                        </div>
                     )}
                 </div>
             )}
