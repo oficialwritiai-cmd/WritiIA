@@ -102,24 +102,29 @@ export default function VoiceStoryPage() {
     async function startRecording() {
         setError('');
         try {
-            // Pedir permiso del micrófono primero y mantener el stream vivo.
-            // Esto es necesario en iOS Safari: la recognition no captura audio
-            // si el stream no fue abierto desde un gesto del usuario en el mismo tick.
-            if (!streamRef.current || streamRef.current.active === false) {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                streamRef.current = stream;
+            // En iOS: pedir permiso via getUserMedia, soltar el stream COMPLETAMENTE
+            // y esperar antes de iniciar recognition. Si el stream sigue activo,
+            // iOS bloquea SpeechRecognition silenciosamente (sin error, sin resultados).
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+
+            // Dar tiempo al sistema para liberar el mic antes de que recognition lo tome
+            await new Promise(r => setTimeout(r, 250));
+
+            if (!isRecordingRef.current) { // el usuario podría haber cancelado durante la espera
+                accRef.current = transcript;
+                isRecordingRef.current = true;
+                setIsRecording(true);
+                try { recognitionRef.current?.start(); } catch(_) {}
             }
-            accRef.current = transcript;
-            isRecordingRef.current = true;
-            setIsRecording(true);
-            try { recognitionRef.current?.start(); } catch(_) {}
         } catch(e) {
             isRecordingRef.current = false;
             setIsRecording(false);
             if (e?.name === 'NotAllowedError') {
-                setError('Permiso denegado. Toca el candado en la barra y activa el micrófono.');
+                setError('Permiso denegado. Activa el micrófono en los ajustes del navegador.');
             } else {
-                setError('No se pudo iniciar. Usa Safari en iPhone o Chrome en Android.');
+                setError('No se pudo iniciar. En iPhone usa Safari, en Android usa Chrome.');
             }
         }
     }
@@ -130,8 +135,7 @@ export default function VoiceStoryPage() {
         setIsRecording(false);
         setInterim('');
         try { recognitionRef.current?.stop(); } catch(_) {}
-        // Liberar stream al parar
-        try { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; } catch(_) {}
+        streamRef.current = null;
     }
 
     function finishRecording() {
