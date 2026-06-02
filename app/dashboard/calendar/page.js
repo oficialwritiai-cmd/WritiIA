@@ -529,6 +529,66 @@ function CalendarContent() {
         return () => window.removeEventListener('click', closeMenu);
     }, []);
 
+    // ── Autosave Eventos: crear/actualizar automáticamente al escribir ──
+    const eventAutosaveRef = useRef(null);
+    useEffect(() => {
+        if (!selectedDate || (!tempTitle && !tempNotes)) return;
+
+        if (eventAutosaveRef.current) clearTimeout(eventAutosaveRef.current);
+
+        eventAutosaveRef.current = setTimeout(async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const colorValue = tempColor || 'purple';
+
+                if (selectedEvent?.id) {
+                    await supabase.from('calendar_events')
+                        .update({
+                            title: tempTitle || 'Sin título',
+                            status: tempStatus,
+                            platform: tempPlatform,
+                            notes: tempNotes,
+                            event_date: selectedDate,
+                            color: colorValue,
+                            start_time: tempStartTime,
+                            end_time: tempEndTime,
+                        })
+                        .eq('id', selectedEvent.id);
+                } else {
+                    const { data: newEv } = await supabase.from('calendar_events')
+                        .insert({
+                            user_id: user.id,
+                            project_id: activeProject?.id || null,
+                            title: tempTitle || 'Sin título',
+                            status: tempStatus,
+                            platform: tempPlatform,
+                            notes: tempNotes,
+                            event_date: selectedDate,
+                            type: 'idea',
+                            color: colorValue,
+                            start_time: tempStartTime,
+                            end_time: tempEndTime,
+                        })
+                        .select()
+                        .single();
+
+                    if (newEv) {
+                        setSelectedEvent(newEv);
+                        setEvents(prev => [...prev, newEv]);
+                    }
+                }
+            } catch (err) {
+                console.log('[Event Autosave]:', err.message);
+            }
+        }, 1500);
+
+        return () => {
+            if (eventAutosaveRef.current) clearTimeout(eventAutosaveRef.current);
+        };
+    }, [tempTitle, tempNotes, tempStatus, tempPlatform, tempColor, tempStartTime, tempEndTime, selectedDate, selectedEvent?.id, activeProject?.id]);
+
     // Drag & drop
     const onDragStart = (e, id) => e.dataTransfer.setData('eventId', id);
     const onDrop = async (e, date) => {
