@@ -274,6 +274,54 @@ export default function DashboardPage() {
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
     const SESSION_KEY = 'writi_scripts_session';
+    const autosaveRef = useRef(null);
+
+    // ── Autosave: guardar guiones editados en BD cada 3 segundos ──
+    useEffect(() => {
+        if (!scripts.length || step !== 3 || !topic) return; // Solo guardar cuando está editando
+
+        // Limpiar timeout anterior
+        if (autosaveRef.current) clearTimeout(autosaveRef.current);
+
+        // Guardar en sessionStorage inmediatamente
+        try {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+                scripts: scripts.slice(0, 10),
+                topic,
+                platform,
+            }));
+        } catch (e) {}
+
+        // Guardar en BD cada 3 segundos (debounced)
+        autosaveRef.current = setTimeout(async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // Guardar en library si hay scripts editados
+                for (let i = 0; i < scripts.length; i++) {
+                    const script = scripts[i];
+                    if (script.library_id) {
+                        // Actualizar script existente
+                        await supabase
+                            .from('library')
+                            .update({
+                                title: script.titulo || topic,
+                                content: JSON.stringify(script),
+                                updated_at: new Date().toISOString(),
+                            })
+                            .eq('id', script.library_id);
+                    }
+                }
+            } catch (err) {
+                console.log('[Autosave] Silent save:', err.message);
+            }
+        }, 3000);
+
+        return () => {
+            if (autosaveRef.current) clearTimeout(autosaveRef.current);
+        };
+    }, [scripts, step, topic, platform]);
 
     // Restaura guiones al montar
     useEffect(() => {
