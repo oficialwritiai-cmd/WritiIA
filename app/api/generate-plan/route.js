@@ -35,20 +35,28 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
         }
 
+        console.log(`[generate-plan] Generating ${postCount} slots for platforms: ${platforms?.join(', ')}`);
+
         const slots = generatePlanSlots(
             postCount,
             description,
             selectedIdeas,
             platforms,
-            contentStyles
+            contentStyles,
+            businessOffer,
+            mainPainPoint
         );
 
         if (!slots || slots.length === 0) {
+            console.error('[generate-plan] No slots generated');
             return NextResponse.json(
                 { error: 'No se pudieron generar las ideas.' },
                 { status: 400 }
             );
         }
+
+        console.log(`[generate-plan] ✅ Generated ${slots.length} slots successfully`);
+        console.log(`[generate-plan] First slot structure:`, slots[0]);
 
         return NextResponse.json({
             success: true,
@@ -65,7 +73,7 @@ export async function POST(req) {
     }
 }
 
-function generatePlanSlots(postCount, description, selectedIdeas, platforms, contentStyles) {
+function generatePlanSlots(postCount, description, selectedIdeas, platforms, contentStyles, businessOffer, mainPainPoint) {
     const slots = [];
     const platformList = platforms || ['Reels'];
 
@@ -99,7 +107,10 @@ function generatePlanSlots(postCount, description, selectedIdeas, platforms, con
             id: `slot-${Date.now()}-${i}`,
             idea_title: ideaTitle,
             idea_description: ideaDesc,
-            plataforma: platform,
+            platform: platform,
+            content_type: 'video',
+            day_number: i + 1,
+            goal: businessOffer || mainPainPoint || 'Generar engagement',
             estilo: contentStyles[i % contentStyles.length] || 'general',
             hook: generarHook(ideaTitle, platform),
             has_script: false,
