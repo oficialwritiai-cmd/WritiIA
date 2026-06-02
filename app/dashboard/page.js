@@ -565,27 +565,42 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Al cambiar de proyecto: limpiar resultados generados
+        // Al cambiar de proyecto: limpiar guiones/ideas (NO plan wizard — se limpia por cambio de projectId)
         // No resetear step si hay scripts cargados (evita que TOKEN_REFRESHED borre el trabajo)
         if (_cachedScripts.length === 0 && !restoredRef.current) setStep(1);
         restoredRef.current = false;
         setIdeas('');
         setLibIdeas([]);
-        setRecommendedIdeas([]);
+        // NO tocar plan wizard state aquí — este effect corre en cada mount y destruiría el caché
         setIdeasFetchError('');
-        setPlanWizardStep(1);
-        setSelectedPlanIdeas([]);
-        setGenerationMode('single');
-        // Limpiar caché de módulo del plan wizard al cambiar proyecto
-        _cachedPlanMode = 'single'; _cachedPlanStep = 1; _cachedPlanIdeas = [];
-        _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
-        _cachedPlanFrequency = '3 publicaciones por semana';
-        _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
-        _cachedPlanProjectId = null;
         setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
     }, [projectVersion]);
+
+    // Detectar cambio REAL de proyecto (no mount) para limpiar el plan wizard
+    const prevProjectIdRef = useRef(null);
+    useEffect(() => {
+        const currentId = activeProject?.id || null;
+        if (prevProjectIdRef.current === null) {
+            // Primera vez (mount): solo registrar el proyecto actual, no limpiar
+            prevProjectIdRef.current = currentId;
+            return;
+        }
+        if (prevProjectIdRef.current !== currentId) {
+            // Proyecto realmente cambió — limpiar plan wizard
+            prevProjectIdRef.current = currentId;
+            setRecommendedIdeas([]);
+            setPlanWizardStep(1);
+            setSelectedPlanIdeas([]);
+            setGenerationMode('single');
+            _cachedPlanMode = 'single'; _cachedPlanStep = 1; _cachedPlanIdeas = [];
+            _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
+            _cachedPlanFrequency = '3 publicaciones por semana';
+            _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
+            _cachedPlanProjectId = null;
+        }
+    }, [activeProject?.id]);
 
     async function loadData() {
         const { data: { user } } = await supabase.auth.getUser();
