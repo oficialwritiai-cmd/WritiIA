@@ -14,6 +14,7 @@ import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
 import FormPresets from '@/app/components/FormPresets';
+import PlanMonthlyStep1 from '@/app/dashboard/components/PlanMonthlyStep1';
 
 
 
@@ -3441,150 +3442,28 @@ export default function DashboardPage() {
 
                     {/* STEP 1: PLATAFORMAS Y FRECUENCIA */}
                     {planWizardStep === 1 && (
-                        <div className="wz-step" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-                                <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px' }}>
-                                    Construyamos tu mes
-                                </h2>
-                                <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
-                                    4 pasos. 20 minutos. Un mes listo para grabar.
-                                </p>
-                            </div>
-                            <div>
-                                <span className="wz-label">Plataformas (multi-selección)</span>
-                                <div className="pwz-chips">
-                                    {PLATAFORMAS.map(p => (
-                                        <button key={p} className={`pwz-chip${planPlatforms.includes(p) ? ' active' : ''}`} onClick={() => handleTogglePlatform(p)}>{p}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <span className="wz-label">Frecuencia semanal</span>
-                                <div className="pwz-chips">
-                                    {FRECUENCIAS.map(f => (
-                                        <button key={f} className={`pwz-chip${planFrequency === f ? ' active' : ''}`} onClick={() => setPlanFrequency(f)}>{f.split(' ')[0]}× por semana</button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                                <div style={{ gridColumn: '1 / span 2' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>¿Qué vendes este mes? (Oferta Principal) <span style={{color: '#7ECECA'}}>*</span></p>
-                                    <input 
-                                        className="input-field" 
-                                        placeholder="Ej: Mentoría 1:1, Curso de IA, Pack de 10 guiones..." 
-                                        value={businessOffer} 
-                                        onChange={(e) => setBusinessOffer(e.target.value)} 
-                                    />
-                                    {businessOffer.length >= 2 && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <input 
-                                                    className="input-field"
-                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
-                                                    placeholder="Instrucción (ej: hazlo más agresivo, añade urgencia...)"
-                                                    value={aiRefineInstructions['businessOffer'] || ''}
-                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, businessOffer: e.target.value }))}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !polishingField) {
-                                                            handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer']);
-                                                        }
-                                                    }}
-                                                />
-                                                <button 
-                                                    onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer'])} 
-                                                    disabled={polishingField === 'businessOffer'}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                        fontWeight: 700, cursor: polishingField === 'businessOffer' ? 'default' : 'pointer',
-                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                        color: '#7ECECA', transition: '0.2s'
-                                                    }}
-                                                >
-                                                    {polishingField === 'businessOffer' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                                    {aiRefineInstructions['businessOffer'] ? 'Aplicar' : 'Mejorar'}
-                                                </button>
-                                            </div>
-                                            <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0 }}>
-                                                Instrucción opcional o hazlo automático. (1 crédito)
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Precio / Ticket medio (Opcional)</p>
-                                    <input 
-                                        className="input-field" 
-                                        placeholder="Ej: 49€, 1500€, Suscripción 20€/mes..." 
-                                        value={ticketPrice} 
-                                        onChange={(e) => setTicketPrice(e.target.value)} 
-                                    />
-                                </div>
-                                <div>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Tipo de audiencia <span style={{color: '#7ECECA'}}>*</span></p>
-                                    <select 
-                                        className="select-field" 
-                                        value={targetAudienceType} 
-                                        onChange={(e) => setTargetAudienceType(e.target.value)}
-                                    >
-                                        {AUDIENCIAS_PLAN.map(a => <option key={a} value={a}>{a}</option>)}
-                                    </select>
-                                </div>
-                                <div style={{ gridColumn: '1 / span 2' }}>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '8px' }}>Describe a tu público y su problema nº1 <span style={{color: '#7ECECA'}}>*</span></p>
-                                    <textarea 
-                                        className="textarea-field" 
-                                        placeholder="Ej: Profesionales de +40 años que se sienten abrumados por la IA y tienen miedo de quedarse atrás." 
-                                        value={mainPainPoint} 
-                                        onChange={(e) => setMainPainPoint(e.target.value)} 
-                                        rows={3} 
-                                    />
-                                    {mainPainPoint.length >= 2 && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <input 
-                                                    className="input-field"
-                                                    style={{ fontSize: '0.7rem', padding: '6px 10px', height: 'auto', flex: 1, background: 'rgba(255,255,255,0.03)' }}
-                                                    placeholder="Instrucción (ej: enfócate en el dolor del tiempo...)"
-                                                    value={aiRefineInstructions['mainPainPoint'] || ''}
-                                                    onChange={(e) => setAiRefineInstructions(prev => ({ ...prev, mainPainPoint: e.target.value }))}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !polishingField) {
-                                                            handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint']);
-                                                        }
-                                                    }}
-                                                />
-                                                <button 
-                                                    onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint'])} 
-                                                    disabled={polishingField === 'mainPainPoint'}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem',
-                                                        fontWeight: 700, cursor: polishingField === 'mainPainPoint' ? 'default' : 'pointer',
-                                                        background: 'rgba(126, 206, 202, 0.08)', border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                        color: '#7ECECA', transition: '0.2s'
-                                                    }}
-                                                >
-                                                    {polishingField === 'mainPainPoint' ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                                                    {aiRefineInstructions['mainPainPoint'] ? 'Aplicar' : 'Mejorar'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                <button onClick={() => setGenerationMode('single')} className="btn-secondary" style={{ flex: 1 }}>← Volver</button>
-                                <button onClick={() => {
-                                    if (planPlatforms.length === 0) { alert('Selecciona al menos una plataforma.'); return; }
-                                    setPlanWizardStep(2);
-                                }} className="btn-primary" style={{ flex: 2 }}>Siguiente →</button>
-                            </div>
-                        </div>
+                        <PlanMonthlyStep1
+                            planPlatforms={planPlatforms}
+                            setPlanPlatforms={setPlanPlatforms}
+                            planFrequency={planFrequency}
+                            setPlanFrequency={setPlanFrequency}
+                            businessOffer={businessOffer}
+                            setBusinessOffer={setBusinessOffer}
+                            ticketPrice={ticketPrice}
+                            setTicketPrice={setTicketPrice}
+                            targetAudienceType={targetAudienceType}
+                            setTargetAudienceType={setTargetAudienceType}
+                            mainPainPoint={mainPainPoint}
+                            setMainPainPoint={setMainPainPoint}
+                            PLATAFORMAS={PLATAFORMAS}
+                            FRECUENCIAS={FRECUENCIAS}
+                            handleImproveField={handleImproveField}
+                            polishingField={polishingField}
+                            aiRefineInstructions={aiRefineInstructions}
+                            setAiRefineInstructions={setAiRefineInstructions}
+                            onNext={() => setPlanWizardStep(2)}
+                            onBack={() => setGenerationMode('single')}
+                        />
                     )}
 
                     {/* STEP 2: ESTRATEGIA DEL MES */}
