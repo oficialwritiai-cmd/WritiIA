@@ -69,16 +69,39 @@ function generatePlanSlots(postCount, description, selectedIdeas, platforms, con
     const slots = [];
     const platformList = platforms || ['Reels'];
 
+    // Plantillas de ideas basadas en el contexto
+    const ideaTemplates = [
+        `Cómo ${description} puede cambiar tu negocio`,
+        `${description}: El error que comete el 90%`,
+        `Por qué necesitas ${description} AHORA`,
+        `${description} en 60 segundos`,
+        `La verdad sobre ${description}`,
+        `Mi opinión brutal sobre ${description}`,
+        `Esto deberían enseñarte sobre ${description}`,
+        `${description}: Antes y después real`,
+        `Lo que nadie te dice de ${description}`,
+        `${description}: La guía completa`,
+        `Resultado real con ${description}`,
+        `¿Cuánto vale ${description}?`,
+    ];
+
     for (let i = 0; i < postCount; i++) {
         const platform = platformList[i % platformList.length];
-        const selectedIdea = selectedIdeas[i % selectedIdeas.length] || description;
+        const templateIdx = i % ideaTemplates.length;
+        const titulo = ideaTemplates[templateIdx];
+
+        // Usa selectedIdeas si existen, sino genera basado en descripción
+        const descripcion = selectedIdeas && selectedIdeas[i]
+            ? selectedIdeas[i]
+            : `Contenido específico para ${platform}: ${titulo}`;
 
         slots.push({
             id: `slot-${Date.now()}-${i}`,
-            titulo: `Idea ${i + 1}`,
-            descripcion: selectedIdea || `Contenido para ${platform}`,
+            titulo: titulo,
+            descripcion: descripcion,
             plataforma: platform,
-            estilo: contentStyles[i % contentStyles.length] || 'estilo',
+            estilo: contentStyles[i % contentStyles.length] || 'general',
+            hook: generarHook(titulo, platform),
             has_script: false,
             scheduled_date: null,
             created_at: new Date().toISOString()
@@ -86,4 +109,16 @@ function generatePlanSlots(postCount, description, selectedIdeas, platforms, con
     }
 
     return slots;
+}
+
+function generarHook(titulo, platform) {
+    const hooks = {
+        'Reels': '¿Sabías que...?',
+        'TikTok': '⚠️ Esto es importante',
+        'LinkedIn': '📊 Dato importante:',
+        'YouTube': '👀 Espera a ver esto',
+        'YouTube Shorts': '🤔 Una pregunta rápida'
+    };
+
+    return hooks[platform] || '¿Sabías que...?';
 }
