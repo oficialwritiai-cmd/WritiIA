@@ -16,6 +16,7 @@ import FinalCTA from "./FinalCTA";
 import Footer from "./Footer";
 import VideoSection from "./VideoSection";
 import LandingIntro from "./LandingIntro";
+import MetaPixel from "@/app/components/MetaPixel";
 
 function ScrollTracker() {
   useEffect(() => {
@@ -32,8 +33,15 @@ function ScrollTracker() {
 }
 
 const Landing = () => {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'PageView');
+    }
+  }, []);
+
   return (
     <LanguageLandingProvider>
+      <MetaPixel />
       <LandingIntro />
       <GalaxyBackground />
       <ScrollTracker />

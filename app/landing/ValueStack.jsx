@@ -2,6 +2,7 @@
 import { useLang } from "./LanguageLanding";
 import Reveal from "./Reveal";
 import { Check, ShieldCheck, Clock, Sparkles, ArrowUpRight } from "lucide-react";
+import { trackPixelEvent } from "@/app/lib/pixel";
 
 function track(event) {
   if (typeof window !== 'undefined' && window.gtag) window.gtag('event', event);
@@ -58,7 +59,10 @@ const ValueStack = () => {
               <a
                 href="/login"
                 data-testid="plan-cta"
-                onClick={() => track('pricing_click')}
+                onClick={() => {
+                  track('pricing_click');
+                  trackPixelEvent('InitiateCheckout');
+                }}
                 className="btn-primary justify-center"
                 style={{
                   background: '#7C3AED',

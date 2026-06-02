@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePersistedState, RestoreBanner, AutosaveIndicator } from '@/hooks/usePersistedState';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { trackPixelEvent } from '@/app/lib/pixel';
 import { createSupabaseClient } from '@/lib/supabase';
 import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
@@ -254,6 +255,17 @@ export default function DashboardPage() {
 
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
+    const searchParams = useSearchParams();
+
+    // Track Purchase event when plan is activated
+    useEffect(() => {
+        if (searchParams.get('plan_activated') === 'true') {
+            trackPixelEvent('Purchase', {
+                value: 24.90,
+                currency: 'EUR',
+            });
+        }
+    }, [searchParams]);
 
     // ── Persistencia — refs para capturar valores actuales ────────
     const [autosaving, setAutosaving]   = useState(false);
