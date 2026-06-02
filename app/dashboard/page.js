@@ -1734,14 +1734,13 @@ export default function DashboardPage() {
     }
 
     const runBatchGeneration = async (slotsToProcess, isAuto = false, creditsObj = null) => {
-        // Credit check using live credits (avoid stale state)
         const liveCredits = creditsObj || aiCredits;
         const available = liveCredits.total - liveCredits.used;
         const estimatedCost = slotsToProcess.length;
         if (available < estimatedCost) {
-            const msg = `Créditos insuficientes. Tienes ${available} crédito(s) pero necesitas ~${estimatedCost} para ${slotsToProcess.length} guiones.`;
+            const msg = `Créditos insuficientes. Tienes ${available} pero necesitas ~${estimatedCost} para ${slotsToProcess.length} guiones.`;
             setError(msg);
-            if (isAuto) alert('⚠️ ' + msg + '\n\nCompra más créditos e inténtalo de nuevo.');
+            if (isAuto) alert('⚠️ ' + msg);
             return [];
         }
 
@@ -1749,125 +1748,96 @@ export default function DashboardPage() {
         let successCount = 0;
         const finalSlots = [];
 
+        // Get auth token once for all requests
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) { setError('Sin sesión activa.'); return []; }
+
         for (let i = 0; i < slotsToProcess.length; i++) {
             const slot = slotsToProcess[i];
             setGenerationProgress({
                 current: i + 1,
                 total: slotsToProcess.length,
-                status: `Generando guión ${i + 1} de ${slotsToProcess.length}: ${slot.idea_title}`
+                status: `✍️ Generando guión ${i + 1} de ${slotsToProcess.length}: ${slot.idea_title}`
             });
 
+            // Mostrar estado "generando" en la tarjeta del slot inmediatamente
+            setPlanSlots(prev => prev.map(s =>
+                s.id === slot.id ? { ...s, slot_status: 'script_generating' } : s
+            ));
+
             try {
-                const result = await handleGenerateSlotScript(slot, true);
-                if (result) {
-                    successCount++;
-                    const scriptData = result.script_data;
-                    let refId = null;
-                    if (scriptData) {
-                        const hookVal = scriptData.hook || scriptData.gancho || '';
-                        const desArr = Array.isArray(scriptData.desarrollo) ? scriptData.desarrollo : [];
-                        const ctaVal = scriptData.cta || scriptData.cierre || '';
-                        const cpPost = scriptData.copy_post || {};
-                        const htags = Array.isArray(cpPost.hashtags) ? cpPost.hashtags.map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
+                // Usar endpoint directo que NO requiere slot en BD
+                const res = await fetch('/api/generate-idea-script', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        idea_title: slot.idea_title,
+                        idea_description: slot.idea_description || '',
+                        platform: slot.platform || 'Reels',
+                        projectId: activeProject?.id || null,
+                        videoDuration: videoDuration || '60 seg',
+                        ctaIdea: ctaIdea || null,
+                    }),
+                });
 
-                        const fullScript = [
-                            slot.idea_title || 'Sin título',
-                            '',
-                            '🎯 GANCHO',
-                            hookVal,
-                            '',
-                            '📝 DESARROLLO',
-                            ...desArr.map((d, idx) => `${idx + 1}. ${d}`),
-                            '',
-                            '🔥 CTA / CIERRE',
-                            ctaVal,
-                            '',
-                            '📱 COPY PARA EL POST',
-                            cpPost.titulo || '',
-                            cpPost.descripcion_larga || '',
-                            '',
-                            htags ? `HASHTAGS: ${htags}` : ''
-                        ].filter(line => line !== undefined).join('\n');
-
-                        try {
-                            const libraryItem = await saveToLibrary({
-                                userId: profile.id,
-                                type: 'guion',
-                                platform: slot.platform || 'General',
-                                goal: slot.goal || 'engagement',
-                                titulo: slot.idea_title || 'Guión del Plan',
-                                script_full_text: fullScript,
-                                content: {
-                                    video_duration: (() => {
-                                        const p = (slot.platform || '').toLowerCase();
-                                        if (p.includes('youtube') && !p.includes('short')) return '5-10 min';
-                                        if (p.includes('youtube short')) return '60 seg';
-                                        if (p.includes('tiktok') || p.includes('reel') || p.includes('instagram')) return '60-90 seg';
-                                        if (p.includes('linkedin')) return '2-3 min';
-                                        if (p.includes(' x ') || p === 'x') return '60 seg';
-                                        return videoDuration || '60 seg';
-                                    })(),
-                                    hook: hookVal,
-                                    desarrollo: desArr,
-                                    cierre: ctaVal,
-                                    cta: ctaVal,
-                                    copy_post: cpPost
-                                },
-                                tags: ['guion', slot.platform, 'plan-mensual'].filter(Boolean),
-                                projectId: activeProject?.id
-                            });
-                            refId = libraryItem?.id || null;
-                            
-                            // Explicitly update slot to reflect it has a script now
-                            slot.has_script = true;
-                            slot.script_id = result.script?.id;
-                            slot.script_data = scriptData;
-                            finalSlots.push(slot);
-
-                            await supabase.from('content_slots').update({
-                                has_script: true,
-                                script_id: result.script?.id,
-                                script_data: scriptData
-                            }).eq('id', slot.id);
-
-                        } catch (libErr) {
-                            console.error('Error saving to library or updating slot:', libErr);
-                        }
-                    }
+                if (res.status === 402) {
+                    window.dispatchEvent(new CustomEvent('show-no-credits'));
+                    setPlanSlots(prev => prev.map(s => s.id === slot.id ? { ...s, slot_status: 'idea_only' } : s));
+                    break; // Sin créditos: detener el batch
                 }
+
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) {
+                    console.error(`[batch] slot ${i + 1} failed:`, data.error);
+                    setPlanSlots(prev => prev.map(s => s.id === slot.id ? { ...s, slot_status: 'script_error' } : s));
+                    continue;
+                }
+
+                // Éxito: actualizar la tarjeta del slot con el guión generado
+                successCount++;
+                const updatedSlot = {
+                    ...slot,
+                    has_script: true,
+                    slot_status: 'script_ready',
+                    script_data: data.script_data,
+                    script_full_text: data.full_text,
+                    library_id: data.script?.library_id || null,
+                };
+                finalSlots.push(updatedSlot);
+
+                // Actualizar UI inmediatamente — el usuario ve el guión al generarse
+                setPlanSlots(prev => prev.map(s =>
+                    s.id === slot.id ? updatedSlot : s
+                ));
+
+                // Actualizar en BD si el slot tiene UUID real
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slot.id);
+                if (isUUID) {
+                    supabase.from('content_slots').update({
+                        has_script: true,
+                        script_data: data.script_data,
+                    }).eq('id', slot.id).then(() => {}).catch(() => {});
+                }
+
             } catch (e) {
-                console.error(`[BatchGenerate] Error for slot ${slot.id}:`, e);
+                console.error(`[batch] slot ${i + 1} error:`, e.message);
+                setPlanSlots(prev => prev.map(s => s.id === slot.id ? { ...s, slot_status: 'script_error' } : s));
             }
         }
 
-        if (!isAuto) {
-            setIsGeneratingMassive(false);
-        }
         setGenerationProgress({
             current: slotsToProcess.length,
             total: slotsToProcess.length,
-            status: `¡Completado! ${successCount} de ${slotsToProcess.length} guiones generados.`
+            status: `✅ ${successCount} de ${slotsToProcess.length} guiones generados.`
         });
 
-        // Refresh credits
         window.dispatchEvent(new CustomEvent('refresh-profile'));
-        fetchCredits(profile.id);
+        if (profile?.id) fetchCredits(profile.id);
 
-        // Update React state for visual feedback
-        if (successCount > 0) {
-            setPlanSlots(prev => prev.map(slot => {
-                const processed = finalSlots.find(s => String(s.id) === String(slot.id));
-                if (processed && processed.has_script) {
-                    return { ...slot, has_script: true, script_data: processed.script_data, script_id: processed.script_id };
-                }
-                return slot;
-            }));
-        }
-
-        if (typeof window !== 'undefined') {
-            console.log(`[v4.5.2] runBatchGeneration DONE. ${successCount}/${slotsToProcess.length} generated. Returning ${finalSlots.length} slots.`);
-        }
-        return finalSlots; // ALWAYS return array — never return false or true
+        if (!isAuto) setIsGeneratingMassive(false);
+        return finalSlots;
     };
 
     const [stats, setStats] = useState({ generated: 0, saved: 0, monthGenerations: 0 });
