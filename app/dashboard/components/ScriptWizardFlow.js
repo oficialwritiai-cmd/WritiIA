@@ -354,7 +354,7 @@ export default function ScriptWizardFlow({
                             {ideaContext ? '¡Idea lista! Elige el estilo' : initialPhase === 3 ? '¡Historia lista! Elige el estilo' : 'Casi listo'}
                         </h2>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                            {ideaContext ? 'Tu idea del calendario ya está incluida — solo elige el estilo' : initialPhase === 3 ? 'Tu historia ya está incluida — solo elige el gancho y plataforma' : 'Solo 3 decisiones rápidas'}
+                            {ideaContext ? 'Tu idea del calendario ya está incluida — solo elige el estilo' : initialPhase === 3 ? 'Tu historia ya está incluida — solo elige el gancho' : 'Solo 3 decisiones rápidas'}
                         </p>
                     </div>
 
