@@ -179,45 +179,102 @@ export default function ScriptWizardFlow({
 
             {/* ── PHASE 2 ─────────────────────────────── */}
             {phase === 2 && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', animation: 'phaseIn 0.3s ease' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-                            Ahora cuéntame algo tuyo
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', animation: 'phaseIn 0.3s ease' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                        <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px', textShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
+                            ▓ Tu historia
                         </h2>
-                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                            Una historia, opinión o caso real — esto hace tu guión único
+                        <p style={{ fontSize: '0.75rem', color: '#34d399', margin: 0, fontFamily: "'Courier New', monospace", letterSpacing: '0.1em' }}>
+                            › cuenta algo real que te defina
                         </p>
                     </div>
 
                     {/* Rotating prompt */}
-                    <div style={{ padding: '14px 20px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '12px', textAlign: 'center', animation: 'phaseIn 0.4s ease' }} key={promptIdx}>
-                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', margin: 0, fontStyle: 'italic' }}>
-                            "{PROMPTS[promptIdx]}"
+                    <div style={{ padding: '12px 18px', background: 'linear-gradient(135deg, rgba(52,211,153,0.08), rgba(124,58,237,0.05))', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', textAlign: 'center', animation: 'phaseIn 0.4s ease', borderLeft: '3px solid #34d399' }} key={promptIdx}>
+                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', margin: 0, fontStyle: 'italic', fontFamily: "'Inter', sans-serif" }}>
+                            💭 {PROMPTS[promptIdx]}
                         </p>
                     </div>
 
-                    {/* Textarea + voice */}
-                    <div style={{ position: 'relative', flex: 1 }}>
+                    {/* Textarea + voice — MATRIX STYLE */}
+                    <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <textarea
                             value={experienciaReal}
                             onChange={e => setExperienciaReal(e.target.value)}
-                            placeholder="Escribe aquí o usa el micrófono..."
+                            placeholder="escribe o graba tu historia aquí..."
                             style={{
-                                width: '100%', minHeight: '120px', background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px',
-                                color: '#fff', padding: '16px 56px 16px 18px', fontSize: '0.92rem',
-                                lineHeight: 1.65, resize: 'none', outline: 'none',
-                                fontFamily: "'Inter', sans-serif", boxSizing: 'border-box',
+                                width: '100%', flex: 1, background: 'rgba(0, 30, 15, 0.5)',
+                                border: '1px solid rgba(52,211,153,0.3)', borderRadius: '6px',
+                                color: '#34d399', padding: '16px', fontSize: '0.95rem',
+                                lineHeight: 1.7, resize: 'none', outline: 'none',
+                                fontFamily: "'Courier New', monospace", boxSizing: 'border-box',
+                                boxShadow: 'inset 0 0 20px rgba(52,211,153,0.05)',
+                                transition: 'all 0.2s',
                             }}
+                            onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.15), 0 0 15px rgba(52,211,153,0.2)'; }}
+                            onBlur={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.05)'; }}
                         />
                         <div style={{ position: 'absolute', right: '14px', bottom: '14px' }}>
                             <VoiceDictation onResult={text => setExperienciaReal(prev => prev ? `${prev} ${text}` : text)} />
                         </div>
                     </div>
 
-                    <button onClick={goNext} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'center', padding: '4px' }}>
-                        Saltar esta fase →
-                    </button>
+                    {/* Buttons row — ACCIONES */}
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => setExperienciaReal('')}
+                            style={{
+                                padding: '10px 18px', background: 'rgba(255, 77, 77, 0.1)',
+                                border: '1px solid rgba(255,77,77,0.4)', borderRadius: '6px',
+                                color: '#ff6b6b', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+                                fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
+                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                            }}
+                            onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; e.target.style.boxShadow = '0 0 12px rgba(255,77,77,0.3)'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                            🔄 Borrar
+                        </button>
+
+                        <button
+                            onClick={goNext}
+                            disabled={!experienciaReal?.trim()}
+                            style={{
+                                padding: '10px 18px',
+                                background: experienciaReal?.trim() ? 'rgba(52,211,153,0.15)' : 'rgba(52,211,153,0.05)',
+                                border: '1px solid rgba(52,211,153,0.4)', borderRadius: '6px',
+                                color: '#34d399', cursor: experienciaReal?.trim() ? 'pointer' : 'not-allowed',
+                                fontSize: '0.82rem', fontWeight: 600,
+                                fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
+                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                                opacity: experienciaReal?.trim() ? 1 : 0.5,
+                            }}
+                            onMouseOver={(e) => { if(experienciaReal?.trim()) { e.target.style.background = 'rgba(52,211,153,0.25)'; e.target.style.boxShadow = '0 0 15px rgba(52,211,153,0.4)'; }}}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(52,211,153,0.15)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                            → Avanzar
+                        </button>
+
+                        <button
+                            onClick={goPrev}
+                            style={{
+                                padding: '10px 18px', background: 'rgba(124,58,237,0.1)',
+                                border: '1px solid rgba(124,58,237,0.4)', borderRadius: '6px',
+                                color: '#a78bfa', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600,
+                                fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
+                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                            }}
+                            onMouseOver={(e) => { e.target.style.background = 'rgba(124,58,237,0.2)'; e.target.style.boxShadow = '0 0 12px rgba(124,58,237,0.3)'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(124,58,237,0.1)'; e.target.style.boxShadow = 'none'; }}
+                        >
+                            ← Atrás
+                        </button>
+                    </div>
+
+                    {/* Char count */}
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.5)', textAlign: 'right', fontFamily: "'Courier New', monospace" }}>
+                        › {experienciaReal?.length || 0} caracteres
+                    </div>
                 </div>
             )}
 
