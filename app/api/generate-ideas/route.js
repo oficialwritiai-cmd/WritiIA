@@ -77,6 +77,18 @@ export async function POST(req) {
             sessionFAQs.length            && `FAQs reales de la audiencia: ${sessionFAQs.slice(0, 10).join(' | ')}`,
         ].filter(Boolean).join('\n');
 
+        // ── Platform-specific guides ─────────────────────────────────
+        function getPlatformIdeasGuide(plats) {
+            const guides = {
+                'Reels': 'INSTAGRAM REELS: ideas de 60-90s con hooks visuales brutales. Gancho en frame 1. Usa trending sounds.',
+                'TikTok': 'TIKTOK: ideas que abusen del algoritmo, trending music, trending formats. Viral es el objetivo.',
+                'LinkedIn': 'LINKEDIN: ideas que posicionen, case studies reales, datos que sorprendan. Autoridad, no entretenimiento.',
+                'YouTube Shorts': 'YOUTUBE SHORTS: ideas con descubrimiento, thumbnails intrigantes, keywords trending.',
+                'YouTube': 'YOUTUBE: ideas para contenido largo, tutoriales profundos, case studies extensos, análisis detallados.'
+            };
+            return plats.map(p => guides[p] || '').filter(Boolean).join('\n');
+        }
+
         // ── Prompts virales ───────────────────────────────────────────
         const currentYear = new Date().getFullYear();
         const systemPrompt = `Eres el estratega de contenido más agudo del mundo hispanohablante.
@@ -92,6 +104,11 @@ ${brainCtx || context}
 
 PLATAFORMA: ${platforms.join(', ')}
 CANTIDAD: ${count} ideas
+
+════════════════════
+ESTRATEGIA POR PLATAFORMA
+════════════════════
+${getPlatformIdeasGuide(platforms)}
 
 ════════════════════
 LO QUE HACE VIRAL UNA IDEA

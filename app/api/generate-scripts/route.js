@@ -159,6 +159,65 @@ Para CADA item de la lista, escribe un bloque de desarrollo que:
 `;
 }
 
+function getPlatformSpecificGuide(platform) {
+    const guides = {
+        'Reels': `
+GUÍA ESPECÍFICA PARA INSTAGRAM REELS (15-90 seg):
+- PRIMEROS 1 SEGUNDO: Gancho visual + auditivo INMEDIATO — si no engancha aquí, swipen
+- TENDENCIAS: Usa trending sounds de Instagram, hashtags virales
+- RITMO: Corte cada 3-5 segundos, cambio de ángulo/zoom, texto en pantalla
+- ESTRUCTURA: Gancho → 2-3 puntos rápidos → CTA claro
+- PALETA: Colores vibrantes, transiciones dinámicas, caption intrigante
+- NO HAGAS: Videos informativos largos, explicaciones complejas
+- HACES: Reacciones emotivas, antes/después, secrets/tips rápidos, controversia ligera`,
+
+        'TikTok': `
+GUÍA ESPECÍFICA PARA TIKTOK (15-60 seg):
+- ALGORITMO: Primeros 2 segundos definen TODO — hook extremadamente fuerte
+- TRENDS MUSICALES: Usa trending music + trending challenges/formats
+- FORMATO: Video vertical 9:16, movimientos dinámicos, cambios de escena constantes
+- ESTRUCTURA: Hook brutal → PayOff → Twist o punchline → Engagement (pregunta/CTA)
+- VIRAL TRIGGERS: Sorpresa, curiosidad extrema, identificación, humor
+- TEXT ON SCREEN: Emojis, captions que hagan scroll hasta el final
+- NO HAGAS: Contenido educativo puro, videos estáticos
+- HACES: Challenges, trending formats, storytelling rápido, revelaciones`,
+
+        'LinkedIn': `
+GUÍA ESPECÍFICA PARA LINKEDIN (30s-2min):
+- AUTORIDAD: Posicionamiento profesional, casos de éxito, datos concretos
+- AUDIENCE: Profesionales, empresarios, tomadores de decisión (B2B)
+- TONE: Profesional pero accesible, genuino, sin clickbait barato
+- ESTRUCTURA: Insight profesional → Caso real → Lección → Valor para el negocio
+- CONTENIDO: Estrategias probadas, errores que evitar, métricas reales
+- ENGAGEMENT: Preguntas que generan debate profesional, datos sorprendentes
+- NO HAGAS: Clickbait, contenido líquido, tonos demasiado informales
+- HACES: Auditoría de errores, frameworks, lecciones de fracaso/éxito, tendencias B2B`,
+
+        'YouTube Shorts': `
+GUÍA ESPECÍFICA PARA YOUTUBE SHORTS (15-60 seg):
+- DESCUBRIMIENTO: YouTube prioriza clicks basados en thumbnail + título
+- GANCHO: 1 segundo visual fuerte — similar a Reels pero con algoritmo de YouTube
+- ESTRUCTURA: Hook → Contenido de valor rápido → CTA (subscribe/click)
+- TRENDING: Keywords, trending topics en YouTube, búsquedas actuales
+- PALETA: Colores contrastantes, movimiento constante, captions grandes
+- CALL-TO-ACTION: 'Mira hasta el final', 'Part 2 en mi canal', 'Suscríbete'
+- NO HAGAS: Contenido genérico sin valor
+- HACES: Tips rápidos, tutoriales visuales, trending content con valor`,
+
+        'YouTube': `
+GUÍA ESPECÍFICA PARA YOUTUBE LARGO (3-10+ min):
+- AUDIENCE: Búsqueda intencional — llegan porque quieren aprender/entretenerse
+- ESTRUCTURA: Intro gancho (5s) → Promesa clara → Contenido profundo con anécdotas → Conclusión → CTA extendido
+- PROFUNDIDAD: Tutoriales step-by-step, casos de estudio completos, historias detalladas
+- RETENCIÓN: Transiciones cada 30-45s, stories que mantienen suspenso, datos/ejemplos concretos
+- SEO: Keywords en título/descripción, timestamps, capitulos
+- ENGAGEMENT: Preguntas al inicio/final, llamadas a comentar, calls to action naturales
+- NO HAGAS: Perder tiempo, relleno de contenido
+- HACES: Profundidad, tutoriales, análisis, case studies, content que merece ser largo`
+    };
+    return guides[platform] || '';
+}
+
 function buildSystemPrompt({ brandContextString, videoDuration, platform, tone, intensity, count, specificDetails, requestedCount, topic, ctaIdea, experienciaReal, opinionPersonal, faseCreador, projectLanguage, targetWords }) {
     const parsedItems = parseUserItemList(specificDetails);
     const totalItems = requestedCount || (parsedItems.length > 0 ? parsedItems.length : null);
@@ -210,6 +269,11 @@ ${contextLines.join('\n')}
 TEMA: ${specificDetails || topic}
 PLATAFORMA: ${platform}
 DURACIÓN: ${videoDuration}
+
+════════════════════
+ESTRATEGIA POR PLATAFORMA
+════════════════════
+${getPlatformSpecificGuide(platform)}
 
 ════════════════════
 ARQUITECTURA DEL GUIÓN
