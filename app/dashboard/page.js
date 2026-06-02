@@ -2523,7 +2523,7 @@ export default function DashboardPage() {
                         notes: fullText,
                         start_time: '12:00',
                         end_time: '13:00',
-                        color: '#9D00FF'
+                        color: 'green'
                     };
 
                     if (existingEventId) {
