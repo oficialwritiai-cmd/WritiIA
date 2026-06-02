@@ -574,14 +574,10 @@ export default function DashboardPage() {
 
     useEffect(() => {
         // TOKEN_REFRESHED dispara este effect en cada cambio de tab del navegador.
-        // Si el usuario está generando el plan mensual, NO resetear step ni tocar su estado.
+        // Si el usuario está en el plan mensual (generando guiones), ignorar COMPLETAMENTE.
+        // loadData() llama fetchPlanSlots() que sobreescribiría planSlots con datos de BD.
         const isGeneratingPlan = _cachedStep === 3 && _cachedPlanMode === 'plan' && _cachedPlanSlots.length > 0;
-        if (isGeneratingPlan) {
-            // Solo recargar datos secundarios, preservar todo el estado del plan
-            setIdeasFetchError('');
-            loadData();
-            return;
-        }
+        if (isGeneratingPlan) return;
 
         // Flujo normal: solo para modo single / sin plan activo
         if (_cachedScripts.length === 0 && !restoredRef.current) setStep(1);
