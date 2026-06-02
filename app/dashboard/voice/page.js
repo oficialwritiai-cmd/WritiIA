@@ -47,6 +47,8 @@ export default function VoiceStoryPage() {
         return () => clearInterval(t);
     }, []);
 
+    const isRecordingRef = useRef(false); // ref para onend/onerror (evita stale closure)
+
     // Init SpeechRecognition
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -55,7 +57,7 @@ export default function VoiceStoryPage() {
 
         const r = new SR();
         r.lang = 'es-ES';
-        r.continuous = true;
+        r.continuous = true;   // desktop; iOS lo ignora y aborta — onend lo reinicia
         r.interimResults = true;
 
         r.onresult = (e) => {
@@ -70,36 +72,49 @@ export default function VoiceStoryPage() {
         };
 
         r.onerror = (e) => {
-            if (e.error !== 'no-speech') setError('Error: ' + e.error);
+            // 'aborted' y 'no-speech' son normales en iOS — no mostrar error
+            if (e.error === 'no-speech' || e.error === 'aborted') return;
+            setError('Micrófono no disponible: ' + e.error);
+            isRecordingRef.current = false;
             setIsRecording(false);
         };
 
         r.onend = () => {
-            setIsRecording(false);
             setInterim('');
+            // iOS Safari no soporta continuous=true: aborta y dispara onend.
+            // Si el usuario todavía está grabando, reiniciar automáticamente.
+            if (isRecordingRef.current) {
+                try { r.start(); } catch (_) {}
+            } else {
+                setIsRecording(false);
+            }
         };
 
         recognitionRef.current = r;
-        return () => { try { r.stop(); } catch(e) {} };
+        return () => { isRecordingRef.current = false; try { r.abort(); } catch(_) {} };
     }, []);
 
     async function startRecording() {
         setError('');
+        // No llamar getUserMedia antes — en iOS compite con SpeechRecognition por el mic
+        // SpeechRecognition gestiona el permiso de micrófono internamente
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(t => t.stop());
             accRef.current = transcript;
-            recognitionRef.current?.start();
+            isRecordingRef.current = true;
             setIsRecording(true);
+            recognitionRef.current?.start();
         } catch(e) {
-            setError('Sin permiso de micrófono. Actívalo en el navegador.');
+            isRecordingRef.current = false;
+            setIsRecording(false);
+            setError('No se pudo iniciar el micrófono. Permite el acceso en el navegador.');
         }
     }
 
     function stopRecording() {
-        recognitionRef.current?.stop();
+        isRecordingRef.current = false;
         setIsRecording(false);
         setInterim('');
+        try { recognitionRef.current?.stop(); } catch(_) {}
     }
 
     function finishRecording() {
