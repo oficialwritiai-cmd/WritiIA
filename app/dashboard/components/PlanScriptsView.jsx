@@ -374,13 +374,16 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
             return;
         }
 
-        // Generar en paralelo con concurrencia máx 3 — rápido y sin sobrecargar la API
+        // Generar en paralelo de 2 en 2 con delay entre lotes para respetar rate limit
         const pending = (slots || []).filter(s => !scriptsRef.current[s.id]);
-        const CONCURRENCY = 3;
+        const CONCURRENCY = 2;
 
         for (let i = 0; i < pending.length; i += CONCURRENCY) {
             const batch = pending.slice(i, i + CONCURRENCY);
             await Promise.all(batch.map(slot => generateOne(slot.id, tok)));
+            if (i + CONCURRENCY < pending.length) {
+                await new Promise(r => setTimeout(r, 1500)); // 1.5s entre lotes
+            }
         }
 
         setAutoRunning(false);

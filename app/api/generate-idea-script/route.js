@@ -137,7 +137,7 @@ Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes
             },
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 2000,
+                max_tokens: 1200,
                 temperature: 0.75,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userMessage }],
