@@ -88,21 +88,22 @@ function generatePlanSlots(postCount, description, selectedIdeas, platforms, con
     for (let i = 0; i < postCount; i++) {
         const platform = platformList[i % platformList.length];
         const templateIdx = i % ideaTemplates.length;
-        const titulo = ideaTemplates[templateIdx];
+        const ideaTitle = ideaTemplates[templateIdx];
 
         // Usa selectedIdeas si existen, sino genera basado en descripción
-        const descripcion = selectedIdeas && selectedIdeas[i]
+        const ideaDesc = selectedIdeas && selectedIdeas[i]
             ? selectedIdeas[i]
-            : `Contenido específico para ${platform}: ${titulo}`;
+            : `Contenido específico para ${platform}: ${ideaTitle}`;
 
         slots.push({
             id: `slot-${Date.now()}-${i}`,
-            titulo: titulo,
-            descripcion: descripcion,
+            idea_title: ideaTitle,
+            idea_description: ideaDesc,
             plataforma: platform,
             estilo: contentStyles[i % contentStyles.length] || 'general',
-            hook: generarHook(titulo, platform),
+            hook: generarHook(ideaTitle, platform),
             has_script: false,
+            script_content: null,
             scheduled_date: null,
             created_at: new Date().toISOString()
         });
