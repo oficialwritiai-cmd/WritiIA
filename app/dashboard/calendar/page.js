@@ -292,7 +292,7 @@ function CalendarContent() {
             const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString().split('T')[0];
             const lastDay  = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0).toISOString().split('T')[0];
 
-            // Filtrar SIEMPRE por project_id — cada proyecto tiene su propio calendario
+            // Filtrar por project_id SI hay proyecto activo, SINO mostrar todos los eventos del usuario
             let calQuery = supabase
                 .from('calendar_events')
                 .select('*')
@@ -301,8 +301,9 @@ function CalendarContent() {
                 .lte('event_date', lastDay)
                 .order('event_date', { ascending: true });
 
+            // Si hay proyecto activo, filtrar por él. Si no, mostrar eventos de TODOS los proyectos
             if (activeProject?.id) {
-                calQuery = calQuery.eq('project_id', activeProject.id);
+                calQuery = calQuery.or(`project_id.eq.${activeProject.id},project_id.is.null`);
             }
             const { data: eventData } = await calQuery;
 
