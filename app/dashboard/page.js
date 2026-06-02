@@ -865,35 +865,57 @@ export default function DashboardPage() {
         }
     }, [supabase, searchParams]);
 
-    // ── Plan wizard sessionStorage helpers ───────────────────────────
-    const PLAN_STATE_KEY = (pid) => `writi_plan_state_v2_${pid}`;
+    // ── Plan wizard sessionStorage persistence ───────────────────────
+    const PLAN_STATE_KEY = (pid) => `writi_plan_state_v3_${pid}`;
 
-    // Restore planWizardStep + recommendedIdeas when activeProject becomes available
+    // Restore full plan wizard state on mount (survives tab navigation)
     useEffect(() => {
         if (!activeProject?.id) return;
         try {
             const saved = sessionStorage.getItem(PLAN_STATE_KEY(activeProject.id));
-            if (saved) {
-                const state = JSON.parse(saved);
-                // Only restore step 2 or 3 — step 1 is the entry, step 4 needs fresh analysis
-                if (state.step >= 2 && state.step <= 3) setPlanWizardStep(state.step);
-                if (Array.isArray(state.ideas) && state.ideas.length > 0) setRecommendedIdeas(state.ideas);
-            }
+            if (!saved) return;
+            const state = JSON.parse(saved);
+            if (!state || state.mode !== 'plan') return;
+            // Restore mode so the plan wizard UI shows
+            setGenerationMode('plan');
+            // Restore wizard position (steps 2-3 only; step 4 needs fresh analysis)
+            if (state.step >= 2 && state.step <= 3) setPlanWizardStep(state.step);
+            // Restore AI ideas
+            if (Array.isArray(state.ideas) && state.ideas.length > 0) setRecommendedIdeas(state.ideas);
+            // Restore selections
+            if (Array.isArray(state.selectedIdeas)) setSelectedPlanIdeas(state.selectedIdeas);
+            // Restore form fields so the user doesn't lose their inputs
+            if (state.platforms?.length > 0) setPlanPlatforms(state.platforms);
+            if (state.frequency) setPlanFrequency(state.frequency);
+            if (state.offer) setBusinessOffer(state.offer);
+            if (state.audience) setTargetAudienceType(state.audience);
+            if (state.painPoint) setMainPainPoint(state.painPoint);
+            // Fetch library ideas since plan mode effect won't run when restoring to step > 1
+            fetchLibraryIdeas();
         } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeProject?.id]);
 
-    // Persist plan state — only when there's actual content to avoid wiping cache on remount
+    // Persist plan state whenever anything meaningful changes (only while in plan mode)
     useEffect(() => {
         if (!activeProject?.id || generationMode !== 'plan') return;
-        if (planWizardStep === 1 && recommendedIdeas.length === 0) return; // don't overwrite with empty state
+        // Don't overwrite cache with a completely empty state on first render
+        const hasContent = planWizardStep > 1 || recommendedIdeas.length > 0 || planPlatforms.length > 0;
+        if (!hasContent) return;
         try {
             sessionStorage.setItem(PLAN_STATE_KEY(activeProject.id), JSON.stringify({
+                mode: 'plan',
                 step: planWizardStep,
                 ideas: recommendedIdeas,
+                selectedIdeas: selectedPlanIdeas,
+                platforms: planPlatforms,
+                frequency: planFrequency,
+                offer: businessOffer,
+                audience: targetAudienceType,
+                painPoint: mainPainPoint,
             }));
         } catch {}
-    }, [planWizardStep, recommendedIdeas, activeProject?.id, generationMode]);
+    }, [planWizardStep, recommendedIdeas, selectedPlanIdeas, planPlatforms, planFrequency, businessOffer, targetAudienceType, mainPainPoint, activeProject?.id, generationMode]);
 
     // Fetch library + AI ideas when entering plan mode at step 1
     useEffect(() => {
