@@ -77,20 +77,33 @@ function generatePlanSlots(postCount, description, selectedIdeas, platforms, con
     const slots = [];
     const platformList = platforms || ['Reels'];
 
-    // Plantillas de ideas basadas en el contexto
+    // Extraer tema corto: businessOffer > mainPainPoint > primera línea de description
+    const rawTopic = businessOffer || mainPainPoint || description || 'tu negocio';
+    // Tomar solo la primera oración/línea corta (máx 60 chars) y limpiar markdown
+    const shortTopic = rawTopic
+        .replace(/^#+\s*/gm, '')       // quitar headings markdown
+        .replace(/\*\*/g, '')          // quitar bold
+        .replace(/\n[\s\S]*/g, '')     // solo primera línea
+        .replace(/^[^a-zA-ZáéíóúÁÉÍÓÚ0-9¿¡]+/, '') // quitar chars raros al inicio
+        .trim()
+        .slice(0, 60);
+
+    const topic = shortTopic || 'tu negocio';
+
+    // Plantillas de ideas concisas basadas en el contexto del negocio
     const ideaTemplates = [
-        `Cómo ${description} puede cambiar tu negocio`,
-        `${description}: El error que comete el 90%`,
-        `Por qué necesitas ${description} AHORA`,
-        `${description} en 60 segundos`,
-        `La verdad sobre ${description}`,
-        `Mi opinión brutal sobre ${description}`,
-        `Esto deberían enseñarte sobre ${description}`,
-        `${description}: Antes y después real`,
-        `Lo que nadie te dice de ${description}`,
-        `${description}: La guía completa`,
-        `Resultado real con ${description}`,
-        `¿Cuánto vale ${description}?`,
+        `Cómo ${topic} puede cambiar tu negocio`,
+        `${topic}: El error que comete el 90%`,
+        `Por qué necesitas ${topic} AHORA`,
+        `${topic} en 60 segundos`,
+        `La verdad sobre ${topic}`,
+        `Mi opinión brutal sobre ${topic}`,
+        `Esto deberían enseñarte sobre ${topic}`,
+        `${topic}: Antes y después real`,
+        `Lo que nadie te dice de ${topic}`,
+        `${topic}: La guía completa`,
+        `Resultado real con ${topic}`,
+        `¿Cuánto vale ${topic}?`,
     ];
 
     for (let i = 0; i < postCount; i++) {

@@ -796,7 +796,7 @@ function CalendarContent() {
             cells.push(
                 <div
                     key={d}
-                    style={{ borderTop: `1px solid ${isT ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)'}`, minHeight: 80, padding: '5px 6px 6px', cursor: 'pointer', position: 'relative', transition: 'background 0.12s', background: isT ? 'rgba(124,58,237,0.04)' : 'transparent' }}
+                    style={{ borderTop: `1px solid ${isT ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)'}`, minHeight: 90, maxHeight: 140, overflow: 'hidden', padding: '5px 6px 6px', cursor: 'pointer', position: 'relative', transition: 'background 0.12s', background: isT ? 'rgba(124,58,237,0.04)' : 'transparent' }}
                     onClick={() => handleDayClick(ds)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => onDrop(e, ds)}
@@ -851,7 +851,7 @@ function CalendarContent() {
         }
 
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', flex: 1, alignContent: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', alignContent: 'start', minWidth: 560, width: '100%' }}>
                 {cells}
             </div>
         );
