@@ -131,8 +131,8 @@ export default function ScriptWizardFlow({
                         </p>
                     </div>
 
-                    {/* Banner: creando desde idea del calendario */}
-                    {ideaContext && (
+                    {/* Banner: creando desde idea del calendario — solo en navegación hacia atrás */}
+                    {ideaContext && initialPhase !== 3 && (
                         <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(52,211,153,0.08))', border: '2px solid rgba(124,58,237,0.4)', borderRadius: '8px', padding: '16px 20px', marginBottom: '16px', width: '100%', maxWidth: '500px' }}>
                             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: "'Courier New', monospace" }}>
                                 ⚡ Idea del calendario:
