@@ -112,6 +112,7 @@ export default function DashboardPage() {
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
     const [recommendedIdeas, setRecommendedIdeas] = useState([]);
     const [loadingRecommended, setLoadingRecommended] = useState(false);
+    const [ideasFetchError, setIdeasFetchError] = useState('');
 
     // New Marketing Briefing States (v4.0.0)
     const [businessOffer, setBusinessOffer] = useState('');
@@ -548,6 +549,11 @@ export default function DashboardPage() {
         setIdeas('');
         setLibIdeas([]);
         setRecommendedIdeas([]);
+        setIdeasFetchError('');
+        // Clear cached ideas for the current project so stale data doesn't show after project switch
+        try {
+            if (activeProject?.id) sessionStorage.removeItem(`writi_rec_ideas_${activeProject.id}`);
+        } catch {}
         setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
@@ -865,22 +871,42 @@ export default function DashboardPage() {
         if (generationMode === 'plan' && planWizardStep === 1) {
             fetchLibraryIdeas();
             if (activeProject && recommendedIdeas.length === 0) {
+                // Restore from sessionStorage first to avoid paying credits on every nav
+                try {
+                    const cached = sessionStorage.getItem(`writi_rec_ideas_${activeProject.id}`);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setRecommendedIdeas(parsed);
+                            return;
+                        }
+                    }
+                } catch {}
+                // Only fetch from API if no cache exists
                 fetchProactiveIdeas();
             }
         }
-    }, [generationMode, planWizardStep, projectVersion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [generationMode, planWizardStep, projectVersion, profile?.id]);
+
+    const RECOMMENDED_CACHE_KEY = (pid) => `writi_rec_ideas_${pid}`;
 
     const fetchProactiveIdeas = async () => {
-        if (!profile?.id || !activeProject) return;
+        if (!activeProject) return;
+        if (!profile?.id) {
+            setIdeasFetchError('Cargando perfil, intenta en un momento...');
+            return;
+        }
+        setIdeasFetchError('');
         setLoadingRecommended(true);
-        setRecommendedIdeas([]); // Clear previous to show new ones
+        // Don't clear existing ideas until new ones arrive (avoids empty flash on failure)
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
             const res = await fetch('/api/ideas-extra', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
@@ -896,14 +922,21 @@ export default function DashboardPage() {
             });
             const data = await res.json();
             if (res.ok) {
-                // v1.17.47: Assign stable IDs upon fetch to ensure selection works
                 const stableIdeas = (data.ideas || []).map((idea, idx) => ({
                     ...idea,
                     id: `ai-idea-${idx}-${Date.now()}`
                 }));
                 setRecommendedIdeas(stableIdeas);
+                // Persist so ideas survive tab navigation without re-charging credits
+                try { sessionStorage.setItem(RECOMMENDED_CACHE_KEY(activeProject.id), JSON.stringify(stableIdeas)); } catch {}
+            } else if (data.code === 'NO_CREDITS') {
+                setIdeasFetchError('Sin créditos suficientes para generar ideas IA.');
+            } else {
+                setIdeasFetchError('Error al generar ideas. Intenta de nuevo.');
+                console.error('Error fetching proactive ideas:', data.error);
             }
         } catch (err) {
+            setIdeasFetchError('Error de red. Intenta de nuevo.');
             console.error('Error fetching proactive ideas:', err);
         } finally {
             setLoadingRecommended(false);
@@ -3613,6 +3646,11 @@ export default function DashboardPage() {
                                             <RefreshCcw size={14} className={loadingRecommended ? "animate-spin" : ""} />
                                         </button>
                                         {loadingRecommended && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Mapeando nicho...</span>}
+                                        {ideasFetchError && !loadingRecommended && (
+                                            <span style={{ fontSize: '0.7rem', color: '#FF6B6B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                ⚠ {ideasFetchError}
+                                            </span>
+                                        )}
                                     </div>
                                     <button onClick={() => setExtraIdeasModal({ ...extraIdeasModal, open: true })} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '6px 12px' }}>Explore más</button>
                                 </div>
