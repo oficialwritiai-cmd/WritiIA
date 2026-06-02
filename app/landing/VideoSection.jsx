@@ -18,14 +18,15 @@ const VideoSection = () => {
                             className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white mb-4"
                             style={{ fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.03em' }}
                         >
-                            Cómo{' '}
                             <span className="text-transparent bg-clip-text"
                                 style={{ backgroundImage: 'linear-gradient(135deg, #a78bfa, #7c3aed)' }}>
-                                7 posts salen solos
+                                Vélo antes de decidir
                             </span>
                         </h2>
                         <p className="text-white/50 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-                            De tu idea manuscrita a publicado, automático. En menos de 1 hora, sin diseño, sin esperas, sin estrés.
+                            90 segundos. Sin explicaciones largas.
+                            <br />
+                            Solo el sistema funcionando en vivo.
                         </p>
                     </div>
 

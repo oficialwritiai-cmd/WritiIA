@@ -39,7 +39,7 @@ const Navbar = () => {
         gap: '10px',
         flexWrap: 'wrap',
       }}>
-        <span>⚡ Lanzamiento — Onboarding personal incluido para los primeros 20 usuarios</span>
+        <span>⚡ Precio de lanzamiento — 24,90€/mes · Sin permanencia · Plazas limitadas</span>
         <a
           href="#pricing"
           onClick={scrollToPricing}
