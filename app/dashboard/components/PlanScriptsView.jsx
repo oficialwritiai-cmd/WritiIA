@@ -74,6 +74,11 @@ function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
                                 {slot.content_type}
                             </span>
                         )}
+                        {slot.platform && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#60a5fa', background: 'rgba(96,165,250,0.1)', borderRadius: 6, padding: '2px 8px' }}>
+                                {slot.platform}
+                            </span>
+                        )}
                         {saved && (
                             <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', borderRadius: 6, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                                 <BookOpen size={10} /> En Biblioteca

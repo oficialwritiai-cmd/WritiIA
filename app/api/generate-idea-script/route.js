@@ -15,35 +15,47 @@ function extractJson(text) {
 function getPlatformRules(platform, duration) {
     const p = (platform || '').toLowerCase();
     if (p.includes('youtube') && !p.includes('short')) {
-        return `PLATAFORMA: YouTube (vídeo largo ${duration || '5-10 min'}).
-- Hook: pregunta o promesa poderosa en los primeros 15 segundos.
-- Estructura: 6-8 bloques bien desarrollados con ejemplos reales, datos y storytelling.
-- Cada bloque debe tener AL MENOS 3-4 frases de detalle concreto.
-- Tono educativo-entretenido, profundo y con autoridad.
-- CTA: suscribir + comentar + compartir.`;
+        return `PLATAFORMA: YouTube (${duration || '5-8 min'}).
+ESTRUCTURA OBLIGATORIA — exactamente 5 bloques:
+1. INTRO (30s): Presenta el problema concreto que resuelve el vídeo. Di exactamente lo que van a aprender. Engancha con una pregunta o dato impactante.
+2. CONTEXTO (1-2 min): Explica por qué este tema importa AHORA. Usa un ejemplo o historia real. 3-4 frases con detalle específico.
+3. DESARROLLO PRINCIPAL (2-3 min): El núcleo del valor. Divide en 2-3 sub-puntos con ejemplos reales, cifras o pasos concretos. Cada sub-punto = 2-3 frases.
+4. CASO PRÁCTICO o DEMOSTRACIÓN (1-2 min): Muestra cómo aplicarlo en la práctica. Un caso real o ejercicio concreto que el espectador pueda hacer.
+5. CIERRE + CTA (30s): Resumen de 1 frase, lección clave, llamada a acción clara (suscribir, comentar, siguiente vídeo).
+- Tono: educativo, profundo, con autoridad pero accesible.`;
     }
     if (p.includes('linkedin')) {
-        return `PLATAFORMA: LinkedIn (vídeo profesional ${duration || '2-3 min'}).
-- Hook: dato sorprendente o insight profesional en 10 segundos.
-- Estructura: 4-5 bloques con casos reales de negocio, métricas y lecciones aprendidas.
-- Cada bloque debe tener 3-5 frases con argumentos sólidos y ejemplos del sector.
-- Tono: profesional, directo, orientado a resultados y ROI.
-- CTA: conectar, comentar perspectiva, descargar recurso.`;
+        return `PLATAFORMA: LinkedIn (${duration || '2-3 min'}).
+ESTRUCTURA — 4 bloques precisos:
+1. HOOK PROFESIONAL: Dato o insight que sorprenda al sector. Una sola frase poderosa.
+2. EL PROBLEMA REAL: Qué está fallando en el sector/empresa. 2-3 frases con contexto específico.
+3. LA SOLUCIÓN CON ROI: Cómo resolverlo con métricas claras. Ejemplo real de resultado. 3-4 frases.
+4. LECCIÓN Y CTA: La lección concreta que se llevan + invitar a conectar o comentar perspectiva.
+- Tono: profesional, directo, orientado a resultados tangibles.`;
     }
     if (p.includes('tiktok')) {
-        return `PLATAFORMA: TikTok (vídeo corto ${duration || '60 seg'}).
-- Hook: las primeras 3 palabras deben enganchar brutalmente — sin intro.
-- Estructura: 3-4 bloques rápidos pero con DETALLE REAL, no generalidades.
-- Cada bloque: 2-3 frases concretas con ejemplo específico o número.
-- Ritmo rápido, lenguaje generacional, directo al grano.
-- CTA: seguir para más, guardar, comentar opinión.`;
+        return `PLATAFORMA: TikTok (${duration || '45-60 seg'}).
+ESTRUCTURA — 3 bloques veloces:
+1. HOOK BRUTAL (0-5s): Las primeras palabras deben generar shock, curiosidad o polémica. Sin intro ni presentación. Directo al grano.
+2. DESARROLLO RÁPIDO (5-45s): 2 puntos concretos con ejemplo específico o número real cada uno. 2 frases por punto, no más.
+3. REMATE + CTA (45-60s): Una frase que deje pensando + "Sígueme para más como esto" o pregunta al comentario.
+- Lenguaje: coloquial, energético, como hablar con un amigo.`;
     }
-    return `PLATAFORMA: Instagram Reels / vídeo corto (${duration || '60-90 seg'}).
-- Hook: pregunta provocadora o afirmación polémica en los primeros 5 segundos.
-- Estructura: 4-5 bloques con contenido DENSO y ESPECÍFICO — nada genérico.
-- Cada bloque debe tener 3-4 frases con dato real, ejemplo concreto o historia breve.
-- Tono cercano pero con autoridad, como hablar a un amigo que necesita la verdad.
-- CTA: guardar para después, compartir con alguien que lo necesite.`;
+    // Default: Reels / Instagram
+    return `PLATAFORMA: Instagram Reels (${duration || '60-90 seg'}).
+ESTRUCTURA — 4 bloques bien construidos:
+1. HOOK (0-5s): Afirmación polémica, pregunta que duela o dato que sorprenda. UNA sola frase poderosa. Sin presentación.
+2. DESARROLLO A (5-30s): El primer punto clave. 3 frases: qué es, por qué importa, ejemplo concreto con detalle real.
+3. DESARROLLO B (30-60s): El segundo punto clave o la solución. 3 frases: cómo aplicarlo, qué resultado da, historia o dato específico.
+4. CIERRE + CTA (60-90s): La lección de 1 frase + "Guárdalo para cuando lo necesites" o pregunta para comentario.
+- Tono: cercano, directo, como un consejo de alguien que ya lo vivió.`;
+}
+
+function getMaxTokens(platform) {
+    const p = (platform || '').toLowerCase();
+    if (p.includes('youtube') && !p.includes('short')) return 1800;
+    if (p.includes('linkedin')) return 1400;
+    return 1200; // Reels, TikTok, Shorts
 }
 
 function buildPrompt(brain, platform, duration) {
@@ -137,7 +149,7 @@ Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes
             },
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1200,
+                max_tokens: getMaxTokens(platform),
                 temperature: 0.75,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userMessage }],
