@@ -1556,14 +1556,69 @@ export default function DashboardPage() {
                 return { ...slot, scheduled_date: scheduledDate };
             });
 
-            setPlanSlots(slotsWithDates);
+            // ── CRÍTICO: Guardar slots en content_slots con UUIDs reales ANTES de generar guiones
+            // handleGenerateSlotScript llama /api/slots/:id/generate-script que busca el slot en BD.
+            // Si el slot no existe en BD (id fake), devuelve 404 y los guiones nunca se generan.
+            let slotsForGeneration = slotsWithDates;
+            try {
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (authUser) {
+                    // Crear un plan en content_plans para agrupar los slots
+                    const { data: planRecord } = await supabase.from('content_plans').insert({
+                        user_id: authUser.id,
+                        project_id: activeProject?.id || null,
+                        description: briefAnalysis || businessOffer || 'Plan mensual',
+                        platforms: planPlatforms,
+                        frequency: planFrequency,
+                        post_count: slotsWithDates.length,
+                    }).select('id').single();
+
+                    if (planRecord) {
+                        // Insertar todos los slots sin ID → Supabase genera UUIDs reales
+                        const slotsToInsert = slotsWithDates.map(s => ({
+                            user_id: authUser.id,
+                            project_id: activeProject?.id || null,
+                            plan_id: planRecord.id,
+                            idea_title: s.idea_title,
+                            idea_description: s.idea_description || '',
+                            platform: s.platform || 'Reels',
+                            content_type: s.content_type || 'video',
+                            day_number: s.day_number || 1,
+                            goal: s.goal || 'engagement',
+                            hook: s.hook || '',
+                            scheduled_date: s.scheduled_date || null,
+                            has_script: false,
+                            slot_status: 'idea_only',
+                        }));
+
+                        const { data: savedSlots } = await supabase
+                            .from('content_slots')
+                            .insert(slotsToInsert)
+                            .select('id, idea_title');
+
+                        if (savedSlots && savedSlots.length > 0) {
+                            // Reemplazar IDs fake por UUIDs reales del servidor
+                            slotsForGeneration = slotsWithDates.map((s, i) => ({
+                                ...s,
+                                id: savedSlots[i]?.id || s.id,
+                            }));
+                            console.log(`[plan] ${savedSlots.length} slots guardados en BD con UUIDs reales`);
+                        }
+                    }
+                }
+            } catch (saveErr) {
+                console.warn('[plan] No se pudieron pre-guardar slots en BD:', saveErr.message);
+                // Continuar con IDs fake — los guiones fallarán pero el plan visual seguirá
+            }
+
+            setPlanSlots(slotsForGeneration);
 
             // Show plan immediately
             setStep(3);
-            
+
             // --- AUTOMATION v4.4.0 ---
             // 1. Select all slots
-            const allIds = slotsWithDates.map(s => s.id);
+            const allIds = slotsForGeneration.map(s => s.id);
             setSelectedSlots(new Set(allIds));
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
@@ -1576,7 +1631,7 @@ export default function DashboardPage() {
 
             // 3. Trigger FULL AUTO FLOW immediately (no setTimeout)
             if (freshCredits.total > 0) {
-                await handleAutoBatchGenerateAndSync(slotsWithDates, allIds, freshCredits);
+                await handleAutoBatchGenerateAndSync(slotsForGeneration, allIds, freshCredits);
             } else {
                 alert('⚠️ Sin créditos disponibles. Por favor compra créditos para generar los guiones.');
             }
