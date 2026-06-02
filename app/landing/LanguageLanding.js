@@ -40,8 +40,6 @@ const translations = {
                 { k: '✅ Sabes que el contenido atrae clientes', v: 'Pero no tienes tiempo ni sistema para hacerlo consistente.' },
                 { k: '✅ Has probado ChatGPT y suena genérico', v: 'No suena a ti. Necesitas algo que aprenda tu voz y tu estilo único.' },
                 { k: '✅ Publicas una semana sí y tres no', v: 'Porque no tienes plan claro. Necesitas un calendario que funcione sin que lo pienses.' },
-                { k: '✅ Quieres que tu contenido llene tu agenda', v: 'No solo acumular likes. Necesitas conversiones reales en llamadas de venta.' },
-                { k: '✅ No tienes un negocio de coaching definido', v: 'Writi.AI NO es para ti si no sabes qué vendes o a quién le hablas.' },
             ],
             outroA: 'Writi.AI NO es para ti si...',
             outroB: '❌ Buscas una herramienta genérica de generación de texto',
