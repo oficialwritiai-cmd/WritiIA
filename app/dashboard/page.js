@@ -255,17 +255,6 @@ export default function DashboardPage() {
 
 
     const { activeProject, projectBrain, refreshBrain, projectVersion } = useProject();
-    const searchParams = useSearchParams();
-
-    // Track Purchase event when plan is activated
-    useEffect(() => {
-        if (searchParams.get('plan_activated') === 'true') {
-            trackPixelEvent('Purchase', {
-                value: 24.90,
-                currency: 'EUR',
-            });
-        }
-    }, [searchParams]);
 
     // ── Persistencia — refs para capturar valores actuales ────────
     const [autosaving, setAutosaving]   = useState(false);
@@ -663,6 +652,16 @@ export default function DashboardPage() {
     const supabase = createSupabaseClient();
     const router = useRouter();
     const searchParams = useSearchParams();
+
+    // Track Purchase event when plan is activated
+    useEffect(() => {
+        if (searchParams.get('plan_activated') === 'true') {
+            trackPixelEvent('Purchase', {
+                value: 24.90,
+                currency: 'EUR',
+            });
+        }
+    }, [searchParams]);
 
     const singleLoadingSteps = [
         "Leyendo tu Cerebro IA...",
