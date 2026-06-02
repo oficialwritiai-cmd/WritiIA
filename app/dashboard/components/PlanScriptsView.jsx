@@ -267,7 +267,12 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
     const [loadingVariant, setLoadingVariant] = useState({});
     const [showVariantPicker, setShowVariantPicker] = useState({});
     const [autoRunning, setAutoRunning]       = useState(false);
+    const [globalError, setGlobalError]       = useState('');
     const autoStartedRef                      = useRef(false);
+    const scriptsRef                          = useRef(initialScripts); // always current, no stale closure
+
+    // Keep scriptsRef in sync
+    useEffect(() => { scriptsRef.current = scripts; }, [scripts]);
 
     // Notify parent when scripts change (for module-level cache persistence)
     useEffect(() => {
@@ -278,25 +283,31 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
     useEffect(() => {
         if (!slots?.length || autoStartedRef.current) return;
         const pending = slots.filter(s => !initialScripts[s.id]);
-        if (pending.length === 0) return; // all cached, nothing to generate
+        if (pending.length === 0) return;
         autoStartedRef.current = true;
         generateAll();
     }, [slots]);
 
     async function getToken() {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            return session?.access_token || '';
-        } catch { return ''; }
+        // Retry up to 3 times with delay — session might not be ready on first mount
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) return session.access_token;
+            } catch {}
+            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+        return '';
     }
 
-    async function generateOne(slotId) {
+    async function generateOne(slotId, preloadedToken) {
         const slot = slots.find(s => s.id === slotId);
         if (!slot) return;
         setLoading(p => ({ ...p, [slotId]: true }));
         setErrors(p => ({ ...p, [slotId]: '' }));
         try {
-            const tok = await getToken();
+            const tok = preloadedToken || await getToken();
+            if (!tok) throw new Error('Sin sesión activa. Recarga la página.');
             const res = await fetch('/api/generate-idea-script', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
@@ -354,8 +365,21 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
 
     async function generateAll() {
         setAutoRunning(true);
+        setGlobalError('');
+
+        // Get token ONCE upfront — avoid stale closure issues
+        const tok = await getToken();
+        if (!tok) {
+            setGlobalError('No se pudo obtener sesión. Recarga la página e intenta de nuevo.');
+            setAutoRunning(false);
+            return;
+        }
+
         for (const slot of (slots || [])) {
-            if (!scripts[slot.id]) await generateOne(slot.id);
+            // Use scriptsRef (always current) instead of stale closure
+            if (!scriptsRef.current[slot.id]) {
+                await generateOne(slot.id, tok);
+            }
         }
         setAutoRunning(false);
     }
@@ -397,6 +421,16 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
     return (
         <div>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+            {/* Global error */}
+            {globalError && (
+                <div style={{ padding: '14px 18px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 12, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <p style={{ fontSize: '0.85rem', color: '#f87171', margin: 0 }}>⚠ {globalError}</p>
+                    <button onClick={() => { setGlobalError(''); generateAll(); }} style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171', borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                        Reintentar
+                    </button>
+                </div>
+            )}
 
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>

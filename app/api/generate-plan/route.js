@@ -6,6 +6,19 @@ import { verifyProjectAccess } from '@/lib/auth-guard';
 
 export const maxDuration = 60;
 
+const CONTENT_TYPES = [
+    'Revelación', 'Storytelling', 'Antes vs Ahora', 'Tutorial rápido',
+    'Opinión polémica', 'Caso real', 'Mito vs Realidad', 'Datos sorprendentes',
+    'Detrás de cámaras', 'Respuesta a objeción', 'Transformación', 'Lista de errores',
+];
+
+function extractJson(text) {
+    if (!text) return null;
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return null;
+    try { return JSON.parse(match[0]); } catch { return null; }
+}
+
 export async function POST(req) {
     try {
         const cookieStore = cookies();
@@ -20,9 +33,9 @@ export async function POST(req) {
 
         const body = await req.json();
         const {
-            description, platforms, frequency, focus, tone, videoDuration, postCount,
+            description, platforms, frequency, tone, videoDuration, postCount,
             selectedIdeas = [], businessOffer, targetAudienceType, mainPainPoint,
-            monthlyGoals = [], contentStyles = [], projectId
+            contentStyles = [], projectId
         } = body;
 
         if (projectId) {
@@ -35,115 +48,130 @@ export async function POST(req) {
             return NextResponse.json({ error: 'Créditos insuficientes.' }, { status: 402 });
         }
 
-        console.log(`[generate-plan] Generating ${postCount} slots for platforms: ${platforms?.join(', ')}`);
-
-        const slots = generatePlanSlots(
-            postCount,
-            description,
-            selectedIdeas,
-            platforms,
-            contentStyles,
-            businessOffer,
-            mainPainPoint
-        );
-
-        if (!slots || slots.length === 0) {
-            console.error('[generate-plan] No slots generated');
-            return NextResponse.json(
-                { error: 'No se pudieron generar las ideas.' },
-                { status: 400 }
-            );
+        // Fetch brand brain for personalization
+        let brain = null;
+        if (projectId) {
+            const { data } = await supabase.from('project_brains').select('*').eq('project_id', projectId).single();
+            brain = data;
+        }
+        if (!brain) {
+            const { data } = await supabase.from('brand_brain').select('*').eq('user_id', user.id).single();
+            brain = data;
         }
 
-        console.log(`[generate-plan] ✅ Generated ${slots.length} slots successfully`);
-        console.log(`[generate-plan] First slot structure:`, slots[0]);
+        const topic = businessOffer || mainPainPoint || description || 'mi negocio';
+        const platformList = platforms || ['Reels'];
+        const count = Math.max(6, Math.min(postCount || 12, 28));
 
-        return NextResponse.json({
-            success: true,
-            slots,
-            message: `Plan generado: ${slots.length} ideas`
+        // Build selected ideas context
+        const selectedContext = selectedIdeas.length > 0
+            ? `\nIDEAS YA SELECCIONADAS (inclúyelas adaptadas en el plan):\n${selectedIdeas.slice(0, 6).map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+            : '';
+
+        const brainContext = brain
+            ? `Creador: ${brain.biography || ''}. Audiencia: ${brain.audience || ''}. Tono: ${brain.values_tone || 'profesional y cercano'}.`
+            : `Tono: ${tone || 'profesional y cercano'}.`;
+
+        const systemPrompt = `Eres un estratega de contenido de élite. Generas planes de contenido variados, creativos y adaptados al negocio del creador.
+Devuelves ÚNICAMENTE un array JSON válido con exactamente ${count} ideas. Sin texto extra.`;
+
+        const userMessage = `Genera ${count} ideas de contenido para el mes para este negocio:
+- Oferta/Negocio: ${topic}
+- Audiencia: ${targetAudienceType || 'Emprendedores'}
+- Plataformas: ${platformList.join(', ')}
+- Frecuencia: ${frequency || '3 por semana'}
+- ${brainContext}
+${selectedContext}
+
+REGLAS:
+1. Exactamente ${count} ideas, variadas (no repetir el mismo formato/ángulo).
+2. Títulos específicos y con gancho, NO genéricos. Que generen curiosidad o emoción.
+3. Alterna entre estos tipos: Revelación, Storytelling, Tutorial, Opinión, Caso real, Datos, Antes/Después, Mito/Realidad.
+4. Distribuye las plataformas: ${platformList.join(', ')}.
+5. Cada idea debe estar alineada con el negocio: ${topic}.
+
+Formato JSON (array de ${count} objetos):
+[{
+  "idea_title": "título con gancho específico y poderoso",
+  "idea_description": "descripción de 1-2 frases del ángulo y valor del contenido",
+  "content_type": "Revelación|Storytelling|Tutorial rápido|Opinión polémica|Caso real|Datos sorprendentes|Antes vs Ahora|Mito vs Realidad",
+  "platform": "${platformList[0]}",
+  "hook": "primera frase de apertura del vídeo que engancha"
+}]`;
+
+        // Call Claude Sonnet for quality idea generation
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 4096,
+                temperature: 0.8,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: userMessage }],
+            }),
         });
+
+        let aiIdeas = null;
+        if (aiRes.ok) {
+            const aiData = await aiRes.json();
+            aiIdeas = extractJson(aiData.content?.[0]?.text || '');
+        }
+
+        // Build final slots (AI ideas or fallback templates)
+        const today = new Date();
+        const slots = [];
+
+        for (let i = 0; i < count; i++) {
+            const platform = platformList[i % platformList.length];
+            const aiIdea = aiIdeas?.[i];
+            const contentType = aiIdea?.content_type || CONTENT_TYPES[i % CONTENT_TYPES.length];
+
+            // Smart title: use AI idea > selected idea title > fallback template
+            let ideaTitle = aiIdea?.idea_title;
+            if (!ideaTitle && selectedIdeas[i]) {
+                // Extract title from "titulo: descripcion" format
+                const colonIdx = selectedIdeas[i].indexOf(':');
+                ideaTitle = colonIdx > 0 ? selectedIdeas[i].slice(0, colonIdx).trim() : selectedIdeas[i].slice(0, 80);
+            }
+            if (!ideaTitle) {
+                ideaTitle = `${contentType}: ${topic.slice(0, 40)}`;
+            }
+
+            const ideaDesc = aiIdea?.idea_description
+                || (selectedIdeas[i] ? selectedIdeas[i] : `Contenido de ${contentType} sobre ${topic}`);
+
+            // Smart scheduling: calculate date based on frequency
+            const freqNum = parseInt(frequency?.split(' ')[0]) || 3;
+            const daysInterval = Math.round(7 / freqNum);
+            const slotDate = new Date(today);
+            slotDate.setDate(today.getDate() + Math.floor(i * daysInterval) + 1);
+
+            slots.push({
+                id: `slot-${Date.now()}-${i}`,
+                idea_title: ideaTitle,
+                idea_description: ideaDesc,
+                platform: aiIdea?.platform || platform,
+                content_type: contentType,
+                day_number: i + 1,
+                goal: businessOffer || mainPainPoint || 'engagement',
+                hook: aiIdea?.hook || '',
+                has_script: false,
+                script_content: null,
+                scheduled_date: slotDate.toISOString().split('T')[0],
+                created_at: new Date().toISOString(),
+            });
+        }
+
+        console.log(`[generate-plan] Generated ${slots.length} slots (AI: ${aiIdeas ? 'yes' : 'fallback'})`);
+        return NextResponse.json({ success: true, slots, message: `Plan generado: ${slots.length} ideas` });
 
     } catch (err) {
         console.error('generate-plan error:', err);
-        return NextResponse.json(
-            { error: err.message || 'Error al generar el plan.' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: err.message || 'Error al generar el plan.' }, { status: 500 });
     }
-}
-
-function generatePlanSlots(postCount, description, selectedIdeas, platforms, contentStyles, businessOffer, mainPainPoint) {
-    const slots = [];
-    const platformList = platforms || ['Reels'];
-
-    // Extraer tema corto: businessOffer > mainPainPoint > primera línea de description
-    const rawTopic = businessOffer || mainPainPoint || description || 'tu negocio';
-    // Tomar solo la primera oración/línea corta (máx 60 chars) y limpiar markdown
-    const shortTopic = rawTopic
-        .replace(/^#+\s*/gm, '')       // quitar headings markdown
-        .replace(/\*\*/g, '')          // quitar bold
-        .replace(/\n[\s\S]*/g, '')     // solo primera línea
-        .replace(/^[^a-zA-ZáéíóúÁÉÍÓÚ0-9¿¡]+/, '') // quitar chars raros al inicio
-        .trim()
-        .slice(0, 60);
-
-    const topic = shortTopic || 'tu negocio';
-
-    // Plantillas de ideas concisas basadas en el contexto del negocio
-    const ideaTemplates = [
-        `Cómo ${topic} puede cambiar tu negocio`,
-        `${topic}: El error que comete el 90%`,
-        `Por qué necesitas ${topic} AHORA`,
-        `${topic} en 60 segundos`,
-        `La verdad sobre ${topic}`,
-        `Mi opinión brutal sobre ${topic}`,
-        `Esto deberían enseñarte sobre ${topic}`,
-        `${topic}: Antes y después real`,
-        `Lo que nadie te dice de ${topic}`,
-        `${topic}: La guía completa`,
-        `Resultado real con ${topic}`,
-        `¿Cuánto vale ${topic}?`,
-    ];
-
-    for (let i = 0; i < postCount; i++) {
-        const platform = platformList[i % platformList.length];
-        const templateIdx = i % ideaTemplates.length;
-        const ideaTitle = ideaTemplates[templateIdx];
-
-        // Usa selectedIdeas si existen, sino genera basado en descripción
-        const ideaDesc = selectedIdeas && selectedIdeas[i]
-            ? selectedIdeas[i]
-            : `Contenido específico para ${platform}: ${ideaTitle}`;
-
-        slots.push({
-            id: `slot-${Date.now()}-${i}`,
-            idea_title: ideaTitle,
-            idea_description: ideaDesc,
-            platform: platform,
-            content_type: 'video',
-            day_number: i + 1,
-            goal: businessOffer || mainPainPoint || 'Generar engagement',
-            estilo: contentStyles[i % contentStyles.length] || 'general',
-            hook: generarHook(ideaTitle, platform),
-            has_script: false,
-            script_content: null,
-            scheduled_date: null,
-            created_at: new Date().toISOString()
-        });
-    }
-
-    return slots;
-}
-
-function generarHook(titulo, platform) {
-    const hooks = {
-        'Reels': '¿Sabías que...?',
-        'TikTok': '⚠️ Esto es importante',
-        'LinkedIn': '📊 Dato importante:',
-        'YouTube': '👀 Espera a ver esto',
-        'YouTube Shorts': '🤔 Una pregunta rápida'
-    };
-
-    return hooks[platform] || '¿Sabías que...?';
 }
