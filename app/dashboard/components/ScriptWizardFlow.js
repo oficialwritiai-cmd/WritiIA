@@ -106,73 +106,141 @@ export default function ScriptWizardFlow({
 
             {/* ── PHASE 1 ─────────────────────────────── */}
             {phase === 1 && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '28px', animation: 'phaseIn 0.3s ease' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-                            ¿Sobre qué quieres crear contenido hoy?
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px', animation: 'phaseIn 0.3s ease', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '20px' }}>
+
+                    <style>{`
+                        @keyframes pulse-glow {
+                            0%, 100% { box-shadow: 0 0 20px rgba(52,211,153,0.3), 0 0 40px rgba(52,211,153,0.1); }
+                            50% { box-shadow: 0 0 30px rgba(52,211,153,0.5), 0 0 60px rgba(52,211,153,0.2); }
+                        }
+                        @keyframes float-micro {
+                            0%, 100% { transform: translateY(0px); }
+                            50% { transform: translateY(-8px); }
+                        }
+                        .mic-button {
+                            animation: float-micro 3s ease-in-out infinite;
+                        }
+                    `}</style>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px', textShadow: '0 0 30px rgba(52,211,153,0.4)' }}>
+                            ▓▓▓ INICIA TU SESIÓN
                         </h2>
-                        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                            Habla o escribe — tú decides
+                        <p style={{ fontSize: '0.75rem', color: '#34d399', margin: '0 0 20px', fontFamily: "'Courier New', monospace", letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                            › cuéntame tu tema y generaremos tu guión
                         </p>
                     </div>
 
                     {/* Banner: creando desde idea del calendario */}
                     {ideaContext && (
-                        <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '14px', padding: '16px 20px', marginBottom: '4px' }}>
-                            <div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-                                📝 Creando guión para:
+                        <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(52,211,153,0.08))', border: '2px solid rgba(124,58,237,0.4)', borderRadius: '8px', padding: '16px 20px', marginBottom: '16px', width: '100%', maxWidth: '500px' }}>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px', fontFamily: "'Courier New', monospace" }}>
+                                ⚡ Idea del calendario:
                             </div>
-                            <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: '0 0 8px', lineHeight: 1.4 }}>
+                            <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: '0 0 10px', lineHeight: 1.5 }}>
                                 "{ideaContext.idea_title}"
                             </p>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                                {ideaContext.platform && <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '6px' }}>📱 {ideaContext.platform}</span>}
-                            </div>
                             <button onClick={() => { try { sessionStorage.removeItem('from_idea_context'); } catch(e){} setIdeaContext(null); setPhase(1); }}
-                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}>
-                                ✏️ Cambiar idea
+                                style={{ background: 'rgba(124,58,237,0.2)', border: '1px solid rgba(124,58,237,0.5)', color: '#a78bfa', fontSize: '0.72rem', cursor: 'pointer', padding: '6px 12px', borderRadius: '4px', fontFamily: "'Courier New', monospace", fontWeight: 600, transition: 'all 0.2s' }}
+                                onMouseOver={(e) => { e.target.style.background = 'rgba(124,58,237,0.3)'; e.target.style.boxShadow = '0 0 12px rgba(124,58,237,0.4)'; }}
+                                onMouseOut={(e) => { e.target.style.background = 'rgba(124,58,237,0.2)'; e.target.style.boxShadow = 'none'; }}>
+                                🔄 Cambiar idea
                             </button>
                         </div>
                     )}
 
-                    {/* Main textarea */}
-                    <div style={{ position: 'relative' }}>
-                        <textarea
-                            value={topic}
-                            onChange={e => setTopic(e.target.value)}
-                            placeholder="Ej: Por qué el 90% de los coaches fracasan en redes..."
-                            style={{
-                                width: '100%', minHeight: '110px', background: 'rgba(124,58,237,0.06)',
-                                border: `1px solid ${topic ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                                borderRadius: '16px', color: '#fff', padding: '16px 56px 16px 18px',
-                                fontSize: '1rem', lineHeight: 1.6, resize: 'none', outline: 'none',
-                                fontFamily: "'Inter', sans-serif", boxSizing: 'border-box',
-                                transition: 'border-color 0.2s',
-                            }}
-                        />
-                        <div style={{ position: 'absolute', right: '14px', bottom: '14px' }}>
-                            <VoiceDictation onResult={text => setTopic(prev => prev ? `${prev} ${text}` : text)} />
+                    {/* Input + Mic */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '600px' }}>
+
+                        {/* Textarea */}
+                        <div style={{ position: 'relative' }}>
+                            <textarea
+                                value={topic}
+                                onChange={e => setTopic(e.target.value)}
+                                placeholder="Ej: Por qué los coaches fracasan en redes..."
+                                style={{
+                                    width: '100%', minHeight: '80px', background: 'rgba(0, 30, 15, 0.6)',
+                                    border: `2px solid ${topic ? 'rgba(52,211,153,0.5)' : 'rgba(52,211,153,0.2)'}`,
+                                    borderRadius: '6px', color: '#34d399', padding: '14px 56px 14px 16px',
+                                    fontSize: '0.95rem', lineHeight: 1.6, resize: 'none', outline: 'none',
+                                    fontFamily: "'Courier New', monospace", boxSizing: 'border-box',
+                                    transition: 'all 0.2s',
+                                    boxShadow: topic ? 'inset 0 0 15px rgba(52,211,153,0.1), 0 0 20px rgba(52,211,153,0.2)' : 'inset 0 0 10px rgba(52,211,153,0.05)',
+                                }}
+                                onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.15), 0 0 30px rgba(52,211,153,0.3)'; }}
+                                onBlur={(e) => { e.target.style.boxShadow = topic ? 'inset 0 0 15px rgba(52,211,153,0.1), 0 0 20px rgba(52,211,153,0.2)' : 'inset 0 0 10px rgba(52,211,153,0.05)'; }}
+                            />
+                            <div style={{ position: 'absolute', right: '14px', bottom: '14px' }}>
+                                <VoiceDictation onResult={text => setTopic(prev => prev ? `${prev} ${text}` : text)} />
+                            </div>
+                        </div>
+
+                        {/* Button row */}
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={goNext}
+                                disabled={!topic?.trim()}
+                                style={{
+                                    padding: '12px 28px',
+                                    background: topic?.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)',
+                                    border: '2px solid rgba(52,211,153,0.5)', borderRadius: '6px',
+                                    color: '#34d399', cursor: topic?.trim() ? 'pointer' : 'not-allowed',
+                                    fontSize: '0.85rem', fontWeight: 700,
+                                    fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
+                                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                                    opacity: topic?.trim() ? 1 : 0.4,
+                                }}
+                                onMouseOver={(e) => { if(topic?.trim()) { e.target.style.background = 'rgba(52,211,153,0.3)'; e.target.style.boxShadow = '0 0 20px rgba(52,211,153,0.4)'; }}}
+                                onMouseOut={(e) => { e.target.style.background = topic?.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)'; e.target.style.boxShadow = 'none'; }}
+                            >
+                                ▶ Siguiente
+                            </button>
+
+                            <button
+                                onClick={() => setTopic('')}
+                                disabled={!topic?.trim()}
+                                style={{
+                                    padding: '12px 28px',
+                                    background: 'rgba(255,77,77,0.1)', border: '2px solid rgba(255,77,77,0.4)',
+                                    borderRadius: '6px', color: '#ff6b6b', cursor: topic?.trim() ? 'pointer' : 'not-allowed',
+                                    fontSize: '0.85rem', fontWeight: 700,
+                                    fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
+                                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                                    opacity: topic?.trim() ? 1 : 0.4,
+                                }}
+                                onMouseOver={(e) => { if(topic?.trim()) { e.target.style.background = 'rgba(255,77,77,0.2)'; e.target.style.boxShadow = '0 0 15px rgba(255,77,77,0.3)'; }}}
+                                onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; e.target.style.boxShadow = 'none'; }}
+                            >
+                                🔄 Limpiar
+                            </button>
                         </div>
                     </div>
 
                     {/* Tone chips */}
-                    <div>
-                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-                            Tono de marca
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontFamily: "'Courier New', monospace" }}>
+                            › Tono de marca
                         </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                             {TONOS.map(t => (
                                 <button key={t} onClick={() => setToneBrand(t)} style={{
-                                    padding: '8px 16px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600,
-                                    border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                                    background: toneBrand === t ? '#7c3aed' : 'rgba(255,255,255,0.06)',
-                                    color: toneBrand === t ? '#fff' : 'rgba(255,255,255,0.55)',
-                                    boxShadow: toneBrand === t ? '0 0 12px rgba(124,58,237,0.4)' : 'none',
+                                    padding: '8px 14px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600,
+                                    border: `2px solid ${toneBrand === t ? 'rgba(52,211,153,0.6)' : 'rgba(52,211,153,0.2)'}`,
+                                    cursor: 'pointer', transition: 'all 0.15s',
+                                    background: toneBrand === t ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)',
+                                    color: toneBrand === t ? '#34d399' : 'rgba(52,211,153,0.6)',
+                                    boxShadow: toneBrand === t ? '0 0 15px rgba(52,211,153,0.3)' : 'none',
+                                    fontFamily: "'Courier New', monospace", textTransform: 'uppercase', letterSpacing: '0.05em',
                                 }}>
                                     {t}
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Char count */}
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.4)', fontFamily: "'Courier New', monospace", marginTop: '8px' }}>
+                        › {topic?.length || 0} caracteres
                     </div>
                 </div>
             )}
