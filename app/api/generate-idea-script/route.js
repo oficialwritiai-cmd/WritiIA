@@ -12,12 +12,79 @@ function extractJson(text) {
     try { return JSON.parse(match[0]); } catch { return null; }
 }
 
-function buildPrompt(brain) {
-    return `Eres un guionista profesional de contenido digital.
-CREADOR: Bio: ${brain.biography || 'Creador digital'}. Nicho: ${brain.niche || 'Marketing'}. Tono: ${brain.values_tone || 'Cercano'}. Estilo: ${brain.style_words || 'Directo'}.
-REGLAS: Hook impactante primeros 5s. 3-5 bloques con detalle real. CTA específico. Solo JSON.
-FORMATO:
-{"title":"...","hook":"...","structure":[{"point":"...","detail":"..."}],"cta":"...","post_copy":{"headline":"...","body":"...","hashtags":["#tag"]},"notes":"..."}`;
+function getPlatformRules(platform, duration) {
+    const p = (platform || '').toLowerCase();
+    if (p.includes('youtube') && !p.includes('short')) {
+        return `PLATAFORMA: YouTube (vídeo largo ${duration || '5-10 min'}).
+- Hook: pregunta o promesa poderosa en los primeros 15 segundos.
+- Estructura: 6-8 bloques bien desarrollados con ejemplos reales, datos y storytelling.
+- Cada bloque debe tener AL MENOS 3-4 frases de detalle concreto.
+- Tono educativo-entretenido, profundo y con autoridad.
+- CTA: suscribir + comentar + compartir.`;
+    }
+    if (p.includes('linkedin')) {
+        return `PLATAFORMA: LinkedIn (vídeo profesional ${duration || '2-3 min'}).
+- Hook: dato sorprendente o insight profesional en 10 segundos.
+- Estructura: 4-5 bloques con casos reales de negocio, métricas y lecciones aprendidas.
+- Cada bloque debe tener 3-5 frases con argumentos sólidos y ejemplos del sector.
+- Tono: profesional, directo, orientado a resultados y ROI.
+- CTA: conectar, comentar perspectiva, descargar recurso.`;
+    }
+    if (p.includes('tiktok')) {
+        return `PLATAFORMA: TikTok (vídeo corto ${duration || '60 seg'}).
+- Hook: las primeras 3 palabras deben enganchar brutalmente — sin intro.
+- Estructura: 3-4 bloques rápidos pero con DETALLE REAL, no generalidades.
+- Cada bloque: 2-3 frases concretas con ejemplo específico o número.
+- Ritmo rápido, lenguaje generacional, directo al grano.
+- CTA: seguir para más, guardar, comentar opinión.`;
+    }
+    return `PLATAFORMA: Instagram Reels / vídeo corto (${duration || '60-90 seg'}).
+- Hook: pregunta provocadora o afirmación polémica en los primeros 5 segundos.
+- Estructura: 4-5 bloques con contenido DENSO y ESPECÍFICO — nada genérico.
+- Cada bloque debe tener 3-4 frases con dato real, ejemplo concreto o historia breve.
+- Tono cercano pero con autoridad, como hablar a un amigo que necesita la verdad.
+- CTA: guardar para después, compartir con alguien que lo necesite.`;
+}
+
+function buildPrompt(brain, platform, duration) {
+    const platformRules = getPlatformRules(platform, duration);
+    return `Eres un guionista profesional de élite especializado en contenido viral y educativo para redes sociales.
+Tu misión: crear guiones COMPLETOS, DETALLADOS y ADAPTADOS a cada plataforma. NUNCA guiones genéricos o cortos.
+
+PERFIL DEL CREADOR:
+- Biografía: ${brain.biography || 'Experto en su sector'}
+- Nicho: ${brain.niche || brain.niche_topics || 'Marketing y negocios'}
+- Productos/Servicios: ${brain.products_services || brain.sells || ''}
+- Audiencia: ${brain.audience || 'Emprendedores y profesionales'}
+- Tono de marca: ${brain.values_tone || 'Profesional y cercano'}
+- Estilo: ${brain.style_words || 'Directo, auténtico, sin postureo'}
+
+${platformRules}
+
+REGLAS DE CALIDAD ABSOLUTA:
+1. El hook DEBE ser irresistible — si no engancha en 5 seg, no sirve.
+2. Cada bloque de desarrollo debe tener contenido REAL y ESPECÍFICO (cifras, ejemplos, casos).
+3. Nunca uses frases genéricas como "es muy importante" — ve directo al detalle.
+4. El guión debe sonar como habla el creador, no como un robot.
+5. Incluye copy para redes sociales optimizado con emojis y hashtags relevantes.
+6. Devuelve ÚNICAMENTE el JSON válido, sin texto adicional.
+
+FORMATO JSON OBLIGATORIO:
+{
+  "title": "título atractivo del vídeo",
+  "hook": "frase de apertura que engancha en los primeros segundos — específica y poderosa",
+  "structure": [
+    { "point": "nombre del bloque/punto", "detail": "3-5 frases de contenido real y específico con ejemplos o datos concretos" },
+    { "point": "...", "detail": "..." }
+  ],
+  "cta": "llamada a la acción específica y motivante (2-3 frases)",
+  "post_copy": {
+    "headline": "título del post con emojis",
+    "body": "descripción del post de 3-5 líneas con valor real",
+    "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5"]
+  },
+  "notes": "sugerencias de grabación específicas para esta plataforma"
+}`;
 }
 
 export async function POST(request) {
@@ -53,9 +120,13 @@ export async function POST(request) {
         const cost = CREDIT_COSTS.GENERATE_SCRIPT_SLOT ?? 1;
         if (balance < cost) return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
 
-        // Generate with Claude
-        const systemPrompt = buildPrompt(brain);
-        const userMessage = `Genera el guion para: "${idea_title}". Contexto: ${idea_description || ''}. Plataforma: ${platform || 'Reels'} (${videoDuration || '60 seg'}). CTA: ${ctaIdea || 'Guarda este video'}.`;
+        // Generate with Claude Sonnet for quality long-form scripts
+        const systemPrompt = buildPrompt(brain, platform, videoDuration);
+        const userMessage = `Genera el guión completo y detallado para: "${idea_title}".
+Contexto adicional: ${idea_description || '(sin contexto extra)'}.
+Plataforma objetivo: ${platform || 'Reels'} — duración estimada: ${videoDuration || '60-90 seg'}.
+${ctaIdea ? `CTA preferido: ${ctaIdea}` : ''}
+Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes contenido corto o genérico.`;
 
         const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -65,8 +136,8 @@ export async function POST(request) {
                 'anthropic-version': '2023-06-01',
             },
             body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 3000,
+                model: 'claude-sonnet-4-6',
+                max_tokens: 4096,
                 temperature: 0.75,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userMessage }],

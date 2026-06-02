@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { createSupabaseClient } from '@/lib/supabase';
 import {
     Loader2, Sparkles, RefreshCw, BookOpen, Copy, Check,
     Zap, MessageSquare, Target, GitBranch, ChevronDown, ChevronUp,
@@ -251,23 +252,43 @@ function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
 }
 
 /* ── Main PlanScriptsView ──────────────────────────────────── */
-export default function PlanScriptsView({ slots, projectId, token, onSendToCalendar, sendingToCalendar }) {
-    const [scripts, setScripts]               = useState({});
+export default function PlanScriptsView({ slots, projectId, initialScripts = {}, onScriptsChange, onSendToCalendar, sendingToCalendar }) {
+    const supabase = createSupabaseClient();
+    const [scripts, setScripts]               = useState(initialScripts);
     const [loading, setLoading]               = useState({});
     const [errors, setErrors]                 = useState({});
-    const [saved, setSaved]                   = useState({});
+    const [saved, setSaved]                   = useState(() => {
+        // Mark as saved any slots that already have scripts from cache
+        const s = {};
+        Object.keys(initialScripts).forEach(id => { s[id] = true; });
+        return s;
+    });
     const [variants, setVariants]             = useState({});
     const [loadingVariant, setLoadingVariant] = useState({});
     const [showVariantPicker, setShowVariantPicker] = useState({});
     const [autoRunning, setAutoRunning]       = useState(false);
     const autoStartedRef                      = useRef(false);
 
-    // Auto-generate all on mount
+    // Notify parent when scripts change (for module-level cache persistence)
+    useEffect(() => {
+        onScriptsChange?.(scripts);
+    }, [scripts]);
+
+    // Auto-generate all on mount (only for slots without cached scripts)
     useEffect(() => {
         if (!slots?.length || autoStartedRef.current) return;
+        const pending = slots.filter(s => !initialScripts[s.id]);
+        if (pending.length === 0) return; // all cached, nothing to generate
         autoStartedRef.current = true;
         generateAll();
     }, [slots]);
+
+    async function getToken() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            return session?.access_token || '';
+        } catch { return ''; }
+    }
 
     async function generateOne(slotId) {
         const slot = slots.find(s => s.id === slotId);
@@ -275,15 +296,16 @@ export default function PlanScriptsView({ slots, projectId, token, onSendToCalen
         setLoading(p => ({ ...p, [slotId]: true }));
         setErrors(p => ({ ...p, [slotId]: '' }));
         try {
+            const tok = await getToken();
             const res = await fetch('/api/generate-idea-script', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
                 body: JSON.stringify({
                     idea_title: slot.idea_title,
                     idea_description: slot.idea_description || '',
                     platform: slot.platform || 'Reels',
                     projectId: projectId || null,
-                    videoDuration: '60 seg',
+                    videoDuration: slot.platform?.toLowerCase().includes('youtube') && !slot.platform?.toLowerCase().includes('short') ? '5-10 min' : '60-90 seg',
                 }),
             });
             if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); return; }
@@ -306,9 +328,10 @@ export default function PlanScriptsView({ slots, projectId, token, onSendToCalen
         setLoadingVariant(p => ({ ...p, [slotId]: true }));
         setShowVariantPicker(p => ({ ...p, [slotId]: false }));
         try {
+            const tok = await getToken();
             const res = await fetch('/api/generate-idea-script', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
                 body: JSON.stringify({
                     idea_title: slot.idea_title,
                     idea_description: slot.idea_description || '',

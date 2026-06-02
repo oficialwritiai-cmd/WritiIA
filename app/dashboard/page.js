@@ -61,6 +61,7 @@ let _cachedPlanPain      = '';
 let _cachedPlanProjectId = null;
 let _cachedPlanSlots     = []; // plan slots con guiones generados
 let _cachedSelectedSlots = []; // IDs de slots seleccionados
+let _cachedPlanScripts   = {}; // { slotId: { text, raw } } — sobrevive navegación
 
 export default function DashboardPage() {
     const [generationMode, setGenerationMode] = useState(_cachedPlanMode);
@@ -301,6 +302,7 @@ export default function DashboardPage() {
         _cachedPlanProjectId = activeProject?.id || null;
         _cachedPlanSlots     = planSlots;
         _cachedSelectedSlots = [...selectedSlots];
+        // _cachedPlanScripts se actualiza desde PlanScriptsView via onScriptsChange
     });
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
@@ -602,7 +604,7 @@ export default function DashboardPage() {
             _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
             _cachedPlanFrequency = '3 publicaciones por semana';
             _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
-            _cachedPlanProjectId = null; _cachedPlanSlots = []; _cachedSelectedSlots = [];
+            _cachedPlanProjectId = null; _cachedPlanSlots = []; _cachedSelectedSlots = []; _cachedPlanScripts = {};
         }
     }, [activeProject?.id]);
 
@@ -4779,7 +4781,7 @@ export default function DashboardPage() {
 
 
             {
-                step === 3 && generationMode === 'plan' && planScriptsToken && (
+                step === 3 && generationMode === 'plan' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '12px' }}>
                             <div style={{ flex: 1 }}>
@@ -4800,7 +4802,8 @@ export default function DashboardPage() {
                             <PlanScriptsView
                                 slots={planSlots}
                                 projectId={activeProject?.id || null}
-                                token={planScriptsToken}
+                                initialScripts={_cachedPlanScripts}
+                                onScriptsChange={(scripts) => { _cachedPlanScripts = scripts; }}
                                 onSendToCalendar={(slotsWithScripts) => {
                                     setPlanSlots(slotsWithScripts);
                                     handleSendPlanToCalendar(slotsWithScripts);
