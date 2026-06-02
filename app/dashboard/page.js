@@ -47,8 +47,20 @@ let _cachedStep    = 1;
 let _cachedTopic   = '';
 let _cachedPlatform = 'Reels';
 
+// Plan wizard cache — mismo patrón, sobrevive navegación entre páginas del dashboard
+let _cachedPlanMode      = 'single';
+let _cachedPlanStep      = 1;
+let _cachedPlanIdeas     = [];
+let _cachedPlanSelected  = [];
+let _cachedPlanPlatforms = ['Reels'];
+let _cachedPlanFrequency = '3 publicaciones por semana';
+let _cachedPlanOffer     = '';
+let _cachedPlanAudience  = 'Emprendedores';
+let _cachedPlanPain      = '';
+let _cachedPlanProjectId = null; // para detectar cambio de proyecto y limpiar
+
 export default function DashboardPage() {
-    const [generationMode, setGenerationMode] = useState('single');
+    const [generationMode, setGenerationMode] = useState(_cachedPlanMode);
 
     // Wizard steps: 1 = marca, 2 = contexto, 3 = detalle
     const [wizardStep, setWizardStep] = useState(1);
@@ -89,9 +101,9 @@ export default function DashboardPage() {
     const [editingBrain, setEditingBrain] = useState(false);
     const [brainForm, setBrainForm] = useState({ biography: '', sells: '', helps: '', style_words: '' });
 
-    // Plan mode states
-    const [planPlatforms, setPlanPlatforms] = useState(['Reels']);
-    const [planFrequency, setPlanFrequency] = useState('3 publicaciones por semana');
+    // Plan mode states — inicializan desde el caché de módulo para sobrevivir navegación
+    const [planPlatforms, setPlanPlatforms] = useState(_cachedPlanPlatforms);
+    const [planFrequency, setPlanFrequency] = useState(_cachedPlanFrequency);
     const [planFocus, setPlanFocus] = useState('mezcla equilibrada');
     const [planContentTypes, setPlanContentTypes] = useState({ autoridad: 30, 'historia personal': 25, venta: 25, comunidad: 20 });
     const [planExcludeTopics, setPlanExcludeTopics] = useState('');
@@ -103,23 +115,23 @@ export default function DashboardPage() {
     const [contextMenu, setContextMenu] = useState(null); // { x, y }
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
     const [libIdeas, setLibIdeas] = useState([]);
-    const [selectedPlanIdeas, setSelectedPlanIdeas] = useState([]);
-    const [planWizardStep, setPlanWizardStep] = useState(1);
+    const [selectedPlanIdeas, setSelectedPlanIdeas] = useState(_cachedPlanSelected);
+    const [planWizardStep, setPlanWizardStep] = useState(_cachedPlanStep);
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
     const [expandedSlots, setExpandedSlots] = useState(new Set());
     const [savedPlanSlotIds, setSavedPlanSlotIds] = useState(new Set());
     const [extraIdeasModal, setExtraIdeasModal] = useState({ open: false, ideas: [], loading: false, form: { context: '', experienceLevel: '', productTicket: '', objections: '', examples: '' } });
-    const [recommendedIdeas, setRecommendedIdeas] = useState([]);
+    const [recommendedIdeas, setRecommendedIdeas] = useState(_cachedPlanIdeas);
     const [loadingRecommended, setLoadingRecommended] = useState(false);
     const [ideasFetchError, setIdeasFetchError] = useState('');
 
     // New Marketing Briefing States (v4.0.0)
-    const [businessOffer, setBusinessOffer] = useState('');
+    const [businessOffer, setBusinessOffer] = useState(_cachedPlanOffer);
     const [ticketPrice, setTicketPrice] = useState('');
     const [targetAudience, setTargetAudience] = useState('');
-    const [targetAudienceType, setTargetAudienceType] = useState('Emprendedores');
-    const [mainPainPoint, setMainPainPoint] = useState('');
+    const [targetAudienceType, setTargetAudienceType] = useState(_cachedPlanAudience);
+    const [mainPainPoint, setMainPainPoint] = useState(_cachedPlanPain);
     const [monthlyGoals, setMonthlyGoals] = useState([]);
     const [successMetric, setSuccessMetric] = useState('');
     const [keyThemes, setKeyThemes] = useState('');
@@ -272,6 +284,17 @@ export default function DashboardPage() {
         _cachedStep     = step;
         _cachedTopic    = topic;
         _cachedPlatform = platform;
+        // Plan wizard cache — mismo patrón
+        _cachedPlanMode      = generationMode;
+        _cachedPlanStep      = planWizardStep;
+        _cachedPlanIdeas     = recommendedIdeas;
+        _cachedPlanSelected  = selectedPlanIdeas;
+        _cachedPlanPlatforms = planPlatforms;
+        _cachedPlanFrequency = planFrequency;
+        _cachedPlanOffer     = businessOffer;
+        _cachedPlanAudience  = targetAudienceType;
+        _cachedPlanPain      = mainPainPoint;
+        _cachedPlanProjectId = activeProject?.id || null;
     });
 
     const getDraftKey = (pid) => `matrix_draft_v4_${pid || 'global'}`;
@@ -551,7 +574,14 @@ export default function DashboardPage() {
         setRecommendedIdeas([]);
         setIdeasFetchError('');
         setPlanWizardStep(1);
-        // Note: sessionStorage cache is preserved on project switch — restore effect will load it for new project
+        setSelectedPlanIdeas([]);
+        setGenerationMode('single');
+        // Limpiar caché de módulo del plan wizard al cambiar proyecto
+        _cachedPlanMode = 'single'; _cachedPlanStep = 1; _cachedPlanIdeas = [];
+        _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
+        _cachedPlanFrequency = '3 publicaciones por semana';
+        _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
+        _cachedPlanProjectId = null;
         setPlanSlots([]);
         setSelectedSlots(new Set());
         loadData();
@@ -865,74 +895,15 @@ export default function DashboardPage() {
         }
     }, [supabase, searchParams]);
 
-    // ── Plan wizard sessionStorage persistence ───────────────────────
-    const PLAN_STATE_KEY = (pid) => `writi_plan_state_v3_${pid}`;
+    // Plan wizard state survives SPA navigation via module-level _cachedPlan* variables.
+    // No sessionStorage effects needed — useState initializers use cached values directly.
 
-    // Restore full plan wizard state on mount (survives tab navigation)
-    useEffect(() => {
-        if (!activeProject?.id) return;
-        try {
-            const saved = sessionStorage.getItem(PLAN_STATE_KEY(activeProject.id));
-            if (!saved) return;
-            const state = JSON.parse(saved);
-            if (!state || state.mode !== 'plan') return;
-            // Restore mode so the plan wizard UI shows
-            setGenerationMode('plan');
-            // Restore wizard position (steps 2-3 only; step 4 needs fresh analysis)
-            if (state.step >= 2 && state.step <= 3) setPlanWizardStep(state.step);
-            // Restore AI ideas
-            if (Array.isArray(state.ideas) && state.ideas.length > 0) setRecommendedIdeas(state.ideas);
-            // Restore selections
-            if (Array.isArray(state.selectedIdeas)) setSelectedPlanIdeas(state.selectedIdeas);
-            // Restore form fields so the user doesn't lose their inputs
-            if (state.platforms?.length > 0) setPlanPlatforms(state.platforms);
-            if (state.frequency) setPlanFrequency(state.frequency);
-            if (state.offer) setBusinessOffer(state.offer);
-            if (state.audience) setTargetAudienceType(state.audience);
-            if (state.painPoint) setMainPainPoint(state.painPoint);
-            // Fetch library ideas since plan mode effect won't run when restoring to step > 1
-            fetchLibraryIdeas();
-        } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeProject?.id]);
-
-    // Persist plan state whenever anything meaningful changes (only while in plan mode)
-    useEffect(() => {
-        if (!activeProject?.id || generationMode !== 'plan') return;
-        // Don't overwrite cache with a completely empty state on first render
-        const hasContent = planWizardStep > 1 || recommendedIdeas.length > 0 || planPlatforms.length > 0;
-        if (!hasContent) return;
-        try {
-            sessionStorage.setItem(PLAN_STATE_KEY(activeProject.id), JSON.stringify({
-                mode: 'plan',
-                step: planWizardStep,
-                ideas: recommendedIdeas,
-                selectedIdeas: selectedPlanIdeas,
-                platforms: planPlatforms,
-                frequency: planFrequency,
-                offer: businessOffer,
-                audience: targetAudienceType,
-                painPoint: mainPainPoint,
-            }));
-        } catch {}
-    }, [planWizardStep, recommendedIdeas, selectedPlanIdeas, planPlatforms, planFrequency, businessOffer, targetAudienceType, mainPainPoint, activeProject?.id, generationMode]);
-
-    // Fetch library + AI ideas when entering plan mode at step 1
+    // Fetch library + AI ideas when entering plan mode at step 1 (first visit or project change)
     useEffect(() => {
         if (generationMode !== 'plan' || planWizardStep !== 1 || !activeProject) return;
         fetchLibraryIdeas();
-        if (recommendedIdeas.length === 0) {
-            // Skip API fetch if sessionStorage already has cached ideas (restore effect will handle it)
-            const hasCached = (() => {
-                try {
-                    const s = sessionStorage.getItem(`writi_plan_state_v2_${activeProject.id}`);
-                    if (!s) return false;
-                    const parsed = JSON.parse(s);
-                    return Array.isArray(parsed.ideas) && parsed.ideas.length > 0;
-                } catch { return false; }
-            })();
-            if (!hasCached) fetchProactiveIdeas();
-        }
+        // Only fetch AI ideas if none cached in module variable (avoids re-charging credits on nav)
+        if (recommendedIdeas.length === 0) fetchProactiveIdeas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [generationMode, planWizardStep, projectVersion, activeProject?.id]);
 
