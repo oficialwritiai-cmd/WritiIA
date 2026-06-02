@@ -1524,8 +1524,9 @@ export default function DashboardPage() {
             }
 
         } catch (err) {
-            setError(err.message);
-            setStep(1);
+            console.error('❌ Plan generation error:', err);
+            setError(`⚠️ Error: ${err.message}. Intenta nuevamente.`);
+            setStep(4); // Mantén en el paso actual para que pueda reintentar
         }
     }
 
