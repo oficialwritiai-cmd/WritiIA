@@ -14,7 +14,7 @@ import { saveToLibrary } from '@/lib/library';
 import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
 import FormPresets from '@/app/components/FormPresets';
-import PlanMonthlyStep1 from '@/app/dashboard/components/PlanMonthlyStep1';
+import PlanMonthlyFlow from '@/app/dashboard/components/PlanMonthlyFlow';
 
 
 
@@ -3440,9 +3440,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    {/* STEP 1: PLATAFORMAS Y FRECUENCIA */}
+                    {/* STEP 1: DYNAMIC FLOW - Plataformas hasta Pain Point */}
                     {planWizardStep === 1 && (
-                        <PlanMonthlyStep1
+                        <PlanMonthlyFlow
                             planPlatforms={planPlatforms}
                             setPlanPlatforms={setPlanPlatforms}
                             planFrequency={planFrequency}
@@ -3457,12 +3457,13 @@ export default function DashboardPage() {
                             setMainPainPoint={setMainPainPoint}
                             PLATAFORMAS={PLATAFORMAS}
                             FRECUENCIAS={FRECUENCIAS}
+                            AUDIENCIAS_PLAN={AUDIENCIAS_PLAN}
                             handleImproveField={handleImproveField}
                             polishingField={polishingField}
                             aiRefineInstructions={aiRefineInstructions}
                             setAiRefineInstructions={setAiRefineInstructions}
-                            onNext={() => setPlanWizardStep(2)}
                             onBack={() => setGenerationMode('single')}
+                            onComplete={() => setPlanWizardStep(2)}
                         />
                     )}
 
