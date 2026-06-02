@@ -2454,12 +2454,38 @@ export default function DashboardPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('No hay sesión activa');
 
-            // Fetch existing events to detect duplicates/updates
+            // Fetch existing events to detect duplicates/updates + used times
             const { data: existingEvents } = await supabase
                 .from('calendar_events')
-                .select('id, event_date, title, has_script, script_full_text, notes')
+                .select('id, event_date, title, has_script, script_full_text, notes, start_time')
                 .eq('user_id', user.id)
                 .eq('project_id', activeProject?.id || null);
+
+            // Build map of already-used times per day to avoid stacking events at same hour
+            const PLAN_HOURS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
+            const usedTimesPerDay = {};
+            (existingEvents || []).forEach(ev => {
+                if (ev.event_date && ev.start_time) {
+                    if (!usedTimesPerDay[ev.event_date]) usedTimesPerDay[ev.event_date] = new Set();
+                    usedTimesPerDay[ev.event_date].add(ev.start_time);
+                }
+            });
+            const getNextFreeTime = (dateStr) => {
+                const used = usedTimesPerDay[dateStr] || new Set();
+                for (const h of PLAN_HOURS) {
+                    if (!used.has(h)) return h;
+                }
+                // All standard slots taken: overflow from 21:00
+                for (let h = 21; h < 24; h++) {
+                    const t = `${String(h).padStart(2,'0')}:00`;
+                    if (!used.has(t)) return t;
+                }
+                return '09:00';
+            };
+            const endTimeOf = (start) => {
+                const h = parseInt(start.split(':')[0], 10);
+                return `${String(Math.min(h + 1, 23)).padStart(2,'0')}:00`;
+            };
 
             // Fetch existing scripts and library items once to improve performance
             const [ { data: allScripts }, { data: allLibraryScripts } ] = await Promise.all([
@@ -2576,10 +2602,16 @@ export default function DashboardPage() {
                         has_script: !!(slot.has_script || (parsedSd && hasRealContent)),
                         script_full_text: fullText,
                         notes: fullText,
-                        start_time: '12:00',
-                        end_time: '13:00',
+                        start_time: (() => {
+                            const t = getNextFreeTime(dateStr);
+                            // Reserve this slot immediately so the next event on the same day uses a different hour
+                            if (!usedTimesPerDay[dateStr]) usedTimesPerDay[dateStr] = new Set();
+                            usedTimesPerDay[dateStr].add(t);
+                            return t;
+                        })(),
                         color: 'green'
                     };
+                    eventPayload.end_time = endTimeOf(eventPayload.start_time);
 
                     if (existingEventId) {
                         const { error: upError } = await supabase.from('calendar_events').update(eventPayload).eq('id', existingEventId);
