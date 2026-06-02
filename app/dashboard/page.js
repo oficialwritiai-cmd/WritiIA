@@ -981,6 +981,8 @@ export default function DashboardPage() {
         if (!topic?.trim() && effectiveTopic) setTopic(effectiveTopic);
         console.log('[Dashboard] handleGenerateSingle called', { topic: effectiveTopic, platform, goal, hasBrain, wizardStep });
 
+        // CRITICAL: Limpiar sessionStorage ANTES de generar para evitar restaurar guiones viejos
+        try { sessionStorage.removeItem('writi_scripts_session'); } catch {}
 
         if (!hasBrain && wizardStep < 2) {
             setError('Por favor, completa el Paso 1 (Marca Personal) antes de generar.');
@@ -1097,6 +1099,11 @@ export default function DashboardPage() {
 
             setScripts(finalScripts);
             setStep(3);
+            // CRITICAL: Limpiar voice-story después de generación exitosa
+            try {
+                sessionStorage.removeItem('writi_voice_story');
+                setVoiceStoryPhase(1);
+            } catch {}
             // Guardar en sessionStorage — restauración garantizada al volver a esta página
             try {
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify({
