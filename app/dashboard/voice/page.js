@@ -122,81 +122,100 @@ export default function VoiceStoryPage() {
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#0c0c0e', color: '#fff',
-            fontFamily: "'Inter', sans-serif",
+            minHeight: '100vh', background: 'linear-gradient(135deg, #000a05 0%, #0a0f0e 50%, #050010 100%)', color: '#fff',
+            fontFamily: "'Courier New', monospace",
             display: 'flex', flexDirection: 'column',
         }}>
+
+            <style>{`
+                @keyframes matrix-glow {
+                    0%, 100% { text-shadow: 0 0 10px rgba(52,211,153,0.4), 0 0 20px rgba(52,211,153,0.2); }
+                    50% { text-shadow: 0 0 20px rgba(52,211,153,0.6), 0 0 40px rgba(52,211,153,0.3); }
+                }
+                @keyframes mic-pulse-red {
+                    0%, 100% { box-shadow: 0 0 30px rgba(255,77,77,0.4), 0 0 60px rgba(255,77,77,0.2), inset 0 0 20px rgba(255,77,77,0.1); }
+                    50% { box-shadow: 0 0 50px rgba(255,77,77,0.6), 0 0 100px rgba(255,77,77,0.3), inset 0 0 30px rgba(255,77,77,0.2); }
+                }
+                @keyframes mic-pulse-green {
+                    0%, 100% { box-shadow: 0 0 30px rgba(52,211,153,0.4), 0 0 60px rgba(52,211,153,0.2), inset 0 0 20px rgba(52,211,153,0.1); }
+                    50% { box-shadow: 0 0 50px rgba(52,211,153,0.6), 0 0 100px rgba(52,211,153,0.3), inset 0 0 30px rgba(52,211,153,0.2); }
+                }
+                @keyframes blink { 0%, 50%, 100% { opacity: 1; } 25%, 75% { opacity: 0.3; } }
+            `}</style>
+
             {/* Back button */}
             <div style={{ padding: '20px 24px', flexShrink: 0 }}>
                 <button onClick={() => router.push('/dashboard/home')}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
-                    <ChevronLeft size={18} /> Volver
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, padding: '8px 12px', borderRadius: '4px', transition: 'all 0.2s' }}
+                    onMouseOver={(e) => { e.target.style.background = 'rgba(52,211,153,0.15)'; e.target.style.boxShadow = '0 0 12px rgba(52,211,153,0.3)'; }}
+                    onMouseOut={(e) => { e.target.style.background = 'rgba(52,211,153,0.08)'; e.target.style.boxShadow = 'none'; }}>
+                    ← Volver
                 </button>
             </div>
 
             {/* ── PHASE: RECORD ──────────────────────────────── */}
             {phase === 'record' && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: '32px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '36px' }}>
 
                     {/* Header */}
                     <div style={{ textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '10px' }}>
-                            Cuenta tu historia
+                        <h1 style={{ fontSize: '2.4rem', fontWeight: 900, letterSpacing: '-0.04em', marginBottom: '12px', color: '#34d399', animation: 'matrix-glow 3s ease-in-out infinite' }}>
+                            ▓▓▓ GRABA TU HISTORIA
                         </h1>
                         {/* Rotating prompt */}
-                        <p key={promptIdx} style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.4)', animation: 'fadeIn 0.4s ease', maxWidth: '380px', lineHeight: 1.5 }}>
+                        <p key={promptIdx} style={{ fontSize: '0.95rem', color: '#34d399', animation: 'fadeIn 0.4s ease', maxWidth: '420px', lineHeight: 1.6, fontStyle: 'italic', opacity: 0.8 }}>
                             {PROMPTS[promptIdx]}
                         </p>
                     </div>
 
-                    {/* Mic button */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                    {/* Mic button — GIANT PULSING */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
                         <button
                             onClick={isRecording ? stopRecording : startRecording}
                             style={{
-                                width: '100px', height: '100px', borderRadius: '50%',
-                                background: isRecording ? 'rgba(239,68,68,0.15)' : 'rgba(124,58,237,0.15)',
-                                border: `3px solid ${isRecording ? '#ef4444' : '#7c3aed'}`,
+                                width: '140px', height: '140px', borderRadius: '50%',
+                                background: isRecording ? 'rgba(255,77,77,0.1)' : 'rgba(52,211,153,0.08)',
+                                border: `4px solid ${isRecording ? '#ff6b6b' : '#34d399'}`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 cursor: 'pointer',
-                                boxShadow: isRecording
-                                    ? '0 0 0 0 rgba(239,68,68,0.4)'
-                                    : '0 0 0 0 rgba(124,58,237,0.4)',
-                                animation: isRecording ? 'micPulse 1.2s infinite' : 'micIdle 2s ease-in-out infinite',
+                                animation: isRecording ? 'mic-pulse-red 1.2s infinite' : 'mic-pulse-green 2s ease-in-out infinite',
                                 transition: 'all 0.3s',
                             }}
                         >
                             {isRecording
-                                ? <Square size={36} color="#ef4444" fill="#ef4444" />
-                                : <Mic size={36} color="#a78bfa" />
+                                ? <Square size={56} color="#ff6b6b" fill="#ff6b6b" />
+                                : <Mic size={56} color="#34d399" />
                             }
                         </button>
 
-                        <p style={{ fontSize: '0.85rem', color: isRecording ? '#ef4444' : 'rgba(255,255,255,0.35)', fontWeight: 600, textAlign: 'center' }}>
-                            {isRecording ? '● Grabando... pulsa para pausar' : 'Pulsa para hablar'}
+                        <p style={{ fontSize: '0.9rem', color: isRecording ? '#ff6b6b' : '#34d399', fontWeight: 700, textAlign: 'center', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                            {isRecording ? '● Grabando... pulsa para pausar' : '▶ Pulsa para hablar'}
                         </p>
+                        {isRecording && <p style={{ fontSize: '0.7rem', color: 'rgba(255,77,77,0.6)', animation: 'blink 1s infinite', fontFamily: "'Courier New'" }}>escuchando tu voz...</p>}
                     </div>
 
-                    {/* Transcript display */}
+                    {/* Transcript display — MATRIX STYLE */}
                     {(displayText || isRecording) && (
-                        <div style={{ width: '100%', maxWidth: '560px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '20px 24px', minHeight: '80px' }}>
-                            <p style={{ fontSize: '0.95rem', lineHeight: 1.7, color: '#fff', margin: 0 }}>
+                        <div style={{ width: '100%', maxWidth: '620px', background: 'rgba(0,30,15,0.5)', border: '2px solid rgba(52,211,153,0.4)', borderRadius: '6px', padding: '20px 24px', minHeight: '100px', boxShadow: 'inset 0 0 20px rgba(52,211,153,0.08), 0 0 30px rgba(52,211,153,0.15)' }}>
+                            <p style={{ fontSize: '1rem', lineHeight: 1.8, color: '#34d399', margin: 0, fontFamily: "'Courier New'" }}>
                                 {transcript}
-                                {interim && <span style={{ color: 'rgba(255,255,255,0.35)' }}>{interim}</span>}
-                                {isRecording && !displayText && <span style={{ color: 'rgba(255,255,255,0.25)', animation: 'blink 1s infinite' }}>Te escucho...</span>}
+                                {interim && <span style={{ color: 'rgba(52,211,153,0.5)' }}>{interim}</span>}
+                                {isRecording && !displayText && <span style={{ color: 'rgba(52,211,153,0.4)', animation: 'blink 1s infinite' }}>▌ </span>}
                             </p>
                         </div>
                     )}
 
                     {error && (
-                        <p style={{ color: '#f87171', fontSize: '0.85rem', textAlign: 'center' }}>{error}</p>
+                        <p style={{ color: '#ff6b6b', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>⚠ {error}</p>
                     )}
 
                     {/* Continue button */}
                     {displayText && (
                         <button onClick={finishRecording}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '14px', padding: '16px 32px', fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 20px rgba(124,58,237,0.35)', animation: 'micIdle 2s ease-in-out infinite' }}>
-                            <Zap size={20} /> Generar guiones desde mi historia
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'rgba(52,211,153,0.15)', border: '2px solid rgba(52,211,153,0.5)', color: '#34d399', borderRadius: '6px', padding: '14px 28px', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 0 25px rgba(52,211,153,0.3)', transition: 'all 0.2s', fontFamily: "'Courier New'", textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                            onMouseOver={(e) => { e.target.style.background = 'rgba(52,211,153,0.25)'; e.target.style.boxShadow = '0 0 40px rgba(52,211,153,0.5)'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(52,211,153,0.15)'; e.target.style.boxShadow = '0 0 25px rgba(52,211,153,0.3)'; }}>
+                            ▶ Avanzar →
                         </button>
                     )}
                     {isRecording && (
@@ -220,45 +239,57 @@ export default function VoiceStoryPage() {
 
             {/* ── PHASE: CONFIRM ─────────────────────────────── */}
             {phase === 'confirm' && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: '28px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '28px' }}>
                     <div style={{ textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '8px' }}>
-                            Esto es lo que contaste
+                        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '12px', color: '#34d399', animation: 'matrix-glow 3s ease-in-out infinite' }}>
+                            ▓ HISTORIA GRABADA
                         </h1>
-                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                            <Edit3 size={14} /> Puedes editar antes de continuar
+                        <p style={{ fontSize: '0.8rem', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: "'Courier New'", textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            ✏️ Edita tu texto
                         </p>
                     </div>
 
-                    {/* Editable transcript */}
-                    <div style={{ width: '100%', maxWidth: '600px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '16px', padding: '4px' }}>
+                    {/* Editable transcript — MATRIX */}
+                    <div style={{ width: '100%', maxWidth: '660px', background: 'rgba(0,30,15,0.6)', border: '2px solid rgba(52,211,153,0.4)', borderRadius: '6px', padding: '2px', boxShadow: 'inset 0 0 20px rgba(52,211,153,0.08), 0 0 30px rgba(52,211,153,0.15)' }}>
                         <textarea
                             value={editedText}
                             onChange={e => setEditedText(e.target.value)}
                             style={{
-                                width: '100%', minHeight: '160px', background: 'transparent',
-                                border: 'none', outline: 'none', color: '#fff',
-                                fontSize: '1rem', lineHeight: 1.75, resize: 'vertical',
-                                padding: '16px 20px', fontFamily: "'Inter', sans-serif",
-                                boxSizing: 'border-box',
+                                width: '100%', minHeight: '140px', background: 'rgba(0,10,5,0.7)',
+                                border: 'none', outline: 'none', color: '#34d399',
+                                fontSize: '1rem', lineHeight: 1.8, resize: 'vertical',
+                                padding: '18px 20px', fontFamily: "'Courier New', monospace",
+                                boxSizing: 'border-box', transition: 'all 0.2s',
                             }}
+                            onFocus={(e) => { e.target.style.background = 'rgba(0,10,5,0.9)'; }}
+                            onBlur={(e) => { e.target.style.background = 'rgba(0,10,5,0.7)'; }}
                         />
+                    </div>
+
+                    {/* Char count */}
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.4)', fontFamily: "'Courier New'" }}>
+                        › {editedText?.length || 0} caracteres
                     </div>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <button onClick={() => { setPhase('record'); }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '12px', padding: '12px 20px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
-                            <RefreshCw size={15} /> Volver a grabar
+                        <button onClick={() => { setPhase('record'); accRef.current = ''; setTranscript(''); setInterim(''); }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,77,77,0.1)', border: '2px solid rgba(255,77,77,0.4)', color: '#ff6b6b', borderRadius: '6px', padding: '12px 20px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: "'Courier New'", textTransform: 'uppercase', letterSpacing: '0.08em', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; e.target.style.boxShadow = '0 0 15px rgba(255,77,77,0.3)'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; e.target.style.boxShadow = 'none'; }}>
+                            🔄 Grabar de nuevo
                         </button>
+
                         <button onClick={generateFromStory} disabled={!editedText.trim()}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', border: 'none', color: '#fff', borderRadius: '12px', padding: '13px 28px', fontSize: '0.95rem', fontWeight: 800, cursor: editedText.trim() ? 'pointer' : 'not-allowed', opacity: editedText.trim() ? 1 : 0.5, boxShadow: '0 4px 20px rgba(124,58,237,0.35)' }}>
-                            <Zap size={18} /> Generar guiones desde esta historia
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: editedText.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)', border: '2px solid rgba(52,211,153,0.5)', color: '#34d399', borderRadius: '6px', padding: '12px 24px', fontSize: '0.85rem', fontWeight: 700, cursor: editedText.trim() ? 'pointer' : 'not-allowed', opacity: editedText.trim() ? 1 : 0.5, boxShadow: editedText.trim() ? '0 0 25px rgba(52,211,153,0.3)' : 'none', fontFamily: "'Courier New'", textTransform: 'uppercase', letterSpacing: '0.08em', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => { if(editedText.trim()) { e.target.style.background = 'rgba(52,211,153,0.3)'; e.target.style.boxShadow = '0 0 40px rgba(52,211,153,0.5)'; }}}
+                            onMouseOut={(e) => { e.target.style.background = editedText.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)'; e.target.style.boxShadow = editedText.trim() ? '0 0 25px rgba(52,211,153,0.3)' : 'none'; }}>
+                            ▶ Generar guiones
                         </button>
                     </div>
 
-                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
-                        Se generarán guiones adaptados a tu voz y Cerebro IA configurado
+                    <p style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.35)', textAlign: 'center', fontFamily: "'Courier New'", maxWidth: '500px' }}>
+                        › se generarán guiones adaptados a tu voz y cerebro ía
                     </p>
                 </div>
             )}
