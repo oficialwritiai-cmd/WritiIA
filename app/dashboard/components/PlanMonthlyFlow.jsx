@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Sparkles, Loader } from 'lucide-react';
-import VoiceDictation from '@/app/components/VoiceDictation';
+import VoiceInputCard from './VoiceInputCard';
 
 const PROMPTS_PAIN = [
     'Tu cliente siente miedo a...',
@@ -164,120 +164,20 @@ export default function PlanMonthlyFlow({
 
             {/* STEP 2: OFFER */}
             {step === 2 && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '32px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
-                    {/* Micrófono grande */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                        <VoiceDictation
-                            onResult={text => setBusinessOffer(prev => prev ? `${prev} ${text}` : text)}
-                            style={{
-                                width: '100px',
-                                height: '100px',
-                                borderRadius: '16px',
-                            }}
-                        />
-                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', margin: 0 }}>
-                            O toca para hablar
-                        </p>
-                    </div>
-
-                    {/* Texto transcrito - abajo */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
+                    <VoiceInputCard
+                        value={businessOffer}
+                        onChange={setBusinessOffer}
+                        placeholder="¿Qué vendes?"
+                        borderColor="rgba(255,206,86,0.4)"
+                        bgColor="rgba(255,206,86,0.05)"
+                    />
                     {businessOffer.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{
-                                padding: '16px 20px',
-                                borderRadius: '14px',
-                                background: 'rgba(255,206,86,0.1)',
-                                border: '1px solid rgba(255,206,86,0.3)',
-                            }}>
-                                <p style={{ fontSize: '1rem', color: '#fff', margin: 0, lineHeight: 1.6 }}>
-                                    {businessOffer}
-                                </p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    onClick={() => setBusinessOffer('')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '10px 16px',
-                                        borderRadius: '10px',
-                                        border: '1px solid rgba(255,77,77,0.3)',
-                                        background: 'rgba(255,77,77,0.1)',
-                                        color: '#ff6b6b',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; }}
-                                    onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; }}
-                                >
-                                    🗑 Borrar
-                                </button>
-                                <button
-                                    onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer'])}
-                                    disabled={polishingField === 'businessOffer'}
-                                    style={{
-                                        flex: 1,
-                                        padding: '10px 16px',
-                                        borderRadius: '10px',
-                                        border: '1px solid rgba(255,206,86,0.3)',
-                                        background: 'rgba(255,206,86,0.1)',
-                                        color: '#fed84f',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseOver={(e) => { e.target.style.background = 'rgba(255,206,86,0.2)'; }}
-                                    onMouseOut={(e) => { e.target.style.background = 'rgba(255,206,86,0.1)'; }}
-                                >
-                                    {polishingField === 'businessOffer' ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                    Mejorar
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* STEP 3: PRICE */}
-            {step === 3 && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '32px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
-                    {/* Micrófono grande */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                        <VoiceDictation
-                            onResult={text => setTicketPrice(prev => prev ? `${prev} ${text}` : text)}
-                            style={{
-                                width: '100px',
-                                height: '100px',
-                                borderRadius: '16px',
-                            }}
-                        />
-                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', margin: 0 }}>
-                            O toca para hablar
-                        </p>
-                    </div>
-
-                    {/* Texto transcrito - abajo */}
-                    {ticketPrice.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{
-                                padding: '16px 20px',
-                                borderRadius: '14px',
-                                background: 'rgba(59,130,246,0.1)',
-                                border: '1px solid rgba(59,130,246,0.3)',
-                            }}>
-                                <p style={{ fontSize: '1rem', color: '#fff', margin: 0, lineHeight: 1.6 }}>
-                                    {ticketPrice}
-                                </p>
-                            </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <button
-                                onClick={() => setTicketPrice('')}
+                                onClick={() => setBusinessOffer('')}
                                 style={{
+                                    flex: 1,
                                     padding: '10px 16px',
                                     borderRadius: '10px',
                                     border: '1px solid rgba(255,77,77,0.3)',
@@ -291,13 +191,71 @@ export default function PlanMonthlyFlow({
                                 onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; }}
                                 onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; }}
                             >
-                                🗑 Borrar
+                                🗑 Borrar todo
+                            </button>
+                            <button
+                                onClick={() => handleImproveField(businessOffer, setBusinessOffer, 'businessOffer', aiRefineInstructions['businessOffer'])}
+                                disabled={polishingField === 'businessOffer'}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(255,206,86,0.3)',
+                                    background: 'rgba(255,206,86,0.1)',
+                                    color: '#fed84f',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseOver={(e) => { e.target.style.background = 'rgba(255,206,86,0.2)'; }}
+                                onMouseOut={(e) => { e.target.style.background = 'rgba(255,206,86,0.1)'; }}
+                            >
+                                {polishingField === 'businessOffer' ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                Mejorar
                             </button>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* STEP 3: PRICE */}
+            {step === 3 && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
+                    <VoiceInputCard
+                        value={ticketPrice}
+                        onChange={setTicketPrice}
+                        placeholder="Ej: 49€, 1500€..."
+                        borderColor="rgba(59,130,246,0.4)"
+                        bgColor="rgba(59,130,246,0.05)"
+                    />
+                    {ticketPrice.length > 0 && (
+                        <button
+                            onClick={() => setTicketPrice('')}
+                            style={{
+                                padding: '10px 16px',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255,77,77,0.3)',
+                                background: 'rgba(255,77,77,0.1)',
+                                color: '#ff6b6b',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: '0.85rem',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; }}
+                        >
+                            🗑 Borrar
+                        </button>
+                    )}
 
                     <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', margin: 0, textAlign: 'center' }}>
-                        Este campo es opcional — continúa aunque dejes vacío
+                        Este campo es opcional
                     </p>
                 </div>
             )}
@@ -333,7 +291,7 @@ export default function PlanMonthlyFlow({
 
             {/* STEP 5: PAIN POINT */}
             {step === 5 && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '32px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
                     <div
                         key={promptIdx}
                         style={{
@@ -351,82 +309,60 @@ export default function PlanMonthlyFlow({
                         </span>
                     </div>
 
-                    {/* Micrófono grande */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                        <VoiceDictation
-                            onResult={text => setMainPainPoint(prev => prev ? `${prev} ${text}` : text)}
-                            style={{
-                                width: '100px',
-                                height: '100px',
-                                borderRadius: '16px',
-                            }}
-                        />
-                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', textAlign: 'center', margin: 0 }}>
-                            Habla con naturalidad
-                        </p>
-                    </div>
+                    <VoiceInputCard
+                        value={mainPainPoint}
+                        onChange={setMainPainPoint}
+                        placeholder="Cuéntame el problema..."
+                        borderColor="rgba(236,72,153,0.4)"
+                        bgColor="rgba(236,72,153,0.05)"
+                    />
 
-                    {/* Texto transcrito - abajo */}
                     {mainPainPoint.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{
-                                padding: '16px 20px',
-                                borderRadius: '14px',
-                                background: 'rgba(236,72,153,0.1)',
-                                border: '1px solid rgba(236,72,153,0.3)',
-                                maxHeight: '200px',
-                                overflowY: 'auto',
-                            }}>
-                                <p style={{ fontSize: '1rem', color: '#fff', margin: 0, lineHeight: 1.6 }}>
-                                    {mainPainPoint}
-                                </p>
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    onClick={() => setMainPainPoint('')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '10px 16px',
-                                        borderRadius: '10px',
-                                        border: '1px solid rgba(255,77,77,0.3)',
-                                        background: 'rgba(255,77,77,0.1)',
-                                        color: '#ff6b6b',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; }}
-                                    onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; }}
-                                >
-                                    🗑 Borrar
-                                </button>
-                                <button
-                                    onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint'])}
-                                    disabled={polishingField === 'mainPainPoint'}
-                                    style={{
-                                        flex: 1,
-                                        padding: '10px 16px',
-                                        borderRadius: '10px',
-                                        border: '1px solid rgba(236,72,153,0.3)',
-                                        background: 'rgba(236,72,153,0.1)',
-                                        color: '#ec4899',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseOver={(e) => { e.target.style.background = 'rgba(236,72,153,0.2)'; }}
-                                    onMouseOut={(e) => { e.target.style.background = 'rgba(236,72,153,0.1)'; }}
-                                >
-                                    {polishingField === 'mainPainPoint' ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                    Mejorar
-                                </button>
-                            </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                                onClick={() => setMainPainPoint('')}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(255,77,77,0.3)',
+                                    background: 'rgba(255,77,77,0.1)',
+                                    color: '#ff6b6b',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseOver={(e) => { e.target.style.background = 'rgba(255,77,77,0.2)'; }}
+                                onMouseOut={(e) => { e.target.style.background = 'rgba(255,77,77,0.1)'; }}
+                            >
+                                🗑 Borrar
+                            </button>
+                            <button
+                                onClick={() => handleImproveField(mainPainPoint, setMainPainPoint, 'mainPainPoint', aiRefineInstructions['mainPainPoint'])}
+                                disabled={polishingField === 'mainPainPoint'}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(236,72,153,0.3)',
+                                    background: 'rgba(236,72,153,0.1)',
+                                    color: '#ec4899',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s',
+                                }}
+                                onMouseOver={(e) => { e.target.style.background = 'rgba(236,72,153,0.2)'; }}
+                                onMouseOut={(e) => { e.target.style.background = 'rgba(236,72,153,0.1)'; }}
+                            >
+                                {polishingField === 'mainPainPoint' ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                Mejorar
+                            </button>
                         </div>
                     )}
                 </div>
