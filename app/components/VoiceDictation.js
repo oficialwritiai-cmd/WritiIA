@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Mic, Square, X, AlertCircle, RefreshCw, ShieldAlert, Copy, Settings, Monitor, Lock } from 'lucide-react';
+import AudioUploadTranscriber from './AudioUploadTranscriber';
 
 export default function VoiceDictation({
     onResult,
@@ -109,7 +110,8 @@ export default function VoiceDictation({
 
     return (
         <>
-            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                {/* Micrófono */}
                 <button
                     type="button"
                     onClick={toggleRecording}
@@ -148,6 +150,9 @@ export default function VoiceDictation({
                         {error}
                     </div>
                 )}
+
+                {/* Upload Audio */}
+                <AudioUploadTranscriber onResult={onResult} size={size} />
             </div>
 
             {/* MODAL DE EMERGENCIA - GUÍA DEFINITIVA v1.15.5 */}
