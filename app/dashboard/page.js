@@ -24,7 +24,7 @@ const SUGGESTED_TRENDS = [
     { name: 'Productividad', icon: '⌛', grow: '+8.1%', color: '#FF007A' },
 ];
 
-const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'X', 'YouTube Shorts', 'YouTube', 'Instagram'];
+const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'YouTube Shorts'];
 const TONOS_MARCA = ['brutal honesto', 'elegante', 'polémico', 'cercano', 'experto', 'profesional'];
 const OBJETIVOS = ['atraer leads', 'autoridad', 'venta directa', 'engagement', 'storytelling', 'educar'];
 const AWARENESS_LEVELS = ['no te conoce', 'tibia', 'muy caliente'];

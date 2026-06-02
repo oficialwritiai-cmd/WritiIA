@@ -165,26 +165,37 @@ export default function PlanMonthlyFlow({
             {/* STEP 2: OFFER */}
             {step === 2 && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
-                    <input
-                        type="text"
-                        placeholder="Ej: Mentoría 1:1, Curso de IA, Pack de 10 videos..."
-                        value={businessOffer}
-                        onChange={(e) => setBusinessOffer(e.target.value)}
-                        style={{
-                            padding: '20px 24px',
-                            borderRadius: '16px',
-                            fontSize: '1.05rem',
-                            border: '2px solid rgba(255,206,86,0.4)',
-                            background: 'rgba(255,206,86,0.05)',
-                            color: '#fff',
-                            outline: 'none',
-                            transition: 'all 0.3s',
-                            fontFamily: 'inherit',
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = 'rgba(255,206,86,0.8)'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255,206,86,0.4)'}
-                        autoFocus
-                    />
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Ej: Mentoría 1:1, Curso de IA, Pack de 10 videos..."
+                            value={businessOffer}
+                            onChange={(e) => setBusinessOffer(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '20px 24px',
+                                paddingRight: '70px',
+                                borderRadius: '16px',
+                                fontSize: '1.05rem',
+                                border: '2px solid rgba(255,206,86,0.4)',
+                                background: 'rgba(255,206,86,0.05)',
+                                color: '#fff',
+                                outline: 'none',
+                                transition: 'all 0.3s',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box',
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'rgba(255,206,86,0.8)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,206,86,0.4)'}
+                            autoFocus
+                        />
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <VoiceDictation
+                                onResult={text => setBusinessOffer(prev => prev ? `${prev} ${text}` : text)}
+                                style={{ width: '44px', height: '44px' }}
+                            />
+                        </div>
+                    </div>
                     {businessOffer.length >= 2 && (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <input
@@ -232,26 +243,37 @@ export default function PlanMonthlyFlow({
             {/* STEP 3: PRICE */}
             {step === 3 && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', animation: 'slideInRight 0.4s ease', marginBottom: '48px' }}>
-                    <input
-                        type="text"
-                        placeholder="Ej: 49€, 1500€, Suscripción 20€/mes..."
-                        value={ticketPrice}
-                        onChange={(e) => setTicketPrice(e.target.value)}
-                        style={{
-                            padding: '20px 24px',
-                            borderRadius: '16px',
-                            fontSize: '1.05rem',
-                            border: '2px solid rgba(59,130,246,0.4)',
-                            background: 'rgba(59,130,246,0.05)',
-                            color: '#fff',
-                            outline: 'none',
-                            transition: 'all 0.3s',
-                            fontFamily: 'inherit',
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = 'rgba(59,130,246,0.8)'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(59,130,246,0.4)'}
-                        autoFocus
-                    />
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Ej: 49€, 1500€, Suscripción 20€/mes..."
+                            value={ticketPrice}
+                            onChange={(e) => setTicketPrice(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '20px 24px',
+                                paddingRight: '70px',
+                                borderRadius: '16px',
+                                fontSize: '1.05rem',
+                                border: '2px solid rgba(59,130,246,0.4)',
+                                background: 'rgba(59,130,246,0.05)',
+                                color: '#fff',
+                                outline: 'none',
+                                transition: 'all 0.3s',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box',
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'rgba(59,130,246,0.8)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(59,130,246,0.4)'}
+                            autoFocus
+                        />
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <VoiceDictation
+                                onResult={text => setTicketPrice(prev => prev ? `${prev} ${text}` : text)}
+                                style={{ width: '44px', height: '44px' }}
+                            />
+                        </div>
+                    </div>
                     <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
                         Este campo es opcional — continúa aunque dejes vacío
                     </p>
