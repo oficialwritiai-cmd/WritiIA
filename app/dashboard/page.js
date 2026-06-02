@@ -15,6 +15,7 @@ import VoiceDictation from '@/app/components/VoiceDictation';
 import { useProject } from '@/app/components/ProjectContext';
 import FormPresets from '@/app/components/FormPresets';
 import PlanMonthlyFlow from '@/app/dashboard/components/PlanMonthlyFlow';
+import PlanScriptsView from '@/app/dashboard/components/PlanScriptsView';
 
 
 
@@ -127,6 +128,7 @@ export default function DashboardPage() {
     const [recommendedIdeas, setRecommendedIdeas] = useState(_cachedPlanIdeas);
     const [loadingRecommended, setLoadingRecommended] = useState(false);
     const [ideasFetchError, setIdeasFetchError] = useState('');
+    const [planScriptsToken, setPlanScriptsToken] = useState(null);
 
     // New Marketing Briefing States (v4.0.0)
     const [businessOffer, setBusinessOffer] = useState(_cachedPlanOffer);
@@ -1615,6 +1617,12 @@ export default function DashboardPage() {
 
             setPlanSlots(slotsForGeneration);
 
+            // Cargar token para PlanScriptsView (necesita Authorization header)
+            try {
+                const { data: { session: sess } } = await supabase.auth.getSession();
+                if (sess?.access_token) setPlanScriptsToken(sess.access_token);
+            } catch (_) {}
+
             // Show plan immediately
             setStep(3);
 
@@ -1631,10 +1639,9 @@ export default function DashboardPage() {
                 console.log(`[v4.5.2] Fresh credits: ${freshCredits.total - freshCredits.used} available`);
             }
 
-            // 3. Trigger FULL AUTO FLOW immediately (no setTimeout)
-            if (freshCredits.total > 0) {
-                await handleAutoBatchGenerateAndSync(slotsForGeneration, allIds, freshCredits);
-            } else {
+            // PlanScriptsView gestiona la generación de guiones automáticamente al montarse.
+            // Solo verificar créditos mínimos
+            if (freshCredits.total <= 0) {
                 alert('⚠️ Sin créditos disponibles. Por favor compra créditos para generar los guiones.');
             }
 
@@ -4772,297 +4779,36 @@ export default function DashboardPage() {
 
 
             {
-                step === 3 && generationMode === 'plan' && (
+                step === 3 && generationMode === 'plan' && planScriptsToken && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '12px' }}>
                             <div style={{ flex: 1 }}>
                                 <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     Plan de contenido a 30 días
-                                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', borderRadius: '4px', border: '1px solid rgba(126, 206, 202, 0.2)' }}>v4.9.1</span>
                                 </h2>
-                                <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-                                    {isGeneratingMassive ? `✍️ Generando guión ${generationProgress.current} de ${generationProgress.total}...` : 'Genera ideas de 30 días y crea guiones con 1 clic desde cada idea.'}
+                                <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '0.9rem' }}>
+                                    Guiones generados automáticamente con tu Cerebro IA
                                 </p>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                {!isGeneratingMassive && (
-                                    <>
-                                        {selectedSlots.size > 0 && (
-                                            <button
-                                                onClick={handleBulkDelete}
-                                                className="btn-secondary"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,0,0,0.3)', color: '#ff4d4d' }}
-                                            >
-                                                <X size={16} /> Eliminar ({selectedSlots.size})
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={handleBatchGenerateScripts}
-                                            disabled={selectedSlots.size === 0}
-                                            className="btn-primary"
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: '8px',
-                                                background: 'linear-gradient(135deg, #7ECECA, #4db8b2)',
-                                                opacity: selectedSlots.size === 0 ? 0.7 : 1,
-                                                fontWeight: 800,
-                                                boxShadow: '0 0 20px rgba(126, 206, 202, 0.3)'
-                                            }}
-                                        >
-                                            <Sparkles size={16} />
-                                            {`Analizar y Planificar (${planSlots.filter(s => selectedSlots.has(s.id) && !s.has_script).length})`}
-                                        </button>
-                                        <button
-                                            onClick={handleConfirmAndSync}
-                                            disabled={sendingToCalendar || selectedSlots.size === 0}
-                                            className="btn-secondary"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: (sendingToCalendar || selectedSlots.size === 0) ? 0.7 : 1 }}
-                                        >
-                                            {sendingToCalendar ? <Loader className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                                            {sendingToCalendar ? 'Sincronizando...' : `Sincronizar Calendario (${selectedSlots.size})`}
-                                        </button>
-                                    </>
-                                )}
-                                <button onClick={() => { setStep(1); setPlanWizardStep(1); setPlanSlots([]); setTopic(''); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><RefreshCcw size={16} /> Nuevo Plan</button>
-                            </div>
+                            <button onClick={() => { setStep(1); setPlanWizardStep(1); setPlanSlots([]); _cachedPlanSlots = []; setTopic(''); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <RefreshCcw size={16} /> Nuevo Plan
+                            </button>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px' }}>
-                            <input
-                                type="checkbox"
-                                checked={planSlots.length > 0 && selectedSlots.size === planSlots.length}
-                                onChange={handleToggleSelectAll}
-                                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#7ECECA' }}
+                        {/* PlanScriptsView — UI profesional de generación de guiones */}
+                        {planSlots.length > 0 && (
+                            <PlanScriptsView
+                                slots={planSlots}
+                                projectId={activeProject?.id || null}
+                                token={planScriptsToken}
+                                onSendToCalendar={(slotsWithScripts) => {
+                                    setPlanSlots(slotsWithScripts);
+                                    handleSendPlanToCalendar(slotsWithScripts);
+                                }}
+                                sendingToCalendar={sendingToCalendar}
                             />
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Seleccionar Todo el Plan</span>
-                        </div>
-
-                        {isGeneratingMassive && (
-                            <div className="premium-card" style={{ padding: '32px', background: 'rgba(126, 206, 202, 0.05)', border: '1px solid rgba(126, 206, 202, 0.2)', marginBottom: '24px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <Loader className="animate-spin" size={20} color="#7ECECA" />
-                                        <h4 style={{ fontWeight: 800 }}>{generationProgress.status}</h4>
-                                    </div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{Math.round((generationProgress.current / generationProgress.total) * 100)}%</span>
-                                </div>
-                                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${(generationProgress.current / generationProgress.total) * 100}%`, height: '100%', background: 'var(--accent-gradient)', transition: '0.3s' }} />
-                                </div>
-                                <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Por favor, no cierres esta ventana hasta que termine la generación.</p>
-                            </div>
                         )}
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {Array.isArray(planSlots) && planSlots.map((slot, i) => {
-                                const isExpanded = expandedSlots.has(slot.id);
-                                const sd = slot.script_data;
-                                const isSaved = savedPlanSlotIds.has(slot.id);
-                                const hookText = sd?.hook || sd?.gancho || '';
-                                const desarrolloArr = Array.isArray(sd?.desarrollo) ? sd.desarrollo : [];
-                                const ctaText = sd?.cta || sd?.cierre || '';
-                                const copyPost = sd?.copy_post || {};
-                                const hashtagsArr = Array.isArray(copyPost.hashtags) ? copyPost.hashtags : [];
-
-                                const handleSavePlanSlot = async () => {
-                                    if (!sd || isSaved) return;
-                                    try {
-                                        await saveScript({
-                                            titulo_guion: slot.idea_title,
-                                            hook: hookText,
-                                            gancho: hookText,
-                                            desarrollo: desarrolloArr,
-                                            cta: ctaText,
-                                            cierre: ctaText,
-                                            copy_post: copyPost,
-                                            platform: slot.platform,
-                                            goal: slot.goal
-                                        }, true);
-                                        setSavedPlanSlotIds(prev => new Set([...prev, slot.id]));
-                                    } catch (e) {
-                                        console.error('Error saving plan slot:', e);
-                                    }
-                                };
-
-                                const handleCopyPlanSlot = () => {
-                                    if (!sd) return;
-                                    const text = `TÍTULO: ${slot.idea_title}\n\nGANCHO:\n${hookText}\n\nDESARROLLO:\n${desarrolloArr.map((d, idx) => `${idx + 1}. ${d}`).join('\n')}\n\nCTA:\n${ctaText}\n\nCOPY POST:\n${copyPost.titulo || ''}\n${copyPost.descripcion_larga || ''}\n\nHASHTAGS:\n${hashtagsArr.map(h => h.startsWith('#') ? h : '#' + h).join(' ')}`;
-                                    navigator.clipboard.writeText(text);
-                                };
-
-                                const toggleExpand = () => {
-                                    const newSet = new Set(expandedSlots);
-                                    if (isExpanded) newSet.delete(slot.id);
-                                    else newSet.add(slot.id);
-                                    setExpandedSlots(newSet);
-                                };
-
-                                return (
-                                <div
-                                    key={slot.id}
-                                    className="premium-card plan-slot-card"
-                                    style={{
-                                        border: selectedSlots.has(slot.id) ? '1px solid rgba(124,58,237,0.35)' : '1px solid rgba(255,255,255,0.07)',
-                                        background: selectedSlots.has(slot.id) ? 'rgba(124,58,237,0.05)' : 'rgba(255,255,255,0.02)',
-                                        borderRadius: '14px',
-                                        overflow: 'hidden',
-                                        animation: `cardFadeIn 0.25s ease ${Math.min(i * 0.03, 0.5)}s both`,
-                                        transition: 'border-color 0.15s',
-                                    }}
-                                >
-                                    {/* Header row */}
-                                    <div
-                                        style={{
-                                            padding: '14px 18px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            cursor: 'pointer',
-                                            userSelect: 'none',
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1 }} onClick={toggleExpand}>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedSlots.has(slot.id)}
-                                                onChange={() => handleToggleSlotSelection(slot.id)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                style={{ width: '20px', height: '20px', accentColor: '#7ECECA', cursor: 'pointer', flexShrink: 0 }}
-                                            />
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(126, 206, 202, 0.1)', color: '#7ECECA', fontWeight: 900 }}>DÍA {slot.day_number || (i + 1)}</span>
-                                                    <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>•</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <Calendar size={12} color="#7ECECA" />
-                                                        <input 
-                                                            type="date"
-                                                            value={slot.scheduled_date || ''}
-                                                            onChange={(e) => {
-                                                                const newSlots = [...planSlots];
-                                                                newSlots[i].scheduled_date = e.target.value;
-                                                                setPlanSlots(newSlots);
-                                                            }}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            style={{ 
-                                                                background: 'rgba(126, 206, 202, 0.1)', 
-                                                                color: '#7ECECA', 
-                                                                border: '1px solid rgba(126, 206, 202, 0.2)',
-                                                                borderRadius: '6px',
-                                                                fontSize: '0.75rem',
-                                                                fontWeight: 800,
-                                                                padding: '4px 8px',
-                                                                outline: 'none',
-                                                                cursor: 'pointer',
-                                                                colorScheme: 'dark'
-                                                            }}
-                                                        />
-                                                        <span style={{ fontSize: '0.75rem', color: '#7ECECA', fontWeight: 700 }}>
-                                                            {slot.scheduled_date ? new Date(slot.scheduled_date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' }) : ''}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'white', margin: 0, lineHeight: 1.3 }}>{slot.idea_title}</h3>
-                                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                                                    {slot.platform && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>{slot.platform}</span>}
-                                                    {slot.content_type && <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>{slot.content_type}</span>}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); setPlanSlots(planSlots.filter(s => s.id !== slot.id)); }} 
-                                                className="btn-secondary" 
-                                                style={{ padding: '8px', minWidth: 'auto', border: '1px solid rgba(255,0,0,0.1)', color: 'rgba(255,77,77,0.6)' }}
-                                                title="Eliminar esta idea"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                            
-                                            {slot.slot_status === 'script_generating' ? (
-                                                <button disabled className="btn-secondary" style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.7 }}>
-                                                    <Loader className="animate-spin" size={14} /> Generando...
-                                                </button>
-                                            ) : !slot.has_script ? (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleGenerateSlotScript(slot); }}
-                                                    disabled={generatingSlotId === slot.id || isGeneratingMassive}
-                                                    className="btn-primary"
-                                                    style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, boxShadow: '0 4px 12px rgba(126, 206, 202, 0.2)' }}
-                                                >
-                                                    {generatingSlotId === slot.id ? <Loader className="animate-spin" size={14} /> : 'Generar Guión'}
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); toggleExpand(); }}
-                                                    className="btn-secondary"
-                                                    style={{ padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)' }}
-                                                >
-                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                    {isExpanded ? 'Cerrar' : 'Ver Guión'}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Expanded Script Content — single column clean */}
-                                    {isExpanded && slot.has_script && sd && (
-                                        <div style={{ padding: '0 18px 18px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
-
-                                                {/* Hook */}
-                                                {hookText && (
-                                                    <div style={{ borderLeft: '3px solid #a78bfa', paddingLeft: '14px', background: 'rgba(167,139,250,0.04)', borderRadius: '0 10px 10px 0', padding: '12px 14px 12px 14px' }}>
-                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '5px' }}>⚡ Hook</span>
-                                                        <p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{hookText}</p>
-                                                    </div>
-                                                )}
-
-                                                {/* Desarrollo */}
-                                                {desarrolloArr.length > 0 && (
-                                                    <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '12px 14px' }}>
-                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>Desarrollo</span>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                            {desarrolloArr.slice(0, 3).map((punto, pidx) => (
-                                                                <div key={pidx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                                                    <span style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0, marginTop: '2px' }}>{pidx + 1}</span>
-                                                                    <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, margin: 0 }}>{typeof punto === 'object' ? JSON.stringify(punto) : punto}</p>
-                                                                </div>
-                                                            ))}
-                                                            {desarrolloArr.length > 3 && <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', margin: '4px 0 0 28px' }}>+{desarrolloArr.length - 3} puntos más</p>}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* CTA */}
-                                                {ctaText && (
-                                                    <div style={{ borderLeft: '3px solid #34d399', background: 'rgba(52,211,153,0.04)', borderRadius: '0 10px 10px 0', padding: '10px 14px' }}>
-                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '4px' }}>CTA</span>
-                                                        <p style={{ fontSize: '0.85rem', color: '#fff', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>{ctaText}</p>
-                                                    </div>
-                                                )}
-
-                                                {/* Actions */}
-                                                <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
-                                                    <button onClick={handleSavePlanSlot} disabled={isSaved}
-                                                        style={{ flex: 1, padding: '9px 0', borderRadius: '9px', border: isSaved ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(124,58,237,0.3)', background: isSaved ? 'rgba(52,211,153,0.08)' : 'rgba(124,58,237,0.1)', color: isSaved ? '#34d399' : '#a78bfa', fontSize: '0.78rem', fontWeight: 700, cursor: isSaved ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                                        {isSaved ? <><CheckCircle size={13} /> Guardado</> : <><Bookmark size={13} /> Guardar</>}
-                                                    </button>
-                                                    <button onClick={handleCopyPlanSlot}
-                                                        style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <Copy size={13} /> Copiar
-                                                    </button>
-                                                    <button onClick={() => router.push('/dashboard/calendar')}
-                                                        style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid rgba(126,206,202,0.2)', background: 'rgba(126,206,202,0.05)', color: '#7ECECA', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <Calendar size={13} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                );
-                            })}
                         </div>
                     </div>
                 )
