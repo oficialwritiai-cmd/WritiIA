@@ -85,7 +85,7 @@ export default function ScriptWizardFlow({
                     <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: n < 3 ? 1 : 'none' }}>
                         <div style={{
                             width: '28px', height: '28px', borderRadius: '50%',
-                            background: phase > n ? '#34d399' : phase === n ? '#7c3aed' : 'rgba(255,255,255,0.08)',
+                            background: phase > n ? '#a78bfa' : phase === n ? '#7c3aed' : 'rgba(255,255,255,0.08)',
                             border: phase === n ? '2px solid rgba(124,58,237,0.5)' : 'none',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '0.72rem', fontWeight: 800,
@@ -99,7 +99,7 @@ export default function ScriptWizardFlow({
                         <span style={{ fontSize: '0.7rem', color: phase === n ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)', fontWeight: phase === n ? 700 : 400, whiteSpace: 'nowrap' }}>
                             {phaseNames[n-1]}
                         </span>
-                        {n < 3 && <div style={{ flex: 1, height: '1px', background: phase > n ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.07)', transition: 'background 0.3s' }} />}
+                        {n < 3 && <div style={{ flex: 1, height: '1px', background: phase > n ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.07)', transition: 'background 0.3s' }} />}
                     </div>
                 ))}
             </div>
@@ -110,8 +110,8 @@ export default function ScriptWizardFlow({
 
                     <style>{`
                         @keyframes pulse-glow {
-                            0%, 100% { box-shadow: 0 0 20px rgba(52,211,153,0.3), 0 0 40px rgba(52,211,153,0.1); }
-                            50% { box-shadow: 0 0 30px rgba(52,211,153,0.5), 0 0 60px rgba(52,211,153,0.2); }
+                            0%, 100% { box-shadow: 0 0 20px rgba(124,58,237,0.3), 0 0 40px rgba(124,58,237,0.1); }
+                            50% { box-shadow: 0 0 30px rgba(124,58,237,0.5), 0 0 60px rgba(124,58,237,0.2); }
                         }
                         @keyframes float-micro {
                             0%, 100% { transform: translateY(0px); }
@@ -123,10 +123,10 @@ export default function ScriptWizardFlow({
                     `}</style>
 
                     <div style={{ marginBottom: '20px' }}>
-                        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px', textShadow: '0 0 30px rgba(52,211,153,0.4)' }}>
+                        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px', textShadow: '0 0 30px rgba(124,58,237,0.4)' }}>
                             ▓▓▓ INICIA TU SESIÓN
                         </h2>
-                        <p style={{ fontSize: '0.75rem', color: '#34d399', margin: '0 0 20px', fontFamily: "'Courier New', monospace", letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                        <p style={{ fontSize: '0.75rem', color: '#a78bfa', margin: '0 0 20px', fontFamily: "'Courier New', monospace", letterSpacing: '0.15em', textTransform: 'uppercase' }}>
                             › cuéntame tu tema y generaremos tu guión
                         </p>
                     </div>
@@ -159,16 +159,16 @@ export default function ScriptWizardFlow({
                                 onChange={e => setTopic(e.target.value)}
                                 placeholder="Ej: Por qué los coaches fracasan en redes..."
                                 style={{
-                                    width: '100%', minHeight: '80px', background: 'rgba(0, 30, 15, 0.6)',
-                                    border: `2px solid ${topic ? 'rgba(52,211,153,0.5)' : 'rgba(52,211,153,0.2)'}`,
-                                    borderRadius: '6px', color: '#34d399', padding: '14px 56px 14px 16px',
+                                    width: '100%', minHeight: '80px', background: 'rgba(25, 8, 50, 0.5)',
+                                    border: `2px solid ${topic ? 'rgba(124,58,237,0.5)' : 'rgba(124,58,237,0.2)'}`,
+                                    borderRadius: '6px', color: '#a78bfa', padding: '14px 56px 14px 16px',
                                     fontSize: '0.95rem', lineHeight: 1.6, resize: 'none', outline: 'none',
                                     fontFamily: "'Courier New', monospace", boxSizing: 'border-box',
                                     transition: 'all 0.2s',
-                                    boxShadow: topic ? 'inset 0 0 15px rgba(52,211,153,0.1), 0 0 20px rgba(52,211,153,0.2)' : 'inset 0 0 10px rgba(52,211,153,0.05)',
+                                    boxShadow: topic ? 'inset 0 0 15px rgba(124,58,237,0.1), 0 0 20px rgba(124,58,237,0.2)' : 'inset 0 0 10px rgba(124,58,237,0.05)',
                                 }}
-                                onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.15), 0 0 30px rgba(52,211,153,0.3)'; }}
-                                onBlur={(e) => { e.target.style.boxShadow = topic ? 'inset 0 0 15px rgba(52,211,153,0.1), 0 0 20px rgba(52,211,153,0.2)' : 'inset 0 0 10px rgba(52,211,153,0.05)'; }}
+                                onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(124,58,237,0.15), 0 0 30px rgba(124,58,237,0.3)'; }}
+                                onBlur={(e) => { e.target.style.boxShadow = topic ? 'inset 0 0 15px rgba(124,58,237,0.1), 0 0 20px rgba(124,58,237,0.2)' : 'inset 0 0 10px rgba(124,58,237,0.05)'; }}
                             />
                             <div style={{ position: 'absolute', right: '14px', bottom: '14px' }}>
                                 <VoiceDictation onResult={text => setTopic(prev => prev ? `${prev} ${text}` : text)} />
@@ -182,16 +182,16 @@ export default function ScriptWizardFlow({
                                 disabled={!topic?.trim()}
                                 style={{
                                     padding: '12px 28px',
-                                    background: topic?.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)',
-                                    border: '2px solid rgba(52,211,153,0.5)', borderRadius: '6px',
-                                    color: '#34d399', cursor: topic?.trim() ? 'pointer' : 'not-allowed',
+                                    background: topic?.trim() ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.05)',
+                                    border: '2px solid rgba(124,58,237,0.5)', borderRadius: '6px',
+                                    color: '#a78bfa', cursor: topic?.trim() ? 'pointer' : 'not-allowed',
                                     fontSize: '0.85rem', fontWeight: 700,
                                     fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
                                     textTransform: 'uppercase', letterSpacing: '0.1em',
                                     opacity: topic?.trim() ? 1 : 0.4,
                                 }}
-                                onMouseOver={(e) => { if(topic?.trim()) { e.target.style.background = 'rgba(52,211,153,0.3)'; e.target.style.boxShadow = '0 0 20px rgba(52,211,153,0.4)'; }}}
-                                onMouseOut={(e) => { e.target.style.background = topic?.trim() ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)'; e.target.style.boxShadow = 'none'; }}
+                                onMouseOver={(e) => { if(topic?.trim()) { e.target.style.background = 'rgba(124,58,237,0.3)'; e.target.style.boxShadow = '0 0 20px rgba(124,58,237,0.4)'; }}}
+                                onMouseOut={(e) => { e.target.style.background = topic?.trim() ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.05)'; e.target.style.boxShadow = 'none'; }}
                             >
                                 ▶ Siguiente
                             </button>
@@ -218,18 +218,18 @@ export default function ScriptWizardFlow({
 
                     {/* Tone chips */}
                     <div style={{ width: '100%', maxWidth: '600px' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontFamily: "'Courier New', monospace" }}>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontFamily: "'Courier New', monospace" }}>
                             › Tono de marca
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                             {TONOS.map(t => (
                                 <button key={t} onClick={() => setToneBrand(t)} style={{
                                     padding: '8px 14px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600,
-                                    border: `2px solid ${toneBrand === t ? 'rgba(52,211,153,0.6)' : 'rgba(52,211,153,0.2)'}`,
+                                    border: `2px solid ${toneBrand === t ? 'rgba(124,58,237,0.6)' : 'rgba(124,58,237,0.2)'}`,
                                     cursor: 'pointer', transition: 'all 0.15s',
-                                    background: toneBrand === t ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.05)',
-                                    color: toneBrand === t ? '#34d399' : 'rgba(52,211,153,0.6)',
-                                    boxShadow: toneBrand === t ? '0 0 15px rgba(52,211,153,0.3)' : 'none',
+                                    background: toneBrand === t ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.05)',
+                                    color: toneBrand === t ? '#a78bfa' : 'rgba(124,58,237,0.6)',
+                                    boxShadow: toneBrand === t ? '0 0 15px rgba(124,58,237,0.3)' : 'none',
                                     fontFamily: "'Courier New', monospace", textTransform: 'uppercase', letterSpacing: '0.05em',
                                 }}>
                                     {t}
@@ -239,7 +239,7 @@ export default function ScriptWizardFlow({
                     </div>
 
                     {/* Char count */}
-                    <div style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.4)', fontFamily: "'Courier New', monospace", marginTop: '8px' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(124,58,237,0.4)', fontFamily: "'Courier New', monospace", marginTop: '8px' }}>
                         › {topic?.length || 0} caracteres
                     </div>
                 </div>
@@ -252,13 +252,13 @@ export default function ScriptWizardFlow({
                         <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '8px', textShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
                             ▓ Tu historia
                         </h2>
-                        <p style={{ fontSize: '0.75rem', color: '#34d399', margin: 0, fontFamily: "'Courier New', monospace", letterSpacing: '0.1em' }}>
+                        <p style={{ fontSize: '0.75rem', color: '#a78bfa', margin: 0, fontFamily: "'Courier New', monospace", letterSpacing: '0.1em' }}>
                             › cuenta algo real que te defina
                         </p>
                     </div>
 
                     {/* Rotating prompt */}
-                    <div style={{ padding: '12px 18px', background: 'linear-gradient(135deg, rgba(52,211,153,0.08), rgba(124,58,237,0.05))', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', textAlign: 'center', animation: 'phaseIn 0.4s ease', borderLeft: '3px solid #34d399' }} key={promptIdx}>
+                    <div style={{ padding: '12px 18px', background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.05))', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '8px', textAlign: 'center', animation: 'phaseIn 0.4s ease', borderLeft: '3px solid #a78bfa' }} key={promptIdx}>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', margin: 0, fontStyle: 'italic', fontFamily: "'Inter', sans-serif" }}>
                             💭 {PROMPTS[promptIdx]}
                         </p>
@@ -271,16 +271,16 @@ export default function ScriptWizardFlow({
                             onChange={e => setExperienciaReal(e.target.value)}
                             placeholder="escribe o graba tu historia aquí..."
                             style={{
-                                width: '100%', flex: 1, background: 'rgba(0, 30, 15, 0.5)',
-                                border: '1px solid rgba(52,211,153,0.3)', borderRadius: '6px',
-                                color: '#34d399', padding: '16px', fontSize: '0.95rem',
+                                width: '100%', flex: 1, background: 'rgba(25, 8, 50, 0.5)',
+                                border: '1px solid rgba(124,58,237,0.3)', borderRadius: '6px',
+                                color: '#a78bfa', padding: '16px', fontSize: '0.95rem',
                                 lineHeight: 1.7, resize: 'none', outline: 'none',
                                 fontFamily: "'Courier New', monospace", boxSizing: 'border-box',
-                                boxShadow: 'inset 0 0 20px rgba(52,211,153,0.05)',
+                                boxShadow: 'inset 0 0 20px rgba(124,58,237,0.05)',
                                 transition: 'all 0.2s',
                             }}
-                            onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.15), 0 0 15px rgba(52,211,153,0.2)'; }}
-                            onBlur={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(52,211,153,0.05)'; }}
+                            onFocus={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(124,58,237,0.15), 0 0 15px rgba(124,58,237,0.2)'; }}
+                            onBlur={(e) => { e.target.style.boxShadow = 'inset 0 0 20px rgba(124,58,237,0.05)'; }}
                         />
                         <div style={{ position: 'absolute', right: '14px', bottom: '14px' }}>
                             <VoiceDictation onResult={text => setExperienciaReal(prev => prev ? `${prev} ${text}` : text)} />
@@ -309,16 +309,16 @@ export default function ScriptWizardFlow({
                             disabled={!experienciaReal?.trim()}
                             style={{
                                 padding: '10px 18px',
-                                background: experienciaReal?.trim() ? 'rgba(52,211,153,0.15)' : 'rgba(52,211,153,0.05)',
-                                border: '1px solid rgba(52,211,153,0.4)', borderRadius: '6px',
-                                color: '#34d399', cursor: experienciaReal?.trim() ? 'pointer' : 'not-allowed',
+                                background: experienciaReal?.trim() ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.05)',
+                                border: '1px solid rgba(124,58,237,0.4)', borderRadius: '6px',
+                                color: '#a78bfa', cursor: experienciaReal?.trim() ? 'pointer' : 'not-allowed',
                                 fontSize: '0.82rem', fontWeight: 600,
                                 fontFamily: "'Courier New', monospace", transition: 'all 0.2s',
                                 textTransform: 'uppercase', letterSpacing: '0.08em',
                                 opacity: experienciaReal?.trim() ? 1 : 0.5,
                             }}
-                            onMouseOver={(e) => { if(experienciaReal?.trim()) { e.target.style.background = 'rgba(52,211,153,0.25)'; e.target.style.boxShadow = '0 0 15px rgba(52,211,153,0.4)'; }}}
-                            onMouseOut={(e) => { e.target.style.background = 'rgba(52,211,153,0.15)'; e.target.style.boxShadow = 'none'; }}
+                            onMouseOver={(e) => { if(experienciaReal?.trim()) { e.target.style.background = 'rgba(124,58,237,0.25)'; e.target.style.boxShadow = '0 0 15px rgba(124,58,237,0.4)'; }}}
+                            onMouseOut={(e) => { e.target.style.background = 'rgba(124,58,237,0.15)'; e.target.style.boxShadow = 'none'; }}
                         >
                             → Avanzar
                         </button>
@@ -340,7 +340,7 @@ export default function ScriptWizardFlow({
                     </div>
 
                     {/* Char count */}
-                    <div style={{ fontSize: '0.7rem', color: 'rgba(52,211,153,0.5)', textAlign: 'right', fontFamily: "'Courier New', monospace" }}>
+                    <div style={{ fontSize: '0.7rem', color: 'rgba(124,58,237,0.5)', textAlign: 'right', fontFamily: "'Courier New', monospace" }}>
                         › {experienciaReal?.length || 0} caracteres
                     </div>
                 </div>
