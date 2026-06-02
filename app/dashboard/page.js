@@ -573,13 +573,21 @@ export default function DashboardPage() {
     }, []);
 
     useEffect(() => {
-        // Al cambiar de proyecto: limpiar guiones/ideas (NO plan wizard — se limpia por cambio de projectId)
-        // No resetear step si hay scripts cargados (evita que TOKEN_REFRESHED borre el trabajo)
+        // TOKEN_REFRESHED dispara este effect en cada cambio de tab del navegador.
+        // Si el usuario está generando el plan mensual, NO resetear step ni tocar su estado.
+        const isGeneratingPlan = _cachedStep === 3 && _cachedPlanMode === 'plan' && _cachedPlanSlots.length > 0;
+        if (isGeneratingPlan) {
+            // Solo recargar datos secundarios, preservar todo el estado del plan
+            setIdeasFetchError('');
+            loadData();
+            return;
+        }
+
+        // Flujo normal: solo para modo single / sin plan activo
         if (_cachedScripts.length === 0 && !restoredRef.current) setStep(1);
         restoredRef.current = false;
         setIdeas('');
         setLibIdeas([]);
-        // NO tocar plan wizard state aquí — este effect corre en cada mount y destruiría el caché
         setIdeasFetchError('');
         loadData();
     }, [projectVersion]);
