@@ -73,6 +73,19 @@ PERFIL DEL CREADOR:
 
 ${platformRules}
 
+PROHIBIDO ABSOLUTAMENTE:
+❌ Hooks: '¿Sabías que [título]?', 'Hoy te enseño', 'En este video'
+❌ Desarrollo: 'La mayoría no sabe cómo...', 'Con este sistema puedes...', 'Empieza hoy mismo'
+❌ CTAs: 'Guarda este video y compártelo', 'Sígueme para más contenido'
+❌ Repetir el título como pregunta
+❌ Contenido que vale para cualquier nicho — debe ser ESPECÍFICO para: ${brain.niche || 'el sector del creador'}
+
+HOOKS QUE SÍ FUNCIONAN (úsalos como referencia):
+✅ 'Tu equipo pierde X horas semanales en esto. Y ni lo saben.'
+✅ 'El 90% de [nicho específico] hace esto mal y les cuesta [consecuencia real].'
+✅ 'Nadie te dice esto sobre [tema] porque les conviene que no lo sepas.'
+✅ '[Afirmación polémica sobre el sector]. Y lo puedo demostrar.'
+
 REGLAS DE CALIDAD ABSOLUTA:
 1. El hook DEBE ser irresistible — si no engancha en 5 seg, no sirve.
 2. Cada bloque de desarrollo debe tener contenido REAL y ESPECÍFICO (cifras, ejemplos, casos).
@@ -168,15 +181,15 @@ Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes
         if (!script?.hook || !script?.structure?.length) {
             script = {
                 title: idea_title,
-                hook: `¿Sabías que ${idea_title.toLowerCase()}?`,
+                hook: `${idea_title} — y la mayoría del sector lo hace completamente al revés.`,
                 structure: [
-                    { point: 'El problema real', detail: `La mayoría no sabe cómo aplicar ${idea_title}. Aquí te explico el método.` },
-                    { point: 'La solución', detail: `Con este sistema puedes lograr resultados en menos tiempo del que crees.` },
-                    { point: 'Acción concreta', detail: `Empieza hoy mismo con este primer paso simple y medible.` },
+                    { point: 'La realidad que nadie dice', detail: `La mayoría de profesionales del sector pierde tiempo y dinero en esto sin saberlo. El coste real no está en el error obvio sino en la consecuencia específica de ${idea_title}.` },
+                    { point: 'Lo que realmente funciona', detail: `Después de aplicar esto con clientes reales, el patrón que funciona es [HUECO: tu método específico aquí]. Los resultados concretos: [HUECO: tus números aquí].` },
+                    { point: 'Cómo aplicarlo ahora', detail: `El primer paso específico es [HUECO: tu proceso aquí]. No necesitas más herramientas. Solo necesitas implementar este cambio concreto esta semana.` },
                 ],
-                cta: ctaIdea || 'Guarda este video y compártelo con alguien que lo necesite.',
-                post_copy: { headline: idea_title, body: `Todo sobre: ${idea_title}`, hashtags: ['contenido', 'ia', 'marketing'] },
-                notes: 'Graba en vertical, buena luz.'
+                cta: ctaIdea || `Si quieres implementar esto en tu negocio, escríbeme o mira el link en mi bio.`,
+                post_copy: { headline: idea_title, body: `Todo sobre: ${idea_title} y cómo aplicarlo en la práctica.`, hashtags: ['contenido', 'negocio', 'estrategia'] },
+                notes: 'Habla directamente a cámara. Usa ejemplos reales tuyos.'
             };
         }
 
