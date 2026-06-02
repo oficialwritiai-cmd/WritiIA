@@ -15,7 +15,7 @@ const AudioUploadTranscriber = ({ onResult, size = 20 }) => {
         if (!file) return;
 
         // Validar formato
-        const validFormats = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/ogg', 'audio/webm'];
+        const validFormats = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/ogg', 'audio/webm', 'audio/m4a'];
         if (!validFormats.some(fmt => file.type.includes(fmt.split('/')[1]))) {
             setError('Formato no soportado. Usa MP3, WAV, M4A, OGG o WebM.');
             return;
@@ -33,41 +33,54 @@ const AudioUploadTranscriber = ({ onResult, size = 20 }) => {
         setProgress(10);
 
         try {
-            // Importar dinámicamente para no cargar Whisper hasta necesitarlo
-            const { pipeline } = await import('@xenova/transformers');
+            if (typeof window === 'undefined') {
+                setError('Esta función solo funciona en el navegador');
+                setIsTranscribing(false);
+                return;
+            }
 
             setProgress(30); // Cargando modelo...
 
+            // Importar transformers SOLO en navegador, con env setup
+            const { pipeline, env } = await import('@xenova/transformers');
+
+            // Usar WebAssembly/WebGL backend (no requiere binarios nativos)
+            env.allowRemoteModels = true;
+            env.allowLocalModels = false;
+            env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
+
             // Crear instancia de Whisper
-            const transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny');
+            const transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
+                dtype: 'q8', // Cuantizado para más rápido
+            });
 
             setProgress(60); // Transcribiendo...
 
             // Leer archivo como ArrayBuffer
             const arrayBuffer = await file.arrayBuffer();
 
-            // Decodificar audio (Whisper espera audio raw)
+            // Decodificar audio
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-            // Convertir a formato que Whisper entienda
-            const offlineContext = new OfflineAudioContext(
-                audioBuffer.numberOfChannels,
-                audioBuffer.length,
-                audioBuffer.sampleRate
-            );
-            const source = offlineContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(offlineContext.destination);
-            source.start(0);
-
-            const renderedBuffer = await offlineContext.startRendering();
-            const rawAudio = renderedBuffer.getChannelData(0);
+            // Convertir a mono si es necesario
+            let monoAudio;
+            if (audioBuffer.numberOfChannels === 1) {
+                monoAudio = audioBuffer.getChannelData(0);
+            } else {
+                const monoContext = new OfflineAudioContext(1, audioBuffer.length, audioBuffer.sampleRate);
+                const monoSource = monoContext.createBufferSource();
+                monoSource.buffer = audioBuffer;
+                monoSource.connect(monoContext.destination);
+                monoSource.start(0);
+                const monoBuffer = await monoContext.startRendering();
+                monoAudio = monoBuffer.getChannelData(0);
+            }
 
             setProgress(75); // Finalizando...
 
             // Transcribir
-            const result = await transcriber(rawAudio, {
+            const result = await transcriber(monoAudio, {
                 language: 'spanish',
                 return_timestamps: false,
             });
