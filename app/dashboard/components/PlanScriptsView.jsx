@@ -379,13 +379,23 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
             return;
         }
 
-        // Secuencial con pausa para no exceder rate limit de Anthropic (10k tokens/min)
+        // Secuencial con pausa — el servidor reintenta ante rate-limit, así que
+        // un delay moderado basta. Esto escala bien con muchos usuarios.
         const pending = (slots || []).filter(s => !scriptsRef.current[s.id]);
 
         for (let i = 0; i < pending.length; i++) {
             await generateOne(pending[i].id, tok);
             if (i < pending.length - 1) {
-                await new Promise(r => setTimeout(r, 3000)); // 3s entre guiones
+                await new Promise(r => setTimeout(r, 2000)); // 2s entre guiones
+            }
+        }
+
+        // Segundo pase: reintentar los que fallaron (sin perder los ya generados)
+        const failed = (slots || []).filter(s => !scriptsRef.current[s.id]);
+        for (let i = 0; i < failed.length; i++) {
+            await generateOne(failed[i].id, tok);
+            if (i < failed.length - 1) {
+                await new Promise(r => setTimeout(r, 3000));
             }
         }
 

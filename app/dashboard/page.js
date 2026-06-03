@@ -1522,6 +1522,12 @@ export default function DashboardPage() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
+            // Obtener userId de auth (profile puede no haber cargado todavía → evita crash null.id)
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const userId = authUser?.id || profile?.id;
+            if (!userId) {
+                throw new Error('Sesión no disponible. Recarga la página e intenta de nuevo.');
+            }
 
             const res = await fetch('/api/generate-plan', {
                 method: 'POST',
@@ -1537,7 +1543,7 @@ export default function DashboardPage() {
                     tone: toneBrand || 'Profesional',
                     videoDuration: videoDuration || '60 seg',
                     postCount: postCount,
-                    userId: profile?.id,
+                    userId: userId,
                     selectedIdeas: selectedPlanIdeas.map(id => {
                         if (id.startsWith('extra-')) {
                             const idx = parseInt(id.replace('extra-', ''));
@@ -1606,86 +1612,74 @@ export default function DashboardPage() {
             });
 
             // ── CRÍTICO: Guardar slots en content_slots con UUIDs reales ANTES de generar guiones
-            // handleGenerateSlotScript llama /api/slots/:id/generate-script que busca el slot en BD.
-            // Si el slot no existe en BD (id fake), devuelve 404 y los guiones nunca se generan.
+            // PlanScriptsView genera los guiones; necesitan UUIDs reales para vincularse a la BD.
             let slotsForGeneration = slotsWithDates;
             try {
-                const { data: { user: authUser } } = await supabase.auth.getUser();
-                if (authUser) {
-                    // Crear un plan en content_plans para agrupar los slots
-                    const { data: planRecord } = await supabase.from('content_plans').insert({
-                        user_id: authUser.id,
+                // Crear un plan en content_plans para agrupar los slots
+                const { data: planRecord } = await supabase.from('content_plans').insert({
+                    user_id: userId,
+                    project_id: activeProject?.id || null,
+                    description: briefAnalysis || businessOffer || 'Plan mensual',
+                    platforms: planPlatforms,
+                    frequency: planFrequency,
+                    post_count: slotsWithDates.length,
+                }).select('id').single();
+
+                if (planRecord?.id) {
+                    // Insertar todos los slots sin ID → Supabase genera UUIDs reales
+                    const slotsToInsert = slotsWithDates.map(s => ({
+                        user_id: userId,
                         project_id: activeProject?.id || null,
-                        description: briefAnalysis || businessOffer || 'Plan mensual',
-                        platforms: planPlatforms,
-                        frequency: planFrequency,
-                        post_count: slotsWithDates.length,
-                    }).select('id').single();
+                        plan_id: planRecord.id,
+                        idea_title: s.idea_title,
+                        idea_description: s.idea_description || '',
+                        platform: s.platform || 'Reels',
+                        content_type: s.content_type || 'video',
+                        day_number: s.day_number || 1,
+                        goal: s.goal || 'engagement',
+                        hook: s.hook || '',
+                        scheduled_date: s.scheduled_date || null,
+                        has_script: false,
+                        slot_status: 'idea_only',
+                    }));
 
-                    if (planRecord) {
-                        // Insertar todos los slots sin ID → Supabase genera UUIDs reales
-                        const slotsToInsert = slotsWithDates.map(s => ({
-                            user_id: authUser.id,
-                            project_id: activeProject?.id || null,
-                            plan_id: planRecord.id,
-                            idea_title: s.idea_title,
-                            idea_description: s.idea_description || '',
-                            platform: s.platform || 'Reels',
-                            content_type: s.content_type || 'video',
-                            day_number: s.day_number || 1,
-                            goal: s.goal || 'engagement',
-                            hook: s.hook || '',
-                            scheduled_date: s.scheduled_date || null,
-                            has_script: false,
-                            slot_status: 'idea_only',
+                    const { data: savedSlots } = await supabase
+                        .from('content_slots')
+                        .insert(slotsToInsert)
+                        .select('id, idea_title');
+
+                    if (savedSlots && savedSlots.length > 0) {
+                        // Reemplazar IDs fake por UUIDs reales del servidor
+                        slotsForGeneration = slotsWithDates.map((s, i) => ({
+                            ...s,
+                            id: savedSlots[i]?.id || s.id,
                         }));
-
-                        const { data: savedSlots } = await supabase
-                            .from('content_slots')
-                            .insert(slotsToInsert)
-                            .select('id, idea_title');
-
-                        if (savedSlots && savedSlots.length > 0) {
-                            // Reemplazar IDs fake por UUIDs reales del servidor
-                            slotsForGeneration = slotsWithDates.map((s, i) => ({
-                                ...s,
-                                id: savedSlots[i]?.id || s.id,
-                            }));
-                            console.log(`[plan] ${savedSlots.length} slots guardados en BD con UUIDs reales`);
-                        }
+                        console.log(`[plan] ${savedSlots.length} slots guardados en BD con UUIDs reales`);
                     }
                 }
             } catch (saveErr) {
-                console.warn('[plan] No se pudieron pre-guardar slots en BD:', saveErr.message);
-                // Continuar con IDs fake — los guiones fallarán pero el plan visual seguirá
+                console.warn('[plan] No se pudieron pre-guardar slots en BD:', saveErr?.message);
+                // Continuar con IDs temporales — los guiones se guardan igual en library
             }
 
             setPlanSlots(slotsForGeneration);
 
-            // Cargar token para PlanScriptsView (necesita Authorization header)
-            try {
-                const { data: { session: sess } } = await supabase.auth.getSession();
-                if (sess?.access_token) setPlanScriptsToken(sess.access_token);
-            } catch (_) {}
+            // Token para PlanScriptsView (necesita Authorization header)
+            if (token) setPlanScriptsToken(token);
 
-            // Show plan immediately
+            // Mostrar el plan inmediatamente
             setStep(3);
 
-            // --- AUTOMATION v4.4.0 ---
-            // 1. Select all slots
+            // Seleccionar todos los slots
             const allIds = slotsForGeneration.map(s => s.id);
             setSelectedSlots(new Set(allIds));
             setExtraIdeasModal({ ...extraIdeasModal, ideas: [] });
 
-            // 2. Refresh credits FIRST, then pass them directly to avoid stale state race conditions
-            const freshCredits = await fetchCredits(profile.id);
+            // Refrescar créditos usando userId seguro (no profile.id que puede ser null)
+            const freshCredits = await fetchCredits(userId);
             window.dispatchEvent(new CustomEvent('refresh-profile'));
-            if (typeof window !== 'undefined') {
-                console.log(`[v4.5.2] Fresh credits: ${freshCredits.total - freshCredits.used} available`);
-            }
 
             // PlanScriptsView gestiona la generación de guiones automáticamente al montarse.
-            // Solo verificar créditos mínimos
             if (freshCredits.total <= 0) {
                 alert('⚠️ Sin créditos disponibles. Por favor compra créditos para generar los guiones.');
             }

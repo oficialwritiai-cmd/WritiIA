@@ -53,9 +53,45 @@ ESTRUCTURA — 4 bloques bien construidos:
 
 function getMaxTokens(platform) {
     const p = (platform || '').toLowerCase();
-    if (p.includes('youtube') && !p.includes('short')) return 1800;
-    if (p.includes('linkedin')) return 1400;
-    return 1200; // Reels, TikTok, Shorts
+    if (p.includes('youtube') && !p.includes('short')) return 2800; // vídeo largo, mucho contenido
+    if (p.includes('linkedin')) return 2000;
+    return 1800; // Reels, TikTok, Shorts — guión completo con desarrollo rico
+}
+
+// Llamada a Anthropic con reintentos ante rate-limit (429) o sobrecarga (529).
+// Crítico para escala: muchos usuarios generando a la vez sin que falle.
+async function callAnthropicWithRetry({ model, max_tokens, temperature, system, messages, maxRetries = 4 }) {
+    let lastErr = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({ model, max_tokens, temperature, system, messages }),
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            return { ok: true, text: data.content?.[0]?.text || '' };
+        }
+
+        const err = await res.json().catch(() => ({}));
+        lastErr = err?.error?.message || `HTTP ${res.status}`;
+
+        // Reintentar solo en rate-limit (429) o sobrecarga (529)
+        if (res.status === 429 || res.status === 529) {
+            // Backoff exponencial: 4s, 8s, 16s, 32s
+            const waitMs = Math.min(4000 * Math.pow(2, attempt), 32000);
+            await new Promise(r => setTimeout(r, waitMs));
+            continue;
+        }
+        // Otros errores: no reintentar
+        return { ok: false, error: lastErr, status: res.status };
+    }
+    return { ok: false, error: lastErr || 'Rate limit persistente', status: 429 };
 }
 
 function buildPrompt(brain, platform, duration) {
@@ -153,29 +189,23 @@ Plataforma objetivo: ${platform || 'Reels'} — duración estimada: ${videoDurat
 ${ctaIdea ? `CTA preferido: ${ctaIdea}` : ''}
 Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes contenido corto o genérico.`;
 
-        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': process.env.ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: getMaxTokens(platform),
-                temperature: 0.75,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userMessage }],
-            }),
+        const aiResult = await callAnthropicWithRetry({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: getMaxTokens(platform),
+            temperature: 0.8,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userMessage }],
         });
 
-        if (!aiRes.ok) {
-            const err = await aiRes.json().catch(() => ({}));
-            return NextResponse.json({ error: err.error?.message || 'Error de IA.' }, { status: 503 });
+        if (!aiResult.ok) {
+            const isRateLimit = aiResult.status === 429 || aiResult.status === 529;
+            return NextResponse.json(
+                { error: isRateLimit ? 'Servicio saturado, reintenta en unos segundos.' : (aiResult.error || 'Error de IA.'), code: isRateLimit ? 'RATE_LIMIT' : 'AI_ERROR' },
+                { status: aiResult.status || 503 }
+            );
         }
 
-        const aiData = await aiRes.json();
-        let script = extractJson(aiData.content?.[0]?.text || '');
+        let script = extractJson(aiResult.text);
 
         // Fallback si la IA no devuelve JSON válido
         if (!script?.hook || !script?.structure?.length) {
