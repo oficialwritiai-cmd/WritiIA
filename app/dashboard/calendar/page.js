@@ -275,9 +275,45 @@ function CalendarContent() {
                         },
                         script_full_text: slotData.script_full_text || '',
                     });
-                } else {
-                    setLinkedScript(null);
+                    return;
                 }
+
+                // 5. Fallback: script_full_text stored directly in the calendar_events row
+                //    (used by handleSendPlanToCalendar which stores the guion text inline)
+                const evScriptText = selectedEvent.script_full_text || selectedEvent.notes || '';
+                if (selectedEvent.has_script && evScriptText.trim().length > 10) {
+                    // Parse the formatted text: extract hook / desarrollo / cta sections
+                    const lines = evScriptText.split('\n');
+                    let hook = '', cta = '';
+                    const desLines = [];
+                    let section = '';
+                    for (const line of lines) {
+                        const l = line.trim();
+                        if (l === '🎯 GANCHO' || l === 'GANCHO:') { section = 'hook'; continue; }
+                        if (l === '📝 DESARROLLO' || l === 'DESARROLLO:') { section = 'des'; continue; }
+                        if (l === '🔥 CTA' || l === 'CTA:') { section = 'cta'; continue; }
+                        if (!l) continue;
+                        if (section === 'hook') hook += (hook ? '\n' : '') + l;
+                        else if (section === 'des') desLines.push(l.replace(/^\d+\.\s*/, ''));
+                        else if (section === 'cta') cta += (cta ? '\n' : '') + l;
+                    }
+                    setLinkedScript({
+                        id: null,
+                        titulo: selectedEvent.title,
+                        content: {
+                            hook: hook || '',
+                            gancho: hook || '',
+                            desarrollo: desLines.length > 0 ? desLines : [],
+                            cta: cta || '',
+                            copy_post: null,
+                        },
+                        script_full_text: evScriptText,
+                        _from_event_inline: true,
+                    });
+                    return;
+                }
+
+                setLinkedScript(null);
             } catch (err) { console.error('Error loading linked script:', err); setLinkedScript(null); }
             finally { setLoadingScript(false); }
         }
@@ -1456,26 +1492,57 @@ function CalendarContent() {
                         </div>
 
                         {/* Notas — expandido */}
-                        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 18 }}>
+                        <div style={{ background: selectedEvent?.has_script ? 'rgba(167,139,250,0.04)' : 'rgba(255,255,255,0.02)', borderRadius: 14, border: `1px solid ${selectedEvent?.has_script ? 'rgba(167,139,250,0.2)' : 'rgba(255,255,255,0.06)'}`, overflow: 'hidden', marginBottom: 18 }}>
                             <div style={{ padding: '11px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                    <BookOpen size={14} color="rgba(255,255,255,0.3)" />
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Notas</span>
+                                    <BookOpen size={14} color={selectedEvent?.has_script ? '#a78bfa' : 'rgba(255,255,255,0.3)'} />
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: selectedEvent?.has_script ? '#a78bfa' : 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                        {selectedEvent?.has_script ? '✍️ Guión' : 'Notas'}
+                                    </span>
                                 </div>
-                                {selectedEvent && (
-                                    <button onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
-                                        style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <Edit3 size={11} /> Editar
-                                    </button>
-                                )}
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {selectedEvent?.has_script && tempNotes && (
+                                        <button onClick={() => navigator.clipboard.writeText(tempNotes).catch(() => {})}
+                                            style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)', color: '#a78bfa', borderRadius: 7, padding: '4px 10px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <Copy size={11} /> Copiar
+                                        </button>
+                                    )}
+                                    {selectedEvent && (
+                                        <button onClick={() => router.push(`/dashboard/idea/${linkedScript?.id || selectedEvent?.reference_id || selectedEvent?.id}`)}
+                                            style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <Edit3 size={11} /> Editar
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <textarea
-                                placeholder="Escribe aquí ideas, objetivos, referencias o el guion completo..."
+                                placeholder={selectedEvent?.has_script ? 'Guión generado automáticamente...' : 'Escribe aquí ideas, objetivos, referencias o el guion completo...'}
                                 value={tempNotes}
                                 onChange={e => setTempNotes(e.target.value)}
-                                style={{ width: '100%', minHeight: 100, background: 'transparent', border: 'none', color: '#ddd', padding: '14px 16px', fontSize: '0.85rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.7, boxSizing: 'border-box' }}
+                                style={{ width: '100%', minHeight: selectedEvent?.has_script ? 200 : 100, background: 'transparent', border: 'none', color: selectedEvent?.has_script ? '#ddd' : '#aaa', padding: '14px 16px', fontSize: '0.83rem', outline: 'none', resize: 'vertical', fontFamily: 'Inter, sans-serif', lineHeight: 1.7, boxSizing: 'border-box' }}
                             />
                         </div>
+
+                        {/* Guion inline — mostrar cuando el guion está guardado en el evento mismo (plan mensual) */}
+                        {selectedEvent?.has_script && !linkedScript && (selectedEvent?.script_full_text || selectedEvent?.notes) && (
+                            <div style={{ margin: '0 0 18px', padding: '16px', background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 12 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                        Guion del Plan
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(selectedEvent?.script_full_text || selectedEvent?.notes || '');
+                                        }}
+                                        style={{ background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa', borderRadius: 8, padding: '4px 10px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                                        Copiar guion
+                                    </button>
+                                </div>
+                                <pre style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0, maxHeight: 400, overflowY: 'auto' }}>
+                                    {selectedEvent?.script_full_text || selectedEvent?.notes || ''}
+                                </pre>
+                            </div>
+                        )}
 
                         {/* Crear / Ver guión desde idea */}
                         {selectedEvent && (
