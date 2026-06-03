@@ -2613,6 +2613,32 @@ export default function DashboardPage() {
                         ].join('\n');
                     }
 
+                    // Guardar en library como 'guion' cuando hay script real
+                    // Esto permite que SheetEditor y el panel del calendario lo encuentren por reference_id
+                    if (hasRealContent) {
+                        try {
+                            const { data: existingLib } = await supabase.from('library')
+                                .select('id').eq('user_id', user.id).eq('type', 'guion')
+                                .eq('titulo', slot.idea_title).limit(1);
+                            if (existingLib?.length) {
+                                await supabase.from('library').update({
+                                    script_full_text: fullText,
+                                    content: { titulo_angulo: slot.idea_title, hook: hookVal, gancho: hookVal, desarrollo: desArr, cta: ctaVal, copy_post: parsedSd?.copy_post || {} },
+                                    platform: slot.platform || 'General',
+                                }).eq('id', existingLib[0].id);
+                                refId = existingLib[0].id;
+                            } else {
+                                const { data: newLib } = await supabase.from('library').insert({
+                                    user_id: user.id, project_id: activeProject?.id || null,
+                                    type: 'guion', platform: slot.platform || 'General', goal: 'engagement',
+                                    titulo: slot.idea_title, script_full_text: fullText,
+                                    content: { titulo_angulo: slot.idea_title, hook: hookVal, gancho: hookVal, desarrollo: desArr, cta: ctaVal, copy_post: parsedSd?.copy_post || {} },
+                                }).select('id').single();
+                                if (newLib?.id) refId = newLib.id;
+                            }
+                        } catch (libErr) { console.warn('[sendToCalendar] library save non-fatal:', libErr.message); }
+                    }
+
                     const eventPayload = {
                         user_id: user.id,
                         project_id: activeProject?.id || null,

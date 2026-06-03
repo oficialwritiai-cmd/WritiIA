@@ -1395,12 +1395,14 @@ function CalendarContent() {
                                     onClick={() => {
                                         const libId = linkedScript?.id || (selectedEvent?.has_script ? selectedEvent?.reference_id : null);
                                         const lc = linkedScript?.content || {};
+                                        // script_full_text está en la raíz de linkedScript, no en .content
+                                        const fullScriptText = linkedScript?.script_full_text || selectedEvent?.script_full_text || tempNotes || lc.full_text || '';
                                         setSheetItem({
                                             id: libId || 'new',
                                             titulo: tempTitle,
                                             platform: tempPlatform,
                                             status: tempStatus,
-                                            script_full_text: lc.script_full_text || tempNotes || lc.full_text || '',
+                                            script_full_text: fullScriptText,
                                             content: {
                                                 titulo_angulo: tempTitle,
                                                 hook: lc.hook || lc.gancho || '',
@@ -1408,7 +1410,7 @@ function CalendarContent() {
                                                 desarrollo: lc.desarrollo || [],
                                                 cta: lc.cta || lc.cierre || '',
                                                 copy_post: lc.copy_post || null,
-                                                full_text: lc.full_text || '',
+                                                full_text: fullScriptText,
                                             }
                                         });
                                     }}

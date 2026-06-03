@@ -379,15 +379,13 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
             return;
         }
 
-        // Generar en paralelo de 2 en 2 con delay entre lotes para respetar rate limit
+        // Secuencial con pausa para no exceder rate limit de Anthropic (10k tokens/min)
         const pending = (slots || []).filter(s => !scriptsRef.current[s.id]);
-        const CONCURRENCY = 2;
 
-        for (let i = 0; i < pending.length; i += CONCURRENCY) {
-            const batch = pending.slice(i, i + CONCURRENCY);
-            await Promise.all(batch.map(slot => generateOne(slot.id, tok)));
-            if (i + CONCURRENCY < pending.length) {
-                await new Promise(r => setTimeout(r, 1500)); // 1.5s entre lotes
+        for (let i = 0; i < pending.length; i++) {
+            await generateOne(pending[i].id, tok);
+            if (i < pending.length - 1) {
+                await new Promise(r => setTimeout(r, 3000)); // 3s entre guiones
             }
         }
 
