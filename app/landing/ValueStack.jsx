@@ -61,7 +61,7 @@ const ValueStack = () => {
                 data-testid="plan-cta"
                 onClick={() => {
                   track('pricing_click');
-                  trackPixelEvent('InitiateCheckout');
+                  trackPixelEvent('InitiateCheckout', { value: 24.90, currency: 'EUR' });
                 }}
                 className="btn-primary justify-center"
                 style={{
