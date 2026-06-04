@@ -62,6 +62,7 @@ let _cachedPlanProjectId = null;
 let _cachedPlanSlots     = []; // plan slots con guiones generados
 let _cachedSelectedSlots = []; // IDs de slots seleccionados
 let _cachedPlanScripts   = {}; // { slotId: { text, raw } } — sobrevive navegación
+let _cachedBriefAnalysis = ''; // estrategia generada (paso 4 del wizard)
 
 // ── sessionStorage helpers para plan activo (sobrevive recarga de página) ──
 const PLAN_SS_KEY = 'writi_plan_active_v2';
@@ -77,12 +78,16 @@ function _clearPlan() {
 }
 
 export default function DashboardPage() {
-    // Leer sessionStorage SÍNCRONAMENTE antes del primer render (sobrevive recarga)
+    // Leer sessionStorage SÍNCRONAMENTE antes del primer render (sobrevive recarga/descarte de página)
     const _ss = _readSavedPlan();
-    // Preferir módulo-level cache (SPA nav sin recarga) sobre sessionStorage (recarga)
-    const _initMode  = _cachedPlanMode  === 'plan' ? 'plan'  : (_ss?.mode  || 'single');
+    // Preferir módulo-level cache (SPA nav sin recarga) sobre sessionStorage (recarga/descarte)
+    const _planActive = _cachedPlanMode === 'plan' || _ss?.mode === 'plan';
+    const _initMode  = _planActive ? 'plan' : 'single';
     const _initSlots = _cachedPlanSlots.length > 0  ? _cachedPlanSlots : (_ss?.slots || []);
     const _hasPlan   = _initMode === 'plan' && _initSlots.length > 0;
+    // Wizard step y estrategia (cubre el caso "estaba en paso 4 antes de generar")
+    const _initWizardStep = _cachedPlanStep > 1 ? _cachedPlanStep : (_ss?.wizardStep || 1);
+    const _initBrief = _cachedBriefAnalysis || _ss?.brief || '';
 
     const [generationMode, setGenerationMode] = useState(_initMode);
 
@@ -126,8 +131,8 @@ export default function DashboardPage() {
     const [brainForm, setBrainForm] = useState({ biography: '', sells: '', helps: '', style_words: '' });
 
     // Plan mode states — inicializan desde el caché de módulo para sobrevivir navegación
-    const [planPlatforms, setPlanPlatforms] = useState(_cachedPlanPlatforms);
-    const [planFrequency, setPlanFrequency] = useState(_cachedPlanFrequency);
+    const [planPlatforms, setPlanPlatforms] = useState(_cachedPlanPlatforms.length > 0 && _cachedPlanPlatforms[0] !== 'Reels' ? _cachedPlanPlatforms : (_ss?.platforms || _cachedPlanPlatforms));
+    const [planFrequency, setPlanFrequency] = useState(_ss?.frequency || _cachedPlanFrequency);
     const [planFocus, setPlanFocus] = useState('mezcla equilibrada');
     const [planContentTypes, setPlanContentTypes] = useState({ autoridad: 30, 'historia personal': 25, venta: 25, comunidad: 20 });
     const [planExcludeTopics, setPlanExcludeTopics] = useState('');
@@ -139,8 +144,8 @@ export default function DashboardPage() {
     const [contextMenu, setContextMenu] = useState(null); // { x, y }
     const [generatingSlotId, setGeneratingSlotId] = useState(null);
     const [libIdeas, setLibIdeas] = useState([]);
-    const [selectedPlanIdeas, setSelectedPlanIdeas] = useState(_cachedPlanSelected);
-    const [planWizardStep, setPlanWizardStep] = useState(_cachedPlanStep);
+    const [selectedPlanIdeas, setSelectedPlanIdeas] = useState(_cachedPlanSelected.length > 0 ? _cachedPlanSelected : (_ss?.selectedIdeas || []));
+    const [planWizardStep, setPlanWizardStep] = useState(_initWizardStep);
     const [isGeneratingMassive, setIsGeneratingMassive] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0, status: '' });
     const [expandedSlots, setExpandedSlots] = useState(new Set());
@@ -152,18 +157,18 @@ export default function DashboardPage() {
     const [planScriptsToken, setPlanScriptsToken] = useState(null);
 
     // New Marketing Briefing States (v4.0.0)
-    const [businessOffer, setBusinessOffer] = useState(_cachedPlanOffer);
-    const [ticketPrice, setTicketPrice] = useState('');
+    const [businessOffer, setBusinessOffer] = useState(_cachedPlanOffer || _ss?.offer || '');
+    const [ticketPrice, setTicketPrice] = useState(_ss?.ticketPrice || '');
     const [targetAudience, setTargetAudience] = useState('');
-    const [targetAudienceType, setTargetAudienceType] = useState(_cachedPlanAudience);
-    const [mainPainPoint, setMainPainPoint] = useState(_cachedPlanPain);
+    const [targetAudienceType, setTargetAudienceType] = useState(_cachedPlanAudience !== 'Emprendedores' ? _cachedPlanAudience : (_ss?.audience || 'Emprendedores'));
+    const [mainPainPoint, setMainPainPoint] = useState(_cachedPlanPain || _ss?.pain || '');
     const [monthlyGoals, setMonthlyGoals] = useState([]);
     const [successMetric, setSuccessMetric] = useState('');
     const [keyThemes, setKeyThemes] = useState('');
     const [contentStyles, setContentStyles] = useState([]);
     const [howNotToSound, setHowNotToSound] = useState('');
     const [brandMantra, setBrandMantra] = useState('');
-    const [briefAnalysis, setBriefAnalysis] = useState('');
+    const [briefAnalysis, setBriefAnalysis] = useState(_initBrief);
     const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
     const [polishingField, setPolishingField] = useState(null); // Used for Monthly Plan / Script polishing
     const [aiRefineInstructions, setAiRefineInstructions] = useState({}); // { [fieldId]: string }
@@ -322,14 +327,28 @@ export default function DashboardPage() {
         _cachedPlanProjectId = activeProject?.id || null;
         _cachedPlanSlots     = planSlots;
         _cachedSelectedSlots = [...selectedSlots];
-        // Persistir en sessionStorage para sobrevivir recarga de página
-        if (step === 3 && generationMode === 'plan' && planSlots.length > 0) {
-            _savePlan({ mode: 'plan', step: 3, slots: planSlots,
-                platforms: planPlatforms, frequency: planFrequency,
-                offer: businessOffer, audience: targetAudienceType, pain: mainPainPoint,
-                wizardStep: planWizardStep });
+        _cachedBriefAnalysis = briefAnalysis;
+        // Persistir TODO el flujo del plan en sessionStorage (sobrevive recarga/descarte de página).
+        // Cubre wizard (paso 1-4), estrategia, generación y slots — no solo el final.
+        const planInProgress = generationMode === 'plan' &&
+            (planWizardStep > 1 || planSlots.length > 0 || briefAnalysis || businessOffer || mainPainPoint);
+        if (planInProgress) {
+            _savePlan({
+                mode: 'plan',
+                step,                          // 1 = wizard, 2 = generando, 3 = guiones
+                wizardStep: planWizardStep,
+                brief: briefAnalysis,
+                slots: planSlots,
+                selectedIdeas: selectedPlanIdeas,
+                platforms: planPlatforms,
+                frequency: planFrequency,
+                offer: businessOffer,
+                audience: targetAudienceType,
+                pain: mainPainPoint,
+                ticketPrice,
+            });
         } else if (generationMode !== 'plan' && step === 1) {
-            _clearPlan(); // limpiar cuando el usuario sale del plan
+            _clearPlan(); // limpiar cuando el usuario sale del plan a modo single
         }
         // _cachedPlanScripts se actualiza desde PlanScriptsView via onScriptsChange
     });
@@ -603,19 +622,19 @@ export default function DashboardPage() {
 
     useEffect(() => {
         // TOKEN_REFRESHED dispara este effect en cada cambio de tab del navegador.
-        // Si el usuario está en el plan mensual (generando guiones), ignorar COMPLETAMENTE.
+        // Si el usuario está en el plan mensual (wizard, generando o con guiones), ignorar.
         // loadData() llama fetchPlanSlots() que sobreescribiría planSlots con datos de BD.
-        const isGeneratingPlan =
-            (_cachedStep === 3 && _cachedPlanMode === 'plan' && _cachedPlanSlots.length > 0)
-            || (() => { // también verificar sessionStorage (plan persiste tras recarga)
-                try {
-                    const s = sessionStorage.getItem(PLAN_SS_KEY);
-                    if (!s) return false;
-                    const p = JSON.parse(s);
-                    return p?.mode === 'plan' && p?.slots?.length > 0;
-                } catch { return false; }
-            })();
-        if (isGeneratingPlan) return;
+        const planActiveInModule = _cachedPlanMode === 'plan' &&
+            (_cachedPlanStep > 1 || _cachedPlanSlots.length > 0 || _cachedBriefAnalysis);
+        const planActiveInSS = (() => {
+            try {
+                const s = sessionStorage.getItem(PLAN_SS_KEY);
+                if (!s) return false;
+                const p = JSON.parse(s);
+                return p?.mode === 'plan' && (p?.wizardStep > 1 || p?.slots?.length > 0 || p?.brief);
+            } catch { return false; }
+        })();
+        if (planActiveInModule || planActiveInSS) return;
 
         // Flujo normal: solo para modo single / sin plan activo
         if (_cachedScripts.length === 0 && !restoredRef.current) setStep(1);
@@ -641,12 +660,14 @@ export default function DashboardPage() {
             setRecommendedIdeas([]);
             setPlanWizardStep(1);
             setSelectedPlanIdeas([]);
+            setBriefAnalysis('');
             setGenerationMode('single');
             _cachedPlanMode = 'single'; _cachedPlanStep = 1; _cachedPlanIdeas = [];
             _cachedPlanSelected = []; _cachedPlanPlatforms = ['Reels'];
             _cachedPlanFrequency = '3 publicaciones por semana';
             _cachedPlanOffer = ''; _cachedPlanAudience = 'Emprendedores'; _cachedPlanPain = '';
             _cachedPlanProjectId = null; _cachedPlanSlots = []; _cachedSelectedSlots = []; _cachedPlanScripts = {};
+            _cachedBriefAnalysis = '';
             _clearPlan(); // limpiar sessionStorage del plan al cambiar proyecto
         }
     }, [activeProject?.id]);
@@ -2688,6 +2709,11 @@ export default function DashboardPage() {
                 `Ahora puedes ir al calendario para ver tus publicaciones programadas.`
             ].filter(Boolean).join('\n');
             
+            // Plan completado con éxito → limpiar persistencia (módulo + sessionStorage)
+            _clearPlan();
+            _cachedPlanSlots = []; _cachedPlanScripts = {}; _cachedSelectedSlots = [];
+            _cachedBriefAnalysis = ''; _cachedPlanStep = 1; _cachedPlanMode = 'single';
+
             alert(report);
             router.push('/dashboard/calendar');
 
@@ -4855,7 +4881,13 @@ export default function DashboardPage() {
                                     Guiones generados automáticamente con tu Cerebro IA
                                 </p>
                             </div>
-                            <button onClick={() => { setStep(1); setPlanWizardStep(1); setPlanSlots([]); setGenerationMode('single'); _cachedPlanSlots = []; _cachedPlanMode = 'single'; _clearPlan(); setTopic(''); }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button onClick={() => {
+                                setStep(1); setPlanWizardStep(1); setPlanSlots([]); setSelectedPlanIdeas([]);
+                                setBriefAnalysis(''); setGenerationMode('single'); setTopic('');
+                                _cachedPlanSlots = []; _cachedPlanScripts = {}; _cachedSelectedSlots = [];
+                                _cachedBriefAnalysis = ''; _cachedPlanStep = 1; _cachedPlanMode = 'single';
+                                _clearPlan();
+                            }} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <RefreshCcw size={16} /> Nuevo Plan
                             </button>
                         </div>
