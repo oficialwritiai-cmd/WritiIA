@@ -154,7 +154,7 @@ export async function POST(request) {
         if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 });
 
         const body = await request.json();
-        const { idea_title, idea_description, platform, projectId, videoDuration, ctaIdea } = body;
+        const { idea_title, idea_description, platform, projectId, videoDuration, ctaIdea, styleInstruction } = body;
 
         if (!idea_title) return NextResponse.json({ error: 'idea_title requerido.' }, { status: 400 });
 
@@ -187,6 +187,7 @@ export async function POST(request) {
 Contexto adicional: ${idea_description || '(sin contexto extra)'}.
 Plataforma objetivo: ${platform || 'Reels'} — duración estimada: ${videoDuration || '60-90 seg'}.
 ${ctaIdea ? `CTA preferido: ${ctaIdea}` : ''}
+${styleInstruction ? `\nESTILO SOLICITADO POR EL USUARIO (prioritario): ${styleInstruction}\nAdapta TODO el guión a este estilo manteniendo la calidad y estructura.` : ''}
 Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes contenido corto o genérico.`;
 
         const aiResult = await callAnthropicWithRetry({

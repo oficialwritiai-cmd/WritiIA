@@ -8,9 +8,11 @@ import {
 } from 'lucide-react';
 
 const VARIANT_OPTIONS = [
-    { id: 'storytelling', label: 'Storytelling personal', emoji: '🎭' },
-    { id: 'educativo',    label: 'Educativo directo',     emoji: '📚' },
-    { id: 'provocador',   label: 'Provocador / gancho fuerte', emoji: '🔥' },
+    { id: 'storytelling', label: 'Storytelling personal', emoji: '🎭', instruction: 'Cuéntalo como una historia personal en primera persona, con emoción y narrativa.' },
+    { id: 'educativo',    label: 'Educativo directo',     emoji: '📚', instruction: 'Hazlo educativo, claro y directo, enseñando paso a paso sin rodeos.' },
+    { id: 'provocador',   label: 'Provocador / gancho fuerte', emoji: '🔥', instruction: 'Hazlo provocador y polémico, con un gancho muy fuerte que genere debate.' },
+    { id: 'corto',        label: 'Más corto y directo',   emoji: '⚡', instruction: 'Hazlo mucho más corto y conciso, sin relleno, solo lo esencial.' },
+    { id: 'cercano',      label: 'Más cercano y casual',  emoji: '😊', instruction: 'Hazlo más cercano y casual, como hablándole a un amigo de tú a tú.' },
 ];
 
 function parseSections(raw) {
@@ -35,13 +37,12 @@ function parseSections(raw) {
 
 /* ── Single Script Card ────────────────────────────────────── */
 function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
-    variant, loadingVariant, showVariantPicker, onToggleVariantPicker, onSelectVariant }) {
+    showVariantPicker, onToggleVariantPicker, onSelectVariant, autoRunning }) {
 
     const [copied, setCopied]         = useState(false);
     const [expanded, setExpanded]     = useState(false);
-    const [varExpanded, setVarExpanded] = useState(true);
+    const [customStyle, setCustomStyle] = useState('');
     const sections = script ? parseSections(script.raw) : null;
-    const varSections = variant ? parseSections(variant.raw) : null;
 
     function copyText() {
         navigator.clipboard.writeText(script?.text || '').catch(() => {});
@@ -91,8 +92,9 @@ function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {script && (
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    {/* Caso 1: guión listo → Copiar + Variante + Regenerar */}
+                    {script && !loading && (
                         <>
                             <button onClick={copyText} title="Copiar"
                                 style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: copied ? '#34d399' : 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -104,26 +106,68 @@ function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
                                     <GitBranch size={13} /> Variante {showVariantPicker ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                                 </button>
                                 {showVariantPicker && (
-                                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: '#1a1a24', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: 6, zIndex: 50, minWidth: 220, boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+                                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: '#1a1a24', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: 8, zIndex: 50, minWidth: 260, boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+                                        <p style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(245,158,11,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 8px 8px' }}>Regenerar en otro estilo</p>
                                         {VARIANT_OPTIONS.map(opt => (
-                                            <button key={opt.id} onClick={() => onSelectVariant(opt.id)} disabled={loadingVariant}
-                                                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', color: loadingVariant ? '#555' : 'rgba(255,255,255,0.8)', fontSize: '0.82rem', fontWeight: 600, cursor: loadingVariant ? 'not-allowed' : 'pointer', borderRadius: 8, textAlign: 'left' }}
-                                                onMouseEnter={e => { if (!loadingVariant) e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; }}
+                                            <button key={opt.id} onClick={() => onSelectVariant(opt.instruction)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', borderRadius: 8, textAlign: 'left' }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; }}
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                                 <span style={{ fontSize: '1rem' }}>{opt.emoji}</span>{opt.label}
-                                                {loadingVariant && <Loader2 size={12} style={{ marginLeft: 'auto', animation: 'spin 0.8s linear infinite' }} />}
                                             </button>
                                         ))}
+                                        {/* Input de estilo personalizado */}
+                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, paddingTop: 8 }}>
+                                            <input
+                                                value={customStyle}
+                                                onChange={e => setCustomStyle(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter' && customStyle.trim()) { onSelectVariant(customStyle.trim()); setCustomStyle(''); } }}
+                                                placeholder="Tu estilo: ej. más corto, con humor..."
+                                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', padding: '8px 10px', fontSize: '0.78rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                                            />
+                                            <button onClick={() => { if (customStyle.trim()) { onSelectVariant(customStyle.trim()); setCustomStyle(''); } }}
+                                                disabled={!customStyle.trim()}
+                                                style={{ width: '100%', marginTop: 6, background: customStyle.trim() ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,158,11,0.3)', color: customStyle.trim() ? '#f59e0b' : '#555', borderRadius: 8, padding: '8px', fontSize: '0.76rem', fontWeight: 700, cursor: customStyle.trim() ? 'pointer' : 'not-allowed' }}>
+                                                Aplicar estilo
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
+                            <button onClick={onGenerate} title="Regenerar"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 9, padding: '7px 14px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                                <RefreshCw size={13} /> Regenerar
+                            </button>
                         </>
                     )}
-                    <button onClick={onGenerate} disabled={loading}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: loading ? 'rgba(255,255,255,0.04)' : script ? 'rgba(255,255,255,0.05)' : 'rgba(124,58,237,0.15)', color: loading ? '#555' : script ? 'rgba(255,255,255,0.4)' : '#a78bfa', border: `1px solid ${script ? 'rgba(255,255,255,0.09)' : 'rgba(124,58,237,0.25)'}`, borderRadius: 9, padding: '7px 14px', fontSize: '0.78rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer' }}>
-                        {loading ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <RefreshCw size={13} />}
-                        {script ? 'Regenerar' : 'Generar'}
-                    </button>
+
+                    {/* Caso 2: generando este guión → indicador (sin botones que confundan) */}
+                    {loading && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#a78bfa', fontSize: '0.78rem', fontWeight: 600 }}>
+                            <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Generando...
+                        </span>
+                    )}
+
+                    {/* Caso 3: en cola (el lote automático aún no llega a este) → indicador */}
+                    {!script && !loading && !error && autoRunning && (
+                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', fontWeight: 600 }}>En cola…</span>
+                    )}
+
+                    {/* Caso 4: falló → botón Reintentar visible */}
+                    {!script && !loading && error && (
+                        <button onClick={onGenerate}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(248,113,113,0.12)', color: '#f87171', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 9, padding: '7px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                            <RefreshCw size={13} /> Reintentar
+                        </button>
+                    )}
+
+                    {/* Caso 5: sin guión, sin auto-gen activo → botón Generar manual */}
+                    {!script && !loading && !error && !autoRunning && (
+                        <button onClick={onGenerate}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 9, padding: '7px 14px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                            <Sparkles size={13} /> Generar
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -205,51 +249,24 @@ function ScriptCard({ slot, idx, onGenerate, loading, error, script, saved,
                         </pre>
                     )}
 
-                    {/* Variant loading */}
-                    {loadingVariant && (
-                        <div style={{ marginTop: 14, padding: '14px 16px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <Loader2 size={15} style={{ color: '#f59e0b', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>Generando variante…</p>
-                        </div>
-                    )}
-
-                    {/* Variant result */}
-                    {variant && !loadingVariant && varSections && (
-                        <div style={{ marginTop: 14, border: '1px solid rgba(245,158,11,0.3)', borderRadius: 14, overflow: 'hidden' }}>
-                            <button onClick={() => setVarExpanded(v => !v)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(245,158,11,0.08)', border: 'none', cursor: 'pointer', color: '#f59e0b' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', fontWeight: 700 }}>
-                                    <GitBranch size={13} /> Variante: {VARIANT_OPTIONS.find(o => o.id === variant.type)?.emoji} {VARIANT_OPTIONS.find(o => o.id === variant.type)?.label}
-                                </span>
-                                {varExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </button>
-                            {varExpanded && (
-                                <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,0.04)' }}>
-                                    {varSections.hook && <div style={{ marginBottom: 10, padding: '12px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)', borderLeft: '3px solid #f59e0b', borderRadius: '0 10px 10px 0' }}><div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>Hook</div><p style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.6, margin: 0 }}>{varSections.hook}</p></div>}
-                                    {varSections.structure?.map((b, i) => (
-                                        <div key={i} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 9, marginBottom: 6 }}>
-                                            <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: 3 }}>{i + 1}. {b.point}</p>
-                                            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, margin: 0 }}>{b.detail}</p>
-                                        </div>
-                                    ))}
-                                    {varSections.cta && <div style={{ padding: '10px 14px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderLeft: '3px solid #34d399', borderRadius: '0 10px 10px 0' }}><div style={{ fontSize: '0.62rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>CTA</div><p style={{ fontSize: '0.85rem', color: '#fff', margin: 0 }}>{varSections.cta}</p></div>}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             )}
 
-            {/* No script yet */}
-            {!script && !loading && !error && (
-                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <p style={{ flex: 1, fontSize: '0.83rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                        Haz clic en "Generar" para crear el guion con IA
+            {/* Sin guión y sin generación activa → mensaje guía (el botón está arriba) */}
+            {!script && !loading && !error && !autoRunning && (
+                <div style={{ padding: '16px 24px' }}>
+                    <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                        Pulsa "Generar" para crear el guion con IA.
                     </p>
-                    <button onClick={onGenerate}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
-                        <Sparkles size={14} /> Generar guion
-                    </button>
+                </div>
+            )}
+
+            {/* En cola dentro del lote automático */}
+            {!script && !loading && !error && autoRunning && (
+                <div style={{ padding: '16px 24px' }}>
+                    <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                        En cola — la IA llegará a este guión en unos segundos…
+                    </p>
                 </div>
             )}
         </div>
@@ -268,8 +285,6 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
         Object.keys(initialScripts).forEach(id => { s[id] = true; });
         return s;
     });
-    const [variants, setVariants]             = useState({});
-    const [loadingVariant, setLoadingVariant] = useState({});
     const [showVariantPicker, setShowVariantPicker] = useState({});
     const [autoRunning, setAutoRunning]       = useState(false);
     const [globalError, setGlobalError]       = useState('');
@@ -305,7 +320,7 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
         return '';
     }
 
-    async function generateOne(slotId, preloadedToken) {
+    async function generateOne(slotId, preloadedToken, styleInstruction = null) {
         const slot = slots.find(s => s.id === slotId);
         if (!slot) return;
         setLoading(p => ({ ...p, [slotId]: true }));
@@ -322,10 +337,11 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
                     platform: slot.platform || 'Reels',
                     projectId: projectId || null,
                     videoDuration: slot.platform?.toLowerCase().includes('youtube') && !slot.platform?.toLowerCase().includes('short') ? '5-10 min' : '60-90 seg',
+                    styleInstruction: styleInstruction || undefined,
                 }),
             });
-            if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); return; }
-            if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error generando guion.'); }
+            if (res.status === 402) { window.dispatchEvent(new CustomEvent('show-no-credits')); setErrors(p => ({ ...p, [slotId]: 'Sin créditos suficientes.' })); return; }
+            if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Error generando guion.'); }
             const data = await res.json();
             const raw = data.script || {};
             const obj = { text: formatText(raw), raw };
@@ -338,34 +354,11 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
         }
     }
 
-    async function generateVariant(slotId, variantType) {
-        const slot = slots.find(s => s.id === slotId);
-        if (!slot) return;
-        setLoadingVariant(p => ({ ...p, [slotId]: true }));
+    // Variante = regenerar el guión principal con un estilo específico (lo reemplaza).
+    // Funciona siempre, incluso mientras el lote automático sigue corriendo.
+    async function generateVariant(slotId, styleInstruction) {
         setShowVariantPicker(p => ({ ...p, [slotId]: false }));
-        try {
-            const tok = await getToken();
-            const res = await fetch('/api/generate-idea-script', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
-                body: JSON.stringify({
-                    idea_title: slot.idea_title,
-                    idea_description: slot.idea_description || '',
-                    platform: slot.platform || 'Reels',
-                    projectId: projectId || null,
-                    videoDuration: '60 seg',
-                    ctaIdea: `Estilo: ${variantType}`,
-                }),
-            });
-            if (!res.ok) throw new Error('Error generando variante.');
-            const data = await res.json();
-            const raw = data.script || {};
-            setVariants(p => ({ ...p, [slotId]: { type: variantType, text: formatText(raw), raw } }));
-        } catch (e) {
-            setErrors(p => ({ ...p, [slotId]: e.message }));
-        } finally {
-            setLoadingVariant(p => ({ ...p, [slotId]: false }));
-        }
+        await generateOne(slotId, null, styleInstruction);
     }
 
     async function generateAll() {
@@ -483,11 +476,10 @@ export default function PlanScriptsView({ slots, projectId, initialScripts = {},
                     error={errors[slot.id] || ''}
                     script={scripts[slot.id] || null}
                     saved={!!saved[slot.id]}
-                    variant={variants[slot.id] || null}
-                    loadingVariant={!!loadingVariant[slot.id]}
+                    autoRunning={autoRunning}
                     showVariantPicker={!!showVariantPicker[slot.id]}
                     onToggleVariantPicker={() => setShowVariantPicker(p => ({ ...p, [slot.id]: !p[slot.id] }))}
-                    onSelectVariant={(type) => generateVariant(slot.id, type)}
+                    onSelectVariant={(instruction) => generateVariant(slot.id, instruction)}
                 />
             ))}
 

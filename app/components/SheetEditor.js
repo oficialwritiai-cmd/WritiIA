@@ -161,8 +161,15 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
         setPlatform(data.platform || 'Reels');
         setStatus(data.metadata?.status || data.status || 'Borrador');
         setHook(data.content?.hook || data.content?.gancho || '');
+        // Preferir el texto crudo (preserva espaciado entre párrafos que el usuario editó).
+        // Fallback: array unido con doble salto para que NO salga amontonado.
+        const desText = data.content?.desarrollo_text;
         const des = data.content?.desarrollo || [];
-        setDesarrollo(Array.isArray(des) ? des.join('\n') : String(des || ''));
+        if (typeof desText === 'string' && desText.length > 0) {
+            setDesarrollo(desText);
+        } else {
+            setDesarrollo(Array.isArray(des) ? des.join('\n\n') : String(des || ''));
+        }
         setCta(data.content?.cta || data.content?.cierre || '');
         const cp = data.content?.copy_post;
         setCopyPost(
@@ -203,7 +210,10 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
                 content: {
                     titulo_angulo: d.title,
                     hook: d.hook || '', gancho: d.hook || '',
+                    // Array limpio para otros consumidores (calendario, etc.)
                     desarrollo: (d.desarrollo || '').split('\n').filter(l => l.trim()),
+                    // Texto crudo que PRESERVA el espaciado/saltos del usuario (se prioriza al recargar)
+                    desarrollo_text: d.desarrollo || '',
                     cta: d.cta || '', copy_post: d.copyPost || null,
                     full_text: fullContent,
                 },
