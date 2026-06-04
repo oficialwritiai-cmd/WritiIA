@@ -16,7 +16,6 @@ import FinalCTA from "./FinalCTA";
 import Footer from "./Footer";
 import VideoSection from "./VideoSection";
 import LandingIntro from "./LandingIntro";
-import MetaPixel from "@/app/components/MetaPixel";
 
 function ScrollTracker() {
   useEffect(() => {
@@ -41,7 +40,6 @@ const Landing = () => {
 
   return (
     <LanguageLandingProvider>
-      <MetaPixel />
       <LandingIntro />
       <GalaxyBackground />
       <ScrollTracker />

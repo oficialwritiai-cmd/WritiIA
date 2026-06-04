@@ -59,9 +59,19 @@ const ValueStack = () => {
               <a
                 href="/login"
                 data-testid="plan-cta"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   track('pricing_click');
-                  trackPixelEvent('InitiateCheckout', { value: 24.90, currency: 'EUR' });
+                  // Disparar el evento ANTES de navegar (la navegación cortaría fbq)
+                  if (typeof window !== 'undefined' && typeof window.fbq !== 'undefined') {
+                    window.fbq('track', 'InitiateCheckout', {
+                      value: 24.90,
+                      currency: 'EUR',
+                      content_name: 'Plan PRO Writi.AI',
+                    });
+                  }
+                  // Esperar 300ms para que Meta reciba el evento, luego navegar
+                  setTimeout(() => { window.location.href = '/login'; }, 300);
                 }}
                 className="btn-primary justify-center"
                 style={{

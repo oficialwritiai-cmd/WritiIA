@@ -50,6 +50,7 @@ export const viewport = {
 import SupportWidget from '@/app/components/SupportWidget';
 import { Providers } from '@/app/components/Providers';
 import PostHogProvider from '@/app/components/PostHogProvider';
+import MetaPixel from '@/app/components/MetaPixel';
 
 const schemaOrg = [
     {
@@ -171,6 +172,7 @@ export default function RootLayout({ children }) {
                 ))}
             </head>
             <body>
+                <MetaPixel />
                 <PostHogProvider>
                     <Providers>
                         {children}
