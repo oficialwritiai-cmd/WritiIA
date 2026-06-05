@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from '@/app/components/SessionContext';
 import { createSupabaseClient } from '@/lib/supabase';
 import {
@@ -373,7 +373,16 @@ export default function SessionStep3Scripts() {
     const [loadingVariant, setLoadingVariant]   = useState({});       // { slotId: bool }
     const [showVariantPicker, setShowVariantPicker] = useState({});   // { slotId: bool }
 
-    useEffect(() => { if (selectedSlotIds.length) { loadSlots(); } }, []);
+    // Recargar cuando selectedSlotIds esté disponible (puede hidratarse tras el mount).
+    // Sin esto, si el estado llega async, se queda en 0/0 para siempre.
+    const loadedRef = useRef(false);
+    useEffect(() => {
+        if (selectedSlotIds.length && !loadedRef.current) {
+            loadedRef.current = true;
+            loadSlots();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSlotIds]);
 
     // ── sessionStorage helpers ──────────────────────────────────────────────
     function cacheKey(slotId) { return `writi_s3_${projectId}_${slotId}`; }

@@ -150,8 +150,13 @@ export default function SessionStep2Ideas() {
                 .single();
             if (planErr) throw new Error(`Error creando plan: ${planErr.message}`);
 
-            // Build slots — exact same columns as generate-plan route
-            const selectedIdeas = generatedIdeas.filter((_, idx) => selectedSlotIds.includes(String(idx)));
+            // Build slots — filtrar con la MISMA lógica de _idx que usa la selección:
+            // _idx = String(idea.id || idx). Si filtramos solo por idx, cuando las ideas
+            // tienen id la selección no coincide -> 0 ideas -> 0 guiones (bug crítico).
+            const selectedIdeas = generatedIdeas.filter((idea, idx) => selectedSlotIds.includes(String(idea.id || idx)));
+            if (selectedIdeas.length === 0) {
+                throw new Error('No se detectaron las ideas seleccionadas. Recarga y vuelve a seleccionar.');
+            }
             const toInsert = selectedIdeas.map((idea, index) => ({
                 plan_id:          planData.id,
                 user_id:          user.id,
