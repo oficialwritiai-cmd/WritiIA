@@ -311,27 +311,36 @@ export default function AsistentePage() {
         });
     }, []);
 
+    const authHeaders = useCallback(async (extra = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        return { ...extra, 'Authorization': `Bearer ${session?.access_token || ''}` };
+    }, []);
+
     const fetchConversations = useCallback(async () => {
         if (!userId) return;
         try {
-            const res = await fetch(`/api/assistant/history?userId=${userId}&projectId=${activeProject?.id || 'null'}`);
+            const res = await fetch(`/api/assistant/history?projectId=${activeProject?.id || 'null'}`, {
+                headers: await authHeaders(),
+            });
             const data = await res.json();
             setConversations(data.conversations || []);
         } catch {}
-    }, [userId, activeProject?.id]);
+    }, [userId, activeProject?.id, authHeaders]);
 
     const loadConversation = useCallback(async (sessionId) => {
         if (!userId || !sessionId) return;
         setHistoryLoaded(false);
         try {
-            const res = await fetch(`/api/assistant/history?userId=${userId}&id=${sessionId}`);
+            const res = await fetch(`/api/assistant/history?id=${sessionId}`, {
+                headers: await authHeaders(),
+            });
             const data = await res.json();
             setMessages(data.messages || []);
             setCurrentSessionId(sessionId);
         } catch {} finally {
             setHistoryLoaded(true);
         }
-    }, [userId]);
+    }, [userId, authHeaders]);
 
     const startNewChat = () => {
         setMessages([]); setCurrentSessionId(null);
@@ -357,13 +366,13 @@ export default function AsistentePage() {
         if (!userId) return;
         try {
             const res = await fetch('/api/assistant/history', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, projectId: activeProject?.id || null, messages: updatedMessages, id: sessionId || currentSessionId || null })
+                method: 'POST', headers: await authHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ projectId: activeProject?.id || null, messages: updatedMessages, id: sessionId || currentSessionId || null })
             });
             const data = await res.json();
             if (data.id && !currentSessionId) { setCurrentSessionId(data.id); fetchConversations(); }
         } catch {}
-    }, [userId, activeProject?.id, currentSessionId, fetchConversations]);
+    }, [userId, activeProject?.id, currentSessionId, fetchConversations, authHeaders]);
 
     const sendMessage = async (text, mode = null) => {
         const messageText = text || input.trim();
@@ -430,7 +439,7 @@ export default function AsistentePage() {
         e.preventDefault(); e.stopPropagation();
         if (!confirm('¿Borrar esta conversación?')) return;
         try {
-            const res = await fetch(`/api/assistant/history?id=${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/assistant/history?id=${id}`, { method: 'DELETE', headers: await authHeaders() });
             if (!res.ok) throw new Error();
             setConversations(prev => prev.filter(c => c.id !== id));
             if (currentSessionId === id) startNewChat();
@@ -441,7 +450,7 @@ export default function AsistentePage() {
     const renameConversation = async (id, newTitle) => {
         if (!newTitle.trim()) return setEditingId(null);
         try {
-            await fetch('/api/assistant/history', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, title: newTitle }) });
+            await fetch('/api/assistant/history', { method: 'PATCH', headers: await authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ id, title: newTitle }) });
             setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
             setEditingId(null); showToast('Renombrado');
         } catch { showToast('Error al renombrar', 'error'); }

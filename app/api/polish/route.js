@@ -4,6 +4,7 @@ import { PolishSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 // Polish is expensive (calls AI), so apply a tight rate limit
 const limiter = rateLimit({
@@ -32,14 +33,18 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, userId, projectId, instruction } = validation.data;
+        const { text, projectId, instruction } = validation.data;
 
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        // SECURITY: verify JWT — never trust userId from the body (prevents charging another user's credits)
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+        const userId = user.id;
 
-        // 3. Charge Credits (1 credit) - blocks unauthenticated users too via userId UUID check
+        // 3. Charge Credits (1 credit)
         const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'polish_text', projectId);
         if (!creditResult.success) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });

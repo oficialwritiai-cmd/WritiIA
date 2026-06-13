@@ -3,21 +3,15 @@
 // PUT: Update/edit an existing script
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
 
 export async function GET(request, { params }) {
     const { slot_id } = params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
 
-    if (!userId) {
-        return NextResponse.json({ error: 'userId requerido.' }, { status: 400 });
-    }
-
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    // SECURITY: verify JWT — never trust userId from the query string
+    const { user, supabase } = await getServerSession(request);
+    if (!user) return unauthorized();
+    const userId = user.id;
 
     // Fetch the slot with its linked script
     const { data: slot, error: slotErr } = await supabase
@@ -49,10 +43,10 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
     const { slot_id } = params;
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    // SECURITY: verify JWT — never trust userId from the body
+    const { user, supabase } = await getServerSession(request);
+    if (!user) return unauthorized();
+    const userId = user.id;
 
     let body;
     try {
@@ -61,9 +55,9 @@ export async function PUT(request, { params }) {
         return NextResponse.json({ error: 'Cuerpo inválido.' }, { status: 400 });
     }
 
-    const { userId, scriptId, title, hook, structure, cta, notes, post_copy } = body;
-    if (!userId || !scriptId) {
-        return NextResponse.json({ error: 'userId y scriptId son requeridos.' }, { status: 400 });
+    const { scriptId, title, hook, structure, cta, notes, post_copy } = body;
+    if (!scriptId) {
+        return NextResponse.json({ error: 'scriptId es requerido.' }, { status: 400 });
     }
 
     // Verify script belongs to user via slot

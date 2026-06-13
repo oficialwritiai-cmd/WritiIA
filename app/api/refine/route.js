@@ -4,6 +4,7 @@ import { RefineSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 const limiter = rateLimit({
     interval: 60 * 1000,
@@ -35,11 +36,18 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Datos inválidos.' }, { status: 400 });
         }
 
-        const { text, texts, type, context, instruction, userId, projectId } = validation.data;
+        const { text, texts, type, context, instruction, projectId } = validation.data;
         const inputTexts = texts || (Array.isArray(text) ? text : [text]);
         const isBulk = inputTexts.length > 1 || ['titles', 'hooks', 'descriptions', 'hashtags_groups'].includes(type);
 
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        // SECURITY: verify JWT — never trust userId from the body (prevents charging another user's credits)
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+        const userId = user.id;
 
         // Charge Credits (1 credit per call)
         const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block', projectId);

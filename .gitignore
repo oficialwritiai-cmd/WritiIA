@@ -41,6 +41,18 @@ build_error.txt
 next_path.txt
 node_path.txt
 
+# dev scratch / generated output (never commit — may contain secrets)
+schema_output.json
+test_*.js
+test_*.mjs
+test_*.txt
+temp_*.js
+tmp_*.js
+tmp_*.mjs
+check_schema.mjs
+model_test_results.txt
+old_model_test_results.txt
+
 # Emergent source folders (no subir)
 /frontend/
 /frontendfinal/

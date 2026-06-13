@@ -1,30 +1,25 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const getSupabase = () => createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { getServerSession, unauthorized } from '@/lib/auth-guard';
 
 export async function GET(req) {
     try {
+        // SECURITY: verify JWT — never trust userId from the query string
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const { searchParams } = new URL(req.url);
-        const userId = searchParams.get('userId');
         const projectId = searchParams.get('projectId');
         const conversationId = searchParams.get('id');
 
-        if (!userId) return NextResponse.json({ error: 'userId requerido.' }, { status: 400 });
-
-        const supabase = getSupabase();
-
-        // Mode A: Get specific conversation messages
+        // Mode A: Get specific conversation messages (scoped to the owner)
         if (conversationId && conversationId !== 'null') {
             const { data, error } = await supabase
                 .from('chat_conversations')
                 .select('messages, updated_at, title')
                 .eq('id', conversationId)
+                .eq('user_id', user.id)
                 .single();
-            
+
             if (error) return NextResponse.json({ messages: [], title: 'Nueva conversación' });
             return NextResponse.json({ messages: data?.messages || [], title: data?.title });
         }
@@ -33,7 +28,7 @@ export async function GET(req) {
         let query = supabase
             .from('chat_conversations')
             .select('id, title, updated_at')
-            .eq('user_id', userId)
+            .eq('user_id', user.id)
             .eq('is_archived', false);
 
         if (projectId && projectId !== 'null') {
@@ -53,12 +48,25 @@ export async function GET(req) {
 
 export async function POST(req) {
     try {
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const body = await req.json();
-        const { userId, projectId, messages, id, title } = body;
+        const { projectId, messages, id, title } = body;
 
-        if (!userId || !messages) return NextResponse.json({ error: 'Datos incompletos.' }, { status: 400 });
+        if (!messages) return NextResponse.json({ error: 'Datos incompletos.' }, { status: 400 });
 
-        const supabase = getSupabase();
+        // If updating an existing conversation, verify it belongs to the user
+        if (id) {
+            const { data: existing } = await supabase
+                .from('chat_conversations')
+                .select('user_id')
+                .eq('id', id)
+                .single();
+            if (existing && existing.user_id !== user.id) {
+                return NextResponse.json({ error: 'Sin permisos.' }, { status: 403 });
+            }
+        }
 
         // Generate title if not provided and it's a new or first-message conversation
         let conversationTitle = title;
@@ -77,9 +85,9 @@ export async function POST(req) {
             const lastPart = messages.slice(-35);
             processedMessages = [
                 ...firstPart,
-                { 
-                    id: 'trim-' + Date.now(), 
-                    role: 'assistant', 
+                {
+                    id: 'trim-' + Date.now(),
+                    role: 'assistant',
                     content: '[Contexto optimizado: Nico mantiene el foco en tu proyecto y los últimos mensajes para mayor velocidad. ⚡]',
                     timestamp: new Date().toISOString()
                 },
@@ -88,7 +96,7 @@ export async function POST(req) {
         }
 
         const record = {
-            user_id: userId,
+            user_id: user.id,
             project_id: projectId || null,
             messages: processedMessages,
             title: conversationTitle || 'Conversación sin título',
@@ -113,14 +121,22 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Error guardando historial.' }, { status: 500 });
     }
 }
+
 export async function DELETE(req) {
     try {
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
         if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
 
-        const supabase = getSupabase();
-        await supabase.from('chat_conversations').update({ is_archived: true }).eq('id', id);
+        // Scope the archive to the owner so a user can't delete another's conversation
+        await supabase
+            .from('chat_conversations')
+            .update({ is_archived: true })
+            .eq('id', id)
+            .eq('user_id', user.id);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error('[assistant/history] DELETE Error:', error);
@@ -130,12 +146,18 @@ export async function DELETE(req) {
 
 export async function PATCH(req) {
     try {
+        const { user, supabase } = await getServerSession(req);
+        if (!user) return unauthorized();
+
         const body = await req.json();
         const { id, title } = body;
         if (!id || !title) return NextResponse.json({ error: 'Faltan datos.' }, { status: 400 });
 
-        const supabase = getSupabase();
-        const { error } = await supabase.from('chat_conversations').update({ title, updated_at: new Date().toISOString() }).eq('id', id);
+        const { error } = await supabase
+            .from('chat_conversations')
+            .update({ title, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .eq('user_id', user.id);
         if (error) throw error;
 
         return NextResponse.json({ success: true });

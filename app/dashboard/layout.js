@@ -470,19 +470,14 @@ export default function DashboardLayout({ children }) {
         : '/dashboard/session';
 
     const navItems = [
-        // ── Principal ──────────────────────────────────
         { href: '/dashboard/home',          icon: Home,          label: t('nav.home') },
         { href: sessionHref,                icon: Sparkles,      label: 'Matrix',              highlight: true },
+        { href: '/dashboard',               icon: PenLine,       label: t('nav.new_script') },
+        { href: '/dashboard/ideas-virales', icon: Megaphone,     label: t('nav.viral_ideas') },
+        { href: '/dashboard/asistente',     icon: MessageSquare, label: t('nav.assistant') },
         { href: '/dashboard/library',       icon: BookOpen,      label: t('nav.library') },
         { href: '/dashboard/calendar',      icon: CalendarDays,  label: t('nav.calendar') },
         { href: '/dashboard/settings',      icon: Settings,      label: t('nav.settings') },
-        // ── Secundario ─────────────────────────────────
-        { href: '/dashboard/asistente',     icon: MessageSquare, label: t('nav.assistant'),    secondary: true },
-        { href: '/dashboard',               icon: PenLine,       label: t('nav.new_script'),   secondary: true },
-        { href: '/dashboard/copys',         icon: Type,          label: 'Textos rápidos',      secondary: true },
-        { href: '/dashboard/ideas-virales', icon: Megaphone,     label: t('nav.viral_ideas'),  secondary: true },
-        { href: '/dashboard/estrategia',    icon: Target,        label: t('nav.strategy'),     secondary: true },
-        { href: '/dashboard/stats',         icon: BarChart2,     label: t('nav.stats'),        secondary: true },
     ];
 
     // User avatar initial
