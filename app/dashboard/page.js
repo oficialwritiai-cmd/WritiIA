@@ -5,7 +5,7 @@ import { usePersistedState, RestoreBanner, AutosaveIndicator } from '@/hooks/use
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trackPixelEvent } from '@/app/lib/pixel';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
+import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, ChevronRight, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
@@ -24,6 +24,87 @@ const SUGGESTED_TRENDS = [
     { name: 'IA Generativa', icon: '🤖', grow: '+45.2%', color: '#00F3FF' },
     { name: 'Productividad', icon: '⌛', grow: '+8.1%', color: '#FF007A' },
 ];
+
+/* ─── Voice Story Card (idéntica a la de Inicio) ────── */
+function VoiceStoryCard({ router }) {
+    const [hovered, setHovered] = useState(false);
+    const accent = '#34d399';
+    return (
+        <div
+            style={{
+                background: hovered ? `${accent}09` : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${hovered ? `${accent}35` : 'rgba(255,255,255,0.07)'}`,
+                borderRadius: '20px',
+                padding: '28px',
+                cursor: 'pointer',
+                transition: 'all 0.22s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                position: 'relative',
+                overflow: 'hidden',
+                transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+                boxShadow: hovered ? `0 12px 32px rgba(0,0,0,0.4)` : 'none',
+                margin: '0 auto 10px',
+                maxWidth: '420px',
+            }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            onClick={() => router.push('/dashboard/voice')}
+        >
+            <div style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: `${accent}22`, border: `1px solid ${accent}40`,
+                borderRadius: '100px', padding: '3px 10px',
+                fontSize: '0.68rem', fontWeight: 700, color: accent, letterSpacing: '0.05em',
+            }}>
+                Nuevo
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                    width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                    background: `${accent}18`, border: `1px solid ${accent}28`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <Mic size={22} color={accent} strokeWidth={1.8} />
+                </div>
+                <span style={{
+                    fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)',
+                    fontWeight: 700, letterSpacing: '0.1em',
+                }}>
+                    03
+                </span>
+            </div>
+
+            <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', marginBottom: '8px', lineHeight: 1.3 }}>
+                    Cuenta tu historia con tu voz
+                </h3>
+                <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+                    Graba una nota de voz contando una anécdota o aprendizaje. WRITI la transcribe y genera guiones a tu alrededor.
+                </p>
+            </div>
+
+            <button
+                onClick={e => { e.stopPropagation(); router.push('/dashboard/voice'); }}
+                style={{
+                    marginTop: 'auto',
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    background: hovered ? accent : 'transparent',
+                    color: hovered ? '#000' : accent,
+                    border: `1px solid ${accent}50`,
+                    borderRadius: '10px', padding: '10px 18px',
+                    fontSize: '0.8rem', fontWeight: 700,
+                    cursor: 'pointer', transition: 'all 0.2s ease',
+                    width: 'fit-content',
+                }}
+            >
+                Grabar nota de voz
+                <ChevronRight size={14} strokeWidth={2.5} />
+            </button>
+        </div>
+    );
+}
 
 const PLATAFORMAS = ['Reels', 'TikTok', 'LinkedIn', 'YouTube Shorts', 'YouTube'];
 const TONOS_MARCA = ['brutal honesto', 'elegante', 'polémico', 'cercano', 'experto', 'profesional'];
@@ -2860,6 +2941,8 @@ export default function DashboardPage() {
                     </button>
                 </div>
             )}
+
+            {step === 1 && <VoiceStoryCard router={router} />}
 
             {step === 1 && generationMode === 'single' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
