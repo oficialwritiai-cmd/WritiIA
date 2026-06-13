@@ -69,10 +69,6 @@ export async function POST(request) {
             const ideasNeeded = MIN_IDEAS - selectedIdeas.length;
             console.log(`[ANALYZE-PLAN] Generando ${ideasNeeded} ideas adicionales...`);
 
-            const brainContext = brandBrain 
-                ? `BIO: ${brandBrain.biography || ''}. PRODUCTOS: ${brandBrain.products_services || ''}. AUDIENCIA: ${brandBrain.audience || ''}. ESTILO: ${brandBrain.style_words || ''}.` 
-                : '';
-
             const topicsFromSelected = selectedIdeas
                 .map(i => i.titulo_idea || i.titulo || '')
                 .filter(Boolean)
@@ -80,19 +76,44 @@ export async function POST(request) {
 
             const platformsFromSelected = [...new Set(selectedIdeas.map(i => i.plataforma).filter(Boolean))];
 
-            const generateSystemPrompt = `Eres el estratega de contenido viral más exitoso del mundo, experto en crear "viral hooks" infalibles.
-Tu tarea es generar ideas de contenido altamente disruptivas, curiosas y con alto potencial de retención.
-Debes basarte en los temas proporcionados pero elevar el impacto con nuevos ángulos (storytelling, controversia, o valor contraintuitivo).
+            const generateSystemPrompt = `Eres una agencia de contenido de élite.
+Tu trabajo es generar ideas complementarias que completen un plan mensual estratégico.
 
-IMPORTANTE: Las ideas generadas deben ser COMPLEMENTARIAS (no repetidas) y seguir una estructura de contenido moderno (Gancho -> Valor -> CTA). 
-Responde ÚNICAMENTE con un array JSON válido de objetos con este formato:
+FECHA HOY: ${new Date().toLocaleDateString('es-ES', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}
+
+CEREBRO IA DEL CREADOR:
+${brandBrain ? [
+    brandBrain.biography         && `Quién es: ${brandBrain.biography}`,
+    brandBrain.niche             && `Nicho: ${brandBrain.niche}`,
+    brandBrain.sub_niche         && `Sub-nicho: ${brandBrain.sub_niche}`,
+    brandBrain.audience          && `Audiencia: ${brandBrain.audience}`,
+    brandBrain.products_services && `Oferta: ${brandBrain.products_services}`,
+    brandBrain.style_words       && `Estilo: ${brandBrain.style_words}`,
+    brandBrain.learning_notes    && `Aprendizaje: ${brandBrain.learning_notes}`,
+].filter(Boolean).join('\n') : 'No disponible'}
+
+TEMAS BASE (ideas ya seleccionadas por el usuario):
+${topicsFromSelected.map(t => `- ${t}`).join('\n')}
+
+REGLAS CRÍTICAS:
+- Las ideas deben ser COMPLEMENTARIAS — no repitas ángulos ya cubiertos
+- Cada idea debe ser específica para el nicho y audiencia del Cerebro IA
+- NUNCA ideas genéricas que valgan para cualquier coach
+- Usa una de estas estructuras por idea:
+  · DOLOR ESPECÍFICO: nombra el problema exacto de la audiencia
+  · CONTRAINTUITIVO: di lo opuesto a lo esperado en el nicho
+  · CASO REAL: resultado concreto con números específicos
+  · URGENCIA: algo que está cambiando ahora en el sector
+- El titulo_idea debe parar el scroll — máximo 65 caracteres
+- PROHIBIDO: "y la mayoría lo hace al revés", frases de plantilla genérica
+
+Responde ÚNICAMENTE con un array JSON válido:
 [{ "titulo_idea": "...", "descripcion": "...", "categoria": "...", "plataforma": "...", "objetivo": "..." }]`;
 
             const generateUserMessage = `Genera ${ideasNeeded} ideas adicionales basadas en estos temas/ángulos:
 ${topicsFromSelected.map(t => `- ${t}`).join('\n')}
 
 Plataformas objetivo: ${platformsFromSelected.join(', ') || 'Reels, TikTok'}
-${brainContext ? `\nPERFIL: ${brainContext}` : ''}
 
 Las ideas deben seguir el mismo tono y estilo de las existentes pero proponer nuevos ángulos.`;
 
@@ -122,7 +143,16 @@ Cada decisión que tomas tiene un propósito: que el negocio del coach crezca de
 FECHA HOY: ${new Date().toLocaleDateString('es-ES', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}
 
 CEREBRO IA COMPLETO:
-${brandBrain ? `BIO: ${brandBrain.biography} | PRODUCTOS: ${brandBrain.products_services} | AUDIENCIA: ${brandBrain.audience} | ESTILO: ${brandBrain.style_words}` : 'No definido'}
+${brandBrain ? [
+    brandBrain.biography         && `Quién es: ${brandBrain.biography}`,
+    brandBrain.niche             && `Nicho: ${brandBrain.niche}`,
+    brandBrain.sub_niche         && `Sub-nicho: ${brandBrain.sub_niche}`,
+    brandBrain.audience          && `Audiencia ideal: ${brandBrain.audience}`,
+    brandBrain.products_services && `Oferta/Productos: ${brandBrain.products_services}`,
+    brandBrain.style_words       && `Estilo de marca: ${brandBrain.style_words}`,
+    brandBrain.values_tone       && `Valores y tono: ${brandBrain.values_tone}`,
+    brandBrain.learning_notes    && `Aprendizaje acumulado: ${brandBrain.learning_notes}`,
+].filter(Boolean).join('\n') : 'No definido'}
 
 ════════════════════
 FILOSOFÍA DE LA SESIÓN MATRIX
