@@ -821,15 +821,28 @@ export default function DashboardPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Track Purchase event when plan is activated
+    // Track the Meta Pixel Purchase event after a successful Stripe checkout.
+    // Covers both plan activation and credit-pack purchases, and strips the
+    // query param afterwards so a page refresh can't double-count the conversion.
     useEffect(() => {
-        if (searchParams.get('plan_activated') === 'true') {
-            trackPixelEvent('Purchase', {
-                value: 24.90,
-                currency: 'EUR',
-            });
+        const planActivated = searchParams.get('plan_activated') === 'true';
+        const creditsPack = searchParams.get('credits_purchased');
+        if (!planActivated && !creditsPack) return;
+
+        if (planActivated) {
+            trackPixelEvent('Purchase', { value: 24.90, currency: 'EUR' });
+        } else if (creditsPack) {
+            const packValues = { '100': 15, '250': 30, '500': 60 };
+            trackPixelEvent('Purchase', { value: packValues[creditsPack] || 0, currency: 'EUR' });
         }
-    }, [searchParams]);
+
+        // Remove the conversion params from the URL (prevents re-firing on refresh)
+        const params = new URLSearchParams(Array.from(searchParams.entries()));
+        params.delete('plan_activated');
+        params.delete('credits_purchased');
+        const qs = params.toString();
+        router.replace(`/dashboard${qs ? `?${qs}` : ''}`, { scroll: false });
+    }, [searchParams, router]);
 
     const singleLoadingSteps = [
         "Leyendo tu Cerebro IA...",

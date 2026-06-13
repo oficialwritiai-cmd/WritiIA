@@ -417,10 +417,12 @@ export async function POST(request) {
         // Use verified userId from session, not from body if possible
         const verifiedUserId = user.id;
 
-        // Credit Check & Charge (Dynamic Cost)
+        // Credit pre-check (read-only). We charge AFTER the AI succeeds so the
+        // user never loses credits on a failed/empty generation.
         const totalCost = getScriptCost(videoDuration, count || 1);
-        const creditResult = await chargeCredits(supabase, verifiedUserId, totalCost, 'generate_scripts', projectId);
-        if (!creditResult.success) {
+        const { data: creditPre } = await supabase
+            .from('users_profiles').select('credits_balance, is_admin').eq('id', verifiedUserId).single();
+        if (!creditPre?.is_admin && (Number(creditPre?.credits_balance) || 0) < totalCost) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
@@ -674,6 +676,10 @@ ${baseSystemPrompt}`;
             };
         });
 
+        // AI produced real content if we have at least one script here (before the
+        // hardcoded emergency-recovery template below). Only then do we charge.
+        const aiSucceeded = scriptsArray.length > 0;
+
         // Final v4.5.3 Guard: Ensure we never return an empty array if status is 200
         if (scriptsArray.length === 0) {
             console.error(`[generate-scripts] CRITICAL: scriptsArray is EMPTY after all guards for topic "${topic}". Injecting emergency recovery script.`);
@@ -690,6 +696,15 @@ ${baseSystemPrompt}`;
                 cta: ctaIdea || `Dame un LIKE si quieres la parte 2 sobre ${topic}. 👇`,
                 copy_post: { titulo: topic, descripcion_larga: `Dominando ${topic} paso a paso.`, hashtags: ['ia', 'estrategia', topic.split(' ')[0]] }
             }];
+        }
+
+        // Charge credits only after a successful AI generation (no charge on the
+        // hardcoded emergency template, so the user isn't billed for a non-AI result).
+        if (aiSucceeded) {
+            const creditResult = await chargeCredits(supabase, verifiedUserId, totalCost, 'generate_scripts', projectId);
+            if (!creditResult.success) {
+                return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
+            }
         }
 
         console.log(`[v4.5.3] Returning ${scriptsArray.length} scripts. Sample Hook: "${scriptsArray[0]?.gancho?.substring(0, 50)}..."`);

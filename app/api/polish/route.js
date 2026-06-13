@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { PolishSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
@@ -44,9 +43,11 @@ export async function POST(request) {
         }
         const userId = user.id;
 
-        // 3. Charge Credits (1 credit)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'polish_text', projectId);
-        if (!creditResult.success) {
+        // 3. Credit pre-check (read-only). We charge AFTER the AI succeeds so the
+        // user never loses a credit on a failed call.
+        const { data: creditPre } = await supabase
+            .from('users_profiles').select('credits_balance, is_admin').eq('id', userId).single();
+        if (!creditPre?.is_admin && (Number(creditPre?.credits_balance) || 0) < CREDIT_COSTS.POLISH) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
@@ -65,6 +66,9 @@ ${instruction ? `5. Sigue esta instrucción específica del usuario: "${instruct
             systemPrompt,
             userMessage: `Texto: ${text}`,
         });
+
+        // Charge only after the AI call succeeded.
+        await chargeCredits(supabase, userId, CREDIT_COSTS.POLISH, 'polish_text', projectId);
 
         return NextResponse.json({ polishedText: polishedText.trim() });
 

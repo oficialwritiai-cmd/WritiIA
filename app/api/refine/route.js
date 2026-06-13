@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { RefineSchema } from '@/lib/validations';
 import rateLimit, { buildRateLimitKey } from '@/lib/rate-limit';
 import { improveBlockWithHaiku } from '@/lib/anthropic';
@@ -49,9 +48,11 @@ export async function POST(request) {
         }
         const userId = user.id;
 
-        // Charge Credits (1 credit per call)
-        const creditResult = await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block', projectId);
-        if (!creditResult.success) {
+        // Credit pre-check (read-only). We charge AFTER the AI succeeds so the
+        // user never loses a credit on a failed call.
+        const { data: creditPre } = await supabase
+            .from('users_profiles').select('credits_balance, is_admin').eq('id', userId).single();
+        if (!creditPre?.is_admin && (Number(creditPre?.credits_balance) || 0) < CREDIT_COSTS.REFINE) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
@@ -81,6 +82,9 @@ REGLA CRÍTICA: Responde SOLO con el contenido refinado (o el array JSON si es b
             systemPrompt,
             userMessage,
         });
+
+        // Charge only after the AI call succeeded.
+        await chargeCredits(supabase, userId, CREDIT_COSTS.REFINE, 'refine_block', projectId);
 
         let finalResult = rawRefined.trim();
         
