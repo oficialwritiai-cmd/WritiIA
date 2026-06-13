@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { generateIdeasWithHaiku } from '@/lib/anthropic';
+import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '@/lib/auth-guard';
 
 export async function POST(request) {
     try {
-        const { selectedIdeas, userId, projectId, preferences } = await request.json();
+        const { selectedIdeas, projectId, preferences } = await request.json();
 
         if (!selectedIdeas || !Array.isArray(selectedIdeas) || selectedIdeas.length === 0) {
             return NextResponse.json({ error: 'No hay ideas seleccionadas para analizar.' }, { status: 400 });
         }
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        // SECURITY: verify JWT — never trust userId from the body
+        const { user, supabase } = await getServerSession(request);
+        if (!user) return unauthorized();
+        if (projectId) {
+            const hasAccess = await verifyProjectAccess(supabase, projectId, user.id);
+            if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
+        }
+        const userId = user.id;
 
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
