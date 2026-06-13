@@ -5,7 +5,7 @@ import { usePersistedState, RestoreBanner, AutosaveIndicator } from '@/hooks/use
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trackPixelEvent } from '@/app/lib/pixel';
 import { createSupabaseClient } from '@/lib/supabase';
-import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, ChevronRight, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
+import { PenLine, CheckCircle2 as CheckCircle, Copy, Bookmark, Calendar, RefreshCcw, PlusCircle, AlertCircle, TrendingUp, CalendarDays, Loader2 as Loader, Sparkles, Search, X, Mic, ThumbsUp, ThumbsDown, Clock, Megaphone, BookOpen, Trash2, ChevronUp, ChevronDown, ChevronRight, FileText, Zap, Brain, Download, MessageSquare, Target, Flag, Eye, Award, Heart } from 'lucide-react';
 import AIPolishedTextarea from '@/app/components/AIPolishedTextarea';
 import ScriptWizardFlow from '@/app/dashboard/components/ScriptWizardFlow';
 import GenerationProgress from '@/app/components/GenerationProgress';
@@ -25,82 +25,60 @@ const SUGGESTED_TRENDS = [
     { name: 'Productividad', icon: '⌛', grow: '+8.1%', color: '#FF007A' },
 ];
 
-/* ─── Voice Story Card (idéntica a la de Inicio) ────── */
-function VoiceStoryCard({ router }) {
+/* ─── Mode Option Card (las 3 opciones de generación) ─ */
+function ModeOptionCard({ icon: Icon, title, desc, btnLabel, accent = '#7c3aed', active = false, onClick }) {
     const [hovered, setHovered] = useState(false);
-    const accent = '#34d399';
     return (
         <div
             style={{
-                background: hovered ? `${accent}09` : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${hovered ? `${accent}35` : 'rgba(255,255,255,0.07)'}`,
-                borderRadius: '20px',
-                padding: '28px',
+                background: active ? `${accent}0c` : (hovered ? `${accent}06` : 'rgba(255,255,255,0.03)'),
+                border: `1px solid ${active ? `${accent}45` : (hovered ? `${accent}30` : 'rgba(255,255,255,0.07)')}`,
+                borderRadius: '16px',
+                padding: '18px',
                 cursor: 'pointer',
-                transition: 'all 0.22s ease',
+                transition: 'all 0.2s ease',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '16px',
-                position: 'relative',
-                overflow: 'hidden',
-                transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
-                boxShadow: hovered ? `0 12px 32px rgba(0,0,0,0.4)` : 'none',
-                margin: '0 auto 10px',
-                maxWidth: '420px',
+                gap: '10px',
+                height: '100%',
             }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            onClick={() => router.push('/dashboard/voice')}
+            onClick={onClick}
         >
             <div style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: `${accent}22`, border: `1px solid ${accent}40`,
-                borderRadius: '100px', padding: '3px 10px',
-                fontSize: '0.68rem', fontWeight: 700, color: accent, letterSpacing: '0.05em',
+                width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+                background: `${accent}18`, border: `1px solid ${accent}28`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-                Nuevo
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{
-                    width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
-                    background: `${accent}18`, border: `1px solid ${accent}28`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <Mic size={22} color={accent} strokeWidth={1.8} />
-                </div>
-                <span style={{
-                    fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)',
-                    fontWeight: 700, letterSpacing: '0.1em',
-                }}>
-                    03
-                </span>
+                <Icon size={18} color={accent} strokeWidth={1.8} />
             </div>
 
-            <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', marginBottom: '8px', lineHeight: 1.3 }}>
-                    Cuenta tu historia con tu voz
+            <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff', marginBottom: '4px', lineHeight: 1.3 }}>
+                    {title}
                 </h3>
-                <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
-                    Graba una nota de voz contando una anécdota o aprendizaje. WRITI la transcribe y genera guiones a tu alrededor.
+                <p style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                    {desc}
                 </p>
             </div>
 
             <button
-                onClick={e => { e.stopPropagation(); router.push('/dashboard/voice'); }}
+                onClick={e => { e.stopPropagation(); onClick(); }}
                 style={{
                     marginTop: 'auto',
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    background: hovered ? accent : 'transparent',
-                    color: hovered ? '#000' : accent,
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: active ? accent : 'transparent',
+                    color: active ? '#000' : accent,
                     border: `1px solid ${accent}50`,
-                    borderRadius: '10px', padding: '10px 18px',
-                    fontSize: '0.8rem', fontWeight: 700,
+                    borderRadius: '8px', padding: '8px 14px',
+                    fontSize: '0.75rem', fontWeight: 700,
                     cursor: 'pointer', transition: 'all 0.2s ease',
                     width: 'fit-content',
                 }}
             >
-                Grabar nota de voz
-                <ChevronRight size={14} strokeWidth={2.5} />
+                {btnLabel}
+                <ChevronRight size={12} strokeWidth={2.5} />
             </button>
         </div>
     );
@@ -2872,6 +2850,9 @@ export default function DashboardPage() {
                 @keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
                 @keyframes cardFadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+                @media (max-width: 768px) {
+                    .mode-grid { grid-template-columns: 1fr !important; }
+                }
             `}</style>
             <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                 <div className="premium-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', animation: 'countUp 0.4s ease', position: 'relative', overflow: 'hidden' }}>
@@ -2909,10 +2890,16 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Mode Switcher */}
+            {/* Mode Switcher — 3 cards al mismo nivel */}
             {step === 1 && (
-                <div style={{ display: 'flex', gap: '8px', padding: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', width: 'fit-content', margin: '0 auto 10px' }}>
-                    <button
+                <div className="mode-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '10px' }}>
+                    <ModeOptionCard
+                        icon={FileText}
+                        title="Guiones de un tema"
+                        desc="Genera 3-5 guiones sobre cualquier tema en 2 minutos"
+                        btnLabel="Crear guiones"
+                        accent="#7c3aed"
+                        active={generationMode === 'single'}
                         onClick={() => {
                             setGenerationMode('single');
                             setTopic('');
@@ -2921,12 +2908,14 @@ export default function DashboardPage() {
                             setScripts([]);
                             _cachedScripts = []; _cachedStep = 1; _cachedTopic = '';
                         }}
-                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'single' ? '#7c3aed' : 'rgba(255,255,255,0.04)', color: generationMode === 'single' ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }}
-                    >
-                        <div>Guiones de un tema</div>
-                        {generationMode === 'single' && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 400 }}>Genera 3-5 guiones sobre cualquier tema en 2 minutos</div>}
-                    </button>
-                    <button
+                    />
+                    <ModeOptionCard
+                        icon={CalendarDays}
+                        title="Plan mensual de contenido"
+                        desc="Planifica todo tu mes con ideas + guiones + calendario"
+                        btnLabel="Iniciar plan"
+                        accent="#7c3aed"
+                        active={generationMode === 'plan'}
                         onClick={() => {
                             setGenerationMode('plan');
                             setTopic('');
@@ -2934,15 +2923,17 @@ export default function DashboardPage() {
                             setStep(1);
                             setPlanSlots([]);
                         }}
-                        style={{ padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, transition: '0.2s', background: generationMode === 'plan' ? '#7c3aed' : 'rgba(255,255,255,0.04)', color: generationMode === 'plan' ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0px' }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CalendarDays size={18} /> Plan mensual de contenido</div>
-                        {generationMode === 'plan' && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 400 }}>Planifica todo tu mes con ideas + guiones + calendario</div>}
-                    </button>
+                    />
+                    <ModeOptionCard
+                        icon={Mic}
+                        title="Cuenta tu historia con tu voz"
+                        desc="Graba una nota de voz y WRITI genera guiones a tu alrededor"
+                        btnLabel="Grabar nota de voz"
+                        accent="#34d399"
+                        onClick={() => router.push('/dashboard/voice')}
+                    />
                 </div>
             )}
-
-            {step === 1 && <VoiceStoryCard router={router} />}
 
             {step === 1 && generationMode === 'single' && (
                 <div className="premium-card" style={{ padding: '40px', background: 'rgba(255,255,255,0.01)' }}>
