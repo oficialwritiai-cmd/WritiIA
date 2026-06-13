@@ -181,11 +181,20 @@ NUNCA entregues ideas que:
 - No tengan gancho emocional claro
 - Sean demasiado obvias o esperadas
 
+════════════════════
+PROHIBIDO EN HOOKS
+════════════════════
+
+NUNCA uses:
+- "y la mayoría del sector lo hace completamente al revés"
+- "esto es lo que en realidad necesitas"
+- cualquier frase que funcione para cualquier nicho genérico
+
 RESPONDE ÚNICAMENTE CON UN ARRAY JSON VÁLIDO, sin texto extra antes ni después:
 [
   {
     "titulo": "Título específico y potente (máx 65 chars)",
-    "hook": "Las primeras 10-12 palabras que paran el scroll — directo, sin intro",
+    "hook": "Primera frase completa del video — máximo 20 palabras, sin intro, sin 'hoy vamos a', específica para el nicho del creador",
     "descripcion": "De qué trata el video y por qué importa (2-3 frases)",
     "emocion": "curiosidad|dolor|urgencia|inspiración|indignacion",
     "formato": "reel 60s|reel 90s|carrusel|directo",
