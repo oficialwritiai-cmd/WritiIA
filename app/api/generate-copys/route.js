@@ -66,11 +66,16 @@ export async function POST(request) {
 
         let brandContextString = '';
         if (brandBrain) {
-            brandContextString = `
-- negocio: ${brandBrain.biography || 'No especificada'}
-- publico_objetivo: ${brandBrain.target_audience || 'No especificado'}
-- tono: ${brandBrain.style_words || 'Profesional y cercano'}
-`;
+            brandContextString = [
+                brandBrain.biography         && `Quién es: ${brandBrain.biography}`,
+                brandBrain.niche             && `Nicho: ${brandBrain.niche}`,
+                brandBrain.sub_niche         && `Sub-nicho: ${brandBrain.sub_niche}`,
+                brandBrain.audience          && `Audiencia: ${brandBrain.audience}`,
+                brandBrain.products_services && `Oferta: ${brandBrain.products_services}`,
+                brandBrain.style_words       && `Estilo y tono: ${brandBrain.style_words}`,
+                brandBrain.values_tone       && `Valores: ${brandBrain.values_tone}`,
+                brandBrain.learning_notes    && `Aprendizaje acumulado: ${brandBrain.learning_notes}`,
+            ].filter(Boolean).join('\n');
         }
 
         // Checklist filter
@@ -92,6 +97,11 @@ Nunca inventes datos no mencionados.
 Si el usuario no dio un número, no lo pongas.
 
 FECHA HOY: ${new Date().toLocaleDateString('es-ES', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}
+
+CEREBRO IA DEL CREADOR — USA ESTO PARA PERSONALIZAR TODO:
+${brandContextString || 'No disponible'}
+
+REGLA: Los títulos y hooks deben ser específicos para el nicho y audiencia del Cerebro IA. NUNCA genéricos.
 
 TEMA: ${text.slice(0, 100)}
 PLATAFORMA: ${platform}
@@ -182,7 +192,7 @@ Respóndeme EXCLUSIVAMENTE en JSON válido con esta estructura EXACTA:
 {
   ${wantsTitulos ? '"titles": ["Título 1...", "Título 2...", "Título 3...", "Título 4...", "Título 5..."],' : ''}
   ${wantsDescripciones ? '"descriptions": ["Descripción 1...", "Descripción 2...", "Descripción 3..."],' : ''}
-  ${wantsGanchos ? '"hooks": ["Hook 1...", "Hook 2...", "Hook 3...", "Hook 4...", "Hook 5..."],' : ''}
+  ${wantsGanchos ? '"hooks": ["Primera frase completa lista para grabar — específica para el nicho, máximo 20 palabras, sin intro genérica", "...", "...", "...", "..."],' : ''}
   ${wantsHashtags ? '"hashtags_groups": [["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"], ["#tag6", "#tag7", "#tag8", "#tag9", "#tag10"]],' : ''}
   ${wantsYoutubeTags ? '"youtube_tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10"]' : ''}
 }
