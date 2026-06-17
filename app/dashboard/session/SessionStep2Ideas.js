@@ -58,11 +58,20 @@ export default function SessionStep2Ideas() {
         }
     }, []);
 
+    function throwFriendly(msg) {
+        const err = new Error(msg);
+        err.isFriendly = true;
+        throw err;
+    }
+
     async function generateIdeas(appendMode = false) {
         setLoading(true);
         setError('');
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user }, error: userErr } = await supabase.auth.getUser();
+            if (userErr || !user) {
+                throwFriendly('Tu sesión expiró. Recarga la página e inicia sesión de nuevo.');
+            }
 
             // Clean + truncate to satisfy schema (max 100/300 chars per item, context max 490 chars)
             const cleanPillars = contentPillars
@@ -96,8 +105,8 @@ export default function SessionStep2Ideas() {
                 return;
             }
             if (!res.ok) {
-                const e = await res.json();
-                throw new Error(e.error || 'Error al generar ideas.');
+                const e = await res.json().catch(() => ({}));
+                throwFriendly(e.error || 'Error al generar ideas.');
             }
 
             const { ideas } = await res.json();
@@ -114,7 +123,7 @@ export default function SessionStep2Ideas() {
             });
         } catch (e) {
             console.error('[Step2] generateIdeas error:', e);
-            setError(e.message);
+            setError(e.isFriendly ? e.message : 'No se pudieron generar las ideas. Revisa tu conexión o vuelve a iniciar sesión, y reintenta.');
         } finally {
             setLoading(false);
         }
@@ -132,7 +141,10 @@ export default function SessionStep2Ideas() {
         setError('');
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user }, error: userErr } = await supabase.auth.getUser();
+            if (userErr || !user) {
+                throwFriendly('Tu sesión expiró. Recarga la página e inicia sesión de nuevo.');
+            }
 
             // plan_id NOT NULL — create plan first (exact same structure as generate-plan route)
             const { data: planData, error: planErr } = await supabase
@@ -148,14 +160,14 @@ export default function SessionStep2Ideas() {
                 })
                 .select()
                 .single();
-            if (planErr) throw new Error(`Error creando plan: ${planErr.message}`);
+            if (planErr) throwFriendly(`Error creando plan: ${planErr.message}`);
 
             // Build slots — filtrar con la MISMA lógica de _idx que usa la selección:
             // _idx = String(idea.id || idx). Si filtramos solo por idx, cuando las ideas
             // tienen id la selección no coincide -> 0 ideas -> 0 guiones (bug crítico).
             const selectedIdeas = generatedIdeas.filter((idea, idx) => selectedSlotIds.includes(String(idea.id || idx)));
             if (selectedIdeas.length === 0) {
-                throw new Error('No se detectaron las ideas seleccionadas. Recarga y vuelve a seleccionar.');
+                throwFriendly('No se detectaron las ideas seleccionadas. Recarga y vuelve a seleccionar.');
             }
             const toInsert = selectedIdeas.map((idea, index) => ({
                 plan_id:          planData.id,
@@ -179,7 +191,7 @@ export default function SessionStep2Ideas() {
                 .insert(toInsert)
                 .select();
 
-            if (insertErr) throw insertErr;
+            if (insertErr) throwFriendly(insertErr.message || 'No se pudieron guardar las ideas seleccionadas.');
 
             const realSlotIds = (insertedSlots || []).map(s => s.id);
 
@@ -190,7 +202,7 @@ export default function SessionStep2Ideas() {
             await completeStep(2, { selected_slot_ids: realSlotIds });
         } catch (e) {
             console.error('[Step2] advance error:', e);
-            setError(e.message);
+            setError(e.isFriendly ? e.message : 'No se pudo continuar. Revisa tu conexión o vuelve a iniciar sesión, y reintenta.');
         } finally {
             setAdvancing(false);
         }
