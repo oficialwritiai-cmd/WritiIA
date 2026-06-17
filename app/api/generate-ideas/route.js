@@ -48,9 +48,11 @@ export async function POST(req) {
             if (!hasAccess) return forbidden('No tienes permiso para acceder a este proyecto.');
         }
 
-        // ── Credits ───────────────────────────────────────────────────
-        const creditResult = await chargeCredits(supabase, user.id, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
-        if (!creditResult.success) {
+        // ── Credits: pre-check (read-only). Cobramos DESPUES de que la IA
+        // tenga éxito, para no perder créditos del usuario en un timeout/fallo.
+        const { data: creditPre } = await supabase
+            .from('users_profiles').select('credits_balance, is_admin').eq('id', user.id).single();
+        if (!creditPre?.is_admin && (Number(creditPre?.credits_balance) || 0) < CREDIT_COSTS.GENERATE_IDEAS) {
             return NextResponse.json({ error: 'Créditos insuficientes.', code: 'NO_CREDITS' }, { status: 402 });
         }
 
@@ -221,6 +223,9 @@ CLAVE: Usa las FAQs reales y los pilares del Cerebro IA. CERO ideas genéricas. 
 
         const ideas = ideasData?.parsed || [];
         if (ideas.length === 0) throw new Error('La IA no devolvió ideas válidas. Reintenta.');
+
+        // Cobrar SOLO ahora que la IA respondió con éxito
+        await chargeCredits(supabase, user.id, CREDIT_COSTS.GENERATE_IDEAS, 'generate_ideas', projectId);
 
         return NextResponse.json({ ideas });
 

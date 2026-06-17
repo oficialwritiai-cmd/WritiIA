@@ -92,7 +92,10 @@ export default function SessionStep2Ideas() {
                     context,
                     platforms: ['Reels', 'TikTok', 'YouTube Shorts'],
                     goal: timeHorizon === '2weeks' ? 'Contenido para 2 semanas' : 'Contenido para 1 mes',
-                    count: 24,
+                    // Menos ideas por tanda = generacion mas rapida = menos riesgo de timeout.
+                    // El usuario solo necesita 6-8 (2 semanas) o 12-16 (1 mes) para elegir,
+                    // y "Generar mas" cubre si quiere ampliar el banco de ideas.
+                    count: timeHorizon === '2weeks' ? 10 : 16,
                     userId: user?.id,
                     projectId,
                     contentPillars: cleanPillars,
