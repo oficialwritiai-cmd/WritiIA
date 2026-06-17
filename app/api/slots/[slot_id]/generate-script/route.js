@@ -5,6 +5,12 @@ import { getServerSession, verifyProjectAccess, unauthorized, forbidden } from '
 import { chargeCredits, CREDIT_COSTS } from '@/lib/credits';
 import { z } from 'zod';
 
+// Sin este export, Vercel usa su timeout por defecto (mucho menor a 60s).
+// Sonnet + reintentos puede tardar mas que eso y la funcion muere a mitad
+// de generacion — critico porque "Generar todos" llama esta ruta 1 vez por
+// idea seleccionada.
+export const maxDuration = 60;
+
 const RequestSchema = z.object({
     platform: z.string().max(50).optional(),
     videoDuration: z.enum(['30 seg', '60 seg', '90 seg', '2 min', '3 min', '5 min', '10 min']).default('60 seg'),
@@ -36,7 +42,7 @@ function extractJson(text) {
     }
 }
 
-async function callAnthropicWithRetries({ apiKey, systemPrompt, userMessage, maxRetries = 3 }) {
+async function callAnthropicWithRetries({ apiKey, systemPrompt, userMessage, maxRetries = 1 }) {
     const cleanKey = (apiKey || '').replace(/['"\s]/g, '').trim();
     let lastError = null;
     let model = 'claude-sonnet-4-6';

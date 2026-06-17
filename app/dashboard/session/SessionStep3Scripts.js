@@ -367,6 +367,8 @@ export default function SessionStep3Scripts() {
     const [saved, setSaved]         = useState({});
     const [generatingAll, setAll]   = useState(false);
     const [advancing, setAdvancing] = useState(false);
+    const [loadError, setLoadError] = useState('');
+    const [loadingSlots, setLoadingSlots] = useState(true);
 
     // Variant state
     const [variants, setVariants]               = useState({});       // { slotId: { type, text, raw } }
@@ -394,6 +396,9 @@ export default function SessionStep3Scripts() {
     }
 
     async function loadSlots() {
+        setLoadingSlots(true);
+        setLoadError('');
+
         // ── Layer 1: sessionStorage (instant, zero DB calls) ───────────────
         const fromCache = {};
         for (const id of selectedSlotIds) {
@@ -409,16 +414,49 @@ export default function SessionStep3Scripts() {
             });
         }
 
-        // ── Layer 2: DB via proper FK join (content_slots.script_id → scripts) ─
-        const { data: slotData } = await supabase
+        // ── Layer 2: DB — content_slots primero SIN el embed de scripts.
+        // Si la tabla `scripts` tiene un problema de permisos/RLS, un select
+        // embebido (`*, scripts(*)`) puede fallar la consulta COMPLETA y
+        // dejar `slots` vacío (el famoso "0/0"). Separar las dos consultas
+        // garantiza que los slots se muestren aunque el embed falle.
+        const { data: slotData, error: slotErr } = await supabase
             .from('content_slots')
-            .select('*, scripts(*)')
+            .select('*')
             .in('id', selectedSlotIds);
-        setSlots(slotData || []);
 
-        for (const slot of (slotData || [])) {
-            if (!slot.scripts || fromCache[slot.id]) continue;
-            const s = slot.scripts;
+        if (slotErr) {
+            console.error('[Step3] content_slots load error:', slotErr);
+            setSlots([]);
+            setLoadError(`No se pudieron cargar tus ideas seleccionadas (${slotErr.message}). Reintenta.`);
+            setLoadingSlots(false);
+            return;
+        }
+
+        setSlots(slotData || []);
+        setLoadingSlots(false);
+
+        if (!slotData?.length) return;
+
+        // ── Layer 3: scripts ya existentes, en consulta separada — si falla
+        // (p.ej. permisos en la tabla `scripts`), no bloquea los slots ya cargados.
+        const scriptIds = slotData.map(s => s.script_id).filter(Boolean);
+        let scriptsById = {};
+        if (scriptIds.length) {
+            const { data: scriptRows, error: scriptsErr } = await supabase
+                .from('scripts')
+                .select('*')
+                .in('id', scriptIds);
+            if (scriptsErr) {
+                console.error('[Step3] scripts load error (non-blocking):', scriptsErr);
+            } else {
+                scriptsById = Object.fromEntries((scriptRows || []).map(s => [s.id, s]));
+            }
+        }
+
+        for (const slot of slotData) {
+            if (fromCache[slot.id]) continue;
+            const s = scriptsById[slot.script_id];
+            if (!s) continue;
             const raw = {
                 title:     s.title     || '',
                 hook:      s.hook      || s.gancho || '',
@@ -432,9 +470,9 @@ export default function SessionStep3Scripts() {
             writeCache(slot.id, obj);
         }
 
-        // ── Layer 3: legacy content_slots.script_data fallback ─────────────
-        for (const slot of (slotData || [])) {
-            if (slot.scripts || fromCache[slot.id] || !slot.has_script || !slot.script_data) continue;
+        // ── Layer 4: legacy content_slots.script_data fallback ─────────────
+        for (const slot of slotData) {
+            if (scriptsById[slot.script_id] || fromCache[slot.id] || !slot.has_script || !slot.script_data) continue;
             const sd = slot.script_data;
             const raw = {
                 hook:      sd.hook || '',
@@ -450,6 +488,11 @@ export default function SessionStep3Scripts() {
             setSaved(p => ({ ...p, [slot.id]: true }));
             writeCache(slot.id, obj);
         }
+    }
+
+    function retryLoadSlots() {
+        loadedRef.current = true;
+        loadSlots();
     }
 
     async function generateOne(slotId) {
@@ -577,6 +620,47 @@ export default function SessionStep3Scripts() {
                 style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
                 ← Volver a Ideas
             </button>
+        </div>
+    );
+
+    if (loadingSlots) return (
+        <div style={{ textAlign:'center', padding:'80px 24px' }}>
+            <Loader2 size={32} style={{ color:'#a78bfa', animation:'spin 0.8s linear infinite', marginBottom:'16px' }} />
+            <p style={{ color:'#888' }}>Cargando tus ideas seleccionadas…</p>
+            <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+        </div>
+    );
+
+    if (loadError) return (
+        <div style={{ textAlign:'center', padding:'60px 24px' }}>
+            <AlertCircle size={32} color="#f87171" style={{ marginBottom:'16px' }} />
+            <p style={{ color:'#f87171', marginBottom:'20px', fontSize:'0.9rem' }}>{loadError}</p>
+            <div style={{ display:'flex', gap:'10px', justifyContent:'center' }}>
+                <button onClick={() => dispatch({ type:'SET_STEP', payload:2 })}
+                    style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
+                    ← Volver a Ideas
+                </button>
+                <button onClick={retryLoadSlots}
+                    style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(126,206,202,0.1)', color:'#7ECECA', border:'1px solid rgba(126,206,202,0.2)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
+                    <RefreshCw size={13} /> Reintentar
+                </button>
+            </div>
+        </div>
+    );
+
+    if (!slots.length) return (
+        <div style={{ textAlign:'center', padding:'60px 24px' }}>
+            <p style={{ color:'#888', marginBottom:'16px' }}>No se encontraron tus ideas seleccionadas. Puede ser un problema temporal.</p>
+            <div style={{ display:'flex', gap:'10px', justifyContent:'center' }}>
+                <button onClick={() => dispatch({ type:'SET_STEP', payload:2 })}
+                    style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
+                    ← Volver a Ideas
+                </button>
+                <button onClick={retryLoadSlots}
+                    style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(126,206,202,0.1)', color:'#7ECECA', border:'1px solid rgba(126,206,202,0.2)', borderRadius:'10px', padding:'9px 16px', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>
+                    <RefreshCw size={13} /> Reintentar
+                </button>
+            </div>
         </div>
     );
 
