@@ -208,25 +208,16 @@ Contexto: ${context.slice(0, 400)}
 Plataformas: ${platforms.join(', ')}. Objetivo: ${goal}.
 CLAVE: Usa las FAQs reales y los pilares del Cerebro IA. CERO ideas genéricas. Cada idea debe sentirse escrita para esta persona concreta.`;
 
-        let ideasData = null;
-        let lastErr = null;
+        // callAnthropic ya reintenta internamente (hasta 3 veces con backoff) — no dupliques
+        // el retry aquí, o el tiempo total puede superar el maxDuration de la funcion (60s)
+        // y Vercel mata la funcion devolviendo una pagina de error no-JSON.
+        const ideasData = await generateIdeasWithHaiku({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            systemPrompt,
+            userMessage: userPrompt,
+        });
 
-        // Up to 2 attempts in case of transient Anthropic error
-        for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-                ideasData = await generateIdeasWithHaiku({
-                    apiKey: process.env.ANTHROPIC_API_KEY,
-                    systemPrompt,
-                    userMessage: userPrompt,
-                });
-                break;
-            } catch (e) {
-                lastErr = e;
-                if (attempt === 0) await new Promise(r => setTimeout(r, 2000));
-            }
-        }
-
-        if (!ideasData) throw lastErr || new Error('No se pudo conectar con la IA');
+        if (!ideasData) throw new Error('No se pudo conectar con la IA');
 
         const ideas = ideasData?.parsed || [];
         if (ideas.length === 0) throw new Error('La IA no devolvió ideas válidas. Reintenta.');

@@ -105,7 +105,15 @@ export default function SessionStep2Ideas() {
                 return;
             }
             if (!res.ok) {
-                const e = await res.json().catch(() => ({}));
+                const e = await res.json().catch(() => null);
+                if (!e) {
+                    console.error('[Step2] non-JSON error response, status:', res.status);
+                    throwFriendly(
+                        res.status >= 500
+                            ? 'La IA tardó demasiado o no respondió. Espera unos segundos y reintenta.'
+                            : 'Error al generar ideas. Reintenta.'
+                    );
+                }
                 throwFriendly(e.error || 'Error al generar ideas.');
             }
 
