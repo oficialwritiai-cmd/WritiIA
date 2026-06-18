@@ -356,7 +356,7 @@ function ScriptCard({ slot, idx, total, onGenerate, onSave, loading, error, scri
 
 /* ─── Main Step 3 ─────────────────────────────────── */
 export default function SessionStep3Scripts() {
-    const { state, dispatch, completeStep } = useSession();
+    const { state, dispatch, completeStep, restartSession } = useSession();
     const { selectedSlotIds = [], projectId } = state;
     const supabase = createSupabaseClient();
 
@@ -369,6 +369,8 @@ export default function SessionStep3Scripts() {
     const [advancing, setAdvancing] = useState(false);
     const [loadError, setLoadError] = useState('');
     const [loadingSlots, setLoadingSlots] = useState(true);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     // Variant state
     const [variants, setVariants]               = useState({});       // { slotId: { type, text, raw } }
@@ -666,13 +668,27 @@ export default function SessionStep3Scripts() {
 
     return (
         <div>
+            {/* Cancelar sesion — discreto, esquina superior derecha */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
+                <button onClick={() => setShowCancelModal(true)}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '4px 6px' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}>
+                    ✕ Nueva sesión
+                </button>
+            </div>
+
             {/* Header */}
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px', gap:'12px', flexWrap:'wrap' }}>
                 <div>
                     <h2 style={{ fontSize:'1.5rem', fontWeight:800, color:'#fff', marginBottom:'6px', letterSpacing:'-0.02em' }}>✍️ Tus Guiones</h2>
-                    <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.85rem' }}>
+                    <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'0.85rem', marginBottom: '8px' }}>
                         {doneCount}/{slots.length} generados · Se guardan automáticamente en Biblioteca
                     </p>
+                    <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: '#7ECECA', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                        ← Cambiar ideas
+                    </button>
                 </div>
                 <button onClick={generateAll} disabled={generatingAll || allDone}
                     style={{
@@ -688,6 +704,29 @@ export default function SessionStep3Scripts() {
                     : <><Sparkles size={16}/> Generar todos ({slots.length})</>}
                 </button>
             </div>
+
+            {/* Modal de confirmacion — nueva sesion */}
+            {showCancelModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '24px' }}>
+                    <div style={{ background: '#15151c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '28px', maxWidth: '400px', width: '100%' }}>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>¿Empezar sesión nueva?</h3>
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '24px' }}>
+                            Los guiones ya generados están guardados en tu Biblioteca. Esta acción limpiará la sesión actual.
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => setShowCancelModal(false)} disabled={cancelling}
+                                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 18px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                                Seguir aquí
+                            </button>
+                            <button onClick={async () => { setCancelling(true); await restartSession(); }} disabled={cancelling}
+                                style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '0.85rem', fontWeight: 700, cursor: cancelling ? 'not-allowed' : 'pointer', opacity: cancelling ? 0.6 : 1, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                {cancelling ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : null}
+                                Sí, nueva sesión →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Script cards */}
             {slots.map((slot, idx) => (

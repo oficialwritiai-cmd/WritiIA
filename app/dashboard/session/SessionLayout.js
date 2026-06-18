@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useSession } from '@/app/components/SessionContext';
 import { Loader2, Save } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -23,9 +24,15 @@ const STEP_MAP = {
     4: SessionStep4Calendar,
 };
 
+function daysAgo(dateStr) {
+    const ms = Date.now() - new Date(dateStr).getTime();
+    return Math.max(1, Math.round(ms / (24 * 60 * 60 * 1000)));
+}
+
 export default function SessionLayout() {
-    const { state } = useSession();
-    const { currentStep, loading, saving, status, error } = state;
+    const { state, resumeStaleSession, restartSession } = useSession();
+    const { currentStep, loading, saving, status, error, staleSession } = state;
+    const [decidingStale, setDecidingStale] = useState(false);
 
     if (loading) {
         return (
@@ -44,6 +51,43 @@ export default function SessionLayout() {
                 <p style={{ color: '#EF4444', marginBottom: '8px', fontWeight: 700 }}>Error al cargar la sesión</p>
                 <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '24px' }}>{error}</p>
                 <a href="/dashboard/home" style={{ color: '#7ECECA', fontSize: '0.9rem' }}>← Volver al dashboard</a>
+            </div>
+        );
+    }
+
+    if (staleSession) {
+        return (
+            <div style={{ maxWidth: '480px', margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>💾</div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
+                    Tienes una sesión sin completar
+                </h2>
+                <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '32px' }}>
+                    Iniciada hace {daysAgo(staleSession.updated_at || staleSession.created_at)} día{daysAgo(staleSession.updated_at || staleSession.created_at) !== 1 ? 's' : ''}.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <button
+                        disabled={decidingStale}
+                        onClick={async () => { setDecidingStale(true); await resumeStaleSession(); }}
+                        style={{
+                            background: 'var(--accent-gradient)', color: 'black', border: 'none',
+                            borderRadius: '14px', padding: '14px 24px', fontWeight: 900, fontSize: '0.95rem',
+                            cursor: decidingStale ? 'not-allowed' : 'pointer', opacity: decidingStale ? 0.6 : 1,
+                        }}>
+                        Continuar sesión anterior
+                    </button>
+                    <button
+                        disabled={decidingStale}
+                        onClick={async () => { setDecidingStale(true); await restartSession(staleSession); }}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)',
+                            border: '1px solid rgba(255,255,255,0.12)', borderRadius: '14px',
+                            padding: '14px 24px', fontWeight: 700, fontSize: '0.9rem',
+                            cursor: decidingStale ? 'not-allowed' : 'pointer', opacity: decidingStale ? 0.6 : 1,
+                        }}>
+                        Empezar sesión nueva →
+                    </button>
+                </div>
             </div>
         );
     }

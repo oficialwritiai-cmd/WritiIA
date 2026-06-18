@@ -28,6 +28,9 @@ const initialState = {
 
     // Step 4
     calendarEvents: [],
+
+    // Sesion activa pero vieja (>48h) — el usuario decide si continuar o empezar de nuevo
+    staleSession: null,
 };
 
 // ── Reducer ──────────────────────────────────────────────────────────────────
@@ -83,10 +86,44 @@ function sessionReducer(state, action) {
 // ── Context ──────────────────────────────────────────────────────────────────
 const SessionContext = createContext(null);
 
+const STALE_SESSION_MS = 48 * 60 * 60 * 1000; // 48 horas
+
 export function SessionProvider({ projectId, children }) {
     const [state, dispatch] = useReducer(sessionReducer, { ...initialState, projectId });
     const supabase = createSupabaseClient();
     const saveTimer = useRef(null);
+
+    // Carga los datos de una sesion existente y los mete en el estado.
+    // Compartido entre el auto-resume normal y "Continuar sesion anterior".
+    const loadSessionData = useCallback(async (session) => {
+        const [brainRes, slotsRes, scriptsRes] = await Promise.all([
+            supabase.from('project_brains').select('*').eq('project_id', session.project_id).single(),
+            session.selected_slot_ids?.length
+                ? supabase.from('content_slots').select('*').in('id', session.selected_slot_ids)
+                : Promise.resolve({ data: [] }),
+            session.script_ids?.length
+                ? supabase.from('scripts').select('*').in('id', session.script_ids)
+                : Promise.resolve({ data: [] }),
+        ]);
+
+        dispatch({
+            type: 'INIT',
+            payload: {
+                sessionId: session.id,
+                currentStep: session.current_step || 1,
+                status: 'active',
+                brain: brainRes.data || null,
+                contentPillars: session.content_pillars || [],
+                sessionFAQs: session.session_faqs || [],
+                timeHorizon: session.time_horizon || '1month',
+                brainSaved: !!brainRes.data,
+                generatedIdeas: slotsRes.data || [],
+                selectedSlotIds: session.selected_slot_ids || [],
+                scripts: scriptsRes.data || [],
+                staleSession: null,
+            },
+        });
+    }, [supabase]);
 
     // ── Initial load: resume active session or create new ──────────────────
     useEffect(() => {
@@ -112,33 +149,16 @@ export function SessionProvider({ projectId, children }) {
                     .single();
 
                 if (session) {
-                    // Resume existing session
-                    const [brainRes, slotsRes, scriptsRes] = await Promise.all([
-                        supabase.from('project_brains').select('*').eq('project_id', projectId).single(),
-                        session.selected_slot_ids?.length
-                            ? supabase.from('content_slots').select('*').in('id', session.selected_slot_ids)
-                            : Promise.resolve({ data: [] }),
-                        session.script_ids?.length
-                            ? supabase.from('scripts').select('*').in('id', session.script_ids)
-                            : Promise.resolve({ data: [] }),
-                    ]);
+                    // Sesion activa pero vieja y a medias — que el usuario decida
+                    const ageMs = Date.now() - new Date(session.updated_at || session.created_at).getTime();
+                    const isStale = ageMs > STALE_SESSION_MS && (session.current_step || 1) > 1;
 
-                    dispatch({
-                        type: 'INIT',
-                        payload: {
-                            sessionId: session.id,
-                            currentStep: session.current_step || 1,
-                            status: 'active',
-                            brain: brainRes.data || null,
-                            contentPillars: session.content_pillars || [],
-                            sessionFAQs: session.session_faqs || [],
-                            timeHorizon: session.time_horizon || '1month',
-                            brainSaved: !!brainRes.data,
-                            generatedIdeas: slotsRes.data || [],
-                            selectedSlotIds: session.selected_slot_ids || [],
-                            scripts: scriptsRes.data || [],
-                        },
-                    });
+                    if (isStale) {
+                        dispatch({ type: 'INIT', payload: { loading: false, staleSession: session } });
+                        return;
+                    }
+
+                    await loadSessionData(session);
                 } else {
                     // New session
                     const { data: newSession, error: insertErr } = await supabase
@@ -171,6 +191,40 @@ export function SessionProvider({ projectId, children }) {
             }
         })();
     }, [projectId]);
+
+    // ── "Continuar sesion anterior" desde el prompt de sesion vieja ────────
+    const resumeStaleSession = useCallback(async () => {
+        if (!state.staleSession) return;
+        await loadSessionData(state.staleSession);
+    }, [state.staleSession, loadSessionData]);
+
+    // ── Limpia sessionStorage de Matrix para un projectId/sesion dados ─────
+    function clearMatrixSessionStorage(pid, slotIds = []) {
+        try {
+            sessionStorage.removeItem(`cerebro_fields_${pid || 'global'}`);
+            (slotIds || []).forEach(id => sessionStorage.removeItem(`writi_s3_${pid}_${id}`));
+        } catch {}
+    }
+
+    // ── Abandona la sesion actual (o una explicita) y empieza una limpia ───
+    // Usado por "Nueva sesion" desde Paso 3 y por "Empezar sesion nueva" del
+    // prompt de sesion vieja. Los guiones ya generados quedan intactos en
+    // Biblioteca/content_slots — solo se marca la fila de `sessions` como
+    // abandonada para que deje de auto-resumirse.
+    const restartSession = useCallback(async (explicitSession = null) => {
+        const target = explicitSession || (state.sessionId ? { id: state.sessionId, project_id: projectId, selected_slot_ids: state.selectedSlotIds } : null);
+        try {
+            if (target?.id) {
+                await supabase.from('sessions').update({ status: 'abandoned' }).eq('id', target.id);
+            }
+            clearMatrixSessionStorage(target?.project_id || projectId, target?.selected_slot_ids || state.selectedSlotIds);
+        } catch (err) {
+            console.error('[SessionContext] restartSession error:', err);
+        } finally {
+            // Recarga completa para que el efecto de init cree una sesion nueva desde cero
+            window.location.href = window.location.pathname + window.location.search;
+        }
+    }, [state.sessionId, state.selectedSlotIds, projectId, supabase]);
 
     // ── Persist current state to Supabase ────────────────────────────────
     const persistStep = useCallback(async (extra = {}) => {
@@ -231,6 +285,8 @@ export function SessionProvider({ projectId, children }) {
             debouncedSave,
             completeStep,
             completeSession,
+            resumeStaleSession,
+            restartSession,
         }}>
             {children}
         </SessionContext.Provider>
