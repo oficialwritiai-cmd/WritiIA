@@ -39,13 +39,13 @@ export default function TrialExpiredPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#050505', padding: '20px', color: 'white' }}>
             <div style={{ maxWidth: '440px', width: '100%', textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
 
-                <div style={{ fontSize: '3rem', marginBottom: '20px' }}>🚀</div>
+                <div style={{ fontSize: '3rem', marginBottom: '20px' }}>⏰</div>
 
                 <h1 style={{ fontSize: '1.9rem', fontWeight: 900, marginBottom: '14px', background: 'linear-gradient(135deg, #FFF, #888)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Activa tu acceso
+                    Tu acceso beta ha finalizado
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '32px', lineHeight: '1.6', fontSize: '1rem' }}>
-                    Para usar <strong style={{ color: '#7ECECA' }}>Writi AI</strong> necesitas el Plan Pro. Sin permanencias — cancela cuando quieras.
+                    Gracias por probar <strong style={{ color: '#7ECECA' }}>Writi.AI</strong>. Todo tu contenido está guardado y disponible cuando actives tu plan.
                     <br /><br />
                     <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>
                         Si iniciaste sesión con Google, <strong style={{ color: 'rgba(255,255,255,0.5)' }}>cierra sesión y regístrate con email y contraseña</strong> para poder pagar directamente.
@@ -74,9 +74,13 @@ export default function TrialExpiredPage() {
                     >
                         {paying
                             ? <><Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> Conectando con el pago...</>
-                            : 'Activar Plan Pro →'
+                            : 'Activar plan PRO — 24,90€/mes →'
                         }
                     </button>
+
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', margin: '-4px 0 0', textAlign: 'center' }}>
+                        Sin permanencia · Cancela cuando quieras
+                    </p>
 
                     <button
                         onClick={handleLogout}
