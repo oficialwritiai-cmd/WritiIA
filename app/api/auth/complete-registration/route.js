@@ -44,10 +44,6 @@ export async function POST(req) {
             trial_ends_at: isTrialActive ? trialEnds.toISOString() : null,
             trial_active: isTrialActive, credits_balance: 250,
             subscription_status: isTrialActive ? 'trial' : 'pending',
-            // dashboard/layout.js tiene su propio "SECURITY WALL" que exige este
-            // campo ademas de trial_active/trial_ends_at — sin esto, el trial
-            // queda bloqueado aunque el resto del perfil este correcto.
-            access_key_used: (!isMasterKey && keyData) ? accessKeyCode : null,
             created_at: now.toISOString(),
         });
         if (profileErr) throw profileErr;

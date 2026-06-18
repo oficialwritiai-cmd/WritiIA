@@ -432,8 +432,10 @@ export default function DashboardLayout({ children }) {
         const _trialEnd = profile.trial_ends_at
             ? parseSupabaseDate(profile.trial_ends_at)
             : null;
+        // NOTA: "access_key_used" no es una columna real de users_profiles —
+        // exigirla aqui bloqueaba a TODOS los usuarios de trial sin excepcion,
+        // sin importar que trial_active/trial_ends_at estuvieran correctos.
         const trialActive = profile.trial_active === true &&
-            profile.access_key_used &&
             _trialEnd && !isNaN(_trialEnd) && _trialEnd > new Date();
 
         if (!hasActivePlan && !trialActive) {
