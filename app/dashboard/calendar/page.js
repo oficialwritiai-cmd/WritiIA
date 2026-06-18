@@ -442,6 +442,12 @@ function CalendarContent() {
                                 .eq('id', selectedEvent.id);
                         }
                     }
+                    // Asegurar has_script=true en el evento ahora que library tiene contenido real
+                    if (selectedEvent?.id) {
+                        await supabase.from('calendar_events')
+                            .update({ has_script: true })
+                            .eq('id', selectedEvent.id);
+                    }
                 }
             }
 
@@ -1548,9 +1554,9 @@ function CalendarContent() {
 
                         {/* Crear / Ver guión desde idea */}
                         {selectedEvent && (
-                            selectedEvent.has_script && selectedEvent.script_id ? (
+                            selectedEvent.has_script && (selectedEvent.script_id || selectedEvent.reference_id) ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '9px', padding: '8px 14px', fontSize: '0.8rem', fontWeight: 700, color: '#34d399', marginTop: '8px', marginBottom: '12px', cursor: 'pointer' }}
-                                    onClick={() => { setSheetItem({ id: selectedEvent.script_id, titulo: tempTitle }); }}>
+                                    onClick={() => { setSheetItem({ id: selectedEvent.script_id || selectedEvent.reference_id, titulo: tempTitle }); }}>
                                     ✓ Guión listo — Ver en editor
                                 </div>
                             ) : (

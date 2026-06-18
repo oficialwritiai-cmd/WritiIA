@@ -223,6 +223,20 @@ export default function SheetEditor({ sheetId, item: initialItem, onClose, onSav
             if (hasRealId) {
                 const { error } = await supabase.from('library').update(payload).eq('id', d.itemId);
                 if (error) throw new Error(`Update falló: ${error.message}`);
+
+                // Sincronizar al Calendario: todo evento que apunte a este guion
+                // (reference_id = este library.id) refleja el cambio.
+                try {
+                    const { data: { user: syncUser } } = await supabase.auth.getUser();
+                    if (syncUser) {
+                        await supabase.from('calendar_events')
+                            .update({ title: d.title || 'Sin título', script_full_text: fullContent, has_script: true })
+                            .eq('reference_id', d.itemId)
+                            .eq('user_id', syncUser.id);
+                    }
+                } catch (syncErr) {
+                    console.warn('[SheetEditor] calendar sync (non-fatal):', syncErr);
+                }
             } else {
                 const { data: { user } } = await supabase.auth.getUser();
                 const uid = user?.id;
