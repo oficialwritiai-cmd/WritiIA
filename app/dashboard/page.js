@@ -1595,11 +1595,9 @@ export default function DashboardPage() {
             return;
         }
 
-        // Pre-check credits: only 3 for the plan itself (scripts generated separately)
-        let postCount = 12;
-        if (planFrequency === '4 publicaciones por semana') postCount = 16;
-        if (planFrequency === '5 publicaciones por semana') postCount = 20;
-        if (planFrequency === '7 publicaciones por semana') postCount = 28;
+        // Siempre 12 guiones — la frecuencia solo cambia cómo se distribuyen
+        // en el calendario (ver dayOffset más abajo), no cuántos se generan.
+        const postCount = 12;
 
         const planCost = 3;
         const available = aiCredits.total - aiCredits.used;
@@ -1683,21 +1681,25 @@ export default function DashboardPage() {
             const slotsWithDates = slots.map((slot, index) => {
                 let scheduledDate = slot.scheduled_date;
                 if (!scheduledDate) {
-                    // v1.17.48: SMART SCHEDULING based on frequency
+                    // Siempre 12 guiones — la frecuencia solo decide en cuántos días
+                    // se reparten esos 12 (más posts/semana = mismos 12 en menos días).
                     let dayOffset = index + 1; // Default
-                    const freqPrefix = planFrequency.split(' ')[0]; // "3", "4", "7"
-                    
+                    const freqPrefix = planFrequency.split(' ')[0]; // "3", "4", "5", "7"
+
                     if (freqPrefix === '3') {
-                        // 3x week (12 slots) -> Gap of ~2.5 days to cover 30 days
+                        // 3x semana -> cubre el mes completo (30 días / 12 = 2.5)
                         dayOffset = Math.floor(index * 2.5) + 1;
                     } else if (freqPrefix === '4') {
-                        // 4x week (16 slots) -> Gap of ~1.8 days
-                        dayOffset = Math.floor(index * 1.8) + 1;
+                        // 4x semana -> cubre ~3 semanas (21 días / 12 = 1.75)
+                        dayOffset = Math.floor(index * 1.75) + 1;
+                    } else if (freqPrefix === '5') {
+                        // 5x semana -> cubre ~2.5 semanas (17.5 días / 12 ≈ 1.46)
+                        dayOffset = Math.floor(index * 1.46) + 1;
                     } else if (freqPrefix === '7' || planFrequency === 'Diario') {
-                        // Every day
-                        dayOffset = index + 1;
+                        // 7x semana -> cubre solo las primeras 2 semanas (14 días / 12 ≈ 1.17)
+                        dayOffset = Math.floor(index * 1.17) + 1;
                     }
-                    
+
                     const slotDate = new Date(currentYear, currentMonth, today.getDate() + dayOffset);
                     scheduledDate = slotDate.toISOString().split('T')[0];
                 }
@@ -2911,10 +2913,10 @@ export default function DashboardPage() {
                     />
                     <ModeOptionCard
                         icon={CalendarDays}
-                        title="Plan mensual de contenido"
-                        desc="Planifica todo tu mes con ideas + guiones + calendario"
-                        btnLabel="Iniciar plan"
-                        accent="#7c3aed"
+                        title="Plan Rápido"
+                        desc="Genera un plan mensual en minutos, sin configurar tu Cerebro IA"
+                        btnLabel="Generar plan"
+                        accent="#f59e0b"
                         active={generationMode === 'plan'}
                         onClick={() => {
                             setGenerationMode('plan');
@@ -4113,13 +4115,24 @@ export default function DashboardPage() {
                                 ))}
                             </div>
 
-                            {/* Ideas estimate */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: '12px', padding: '12px 20px' }}>
-                                <CheckCircle size={15} color="#34d399" />
-                                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
-                                    Se generarán ~{planFrequency.split(' ')[0] === '3' ? 12 : planFrequency.split(' ')[0] === '7' ? 28 : 16} ideas de contenido alineadas con esta estrategia
-                                </p>
-                            </div>
+                            {/* Ideas estimate — siempre 12, la frecuencia define la cobertura */}
+                            {(() => {
+                                const freqPrefix = planFrequency.split(' ')[0];
+                                const coverage = {
+                                    '3': { icon: '✅', text: 'Cubrirán tu mes completo' },
+                                    '4': { icon: '✅', text: 'Cubrirán 3 semanas' },
+                                    '5': { icon: '⚡', text: 'Cubrirán 2.5 semanas' },
+                                    '7': { icon: '⚡', text: 'Cubrirán las primeras 2 semanas. Podrás generar más cuando los necesites.' },
+                                }[freqPrefix] || { icon: '✅', text: 'Cubrirán tu mes completo' };
+                                return (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: '12px', padding: '12px 20px' }}>
+                                        <CheckCircle size={15} color="#34d399" />
+                                        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                                            Se generarán 12 guiones · {coverage.icon} {coverage.text}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
 
                             <div className="wz-nav-sticky" style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                                 <button onClick={() => setPlanWizardStep(3)} className="btn-secondary" style={{ flex: 'none', padding: '0 20px', height: '52px' }}>← Ajustar</button>

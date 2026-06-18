@@ -60,7 +60,7 @@ function getMaxTokens(platform) {
 
 // Llamada a Anthropic con reintentos ante rate-limit (429) o sobrecarga (529).
 // Crítico para escala: muchos usuarios generando a la vez sin que falle.
-async function callAnthropicWithRetry({ model, max_tokens, temperature, system, messages, maxRetries = 4 }) {
+async function callAnthropicWithRetry({ model, max_tokens, temperature, system, messages, maxRetries = 2 }) {
     let lastErr = null;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -83,8 +83,8 @@ async function callAnthropicWithRetry({ model, max_tokens, temperature, system, 
 
         // Reintentar solo en rate-limit (429) o sobrecarga (529)
         if (res.status === 429 || res.status === 529) {
-            // Backoff exponencial: 4s, 8s, 16s, 32s
-            const waitMs = Math.min(4000 * Math.pow(2, attempt), 32000);
+            // Backoff exponencial: 2s, 4s
+            const waitMs = Math.min(2000 * Math.pow(2, attempt), 4000);
             await new Promise(r => setTimeout(r, waitMs));
             continue;
         }
