@@ -177,7 +177,7 @@ export default function LoginPage() {
 
                 if (user) {
                     const now = new Date();
-                    const trialEnds = new Date(); trialEnds.setDate(now.getDate() + 7);
+                    const trialEnds = new Date(); trialEnds.setDate(now.getDate() + 14);
                     const isTrialActive = hasAccessKey;
                     const plan = isMasterKey ? 'pro' : (hasAccessKey ? 'trial' : 'pending');
 
