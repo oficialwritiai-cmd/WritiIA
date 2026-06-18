@@ -224,9 +224,16 @@ async function handleCheckoutCompleted(session, supabase, logEntry = null) {
             periodEnd = new Date(sub.current_period_end * 1000).toISOString();
         }
 
+        // upsert (no update): si el usuario pago directo sin llave beta, este es
+        // el PRIMER lugar donde se toca users_profiles para el — un UPDATE simple
+        // no crea nada si la fila no existe (bug real que dejaba pagos cobrados
+        // sin activar el acceso). upsert garantiza que la fila quede creada.
         const { error } = await supabase
             .from('users_profiles')
-            .update({
+            .upsert({
+                id: userId,
+                email: userEmail || undefined,
+                name: (userEmail || 'usuario').split('@')[0],
                 plan: 'pro',
                 subscription_status: 'active',
                 stripe_customer_id: customerId,
@@ -236,8 +243,7 @@ async function handleCheckoutCompleted(session, supabase, logEntry = null) {
                 payment_failure_count: 0,
                 grace_period_started_at: null,
                 updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
+            }, { onConflict: 'id' });
 
         if (error) {
             console.error('[Webhook] Error activating plan:', error);
