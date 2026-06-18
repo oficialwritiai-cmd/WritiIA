@@ -154,6 +154,61 @@ export default function SessionStep4Calendar() {
                         .update({ event_date: date })
                         .eq('id', existing.id);
                 }
+
+                // 3. BUG FIX: Matrix nunca guardaba el guion en `library` — el
+                // calendario lo mostraba via fallback (content_slots.script_data)
+                // pero la Biblioteca quedaba vacía y reference_id apuntaba a
+                // content_slots.id en vez de a library.id. Sincronizamos aquí,
+                // evitando duplicados (busca por user_id+type+titulo antes de
+                // insertar, igual que el resto de la app).
+                if (slot?.script_data) {
+                    try {
+                        const sd = slot.script_data;
+                        const hookVal = sd.hook || sd.gancho || '';
+                        const desArr  = Array.isArray(sd.desarrollo) ? sd.desarrollo : [];
+                        const ctaVal  = sd.cta || sd.cierre || '';
+                        const fullText = [
+                            slot.idea_title || '',
+                            hookVal ? `\n⚡ HOOK:\n${hookVal}` : '',
+                            desArr.length ? `\n📝 DESARROLLO:\n${desArr.map((d, i) => `${i + 1}. ${typeof d === 'string' ? d : `${d.point}: ${d.detail}`}`).join('\n')}` : '',
+                            ctaVal ? `\n📢 CTA:\n${ctaVal}` : '',
+                        ].filter(Boolean).join('\n');
+
+                        const { data: existingLib } = await supabase.from('library')
+                            .select('id').eq('user_id', user.id).eq('type', 'guion')
+                            .eq('titulo', slot.idea_title).limit(1);
+
+                        let libraryId = null;
+                        if (existingLib?.length) {
+                            await supabase.from('library').update({
+                                content: sd,
+                                script_full_text: fullText,
+                                platform: slot.platform || 'Reels',
+                            }).eq('id', existingLib[0].id);
+                            libraryId = existingLib[0].id;
+                        } else {
+                            const { data: newLib } = await supabase.from('library').insert({
+                                user_id: user.id,
+                                project_id: slot.project_id || null,
+                                titulo: slot.idea_title,
+                                type: 'guion',
+                                platform: slot.platform || 'Reels',
+                                content: sd,
+                                script_full_text: fullText,
+                            }).select('id').single();
+                            libraryId = newLib?.id || null;
+                        }
+
+                        if (libraryId) {
+                            await supabase.from('calendar_events')
+                                .update({ reference_id: libraryId, has_script: true })
+                                .eq('reference_id', slotId)
+                                .eq('user_id', user.id);
+                        }
+                    } catch (libErr) {
+                        console.error('[Calendar][Matrix] library sync error (non-fatal):', libErr);
+                    }
+                }
             })
         );
 
