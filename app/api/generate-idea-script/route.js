@@ -109,18 +109,52 @@ PERFIL DEL CREADOR:
 
 ${platformRules}
 
-PROHIBIDO ABSOLUTAMENTE:
-❌ Hooks: '¿Sabías que [título]?', 'Hoy te enseño', 'En este video'
-❌ Desarrollo: 'La mayoría no sabe cómo...', 'Con este sistema puedes...', 'Empieza hoy mismo'
-❌ CTAs: 'Guarda este video y compártelo', 'Sígueme para más contenido'
+════════════════════
+HOOK — REGLAS ESTRICTAS
+════════════════════
+NUNCA hagas esto:
 ❌ Repetir el título como pregunta
-❌ Contenido que vale para cualquier nicho — debe ser ESPECÍFICO para: ${brain.niche || 'el sector del creador'}
+❌ "[título] — y la mayoría lo hace al revés"
+❌ Empezar con "¿Sabías que..."
+❌ 'Hoy te enseño', 'En este video'
 
-HOOKS QUE SÍ FUNCIONAN (úsalos como referencia):
-✅ 'Tu equipo pierde X horas semanales en esto. Y ni lo saben.'
-✅ 'El 90% de [nicho específico] hace esto mal y les cuesta [consecuencia real].'
-✅ 'Nadie te dice esto sobre [tema] porque les conviene que no lo sepas.'
-✅ '[Afirmación polémica sobre el sector]. Y lo puedo demostrar.'
+SIEMPRE haz esto:
+✅ Hook que provoca dolor o curiosidad real
+✅ Máximo 2 frases contundentes
+✅ Completamente diferente al título
+✅ ESPECÍFICO para: ${brain.niche || 'el sector del creador'} — nunca una frase que valga para cualquier nicho
+
+════════════════════
+DESARROLLO — REGLAS ESTRICTAS
+════════════════════
+NUNCA hagas esto:
+❌ "La mayoría no sabe cómo aplicar [título]"
+❌ "El coste real está en [título]"
+❌ Bloques con solo [HUECOS] sin contenido
+❌ 'Con este sistema puedes...', 'Empieza hoy mismo'
+
+SIEMPRE haz esto:
+✅ Contenido específico y real en cada bloque
+✅ El hueco COMPLETA el contenido, no LO REEMPLAZA
+✅ Ejemplo correcto:
+   "Los vendedores pierden el 40% de leads por no responder en las primeras 2 horas.
+   En tu caso específico [HUECO: añade tu tiempo de respuesta aquí]"
+
+CTAs PROHIBIDOS:
+❌ 'Guarda este video y compártelo', 'Sígueme para más contenido'
+
+════════════════════
+LONGITUD POR PLATAFORMA
+════════════════════
+Reels/TikTok (80-90 seg):
+→ 150-200 palabras de contenido real
+→ Hook: 1-2 frases
+→ 3 bloques de 2-3 frases cada uno
+→ CTA: 1-2 frases específicas
+
+YouTube (8-15 min):
+→ 1.200-2.000 palabras
+→ Intro + 5 puntos desarrollados + cierre
 
 REGLAS DE CALIDAD ABSOLUTA:
 1. El hook DEBE ser irresistible — si no engancha en 5 seg, no sirve.
@@ -208,19 +242,21 @@ Recuerda: el guión debe ser EXTENSO, con bloques bien desarrollados. No generes
 
         let script = extractJson(aiResult.text);
 
-        // Fallback si la IA no devuelve JSON válido
+        // Fallback si la IA no devuelve JSON válido — marcado claramente como
+        // incompleto (huecos reales) en vez de simular un guion genérico ya
+        // "terminado" que violaría las mismas reglas que le exigimos a la IA.
         if (!script?.hook || !script?.structure?.length) {
             script = {
                 title: idea_title,
-                hook: `${idea_title} — y la mayoría del sector lo hace completamente al revés.`,
+                hook: `[HUECO: escribe aquí un hook específico para "${idea_title}" — la IA no pudo generarlo, reintenta o complétalo a mano]`,
                 structure: [
-                    { point: 'La realidad que nadie dice', detail: `La mayoría de profesionales del sector pierde tiempo y dinero en esto sin saberlo. El coste real no está en el error obvio sino en la consecuencia específica de ${idea_title}.` },
-                    { point: 'Lo que realmente funciona', detail: `Después de aplicar esto con clientes reales, el patrón que funciona es [HUECO: tu método específico aquí]. Los resultados concretos: [HUECO: tus números aquí].` },
-                    { point: 'Cómo aplicarlo ahora', detail: `El primer paso específico es [HUECO: tu proceso aquí]. No necesitas más herramientas. Solo necesitas implementar este cambio concreto esta semana.` },
+                    { point: 'El problema real', detail: `[HUECO: describe el problema concreto de tu audiencia con "${idea_title}" — con un número o ejemplo real]` },
+                    { point: 'Lo que funciona', detail: `[HUECO: tu método específico para resolverlo]. Resultado concreto: [HUECO: tus números aquí].` },
+                    { point: 'Cómo aplicarlo ahora', detail: `[HUECO: el primer paso concreto que debe dar el espectador esta semana]` },
                 ],
-                cta: ctaIdea || `Si quieres implementar esto en tu negocio, escríbeme o mira el link en mi bio.`,
-                post_copy: { headline: idea_title, body: `Todo sobre: ${idea_title} y cómo aplicarlo en la práctica.`, hashtags: ['contenido', 'negocio', 'estrategia'] },
-                notes: 'Habla directamente a cámara. Usa ejemplos reales tuyos.'
+                cta: ctaIdea || `[HUECO: tu llamada a la acción específica]`,
+                post_copy: { headline: idea_title, body: `[HUECO: descripción del post para "${idea_title}"]`, hashtags: ['contenido', 'negocio', 'estrategia'] },
+                notes: 'GUION DE EMERGENCIA — la IA no devolvió un JSON válido. Pulsa "Regenerar" para reintentar o completa los huecos a mano.'
             };
         }
 
