@@ -170,38 +170,26 @@ export default function LoginPage() {
                     throw signUpError;
                 }
 
+                // CRÍTICO: esto debe correr SIEMPRE tras el signUp, sin importar si
+                // falta confirmar el email — si no, el perfil/trial/llave nunca se
+                // activan (bug real que afectó a varios registros). Va contra un
+                // endpoint con service role porque el navegador todavía no tiene
+                // sesión válida en este punto cuando se exige confirmar email.
+                if (user) {
+                    try {
+                        await fetch('/api/auth/complete-registration', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userId: user.id, email: user.email, name: email.split('@')[0],
+                                hasAccessKey, isMasterKey, accessKeyCode: keyData ? accessKey.trim() : null,
+                            }),
+                        });
+                    } catch (err) { console.error('[Registration] complete-registration error:', err); }
+                }
+
                 if (user && !user.email_confirmed_at) {
                     setSuccess('¡Registro exitoso! Revisa tu email para confirmar tu cuenta.');
                     setMode('login'); setLoading(false); return;
-                }
-
-                if (user) {
-                    const now = new Date();
-                    const trialEnds = new Date(); trialEnds.setDate(now.getDate() + 14);
-                    const isTrialActive = hasAccessKey;
-                    const plan = isMasterKey ? 'pro' : (hasAccessKey ? 'trial' : 'pending');
-
-                    await supabase.from('users_profiles').upsert({
-                        id: user.id, email: user.email, name: email.split('@')[0],
-                        plan, is_admin: isMasterKey,
-                        trial_started_at: isTrialActive ? now.toISOString() : null,
-                        trial_ends_at: isTrialActive ? trialEnds.toISOString() : null,
-                        trial_active: isTrialActive, credits_balance: 250,
-                        subscription_status: isTrialActive ? 'trial' : 'pending',
-                        created_at: now.toISOString()
-                    });
-
-                    if (!isMasterKey && keyData) {
-                        await supabase.from('access_keys').update({
-                            is_used: true, used_by_user_id: user.id, used_at: now.toISOString()
-                        }).eq('id', keyData.id);
-                        try {
-                            await fetch('/api/auth/trial-welcome', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id })
-                            });
-                        } catch (err) { console.error('[Registration] trial email error:', err); }
-                    }
                 }
 
                 if (!session && !isMasterKey && hasAccessKey) {
